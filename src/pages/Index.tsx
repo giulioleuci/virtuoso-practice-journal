@@ -10,13 +10,13 @@ import Profile from "./Profile";
 import { Routes, Route } from "react-router-dom";
 
 const Index = () => {
-  const profile = useLiveQuery(() => db.profile.get("me"));
-  // useLiveQuery returns undefined while loading; null/missing = needs onboarding
+  const profile = useLiveQuery(async () => (await db.profile.get("me")) ?? null);
+  // undefined = loading; null = no profile yet
   if (profile === undefined) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground italic">Opening your taccuino…</div>;
   }
 
-  if (!profile?.onboarded) {
+  if (!profile || !profile.onboarded) {
     return (
       <I18nProvider initial="en">
         <Onboarding onDone={() => { /* live query refreshes automatically */ }} />
