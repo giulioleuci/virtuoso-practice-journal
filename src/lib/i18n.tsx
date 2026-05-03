@@ -1,0 +1,197 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { Lang } from "./db";
+
+type Dict = Record<string, string>;
+
+const dicts: Record<Lang, Dict> = {
+  en: {
+    "app.name": "Virtuoso",
+    "app.tagline": "Your musical taccuino",
+    "nav.diary": "Diary",
+    "nav.library": "Library",
+    "nav.lessons": "Lessons",
+    "nav.profile": "Profile",
+    "onb.welcome": "Welcome",
+    "onb.welcome.sub": "A quiet place for your daily practice.",
+    "onb.lang": "Choose your language",
+    "onb.name": "What should we call you?",
+    "onb.name.ph": "Your name",
+    "onb.subjects": "What do you study?",
+    "onb.subjects.sub": "Pick the subjects you practice. You can add more later.",
+    "onb.subjects.custom": "Add a custom subject",
+    "onb.reminder": "Daily reminder",
+    "onb.reminder.sub": "We'll gently nudge you at this time.",
+    "onb.freq.daily": "Every day",
+    "onb.freq.weekdays": "Weekdays",
+    "onb.freq.custom": "Custom",
+    "onb.continue": "Continue",
+    "onb.back": "Back",
+    "onb.finish": "Begin",
+    "diary.today": "Today",
+    "diary.empty": "No tasks yet. Pick something from your library to practice.",
+    "diary.overdue": "Overdue",
+    "library.empty": "Your library is empty.",
+    "library.add": "Add to library",
+    "library.kind.repertoire": "Repertoire",
+    "library.kind.manual": "Manuals",
+    "library.kind.technique": "Technique",
+    "library.kind.theory": "Theory",
+    "lessons.empty": "No lessons scheduled.",
+    "lessons.addRecurrence": "Add a teacher",
+    "profile.settings": "Settings",
+    "profile.export": "Export data",
+    "profile.import": "Import data",
+    "profile.wipe": "Delete all data",
+  },
+  it: {
+    "app.name": "Virtuoso",
+    "app.tagline": "Il tuo taccuino musicale",
+    "nav.diary": "Diario",
+    "nav.library": "Libreria",
+    "nav.lessons": "Lezioni",
+    "nav.profile": "Profilo",
+    "onb.welcome": "Benvenuto",
+    "onb.welcome.sub": "Uno spazio sereno per la tua pratica quotidiana.",
+    "onb.lang": "Scegli la lingua",
+    "onb.name": "Come ti chiami?",
+    "onb.name.ph": "Il tuo nome",
+    "onb.subjects": "Cosa studi?",
+    "onb.subjects.sub": "Scegli le materie che pratichi. Puoi aggiungerne altre in seguito.",
+    "onb.subjects.custom": "Aggiungi materia personalizzata",
+    "onb.reminder": "Promemoria quotidiano",
+    "onb.reminder.sub": "Ti avviseremo gentilmente a quest'ora.",
+    "onb.freq.daily": "Ogni giorno",
+    "onb.freq.weekdays": "Giorni feriali",
+    "onb.freq.custom": "Personalizzato",
+    "onb.continue": "Continua",
+    "onb.back": "Indietro",
+    "onb.finish": "Inizia",
+    "diary.today": "Oggi",
+    "diary.empty": "Nessun esercizio. Scegli qualcosa dalla libreria.",
+    "diary.overdue": "In ritardo",
+    "library.empty": "La libreria è vuota.",
+    "library.add": "Aggiungi",
+    "library.kind.repertoire": "Repertorio",
+    "library.kind.manual": "Manuali",
+    "library.kind.technique": "Tecnica",
+    "library.kind.theory": "Teoria",
+    "lessons.empty": "Nessuna lezione programmata.",
+    "lessons.addRecurrence": "Aggiungi un insegnante",
+    "profile.settings": "Impostazioni",
+    "profile.export": "Esporta dati",
+    "profile.import": "Importa dati",
+    "profile.wipe": "Elimina tutti i dati",
+  },
+  es: {
+    "app.name": "Virtuoso",
+    "app.tagline": "Tu cuaderno musical",
+    "nav.diary": "Diario",
+    "nav.library": "Biblioteca",
+    "nav.lessons": "Lecciones",
+    "nav.profile": "Perfil",
+    "onb.welcome": "Bienvenido",
+    "onb.welcome.sub": "Un lugar tranquilo para tu práctica diaria.",
+    "onb.lang": "Elige tu idioma",
+    "onb.name": "¿Cómo te llamas?",
+    "onb.name.ph": "Tu nombre",
+    "onb.subjects": "¿Qué estudias?",
+    "onb.subjects.sub": "Elige las materias que practicas.",
+    "onb.subjects.custom": "Añadir materia personalizada",
+    "onb.reminder": "Recordatorio diario",
+    "onb.reminder.sub": "Te avisaremos a esta hora.",
+    "onb.freq.daily": "Cada día",
+    "onb.freq.weekdays": "Días laborables",
+    "onb.freq.custom": "Personalizado",
+    "onb.continue": "Continuar",
+    "onb.back": "Atrás",
+    "onb.finish": "Empezar",
+    "diary.today": "Hoy",
+    "diary.empty": "No hay tareas todavía.",
+    "diary.overdue": "Atrasadas",
+    "library.empty": "Tu biblioteca está vacía.",
+    "library.add": "Añadir",
+    "library.kind.repertoire": "Repertorio",
+    "library.kind.manual": "Manuales",
+    "library.kind.technique": "Técnica",
+    "library.kind.theory": "Teoría",
+    "lessons.empty": "Sin lecciones programadas.",
+    "lessons.addRecurrence": "Añadir profesor",
+    "profile.settings": "Ajustes",
+    "profile.export": "Exportar datos",
+    "profile.import": "Importar datos",
+    "profile.wipe": "Eliminar todos los datos",
+  },
+  de: {
+    "app.name": "Virtuoso",
+    "app.tagline": "Dein musikalisches Notizbuch",
+    "nav.diary": "Tagebuch",
+    "nav.library": "Bibliothek",
+    "nav.lessons": "Stunden",
+    "nav.profile": "Profil",
+    "onb.welcome": "Willkommen",
+    "onb.welcome.sub": "Ein ruhiger Ort für dein tägliches Üben.",
+    "onb.lang": "Wähle deine Sprache",
+    "onb.name": "Wie sollen wir dich nennen?",
+    "onb.name.ph": "Dein Name",
+    "onb.subjects": "Was studierst du?",
+    "onb.subjects.sub": "Wähle die Fächer, die du übst.",
+    "onb.subjects.custom": "Eigenes Fach hinzufügen",
+    "onb.reminder": "Tägliche Erinnerung",
+    "onb.reminder.sub": "Wir erinnern dich zu dieser Zeit.",
+    "onb.freq.daily": "Täglich",
+    "onb.freq.weekdays": "Wochentags",
+    "onb.freq.custom": "Benutzerdefiniert",
+    "onb.continue": "Weiter",
+    "onb.back": "Zurück",
+    "onb.finish": "Starten",
+    "diary.today": "Heute",
+    "diary.empty": "Noch keine Aufgaben.",
+    "diary.overdue": "Überfällig",
+    "library.empty": "Deine Bibliothek ist leer.",
+    "library.add": "Hinzufügen",
+    "library.kind.repertoire": "Repertoire",
+    "library.kind.manual": "Lehrbücher",
+    "library.kind.technique": "Technik",
+    "library.kind.theory": "Theorie",
+    "lessons.empty": "Keine Stunden geplant.",
+    "lessons.addRecurrence": "Lehrer hinzufügen",
+    "profile.settings": "Einstellungen",
+    "profile.export": "Daten exportieren",
+    "profile.import": "Daten importieren",
+    "profile.wipe": "Alle Daten löschen",
+  },
+};
+
+interface I18nCtx {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (key: string) => string;
+}
+
+const Ctx = createContext<I18nCtx | null>(null);
+
+export function I18nProvider({ children, initial = "en" }: { children: ReactNode; initial?: Lang }) {
+  const [lang, setLangState] = useState<Lang>(initial);
+
+  useEffect(() => {
+    setLangState(initial);
+  }, [initial]);
+
+  const setLang = (l: Lang) => setLangState(l);
+  const t = (key: string) => dicts[lang][key] ?? key;
+
+  return <Ctx.Provider value={{ lang, setLang, t }}>{children}</Ctx.Provider>;
+}
+
+export function useI18n() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useI18n must be used inside I18nProvider");
+  return ctx;
+}
+
+export const SUPPORTED_LANGS: { code: Lang; label: string; flag: string }[] = [
+  { code: "en", label: "English", flag: "EN" },
+  { code: "it", label: "Italiano", flag: "IT" },
+  { code: "es", label: "Español", flag: "ES" },
+  { code: "de", label: "Deutsch", flag: "DE" },
+];
