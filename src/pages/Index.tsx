@@ -1,16 +1,41 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/db";
+import { I18nProvider } from "@/lib/i18n";
+import Onboarding from "@/components/onboarding/Onboarding";
+import AppShell from "@/components/AppShell";
+import Diary from "./Diary";
+import Library from "./Library";
+import Lessons from "./Lessons";
+import Profile from "./Profile";
+import { Routes, Route } from "react-router-dom";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const profile = useLiveQuery(() => db.profile.get("me"));
+  // useLiveQuery returns undefined while loading; null/missing = needs onboarding
+  if (profile === undefined) {
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground italic">Opening your taccuino…</div>;
+  }
+
+  if (!profile?.onboarded) {
+    return (
+      <I18nProvider initial="en">
+        <Onboarding onDone={() => { /* live query refreshes automatically */ }} />
+      </I18nProvider>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <I18nProvider initial={profile.lang}>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route index element={<Diary />} />
+          <Route path="library" element={<Library />} />
+          <Route path="lessons" element={<Lessons />} />
+          <Route path="profile" element={<Profile />} />
+        </Route>
+      </Routes>
+    </I18nProvider>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
