@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BpmCoupler } from "./BpmCoupler";
+import { LayersEditor } from "./LayersEditor";
 import { cn } from "@/lib/utils";
 
 export interface DraftSegment {
@@ -12,6 +13,7 @@ export interface DraftSegment {
   targetBpm?: number;
   noteVal?: NoteVal;
   confidence: number; // 1-5
+  layers: string[];
 }
 
 interface Props {
@@ -25,7 +27,7 @@ export function SegmentsEditor({ segments, onChange }: Props) {
   const addSegment = () => {
     const trimmed = draftLabel.trim();
     if (!trimmed) return;
-    onChange([...segments, { label: trimmed, confidence: 3 }]);
+    onChange([...segments, { label: trimmed, confidence: 3, layers: [] }]);
     setDraftLabel("");
   };
 
@@ -55,54 +57,69 @@ export function SegmentsEditor({ segments, onChange }: Props) {
 
       {segments.length > 0 && (
         <ul className="space-y-2">
-          {segments.map((s, i) => (
-            <li key={i} className="paper-card p-3 space-y-3">
-              <div className="flex items-center gap-2">
-                <Input
-                  value={s.label}
-                  onChange={(e) => update(i, { label: e.target.value })}
-                  className="border-0 bg-transparent focus-visible:ring-0 font-serif text-lg px-0 h-8"
-                />
-                <button
-                  type="button"
-                  onClick={() => remove(i)}
-                  className="text-muted-foreground hover:text-destructive p-1"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <BpmCoupler
-                bpm={s.targetBpm}
-                noteVal={s.noteVal}
-                onChange={(next) => update(i, next)}
-                label="Segment target"
-              />
-
-              <div className="flex items-center gap-1">
-                <span className="text-xs uppercase tracking-wider text-muted-foreground mr-2">
-                  Confidence
-                </span>
-                {[1, 2, 3, 4, 5].map((n) => (
+          {segments.map((s, i) => {
+            const labelInvalid = s.label.trim().length === 0;
+            return (
+              <li key={i} className="paper-card p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={s.label}
+                    onChange={(e) => update(i, { label: e.target.value })}
+                    className={cn(
+                      "border-0 bg-transparent focus-visible:ring-0 font-serif text-lg px-0 h-8",
+                      labelInvalid && "text-destructive"
+                    )}
+                  />
                   <button
-                    key={n}
                     type="button"
-                    onClick={() => update(i, { confidence: n })}
-                    className="p-0.5"
+                    onClick={() => remove(i)}
+                    className="text-muted-foreground hover:text-destructive p-1"
                   >
-                    <Star
-                      className={cn(
-                        "h-5 w-5 transition-colors",
-                        n <= s.confidence
-                          ? "fill-primary text-primary"
-                          : "text-muted-foreground/40"
-                      )}
-                    />
+                    <X className="h-4 w-4" />
                   </button>
-                ))}
-              </div>
-            </li>
-          ))}
+                </div>
+                {labelInvalid && (
+                  <p className="text-xs text-destructive -mt-1">Label required</p>
+                )}
+
+                <BpmCoupler
+                  bpm={s.targetBpm}
+                  noteVal={s.noteVal}
+                  onChange={(next) => update(i, next)}
+                  label="Segment target"
+                />
+
+                <LayersEditor
+                  layers={s.layers}
+                  onChange={(layers) => update(i, { layers })}
+                  label="Segment layers"
+                />
+
+                <div className="flex items-center gap-1">
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground mr-2">
+                    Confidence
+                  </span>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => update(i, { confidence: n })}
+                      className="p-0.5"
+                    >
+                      <Star
+                        className={cn(
+                          "h-5 w-5 transition-colors",
+                          n <= s.confidence
+                            ? "fill-primary text-primary"
+                            : "text-muted-foreground/40"
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
