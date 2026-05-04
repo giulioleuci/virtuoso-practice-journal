@@ -30,6 +30,8 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   kind: LibraryKind;
+  /** When provided, the sheet opens in edit mode prefilled with this item. */
+  item?: LibraryItem | null;
 }
 
 const STATUSES: { key: PracticeStatus; label: string }[] = [
@@ -45,8 +47,22 @@ const emptyMastery: MasteryState = {
   compositional: 0,
 };
 
-export function NewLibraryItemSheet({ open, onOpenChange, kind }: Props) {
+const BPM_MIN = 20;
+const BPM_MAX = 400;
+
+const isValidBpm = (n: number | undefined) =>
+  n === undefined || (Number.isFinite(n) && n >= BPM_MIN && n <= BPM_MAX);
+
+export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
+  const isEdit = !!item?.id;
+  const editingKind = item?.kind ?? kind;
+
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
+  const existingSegments = useLiveQuery(
+    () => (item?.id ? db.segments.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
+    [item?.id]
+  );
+
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
@@ -64,12 +80,46 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind }: Props) {
 
   const [mastery, setMastery] = useState<MasteryState>(emptyMastery);
 
-  // Default subject when sheet opens / subjects load
+  // Default subject when sheet opens / subjects load (create mode)
   useEffect(() => {
-    if (open && subjects?.length && subjectId === undefined) {
+    if (open && !isEdit && subjects?.length && subjectId === undefined) {
       setSubjectId(subjects[0].id);
     }
-  }, [open, subjects, subjectId]);
+  }, [open, subjects, subjectId, isEdit]);
+
+  // Prefill on edit-open
+  useEffect(() => {
+    if (!open) return;
+    if (isEdit && item) {
+      setSubjectId(item.subjectId);
+      setTitle(item.title ?? "");
+      setComposer(item.composer ?? "");
+      setStatus(item.status ?? "in_study");
+      setTargetBpm(item.targetBpm);
+      setStartBpm(item.startBpm);
+      setNoteVal(item.noteVal);
+      setLayers(item.layers ?? []);
+      setTotalExercises(item.totalExercises);
+      setCurrentExercise(item.currentExercise ?? 1);
+      setMastery(item.mastery ?? emptyMastery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isEdit, item?.id]);
+
+  // Hydrate segments from DB on edit
+  useEffect(() => {
+    if (open && isEdit && existingSegments) {
+      setSegments(
+        existingSegments.map((s) => ({
+          label: s.label,
+          targetBpm: s.targetBpm,
+          noteVal: s.noteVal,
+          confidence: s.confidence,
+          layers: s.layers ?? [],
+        }))
+      );
+    }
+  }, [open, isEdit, existingSegments]);
 
   // Reset when closed
   useEffect(() => {
@@ -90,64 +140,106 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind }: Props) {
   }, [open]);
 
   const titleLabel = useMemo(() => {
-    switch (kind) {
+    if (isEdit) return "Edit item";
+    switch (editingKind) {
       case "repertoire": return "New piece";
       case "manual":     return "New manual";
       case "technique":  return "New technique";
       case "theory":     return "New theory topic";
     }
-  }, [kind]);
+  }, [editingKind, isEdit]);
 
-  const canSave = title.trim().length > 0 && subjectId !== undefined;
+  // ---- Validation ----
+  const errors = useMemo(() => {
+    const e: string[] = [];
+    if (!title.trim()) e.push("Title is required");
+    if (subjectId === undefined) e.push("Pick a subject");
+
+    if (!isValidBpm(targetBpm)) e.push(`Target BPM must be ${BPM_MIN}–${BPM_MAX}`);
+    if (!isValidBpm(startBpm)) e.push(`Start BPM must be ${BPM_MIN}–${BPM_MAX}`);
+
+    if (editingKind === "technique" && startBpm !== undefined && targetBpm !== undefined && startBpm > targetBpm) {
+      e.push("Start BPM cannot exceed target BPM");
+    }
+
+    if (editingKind === "manual") {
+      if (currentExercise === undefined || currentExercise < 1) e.push("Current exercise required (≥ 1)");
+      if (totalExercises !== undefined && totalExercises < 1) e.push("Total exercises must be ≥ 1");
+      if (
+        currentExercise !== undefined &&
+        totalExercises !== undefined &&
+        currentExercise > totalExercises
+      ) {
+        e.push("Current cannot exceed total");
+      }
+    }
+
+    if ((editingKind === "repertoire" || editingKind === "manual") && segments.length) {
+      if (segments.some((s) => !s.label.trim())) e.push("Every segment needs a label");
+      if (segments.some((s) => !isValidBpm(s.targetBpm))) e.push("Segment BPM out of range");
+    }
+
+    return e;
+  }, [title, subjectId, targetBpm, startBpm, editingKind, currentExercise, totalExercises, segments]);
+
+  const canSave = errors.length === 0;
 
   const save = async () => {
     if (!canSave || subjectId === undefined) return;
     const now = Date.now();
     const base: LibraryItem = {
       subjectId,
-      kind,
+      kind: editingKind,
       title: title.trim(),
-      createdAt: now,
+      createdAt: item?.createdAt ?? now,
     };
 
-    if (kind === "repertoire") {
+    if (editingKind === "repertoire") {
       base.composer = composer.trim() || undefined;
       base.status = status;
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
       base.layers = layers;
-    } else if (kind === "manual") {
+    } else if (editingKind === "manual") {
       base.composer = composer.trim() || undefined;
       base.totalExercises = totalExercises;
       base.currentExercise = currentExercise;
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
-    } else if (kind === "technique") {
+    } else if (editingKind === "technique") {
       base.startBpm = startBpm;
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
       base.layers = layers;
-    } else if (kind === "theory") {
+    } else if (editingKind === "theory") {
       base.mastery = mastery;
     }
 
-    const itemId = (await db.library.add(base)) as number;
+    let itemId: number;
+    if (isEdit && item?.id) {
+      await db.library.put({ ...base, id: item.id });
+      itemId = item.id;
+      // Replace segments wholesale for simplicity & correctness
+      await db.segments.where("itemId").equals(itemId).delete();
+    } else {
+      itemId = (await db.library.add(base)) as number;
+    }
 
-    if ((kind === "repertoire" || kind === "manual") && segments.length) {
+    if ((editingKind === "repertoire" || editingKind === "manual") && segments.length) {
       await db.segments.bulkAdd(
         segments.map((s) => ({
           itemId,
-          label: s.label,
+          label: s.label.trim(),
           targetBpm: s.targetBpm,
           noteVal: s.noteVal,
           confidence: s.confidence,
-          layers: [],
+          layers: s.layers ?? [],
           createdAt: now,
         }))
       );
     }
 
-    toast.success(`${title.trim()} added to library`);
+    toast.success(isEdit ? `${title.trim()} updated` : `${title.trim()} added to library`);
     onOpenChange(false);
   };
 
@@ -196,11 +288,11 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind }: Props) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={
-                kind === "repertoire"
+                editingKind === "repertoire"
                   ? "Sonata in C major, K.545…"
-                  : kind === "manual"
+                  : editingKind === "manual"
                   ? "Hanon — The Virtuoso Pianist"
-                  : kind === "technique"
+                  : editingKind === "technique"
                   ? "C major scale, hands together"
                   : "Secondary dominants"
               }
@@ -209,23 +301,23 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind }: Props) {
             />
           </div>
 
-          {/* Composer (repertoire/manual) */}
-          {(kind === "repertoire" || kind === "manual") && (
+          {/* Composer */}
+          {(editingKind === "repertoire" || editingKind === "manual") && (
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                {kind === "manual" ? "Author" : "Composer"}
+                {editingKind === "manual" ? "Author" : "Composer"}
               </Label>
               <Input
                 value={composer}
                 onChange={(e) => setComposer(e.target.value)}
-                placeholder={kind === "manual" ? "Hanon" : "Mozart"}
+                placeholder={editingKind === "manual" ? "Hanon" : "Mozart"}
                 className="bg-card"
               />
             </div>
           )}
 
-          {/* Repertoire-specific */}
-          {kind === "repertoire" && (
+          {/* Repertoire */}
+          {editingKind === "repertoire" && (
             <>
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -259,8 +351,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind }: Props) {
             </>
           )}
 
-          {/* Manual-specific */}
-          {kind === "manual" && (
+          {/* Manual */}
+          {editingKind === "manual" && (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -302,8 +394,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind }: Props) {
             </>
           )}
 
-          {/* Technique-specific */}
-          {kind === "technique" && (
+          {/* Technique */}
+          {editingKind === "technique" && (
             <>
               <BpmCoupler
                 bpm={startBpm}
@@ -321,8 +413,20 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind }: Props) {
             </>
           )}
 
-          {/* Theory-specific */}
-          {kind === "theory" && <MasterySliders value={mastery} onChange={setMastery} />}
+          {/* Theory */}
+          {editingKind === "theory" && <MasterySliders value={mastery} onChange={setMastery} />}
+
+          {/* Validation summary */}
+          {errors.length > 0 && (
+            <div className="paper-card p-3 border border-destructive/30">
+              <p className="text-xs uppercase tracking-wider text-destructive mb-1">
+                Fix to save
+              </p>
+              <ul className="text-sm text-destructive/90 list-disc pl-5 space-y-0.5">
+                {errors.map((e) => <li key={e}>{e}</li>)}
+              </ul>
+            </div>
+          )}
         </div>
 
         <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
@@ -331,7 +435,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind }: Props) {
               Cancel
             </Button>
             <Button onClick={save} disabled={!canSave} className="flex-1">
-              Save to library
+              {isEdit ? "Save changes" : "Save to library"}
             </Button>
           </div>
         </SheetFooter>
