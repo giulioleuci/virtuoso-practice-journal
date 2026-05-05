@@ -420,6 +420,9 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="never">End of school year (Jun 30)</SelectItem>
+                      <SelectItem value="nextLesson" disabled={!nextLessonDate}>
+                        Until next lesson{nextLessonDate ? ` (${nextLessonDate})` : " — none scheduled"}
+                      </SelectItem>
                       <SelectItem value="date">On a date</SelectItem>
                       <SelectItem value="count">After N occurrences</SelectItem>
                     </SelectContent>
