@@ -1,16 +1,22 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Task } from "@/lib/db";
+import { db, type Task, type Session } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { Plus, CheckCircle2, Circle, ListChecks, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
+import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { PracticeMode } from "@/components/diary/PracticeMode";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { pickQuote } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function todayKey() {
   const d = new Date();
