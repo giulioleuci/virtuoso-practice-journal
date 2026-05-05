@@ -28,15 +28,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
     () => (subjId ? db.library.where("subjectId").equals(subjId).toArray() : Promise.resolve([])),
     [subjId]
   );
-  const helpReqs = useLiveQuery(
-    () => db.helpRequests.toArray().then((rs) => rs.filter((r) => !r.resolved)),
-    []
-  );
-  const helpForSubject = useMemo(() => {
-    if (!subjId || !library) return [];
-    const itemIds = new Set(library.map((l) => l.id));
-    return (helpReqs ?? []).filter((h) => h.itemId && itemIds.has(h.itemId));
-  }, [helpReqs, library, subjId]);
 
   const existingAssignments = useLiveQuery(
     () => (lesson?.id ? db.assignments.where("lessonId").equals(lesson.id).toArray() : Promise.resolve([])),
