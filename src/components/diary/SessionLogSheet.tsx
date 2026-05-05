@@ -94,6 +94,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
         date: task.date,
         bpmReached: bpm,
         noteVal,
+        reps,
+        confidence,
         quality,
         notes: notes.trim() || undefined,
         layersUsed,
