@@ -46,6 +46,7 @@ export default function Library() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
   const allHelp = useLiveQuery(() => db.helpRequests.toArray(), []);
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
   const items = useLiveQuery(
     () => db.library.where("kind").equals(active).toArray(),
