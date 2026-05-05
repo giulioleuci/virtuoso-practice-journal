@@ -78,7 +78,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           subjectId: subjId!,
           date,
           notes: notes.trim() || undefined,
-          piecesPlayed,
+          piecesPlayed: [],
           createdAt: Date.now(),
         })) as number;
       }
