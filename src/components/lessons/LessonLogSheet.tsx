@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Plus, X, Check, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
@@ -24,11 +24,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
   const isEdit = !!lesson?.id;
   const subjId = lesson?.subjectId ?? recurrence?.subjectId ?? subjectId;
 
-  const library = useLiveQuery(
-    () => (subjId ? db.library.where("subjectId").equals(subjId).toArray() : Promise.resolve([])),
-    [subjId]
-  );
-
   const existingAssignments = useLiveQuery(
     () => (lesson?.id ? db.assignments.where("lessonId").equals(lesson.id).toArray() : Promise.resolve([])),
     [lesson?.id]
@@ -36,7 +31,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
 
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
-  const [piecesPlayed, setPiecesPlayed] = useState<number[]>([]);
   const [assignments, setAssignments] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [recapOpen, setRecapOpen] = useState(false);
@@ -45,13 +39,10 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
     if (!open) return;
     setDate(lesson?.date ?? prefilledDate ?? new Date().toISOString().slice(0, 10));
     setNotes(lesson?.notes ?? "");
-    setPiecesPlayed(lesson?.piecesPlayed ?? []);
     setAssignments(existingAssignments?.map((a) => a.text) ?? []);
     setDraft("");
   }, [open, lesson, existingAssignments]);
 
-  const togglePiece = (id: number) =>
-    setPiecesPlayed((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const addAssignment = () => {
     const t = draft.trim();
@@ -76,7 +67,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           ...lesson,
           date,
           notes: notes.trim() || undefined,
-          piecesPlayed,
+          piecesPlayed: lesson.piecesPlayed,
         });
         lessonId = lesson.id;
         // Replace assignments wholesale
@@ -87,7 +78,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           subjectId: subjId!,
           date,
           notes: notes.trim() || undefined,
-          piecesPlayed,
+          piecesPlayed: [],
           createdAt: Date.now(),
         })) as number;
       }
@@ -128,22 +119,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
               placeholder="What was discussed, what landed, what didn't…" />
           </div>
 
-          {!!library?.length && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Pieces played</Label>
-              <div className="paper-card p-3 space-y-2">
-                {library.map((l) => (
-                  <label key={l.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={piecesPlayed.includes(l.id!)}
-                      onCheckedChange={() => togglePiece(l.id!)}
-                    />
-                    <span className="flex-1 truncate">{l.title}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">
