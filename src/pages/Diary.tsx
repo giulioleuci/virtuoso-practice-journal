@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { Plus, CheckCircle2, Circle, ListChecks, Play } from "lucide-react";
+import { Plus, CheckCircle2, Circle, ListChecks, Play, ArrowRightCircle, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
@@ -37,6 +37,21 @@ export default function Diary() {
     (acc[s.taskId] ||= [] as never).push(s as never);
     return acc;
   }, {});
+
+  const carryoverDays = profile?.carryoverDays ?? 2;
+  const carryoverFrom = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - carryoverDays);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, [carryoverDays]);
+
+  const carryoverTasks = useLiveQuery(
+    () => db.tasks
+      .where("date").between(carryoverFrom, today, true, false)
+      .filter((t) => !t.done && !t.skipped)
+      .toArray(),
+    [carryoverFrom, today]
+  );
 
   const [newOpen, setNewOpen] = useState(false);
   const [logTask, setLogTask] = useState<Task | null>(null);
