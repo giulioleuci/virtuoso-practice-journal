@@ -23,8 +23,9 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
 
   const [draft, setDraft] = useState("");
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  useEffect(() => { if (!open) { setDraft(""); setAnswers({}); } }, [open]);
+  useEffect(() => { if (!open) { setDraft(""); setAnswers({}); setExpandedId(null); } }, [open]);
 
   const addQuestion = async () => {
     if (!draft.trim()) return;
