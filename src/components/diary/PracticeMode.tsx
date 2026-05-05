@@ -41,7 +41,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
 
   // Metronome
   const [bpm, setBpm] = useState<number>(task.targetBpm ?? 80);
-  const [noteVal] = useState<NoteVal | undefined>(task.noteVal);
+  const [noteVal, setNoteVal] = useState<NoteVal | undefined>(task.noteVal);
   const [meterOn, setMeterOn] = useState(false);
   const [muted, setMuted] = useState(false);
   const [beatsPerBar, setBeatsPerBar] = useState(4);
