@@ -73,9 +73,10 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const errors = useMemo(() => {
     const e: string[] = [];
     if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push("BPM out of range (20–400)");
+    if (reps !== undefined && (reps < 0 || reps > 9999)) e.push("Reps out of range (0–9999)");
     if (needHelp && !helpText.trim()) e.push("Describe what to ask the teacher");
     return e;
-  }, [bpm, needHelp, helpText]);
+  }, [bpm, reps, needHelp, helpText]);
 
   const save = async () => {
     if (!task?.id || errors.length) return;
