@@ -118,17 +118,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
               placeholder="What was discussed, what landed, what didn't…" />
           </div>
-
-
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-              Help requests
-            </Label>
-            <Button type="button" variant="outline" className="w-full justify-start" onClick={() => setRecapOpen(true)}>
-              <HelpCircle className="h-4 w-4 mr-2" /> Open Ask the Teacher recap
-            </Button>
-          </div>
-
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Assignments</Label>
             <div className="flex gap-2">
