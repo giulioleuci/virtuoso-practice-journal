@@ -125,7 +125,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           label: s.label,
           targetBpm: s.targetBpm,
           noteVal: s.noteVal,
-          confidence: s.confidence,
           layers: s.layers ?? [],
           techniqueIds: s.techniqueIds ?? [],
         }))
@@ -246,7 +245,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           label: s.label.trim(),
           targetBpm: s.targetBpm,
           noteVal: s.noteVal,
-          confidence: s.confidence,
           layers: s.layers ?? [],
           techniqueIds: s.techniqueIds ?? [],
           createdAt: now,
