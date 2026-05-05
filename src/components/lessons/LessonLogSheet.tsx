@@ -16,9 +16,10 @@ interface Props {
   recurrence?: LessonRecurrence | null;
   subjectId?: number;
   lesson?: Lesson | null;
+  prefilledDate?: string;
 }
 
-export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, lesson }: Props) {
+export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, lesson, prefilledDate }: Props) {
   const isEdit = !!lesson?.id;
   const subjId = lesson?.subjectId ?? recurrence?.subjectId ?? subjectId;
 
@@ -50,7 +51,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
 
   useEffect(() => {
     if (!open) return;
-    setDate(lesson?.date ?? new Date().toISOString().slice(0, 10));
+    setDate(lesson?.date ?? prefilledDate ?? new Date().toISOString().slice(0, 10));
     setNotes(lesson?.notes ?? "");
     setPiecesPlayed(lesson?.piecesPlayed ?? []);
     setResolvedHelp([]);
