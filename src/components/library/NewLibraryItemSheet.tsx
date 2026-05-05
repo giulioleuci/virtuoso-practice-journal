@@ -208,18 +208,20 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       base.status = status;
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
-      base.layers = layers;
+      base.techniqueIds = techniqueIds;
     } else if (editingKind === "manual") {
       base.composer = composer.trim() || undefined;
       base.totalExercises = totalExercises;
       base.currentExercise = currentExercise;
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
+      base.techniqueIds = techniqueIds;
     } else if (editingKind === "technique") {
+      base.composer = composer.trim() || undefined;
       base.startBpm = startBpm;
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
-      base.layers = layers;
+      base.techniqueIds = techniqueIds;
     } else if (editingKind === "theory") {
       base.mastery = mastery;
     }
@@ -243,6 +245,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           noteVal: s.noteVal,
           confidence: s.confidence,
           layers: s.layers ?? [],
+          techniqueIds: s.techniqueIds ?? [],
           createdAt: now,
         }))
       );
