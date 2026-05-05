@@ -32,7 +32,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
   const [notes, setNotes] = useState("");
   const [assignments, setAssignments] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
-  const [recapOpen, setRecapOpen] = useState(false);
+  
 
   useEffect(() => {
     if (!open) return;
