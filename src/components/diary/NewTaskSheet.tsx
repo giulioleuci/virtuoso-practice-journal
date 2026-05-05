@@ -79,7 +79,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
 
   const save = async () => {
     if (errors.length) return;
-    await db.tasks.add({
+    const taskId = await db.tasks.add({
       date,
       subjectId: subjectId!,
       itemId,
@@ -90,7 +90,11 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       done: false,
       createdAt: Date.now(),
     });
+    if (prefill?.assignmentId) {
+      await db.assignments.update(prefill.assignmentId, { transformed: true });
+    }
     toast.success("Task added");
+    onCreated?.(taskId as number);
     onOpenChange(false);
   };
 
