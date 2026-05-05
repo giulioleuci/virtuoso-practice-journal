@@ -7,7 +7,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle, CalendarClock, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet } from "@/components/lessons/LessonLogSheet";
@@ -84,7 +84,7 @@ export default function Lessons() {
     setDelLessonId(null);
   };
 
-  const pendingAssignments = (assignments ?? []).filter((a) => !a.transformed);
+  const pendingAssignments = (assignments ?? []).filter((a) => !a.transformed && !a.ignored);
 
   // Auto-generated upcoming schedule from teacher recurrences
   const upcoming = useMemo(() => {
@@ -184,6 +184,17 @@ export default function Lessons() {
                     >
                       Make task
                     </Button>
+                    <button
+                      onClick={async () => {
+                        if (!a.id) return;
+                        await db.assignments.update(a.id, { ignored: true });
+                        toast("Ignored");
+                      }}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent shrink-0"
+                      aria-label="Ignore"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </li>
                 );
               })}
