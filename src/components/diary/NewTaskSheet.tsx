@@ -164,6 +164,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       title: title.trim(),
       targetBpm: bpm,
       noteVal,
+      layers,
+      techniqueIds,
       done: false,
       createdAt: now,
     };
