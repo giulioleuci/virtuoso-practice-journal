@@ -59,6 +59,8 @@ export default function Diary() {
   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
   const [detailSession, setDetailSession] = useState<Session | null>(null);
   const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
+  const [carryPage, setCarryPage] = useState(0);
+  const CARRY_PAGE_SIZE = 4;
 
   const dateLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long", month: "long", day: "numeric",
