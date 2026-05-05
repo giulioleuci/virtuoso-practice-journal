@@ -87,6 +87,8 @@ export interface Task {
   title: string;
   targetBpm?: number;
   noteVal?: NoteVal;
+  layers?: string[];             // selected practice layers
+  techniqueIds?: number[];       // selected techniques
   done: boolean;
   skipped?: boolean;
   recurrenceTaskId?: number;     // points to template task id
@@ -104,6 +106,8 @@ export interface Session {
   quality?: SessionQuality;
   confidence?: number;
   notes?: string;
+  layersUsed?: string[];
+  techniquesUsed?: number[];
   createdAt: number;
 }
 
