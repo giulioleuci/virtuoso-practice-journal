@@ -15,7 +15,14 @@ const Index = () => {
   const profile = useLiveQuery(async () => (await db.profile.get("me")) ?? null);
   // undefined = loading; null = no profile yet
   if (profile === undefined) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground italic">Opening your taccuino…</div>;
+    return (
+      <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4">
+        <div className="paper-skeleton h-24 w-full" />
+        <div className="paper-skeleton h-32 w-full" />
+        <div className="paper-skeleton h-20 w-full" />
+        <div className="paper-skeleton h-20 w-2/3" />
+      </div>
+    );
   }
 
   if (!profile || !profile.onboarded) {
