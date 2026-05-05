@@ -20,6 +20,8 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
   const helpRequests = useLiveQuery(() => db.helpRequests.toArray());
   const items = useLiveQuery(() => db.library.toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
+  const tasks = useLiveQuery(() => db.tasks.toArray());
+  const taskById = useMemo(() => new Map((tasks ?? []).map((t) => [t.id!, t])), [tasks]);
 
   const [tab, setTab] = useState<Tab>("open");
   const [answeringId, setAnsweringId] = useState<number | null>(null);
