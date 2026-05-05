@@ -222,10 +222,6 @@ export default function Library() {
                   <div className="mt-3 pt-3 border-t border-border/60 space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground">
                       <span>{segs.length} segment{segs.length === 1 ? "" : "s"}</span>
-                      <span className="inline-flex items-center gap-0.5">
-                        <Star className="h-3 w-3 fill-primary text-primary" />
-                        <span className="tabular-nums">{avgConfidence.toFixed(1)}/5</span>
-                      </span>
                     </div>
                     <ul className="space-y-1">
                       {segs.slice(0, 3).map((s) => (
@@ -237,17 +233,6 @@ export default function Library() {
                                 {s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}={s.targetBpm}
                               </span>
                             )}
-                            <span className="inline-flex">
-                              {[1, 2, 3, 4, 5].map((n) => (
-                                <Star
-                                  key={n}
-                                  className={cn(
-                                    "h-2.5 w-2.5",
-                                    n <= s.confidence
-                                      ? "fill-primary text-primary"
-                                      : "text-muted-foreground/30"
-                                  )}
-                                />
                               ))}
                             </span>
                           </span>
