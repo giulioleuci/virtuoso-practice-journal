@@ -160,6 +160,14 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                     <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Note</dt>
                     <dd>{session.noteVal ?? "—"}</dd>
                   </div>
+                  <div>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Reps</dt>
+                    <dd className="tabular-nums">{session.reps ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Confidence</dt>
+                    <dd className="tabular-nums">{session.confidence != null ? `${session.confidence}/5` : "—"}</dd>
+                  </div>
                 </dl>
 
                 {session.notes && (
