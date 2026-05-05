@@ -121,9 +121,17 @@ export default function History() {
             {KINDS.map((k) => <SelectItem key={k} value={k} className="capitalize">{k === "all" ? "All kinds" : k}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); }} placeholder="From" />
-        <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); }} placeholder="To" />
+        <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("from", e.target.value) : p.delete("from"); return p; }); }} placeholder="From" />
+        <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("to", e.target.value) : p.delete("to"); return p; }); }} placeholder="To" />
       </div>
+      {(from || to) && (
+        <button
+          onClick={() => { setFrom(""); setTo(""); setSearchParams({}); }}
+          className="text-xs text-primary hover:underline"
+        >
+          Clear date filter ({from || "…"} → {to || "…"})
+        </button>
+      )}
 
       <div className="flex justify-end">
         <Button size="sm" variant="ghost" onClick={() => setSortDir((d) => d === "newest" ? "oldest" : "newest")}>
