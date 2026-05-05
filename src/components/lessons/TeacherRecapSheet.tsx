@@ -186,7 +186,8 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                               </button>
                             )}
                           </li>
-                        ))}
+                          );
+                        })}
                       </ul>
                     </div>
                   ))}
