@@ -110,9 +110,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           }))
         );
       }
-      for (const hid of resolvedHelp) {
-        await db.helpRequests.update(hid, { resolved: true });
-      }
     });
     toast.success(isEdit ? "Lesson updated" : "Lesson logged");
     onOpenChange(false);
