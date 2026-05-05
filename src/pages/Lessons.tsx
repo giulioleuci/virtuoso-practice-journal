@@ -290,11 +290,25 @@ export default function Lessons() {
                                       <span className="text-[10px] uppercase tracking-wider text-primary truncate max-w-[40%]">
                                         → {linkedTask?.title ?? "scheduled"}
                                       </span>
-                                    ) : (
+                                    ) : a.ignored ? (
                                       <button
-                                        onClick={() => setTaskPrefill({ subjectId: l.subjectId, title: a.text, assignmentId: a.id })}
-                                        className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
-                                      >Make task</button>
+                                        onClick={async () => { if (a.id) { await db.assignments.update(a.id, { ignored: false }); toast("Restored"); } }}
+                                        className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary italic"
+                                      >Ignored · restore</button>
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={() => setTaskPrefill({ subjectId: l.subjectId, title: a.text, assignmentId: a.id })}
+                                          className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
+                                        >Make task</button>
+                                        <button
+                                          onClick={async () => { if (a.id) { await db.assignments.update(a.id, { ignored: true }); toast("Ignored"); } }}
+                                          className="text-muted-foreground hover:text-destructive"
+                                          aria-label="Ignore"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      </>
                                     )}
                                   </li>
                                 );
