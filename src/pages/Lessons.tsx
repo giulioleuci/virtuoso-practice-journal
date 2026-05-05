@@ -214,6 +214,8 @@ export default function Lessons() {
         lesson={editingLesson}
       />
 
+      <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />
+
       <NewTaskSheet
         open={taskPrefill !== null}
         onOpenChange={(o) => !o && setTaskPrefill(null)}
