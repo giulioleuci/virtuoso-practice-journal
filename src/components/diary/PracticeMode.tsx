@@ -25,20 +25,50 @@ function formatTime(ms: number) {
 }
 
 export function PracticeMode({ task, onClose, onFinish }: Props) {
-  // Timer
-  const [running, setRunning] = useState(false);
+  // Timer — auto-starts and uses wall-clock so backgrounding doesn't lose time
+  const [running, setRunning] = useState(true);
   const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef<number | null>(null);
+  const startRef = useRef<number | null>(Date.now());
+  const baseRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!running) return;
-    startRef.current = Date.now() - elapsed;
-    const id = setInterval(() => {
-      if (startRef.current != null) setElapsed(Date.now() - startRef.current);
-    }, 100);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!running) {
+      if (startRef.current != null) {
+        baseRef.current += Date.now() - startRef.current;
+        startRef.current = null;
+        setElapsed(baseRef.current);
+      }
+      return;
+    }
+    startRef.current = Date.now();
+    const tick = () => {
+      if (startRef.current != null) setElapsed(baseRef.current + (Date.now() - startRef.current));
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    const onVis = () => tick();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [running]);
+
+  // Screen wake lock so the device doesn't sleep mid-practice
+  useEffect(() => {
+    let wl: { release: () => Promise<void> } | null = null;
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> } };
+    const acquire = async () => {
+      try { if (nav.wakeLock) wl = await nav.wakeLock.request("screen"); } catch { /* ignore */ }
+    };
+    acquire();
+    const onVis = () => { if (document.visibilityState === "visible" && !wl) acquire(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      wl?.release().catch(() => undefined);
+    };
+  }, []);
 
   // Metronome
   const [bpm, setBpm] = useState<number>(task.targetBpm ?? 80);
