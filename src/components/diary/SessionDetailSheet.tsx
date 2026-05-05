@@ -220,6 +220,26 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                 />
 
                 <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Repetitions</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={9999}
+                    value={reps ?? ""}
+                    onChange={(e) => setReps(e.target.value === "" ? undefined : Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Confidence</Label>
+                    <span className="text-sm tabular-nums">{confidence}/5</span>
+                  </div>
+                  <Slider min={1} max={5} step={1} value={[confidence]} onValueChange={(v) => setConfidence(v[0])} />
+                </div>
+
+                <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Quality</Label>
                   <div className="grid grid-cols-3 gap-2">
                     {QUALITIES.map((q) => (
