@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Lesson, type LessonRecurrence } from "@/lib/db";
+import { db, buildLessonSnapshot, type Lesson, type LessonRecurrence } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +59,12 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
 
   const save = async () => {
     if (errors.length) return;
+    const piecePlayedIds = lesson?.piecesPlayed ?? [];
+    const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(
+      subjId!,
+      recurrence ?? null,
+      piecePlayedIds,
+    );
     await db.transaction("rw", db.lessons, db.assignments, db.helpRequests, async () => {
       let lessonId: number;
       if (isEdit && lesson?.id) {
@@ -67,9 +73,11 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           date,
           notes: notes.trim() || undefined,
           piecesPlayed: lesson.piecesPlayed,
+          // Only set snapshot if it wasn't already captured (preserve original history)
+          snapshot: lesson.snapshot ?? snapshot,
+          piecesPlayedTitles: lesson.piecesPlayedTitles ?? piecesPlayedTitles,
         });
         lessonId = lesson.id;
-        // Replace assignments wholesale
         await db.assignments.where("lessonId").equals(lessonId).delete();
       } else {
         lessonId = (await db.lessons.add({
@@ -78,6 +86,8 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           date,
           notes: notes.trim() || undefined,
           piecesPlayed: [],
+          snapshot,
+          piecesPlayedTitles,
           createdAt: Date.now(),
         })) as number;
       }

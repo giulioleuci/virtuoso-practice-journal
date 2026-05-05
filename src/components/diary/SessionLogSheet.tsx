@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { db, type NoteVal, type SessionQuality, type Task } from "@/lib/db";
+import { db, buildSessionSnapshot, type NoteVal, type SessionQuality, type Task } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -74,6 +74,13 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const save = async () => {
     if (!task?.id || errors.length) return;
     const now = Date.now();
+    const snapshot = await buildSessionSnapshot({
+      ...task,
+      layers: layersUsed,
+      techniqueIds: techniquesUsed,
+      targetBpm: bpm ?? task.targetBpm,
+      noteVal: noteVal ?? task.noteVal,
+    });
     await db.transaction("rw", db.tasks, db.sessions, db.helpRequests, async () => {
       const sessionId = await db.sessions.add({
         taskId: task.id!,
@@ -84,6 +91,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
         notes: notes.trim() || undefined,
         layersUsed,
         techniquesUsed,
+        snapshot,
         createdAt: now,
       });
       await db.tasks.update(task.id!, { done: true });
