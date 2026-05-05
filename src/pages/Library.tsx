@@ -8,6 +8,7 @@ import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, Star, MessageC
 import { Button } from "@/components/ui/button";
 import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
+import { BpmSparkline } from "@/components/library/BpmSparkline";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,11 +21,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-const KINDS: { key: LibraryKind; icon: typeof BookOpen; tKey: string }[] = [
-  { key: "repertoire", icon: Music2, tKey: "library.kind.repertoire" },
-  { key: "manual",     icon: BookOpen, tKey: "library.kind.manual" },
-  { key: "technique",  icon: Activity, tKey: "library.kind.technique" },
-  { key: "theory",     icon: Brain, tKey: "library.kind.theory" },
+const KINDS: { key: LibraryKind; icon: typeof BookOpen; tKey: string; tint: string }[] = [
+  { key: "repertoire", icon: Music2, tKey: "library.kind.repertoire", tint: "hsl(var(--key-terracotta))" },
+  { key: "manual",     icon: BookOpen, tKey: "library.kind.manual",   tint: "hsl(var(--key-gold))" },
+  { key: "technique",  icon: Activity, tKey: "library.kind.technique", tint: "hsl(var(--key-sage))" },
+  { key: "theory",     icon: Brain, tKey: "library.kind.theory",      tint: "hsl(var(--key-blue))" },
 ];
 
 const NOTE_GLYPH: Record<string, string> = {
