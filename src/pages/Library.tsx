@@ -140,6 +140,24 @@ export default function Library() {
                         {it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}
                       </div>
                     )}
+                    {(() => {
+                      const itemHelp = (allHelp ?? []).filter((h) => h.itemId === it.id);
+                      const open = itemHelp.filter((h) => !h.resolved).length;
+                      return (
+                        <button
+                          onClick={() => setHelpItem(it)}
+                          className="relative p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent"
+                          aria-label="Ask the teacher"
+                        >
+                          <MessageCircleQuestion className="h-4 w-4" />
+                          {itemHelp.length > 0 && (
+                            <span className={`absolute -top-0.5 -right-0.5 text-[9px] tabular-nums rounded-full px-1 ${open ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                              {itemHelp.length}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })()}
                     <button
                       onClick={() => openEdit(it)}
                       className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
