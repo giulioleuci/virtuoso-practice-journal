@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { X, Play, Pause, RotateCcw, Volume2, VolumeX, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BpmCoupler } from "@/components/library/BpmCoupler";
 
 interface Props {
   task: Task;
@@ -41,7 +42,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
 
   // Metronome
   const [bpm, setBpm] = useState<number>(task.targetBpm ?? 80);
-  const [noteVal] = useState<NoteVal | undefined>(task.noteVal);
+  const [noteVal, setNoteVal] = useState<NoteVal | undefined>(task.noteVal);
   const [meterOn, setMeterOn] = useState(false);
   const [muted, setMuted] = useState(false);
   const [beatsPerBar, setBeatsPerBar] = useState(4);
@@ -50,21 +51,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
   const ctxRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<number | null>(null);
 
-  // Tap-tempo
-  const tapsRef = useRef<number[]>([]);
-  const tap = () => {
-    const now = performance.now();
-    tapsRef.current = [...tapsRef.current.filter((t) => now - t < 2500), now];
-    if (tapsRef.current.length >= 2) {
-      const diffs: number[] = [];
-      for (let i = 1; i < tapsRef.current.length; i++) {
-        diffs.push(tapsRef.current[i] - tapsRef.current[i - 1]);
-      }
-      const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
-      const next = Math.round(60000 / avg);
-      if (next >= 30 && next <= 280) setBpm(next);
-    }
-  };
+  // Tap-tempo removed
 
   const ensureCtx = () => {
     if (!ctxRef.current) {
@@ -260,10 +247,10 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground mr-1">Beats/bar</span>
-              {[2, 3, 4, 6].map((n) => (
+              {[1, 2, 3, 4, 6].map((n) => (
                 <button
                   key={n}
                   onClick={() => setBeatsPerBar(n)}
@@ -278,9 +265,24 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
                 </button>
               ))}
             </div>
-            <Button variant="outline" size="sm" onClick={tap}>
-              Tap tempo
-            </Button>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground mr-1">Note</span>
+              {(["half","quarter","eighth","sixteenth"] as NoteVal[]).map((nv) => (
+                <button
+                  key={nv}
+                  onClick={() => setNoteVal(nv)}
+                  className={cn(
+                    "h-8 w-8 rounded-lg text-lg leading-none",
+                    noteVal === nv
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground hover:bg-accent"
+                  )}
+                  title={nv}
+                >
+                  {NOTE_GLYPH[nv]}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
