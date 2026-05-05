@@ -208,6 +208,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           </div>
         </div>
       </SheetContent>
+      <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />
     </Sheet>
   );
 }
