@@ -58,7 +58,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   const [recDays, setRecDays] = useState<number[]>([new Date(date).getDay()]);
   const [everyX, setEveryX] = useState(2);
   const [startDate, setStartDate] = useState(date);
-  const [endMode, setEndMode] = useState<"never" | "date" | "count">("never");
+  const [endMode, setEndMode] = useState<"never" | "nextLesson" | "date" | "count">("never");
   const [endDate, setEndDate] = useState("");
   const [occurrences, setOccurrences] = useState(10);
 
@@ -118,6 +118,42 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       .map((t) => ({ value: t.id!, label: t.name })),
     [allTechniques, subjectId]
   );
+
+  // Next lesson date for the selected subject (strictly after startDate)
+  const lessons = useLiveQuery(() => db.lessons.toArray(), []);
+  const lessonRecurrences = useLiveQuery(() => db.recurrences.toArray(), []);
+  const nextLessonDate = useMemo(() => {
+    if (!subjectId) return undefined;
+    const candidates: string[] = [];
+    for (const l of lessons ?? []) {
+      if (l.subjectId === subjectId && l.date > startDate) candidates.push(l.date);
+    }
+    // Also project upcoming dates from recurrences
+    for (const r of lessonRecurrences ?? []) {
+      if (r.subjectId !== subjectId) continue;
+      // simple weekly/biweekly projection within a year
+      const start = new Date(startDate);
+      for (let i = 1; i <= 365; i++) {
+        const d = new Date(start);
+        d.setDate(d.getDate() + i);
+        if (d.getDay() !== r.dayOfWeek) continue;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        if (r.endDate && key > r.endDate) break;
+        if (r.frequency === "biweekly") {
+          const weeks = Math.floor((d.getTime() - new Date(r.startDate).getTime()) / (7 * 86400000));
+          if (weeks % 2 !== 0) continue;
+        } else if (r.frequency === "monthly") {
+          // approx every 4 weeks from startDate
+          const days = Math.floor((d.getTime() - new Date(r.startDate).getTime()) / 86400000);
+          if (days % 28 !== 0) continue;
+        }
+        candidates.push(key);
+        break;
+      }
+    }
+    candidates.sort();
+    return candidates[0];
+  }, [lessons, lessonRecurrences, subjectId, startDate]);
 
   const recurrence: TaskRecurrence | undefined = useMemo(() => {
     if (!repeat) return undefined;
