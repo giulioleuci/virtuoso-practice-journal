@@ -4,7 +4,7 @@ import { db, type HelpRequest } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, HelpCircle, MessageSquareQuote, ChevronDown, ChevronRight } from "lucide-react";
+import { CheckCircle2, HelpCircle, MessageSquareQuote, ChevronDown, ChevronRight, History as HistoryIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
