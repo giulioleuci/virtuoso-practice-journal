@@ -26,6 +26,10 @@ export default function Lessons() {
   const subjects = useLiveQuery(() => db.subjects.toArray());
   const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().limit(20).toArray());
   const assignments = useLiveQuery(() => db.assignments.toArray());
+  const openHelp = useLiveQuery(() => db.helpRequests.where("resolved").equals(0 as never).count().catch(() => 0));
+  const openHelpCount = useLiveQuery(async () => (await db.helpRequests.toArray()).filter((h) => !h.resolved).length);
+
+  const [recapOpen, setRecapOpen] = useState(false);
 
   const [recOpen, setRecOpen] = useState(false);
   const [editingRec, setEditingRec] = useState<LessonRecurrence | null>(null);
@@ -76,9 +80,17 @@ export default function Lessons() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="font-serif text-3xl">{t("nav.lessons")}</h2>
-        <Button size="sm" variant="ghost" onClick={openNew}>
-          <Plus className="h-4 w-4 mr-1" /> {t("lessons.addRecurrence")}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="ghost" onClick={() => setRecapOpen(true)}>
+            <HelpCircle className="h-4 w-4 mr-1" /> Recap
+            {openHelpCount ? (
+              <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">{openHelpCount}</span>
+            ) : null}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={openNew}>
+            <Plus className="h-4 w-4 mr-1" /> {t("lessons.addRecurrence")}
+          </Button>
+        </div>
       </div>
 
       {/* Recurrences */}
