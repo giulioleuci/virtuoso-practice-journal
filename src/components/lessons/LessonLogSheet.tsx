@@ -24,11 +24,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
   const isEdit = !!lesson?.id;
   const subjId = lesson?.subjectId ?? recurrence?.subjectId ?? subjectId;
 
-  const library = useLiveQuery(
-    () => (subjId ? db.library.where("subjectId").equals(subjId).toArray() : Promise.resolve([])),
-    [subjId]
-  );
-
   const existingAssignments = useLiveQuery(
     () => (lesson?.id ? db.assignments.where("lessonId").equals(lesson.id).toArray() : Promise.resolve([])),
     [lesson?.id]
@@ -36,7 +31,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
 
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
-  const [piecesPlayed, setPiecesPlayed] = useState<number[]>([]);
   const [assignments, setAssignments] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [recapOpen, setRecapOpen] = useState(false);
@@ -45,13 +39,10 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
     if (!open) return;
     setDate(lesson?.date ?? prefilledDate ?? new Date().toISOString().slice(0, 10));
     setNotes(lesson?.notes ?? "");
-    setPiecesPlayed(lesson?.piecesPlayed ?? []);
     setAssignments(existingAssignments?.map((a) => a.text) ?? []);
     setDraft("");
   }, [open, lesson, existingAssignments]);
 
-  const togglePiece = (id: number) =>
-    setPiecesPlayed((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const addAssignment = () => {
     const t = draft.trim();
