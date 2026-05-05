@@ -87,7 +87,10 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       .map((t) => ({ value: t.id!, label: t.name })),
     [allTechniques, subjectId]
   );
-
+  const subjectLayers = useMemo(
+    () => subjects?.find((s) => s.id === subjectId)?.layers ?? [],
+    [subjects, subjectId]
+  );
   // Default subject when sheet opens / subjects load (create mode)
   useEffect(() => {
     if (open && !isEdit && subjects?.length && subjectId === undefined) {
