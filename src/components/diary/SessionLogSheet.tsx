@@ -13,6 +13,7 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   task: Task | null;
+  prefill?: { bpm?: number; noteVal?: NoteVal; notes?: string };
 }
 
 const QUALITIES: { val: SessionQuality; label: string; emoji: string }[] = [
@@ -21,7 +22,7 @@ const QUALITIES: { val: SessionQuality; label: string; emoji: string }[] = [
   { val: "great", label: "Great",  emoji: "✨" },
 ];
 
-export function SessionLogSheet({ open, onOpenChange, task }: Props) {
+export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const [bpm, setBpm] = useState<number | undefined>();
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
   const [quality, setQuality] = useState<SessionQuality>("well");
@@ -31,14 +32,14 @@ export function SessionLogSheet({ open, onOpenChange, task }: Props) {
 
   useEffect(() => {
     if (open && task) {
-      setBpm(task.targetBpm);
-      setNoteVal(task.noteVal);
+      setBpm(prefill?.bpm ?? task.targetBpm);
+      setNoteVal(prefill?.noteVal ?? task.noteVal);
       setQuality("well");
-      setNotes("");
+      setNotes(prefill?.notes ?? "");
       setNeedHelp(false);
       setHelpText("");
     }
-  }, [open, task]);
+  }, [open, task, prefill]);
 
   const errors = useMemo(() => {
     const e: string[] = [];
