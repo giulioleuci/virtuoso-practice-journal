@@ -231,13 +231,31 @@ export default function Lessons() {
                     </div>
                   </div>
                   {las.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-border/60 text-xs text-muted-foreground">
-                      {las.length} assignment{las.length === 1 ? "" : "s"} ·{" "}
-                      <span className="text-primary inline-flex items-center gap-0.5">
-                        <CheckCircle2 className="h-3 w-3" />
-                        {las.filter((a) => a.transformed).length} scheduled
-                      </span>
-                    </div>
+                    <ul className="mt-2 pt-2 border-t border-border/60 space-y-1">
+                      {las.map((a) => {
+                        const linkedTask = a.taskId ? tasksAll?.find((tk) => tk.id === a.taskId) : undefined;
+                        return (
+                          <li key={a.id} className="text-xs flex items-center gap-2">
+                            {a.transformed ? (
+                              <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
+                            ) : (
+                              <Wand2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                            )}
+                            <span className="flex-1 truncate">{a.text}</span>
+                            {a.transformed ? (
+                              <span className="text-[10px] uppercase tracking-wider text-primary truncate max-w-[40%]">
+                                → {linkedTask?.title ?? "scheduled"}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setTaskPrefill({ subjectId: l.subjectId, title: a.text, assignmentId: a.id })}
+                                className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
+                              >Make task</button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </li>
               );
