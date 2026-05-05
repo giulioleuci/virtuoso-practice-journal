@@ -9,7 +9,7 @@ import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { PracticeMode } from "@/components/diary/PracticeMode";
-import { StatsDashboard } from "@/components/diary/StatsDashboard";
+
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -59,8 +59,6 @@ export default function Diary() {
         <p className="text-muted-foreground italic mt-1">{dateLabel}</p>
         <p className="text-sm text-muted-foreground tabular-nums mt-3">{doneCount}/{tasks?.length ?? 0} done today</p>
       </section>
-
-      <StatsDashboard />
 
       <section>
         <div className="flex items-center justify-between mb-3">

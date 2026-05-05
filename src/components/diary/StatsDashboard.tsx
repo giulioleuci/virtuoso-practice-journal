@@ -20,10 +20,28 @@ function computeStreak(daysWithSessions: Set<string>): number {
   return streak;
 }
 
-export function StatsDashboard() {
+interface Props {
+  /** YYYY-MM-DD inclusive lower bound */
+  from?: string;
+  /** YYYY-MM-DD inclusive upper bound */
+  to?: string;
+}
+
+export function StatsDashboard({ from, to }: Props = {}) {
   const sessions = useLiveQuery(() => db.sessions.toArray());
 
-  const { streak, last14, heatmap, totalWeek, totalMinutesEstimate } = useMemo(() => {
+  const rangeSessions = useMemo(
+    () => (sessions ?? []).filter((s) => {
+      if (from && s.date < from) return false;
+      if (to && s.date > to) return false;
+      return true;
+    }),
+    [sessions, from, to]
+  );
+
+  const hasRange = !!(from || to);
+
+  const { streak, last14, heatmap, totalWeek, rangeCount, rangeMinutes, rangeDays, rangeLabel, last14Label, heatmapLabel } = useMemo(() => {
     const counts = new Map<string, number>();
     for (const s of sessions ?? []) counts.set(s.date, (counts.get(s.date) ?? 0) + 1);
     const daySet = new Set(counts.keys());
@@ -31,20 +49,36 @@ export function StatsDashboard() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Determine sparkline window: range if provided (capped to ~60 days), else last 14
+    const parse = (s: string) => {
+      const [y, m, d] = s.split("-").map(Number);
+      const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+      dt.setHours(0, 0, 0, 0);
+      return dt;
+    };
+    const sparkEnd = to ? parse(to) : new Date(today);
+    const sparkStart = from
+      ? parse(from)
+      : (() => { const d = new Date(sparkEnd); d.setDate(d.getDate() - 13); return d; })();
+    const dayCount = Math.max(1, Math.min(90, Math.round((sparkEnd.getTime() - sparkStart.getTime()) / 86400000) + 1));
     const last14: { key: string; count: number }[] = [];
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
+    for (let i = 0; i < dayCount; i++) {
+      const d = new Date(sparkStart);
+      d.setDate(sparkStart.getDate() + i);
       const k = dayKey(d);
       last14.push({ key: k, count: counts.get(k) ?? 0 });
     }
 
-    // 12 weeks heatmap, columns are weeks (Mon start)
+    // Heatmap: weeks ending at sparkEnd, count weeks to cover the span (1..16)
+    const heatEnd = new Date(sparkEnd);
+    const dow = (heatEnd.getDay() + 6) % 7;
+    const heatLastMon = new Date(heatEnd);
+    heatLastMon.setDate(heatEnd.getDate() - dow);
+    const weeksNeeded = Math.max(1, Math.min(16, Math.ceil(dayCount / 7)));
+    const start = new Date(heatLastMon);
+    start.setDate(heatLastMon.getDate() - 7 * (weeksNeeded - 1));
     const weeks: { key: string; count: number }[][] = [];
-    const start = new Date(today);
-    const dow = (start.getDay() + 6) % 7; // make Monday=0
-    start.setDate(start.getDate() - dow - 7 * 11);
-    for (let w = 0; w < 12; w++) {
+    for (let w = 0; w < weeksNeeded; w++) {
       const col: { key: string; count: number }[] = [];
       for (let d = 0; d < 7; d++) {
         const day = new Date(start);
@@ -62,17 +96,28 @@ export function StatsDashboard() {
       totalWeek += counts.get(dayKey(d)) ?? 0;
     }
 
+    const rangeCount = (sessions ?? []).filter((s) => {
+      if (from && s.date < from) return false;
+      if (to && s.date > to) return false;
+      return true;
+    }).length;
+
     return {
       streak: computeStreak(daySet),
       last14,
       heatmap: weeks,
       totalWeek,
-      totalMinutesEstimate: (sessions ?? []).length * 10,
+      rangeCount,
+      rangeMinutes: rangeCount * 10,
+      rangeDays: dayCount,
+      rangeLabel: hasRange ? "In range" : "All time",
+      last14Label: hasRange ? `${dayCount} day${dayCount === 1 ? "" : "s"}` : "Last 14 days",
+      heatmapLabel: hasRange ? `${weeksNeeded} week${weeksNeeded === 1 ? "" : "s"}` : "Last 12 weeks",
     };
-  }, [sessions]);
+  }, [sessions, from, to, hasRange]);
 
   const max = Math.max(1, ...last14.map((d) => d.count));
-  const w = 220, h = 36, step = w / (last14.length - 1);
+  const w = 220, h = 36, step = w / Math.max(1, last14.length - 1);
   const path = last14
     .map((d, i) => `${i === 0 ? "M" : "L"}${(i * step).toFixed(1)},${(h - (d.count / max) * h).toFixed(1)}`)
     .join(" ");
@@ -89,11 +134,11 @@ export function StatsDashboard() {
       <div className="grid grid-cols-3 gap-3">
         <Stat label="Streak" value={`${streak}d`} icon={<Flame className="h-4 w-4 text-primary mx-auto" />} />
         <Stat label="This week" value={`${totalWeek}`} sub="sessions" />
-        <Stat label="All time" value={`${(sessions ?? []).length}`} sub={`~${totalMinutesEstimate}m`} />
+        <Stat label={rangeLabel} value={`${hasRange ? rangeCount : (sessions ?? []).length}`} sub={`~${hasRange ? rangeMinutes : (sessions ?? []).length * 10}m`} />
       </div>
 
       <div>
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Last 14 days</div>
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{last14Label}</div>
         <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-10" preserveAspectRatio="none">
           <path d={path} fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           {last14.map((d, i) => (
@@ -103,7 +148,7 @@ export function StatsDashboard() {
       </div>
 
       <div>
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Last 12 weeks</div>
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{heatmapLabel}</div>
         <div className="flex gap-[3px]">
           {heatmap.map((col, ci) => (
             <div key={ci} className="flex flex-col gap-[3px]">

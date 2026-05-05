@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
+import { StatsDashboard } from "@/components/diary/StatsDashboard";
 
 const NOTE_GLYPH: Record<string, string> = {
   half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
@@ -95,6 +96,8 @@ export default function History() {
         <h2 className="font-serif text-3xl">History</h2>
         <span className="text-xs text-muted-foreground tabular-nums">{filteredSessions.length} sessions</span>
       </div>
+
+      <StatsDashboard from={from || undefined} to={to || undefined} />
 
       <Tabs value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setPage(0); }}>
         <TabsList className="w-full">
