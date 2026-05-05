@@ -358,7 +358,13 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
                 setTargetBpm(n.bpm); setNoteVal(n.noteVal);
               }} />
 
-              <LayersEditor layers={layers} onChange={setLayers} />
+              <MultiChipPicker
+                label="Techniques"
+                options={subjectTechniqueOptions}
+                value={techniqueIds}
+                onChange={setTechniqueIds}
+                emptyHint="Add techniques in Profile to associate them here."
+              />
               <SegmentsEditor segments={segments} onChange={setSegments} />
             </>
           )}
@@ -402,6 +408,13 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
                 setTargetBpm(n.bpm); setNoteVal(n.noteVal);
               }} />
 
+              <MultiChipPicker
+                label="Techniques"
+                options={subjectTechniqueOptions}
+                value={techniqueIds}
+                onChange={setTechniqueIds}
+                emptyHint="Add techniques in Profile to associate them here."
+              />
               <SegmentsEditor segments={segments} onChange={setSegments} />
             </>
           )}
