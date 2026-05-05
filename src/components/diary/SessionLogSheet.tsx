@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
+import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+import { useLiveQuery } from "dexie-react-hooks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -29,6 +31,25 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const [notes, setNotes] = useState("");
   const [needHelp, setNeedHelp] = useState(false);
   const [helpText, setHelpText] = useState("");
+  const [layersUsed, setLayersUsed] = useState<string[]>([]);
+  const [techniquesUsed, setTechniquesUsed] = useState<number[]>([]);
+
+  const subject = useLiveQuery(
+    () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
+    [task?.subjectId]
+  );
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+
+  const layerOptions = useMemo(() => {
+    const base = task?.layers?.length ? task.layers : (subject?.layers ?? []);
+    return base.map((l) => ({ value: l, label: l }));
+  }, [task, subject]);
+  const techniqueOptions = useMemo(() => {
+    const ids = task?.techniqueIds && task.techniqueIds.length ? task.techniqueIds : null;
+    const all = (allTechniques ?? []).filter((t) => t.subjectId === task?.subjectId);
+    const scoped = ids ? all.filter((t) => ids.includes(t.id!)) : all;
+    return scoped.map((t) => ({ value: t.id!, label: t.name }));
+  }, [allTechniques, task]);
 
   useEffect(() => {
     if (open && task) {
@@ -38,6 +59,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       setNotes(prefill?.notes ?? "");
       setNeedHelp(false);
       setHelpText("");
+      setLayersUsed(task.layers ?? []);
+      setTechniquesUsed(task.techniqueIds ?? []);
     }
   }, [open, task, prefill]);
 
@@ -59,6 +82,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
         noteVal,
         quality,
         notes: notes.trim() || undefined,
+        layersUsed,
+        techniquesUsed,
         createdAt: now,
       });
       await db.tasks.update(task.id!, { done: true });
@@ -91,6 +116,21 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
             noteVal={noteVal}
             onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }}
             label="BPM reached"
+          />
+
+          <MultiChipPicker
+            label="Layers practiced"
+            options={layerOptions}
+            value={layersUsed}
+            onChange={setLayersUsed}
+            emptyHint="Define this subject's layers in Profile."
+          />
+          <MultiChipPicker
+            label="Techniques practiced"
+            options={techniqueOptions}
+            value={techniquesUsed}
+            onChange={setTechniquesUsed}
+            emptyHint="Add techniques in Profile."
           />
 
           <div className="space-y-2">

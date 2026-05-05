@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/select";
 import { BpmCoupler } from "./BpmCoupler";
 import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
-import { LayersEditor } from "./LayersEditor";
 import { MasterySliders, type MasteryState } from "./MasterySliders";
+import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -58,6 +58,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const editingKind = item?.kind ?? kind;
 
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
   const existingSegments = useLiveQuery(
     () => (item?.id ? db.segments.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
     [item?.id]
@@ -72,7 +73,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const [startBpm, setStartBpm] = useState<number | undefined>();
   const [noteVal, setNoteVal] = useState<LibraryItem["noteVal"]>();
 
-  const [layers, setLayers] = useState<string[]>([]);
+  const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
   const [segments, setSegments] = useState<DraftSegment[]>([]);
 
   const [totalExercises, setTotalExercises] = useState<number | undefined>();
@@ -80,6 +81,16 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
 
   const [mastery, setMastery] = useState<MasteryState>(emptyMastery);
 
+  const subjectTechniqueOptions = useMemo(
+    () => (allTechniques ?? [])
+      .filter((t) => t.subjectId === subjectId)
+      .map((t) => ({ value: t.id!, label: t.name })),
+    [allTechniques, subjectId]
+  );
+  const subjectLayers = useMemo(
+    () => subjects?.find((s) => s.id === subjectId)?.layers ?? [],
+    [subjects, subjectId]
+  );
   // Default subject when sheet opens / subjects load (create mode)
   useEffect(() => {
     if (open && !isEdit && subjects?.length && subjectId === undefined) {
@@ -98,7 +109,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setTargetBpm(item.targetBpm);
       setStartBpm(item.startBpm);
       setNoteVal(item.noteVal);
-      setLayers(item.layers ?? []);
+      setTechniqueIds(item.techniqueIds ?? []);
       setTotalExercises(item.totalExercises);
       setCurrentExercise(item.currentExercise ?? 1);
       setMastery(item.mastery ?? emptyMastery);
@@ -116,6 +127,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           noteVal: s.noteVal,
           confidence: s.confidence,
           layers: s.layers ?? [],
+          techniqueIds: s.techniqueIds ?? [],
         }))
       );
     }
@@ -130,7 +142,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setTargetBpm(undefined);
       setStartBpm(undefined);
       setNoteVal(undefined);
-      setLayers([]);
+      setTechniqueIds([]);
       setSegments([]);
       setTotalExercises(undefined);
       setCurrentExercise(1);
@@ -199,18 +211,20 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       base.status = status;
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
-      base.layers = layers;
+      base.techniqueIds = techniqueIds;
     } else if (editingKind === "manual") {
       base.composer = composer.trim() || undefined;
       base.totalExercises = totalExercises;
       base.currentExercise = currentExercise;
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
+      base.techniqueIds = techniqueIds;
     } else if (editingKind === "technique") {
+      base.composer = composer.trim() || undefined;
       base.startBpm = startBpm;
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
-      base.layers = layers;
+      base.techniqueIds = techniqueIds;
     } else if (editingKind === "theory") {
       base.mastery = mastery;
     }
@@ -234,6 +248,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           noteVal: s.noteVal,
           confidence: s.confidence,
           layers: s.layers ?? [],
+          techniqueIds: s.techniqueIds ?? [],
           createdAt: now,
         }))
       );
@@ -346,7 +361,13 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
                 setTargetBpm(n.bpm); setNoteVal(n.noteVal);
               }} />
 
-              <LayersEditor layers={layers} onChange={setLayers} />
+              <MultiChipPicker
+                label="Techniques"
+                options={subjectTechniqueOptions}
+                value={techniqueIds}
+                onChange={setTechniqueIds}
+                emptyHint="Add techniques in Profile to associate them here."
+              />
               <SegmentsEditor segments={segments} onChange={setSegments} />
             </>
           )}
@@ -390,6 +411,13 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
                 setTargetBpm(n.bpm); setNoteVal(n.noteVal);
               }} />
 
+              <MultiChipPicker
+                label="Techniques"
+                options={subjectTechniqueOptions}
+                value={techniqueIds}
+                onChange={setTechniqueIds}
+                emptyHint="Add techniques in Profile to associate them here."
+              />
               <SegmentsEditor segments={segments} onChange={setSegments} />
             </>
           )}
@@ -409,7 +437,13 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
                 onChange={(n) => { setTargetBpm(n.bpm); setNoteVal(n.noteVal); }}
                 label="Target tempo"
               />
-              <LayersEditor layers={layers} onChange={setLayers} />
+              <MultiChipPicker
+                label="Techniques covered"
+                options={subjectTechniqueOptions}
+                value={techniqueIds}
+                onChange={setTechniqueIds}
+                emptyHint="Add techniques in Profile to associate them here."
+              />
             </>
           )}
 

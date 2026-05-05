@@ -46,6 +46,7 @@ export default function Library() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
   const allHelp = useLiveQuery(() => db.helpRequests.toArray(), []);
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
   const items = useLiveQuery(
     () => db.library.where("kind").equals(active).toArray(),
@@ -192,18 +193,9 @@ export default function Library() {
                   </div>
                 )}
 
-                {/* Layers chips */}
-                {!!it.layers?.length && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {it.layers.map((l) => (
-                      <span
-                        key={l}
-                        className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70"
-                      >
-                        {l}
-                      </span>
-                    ))}
-                  </div>
+                {/* Technique chips */}
+                {!!it.techniqueIds?.length && (
+                  <TechChips ids={it.techniqueIds} all={allTechniques ?? []} />
                 )}
 
                 {/* Segments preview */}
@@ -327,5 +319,19 @@ function EmptyLibrary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
         <Plus className="h-4 w-4" /> Add to library
       </span>
     </button>
+  );
+}
+
+function TechChips({ ids, all }: { ids: number[]; all: { id?: number; name: string }[] }) {
+  const names = ids.map((id) => all.find((t) => t.id === id)?.name).filter(Boolean) as string[];
+  if (!names.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {names.map((n) => (
+        <span key={n} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70">
+          {n}
+        </span>
+      ))}
+    </div>
   );
 }

@@ -27,6 +27,14 @@ export interface Subject {
   id?: number;
   name: string;
   type: SubjectType;
+  layers?: string[];             // allowed practice layers, defined per subject
+  createdAt: number;
+}
+
+export interface Technique {
+  id?: number;
+  subjectId: number;
+  name: string;
   createdAt: number;
 }
 
@@ -35,12 +43,12 @@ export interface LibraryItem {
   subjectId: number;
   kind: LibraryKind;
   title: string;
-  composer?: string;
+  composer?: string;             // composer / author (technique manuals)
   status?: PracticeStatus;       // repertoire
   startBpm?: number;             // technique
   targetBpm?: number;            // repertoire/manual/technique
   noteVal?: NoteVal;
-  layers?: string[];             // technique/repertoire layers
+  techniqueIds?: number[];       // associated techniques
   totalExercises?: number;       // manual
   currentExercise?: number;      // manual
   // theory mastery 0-100
@@ -56,7 +64,8 @@ export interface Segment {
   targetBpm?: number;
   noteVal?: NoteVal;
   confidence: number;            // 1-5
-  layers: string[];
+  layers: string[];              // values from owning subject's layers
+  techniqueIds?: number[];
   createdAt: number;
 }
 
@@ -78,6 +87,8 @@ export interface Task {
   title: string;
   targetBpm?: number;
   noteVal?: NoteVal;
+  layers?: string[];             // selected practice layers
+  techniqueIds?: number[];       // selected techniques
   done: boolean;
   skipped?: boolean;
   recurrenceTaskId?: number;     // points to template task id
@@ -95,6 +106,8 @@ export interface Session {
   quality?: SessionQuality;
   confidence?: number;
   notes?: string;
+  layersUsed?: string[];
+  techniquesUsed?: number[];
   createdAt: number;
 }
 
@@ -146,6 +159,7 @@ export interface Assignment {
 class VirtuosoDB extends Dexie {
   profile!: Table<Profile, string>;
   subjects!: Table<Subject, number>;
+  techniques!: Table<Technique, number>;
   library!: Table<LibraryItem, number>;
   segments!: Table<Segment, number>;
   tasks!: Table<Task, number>;
@@ -168,6 +182,9 @@ class VirtuosoDB extends Dexie {
       recurrences: "++id, subjectId",
       lessons: "++id, recurrenceId, subjectId, date",
       assignments: "++id, lessonId, transformed",
+    });
+    this.version(2).stores({
+      techniques: "++id, subjectId, name",
     });
   }
 }

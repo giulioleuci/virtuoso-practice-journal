@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
+import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: Props) {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const library = useLiveQuery(() => db.library.toArray(), []);
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [kindFilter, setKindFilter] = useState<LibraryKind | "all">("all");
@@ -47,6 +49,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   const [title, setTitle] = useState("");
   const [bpm, setBpm] = useState<number | undefined>();
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
+  const [layers, setLayers] = useState<string[]>([]);
+  const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
 
   // Recurrence
   const [repeat, setRepeat] = useState(false);
@@ -80,6 +84,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       setTitle(prefill?.title ?? "");
       setBpm(undefined);
       setNoteVal(undefined);
+      setLayers([]);
+      setTechniqueIds([]);
       setRepeat(false);
       setRecKind("weekdays");
       setRecDays([new Date(date).getDay()]);
@@ -97,7 +103,21 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     setTitle(`${selectedItem.title}${segLabel}`);
     setBpm(selectedSegment?.targetBpm ?? selectedItem.targetBpm);
     setNoteVal(selectedSegment?.noteVal ?? selectedItem.noteVal);
+    // Pre-seed techniques from item/segment association
+    setTechniqueIds(selectedSegment?.techniqueIds ?? selectedItem.techniqueIds ?? []);
+    setLayers(selectedSegment?.layers ?? []);
   }, [itemId, segmentId, selectedItem, selectedSegment]);
+
+  const subjectLayers = useMemo(
+    () => subjects?.find((s) => s.id === subjectId)?.layers ?? [],
+    [subjects, subjectId]
+  );
+  const techniqueOptions = useMemo(
+    () => (allTechniques ?? [])
+      .filter((t) => t.subjectId === subjectId)
+      .map((t) => ({ value: t.id!, label: t.name })),
+    [allTechniques, subjectId]
+  );
 
   const recurrence: TaskRecurrence | undefined = useMemo(() => {
     if (!repeat) return undefined;
@@ -144,6 +164,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       title: title.trim(),
       targetBpm: bpm,
       noteVal,
+      layers,
+      techniqueIds,
       done: false,
       createdAt: now,
     };
@@ -275,6 +297,21 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
             noteVal={noteVal}
             onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }}
             label="Target tempo (optional)"
+          />
+
+          <MultiChipPicker
+            label="Layers to practice"
+            options={subjectLayers.map((l) => ({ value: l, label: l }))}
+            value={layers}
+            onChange={setLayers}
+            emptyHint="Define this subject's layers in Profile."
+          />
+          <MultiChipPicker
+            label="Techniques to focus"
+            options={techniqueOptions}
+            value={techniqueIds}
+            onChange={setTechniqueIds}
+            emptyHint="Add techniques in Profile."
           />
 
           <div className="paper-card p-4 space-y-3">

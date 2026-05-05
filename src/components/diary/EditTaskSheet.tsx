@@ -9,6 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
+import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { toast } from "sonner";
 
 interface Props {
@@ -21,6 +22,7 @@ interface Props {
 export function EditTaskSheet({ open, onOpenChange, task }: Props) {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const library = useLiveQuery(() => db.library.toArray(), []);
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [kindFilter, setKindFilter] = useState<LibraryKind | "all">("all");
@@ -30,6 +32,8 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
   const [date, setDate] = useState("");
   const [bpm, setBpm] = useState<number | undefined>();
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
+  const [layers, setLayers] = useState<string[]>([]);
+  const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
 
   const segments = useLiveQuery(
     () => (itemId ? db.segments.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
@@ -52,8 +56,21 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
       setDate(task.date);
       setBpm(task.targetBpm);
       setNoteVal(task.noteVal);
+      setLayers(task.layers ?? []);
+      setTechniqueIds(task.techniqueIds ?? []);
     }
   }, [open, task]);
+
+  const subjectLayers = useMemo(
+    () => subjects?.find((s) => s.id === subjectId)?.layers ?? [],
+    [subjects, subjectId]
+  );
+  const techniqueOptions = useMemo(
+    () => (allTechniques ?? [])
+      .filter((t) => t.subjectId === subjectId)
+      .map((t) => ({ value: t.id!, label: t.name })),
+    [allTechniques, subjectId]
+  );
 
   const errors = useMemo(() => {
     const e: string[] = [];
@@ -69,6 +86,7 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
     await db.tasks.update(task.id, {
       subjectId: subjectId!, itemId, segmentId,
       title: title.trim(), date, targetBpm: bpm, noteVal,
+      layers, techniqueIds,
     });
     toast.success("Task updated");
     onOpenChange(false);
@@ -154,6 +172,21 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
           </div>
 
           <BpmCoupler bpm={bpm} noteVal={noteVal} onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }} />
+
+          <MultiChipPicker
+            label="Layers"
+            options={subjectLayers.map((l) => ({ value: l, label: l }))}
+            value={layers}
+            onChange={setLayers}
+            emptyHint="Define this subject's layers in Profile."
+          />
+          <MultiChipPicker
+            label="Techniques"
+            options={techniqueOptions}
+            value={techniqueIds}
+            onChange={setTechniqueIds}
+            emptyHint="Add techniques in Profile."
+          />
 
           {errors.length > 0 && (
             <ul className="text-xs text-destructive space-y-0.5">
