@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { X, Play, Pause, RotateCcw, Volume2, VolumeX, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BpmCoupler } from "@/components/library/BpmCoupler";
 
 interface Props {
   task: Task;
@@ -50,21 +51,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
   const ctxRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<number | null>(null);
 
-  // Tap-tempo
-  const tapsRef = useRef<number[]>([]);
-  const tap = () => {
-    const now = performance.now();
-    tapsRef.current = [...tapsRef.current.filter((t) => now - t < 2500), now];
-    if (tapsRef.current.length >= 2) {
-      const diffs: number[] = [];
-      for (let i = 1; i < tapsRef.current.length; i++) {
-        diffs.push(tapsRef.current[i] - tapsRef.current[i - 1]);
-      }
-      const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
-      const next = Math.round(60000 / avg);
-      if (next >= 30 && next <= 280) setBpm(next);
-    }
-  };
+  // Tap-tempo removed
 
   const ensureCtx = () => {
     if (!ctxRef.current) {
