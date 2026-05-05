@@ -25,20 +25,50 @@ function formatTime(ms: number) {
 }
 
 export function PracticeMode({ task, onClose, onFinish }: Props) {
-  // Timer
-  const [running, setRunning] = useState(false);
+  // Timer — auto-starts and uses wall-clock so backgrounding doesn't lose time
+  const [running, setRunning] = useState(true);
   const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef<number | null>(null);
+  const startRef = useRef<number | null>(Date.now());
+  const baseRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!running) return;
-    startRef.current = Date.now() - elapsed;
-    const id = setInterval(() => {
-      if (startRef.current != null) setElapsed(Date.now() - startRef.current);
-    }, 100);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!running) {
+      if (startRef.current != null) {
+        baseRef.current += Date.now() - startRef.current;
+        startRef.current = null;
+        setElapsed(baseRef.current);
+      }
+      return;
+    }
+    startRef.current = Date.now();
+    const tick = () => {
+      if (startRef.current != null) setElapsed(baseRef.current + (Date.now() - startRef.current));
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    const onVis = () => tick();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [running]);
+
+  // Screen wake lock so the device doesn't sleep mid-practice
+  useEffect(() => {
+    let wl: { release: () => Promise<void> } | null = null;
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> } };
+    const acquire = async () => {
+      try { if (nav.wakeLock) wl = await nav.wakeLock.request("screen"); } catch { /* ignore */ }
+    };
+    acquire();
+    const onVis = () => { if (document.visibilityState === "visible" && !wl) acquire(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      wl?.release().catch(() => undefined);
+    };
+  }, []);
 
   // Metronome
   const [bpm, setBpm] = useState<number>(task.targetBpm ?? 80);
@@ -117,7 +147,8 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
 
   const toggleRun = () => setRunning((r) => !r);
   const reset = () => {
-    setRunning(false);
+    baseRef.current = 0;
+    startRef.current = running ? Date.now() : null;
     setElapsed(0);
   };
 
@@ -148,19 +179,24 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
 
       <div className="flex-1 overflow-y-auto px-6 pb-8 max-w-3xl w-full mx-auto space-y-6">
         {/* Timer */}
-        <section className="paper-raised p-8 text-center">
-          <div className="font-numeric text-7xl font-light tabular-nums text-foreground select-none">
+        <section className="flex items-center justify-center gap-3 text-muted-foreground/70">
+          <div className="font-numeric text-2xl font-light tabular-nums select-none">
             {formatTime(elapsed)}
           </div>
-          <div className="flex items-center justify-center gap-2 mt-5">
-            <Button onClick={toggleRun} size="lg" className="px-8">
-              {running ? <Pause className="h-5 w-5 mr-2" /> : <Play className="h-5 w-5 mr-2" />}
-              {running ? "Pause" : elapsed === 0 ? "Start" : "Resume"}
-            </Button>
-            <Button onClick={reset} variant="outline" size="lg" aria-label="Reset">
-              <RotateCcw className="h-5 w-5" />
-            </Button>
-          </div>
+          <button
+            onClick={toggleRun}
+            className="p-1.5 rounded-md hover:text-foreground hover:bg-accent"
+            aria-label={running ? "Pause timer" : "Start timer"}
+          >
+            {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={reset}
+            className="p-1.5 rounded-md hover:text-foreground hover:bg-accent"
+            aria-label="Reset timer"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
         </section>
 
         {/* Metronome */}
