@@ -67,7 +67,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           ...lesson,
           date,
           notes: notes.trim() || undefined,
-          piecesPlayed,
+          piecesPlayed: lesson.piecesPlayed,
         });
         lessonId = lesson.id;
         // Replace assignments wholesale
