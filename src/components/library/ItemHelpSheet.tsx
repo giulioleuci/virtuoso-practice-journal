@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { HelpCircle, MessageSquareQuote, Plus, X } from "lucide-react";
+import { HelpCircle, MessageSquareQuote, Plus, X, ChevronDown, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
