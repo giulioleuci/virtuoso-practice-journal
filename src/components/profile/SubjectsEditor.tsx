@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const SUBJECT_TYPES: { val: SubjectType; label: string }[] = [
   { val: "instrument", label: "Instrument" },
@@ -101,86 +102,93 @@ export function SubjectsEditor() {
         </Button>
       </div>
 
-      <div className="space-y-3">
+      <Accordion type="multiple" className="space-y-2">
         {(subjects ?? []).map((s) => {
           const subjTechs = (techniques ?? []).filter((t) => t.subjectId === s.id);
+          const layerCount = (s.layers ?? []).length;
           return (
-            <div key={s.id} className="paper-card p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-serif text-lg">{s.name}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.type}</div>
-                </div>
+            <AccordionItem key={s.id} value={`subj-${s.id}`} className="paper-card border-0 px-3">
+              <div className="flex items-center justify-between gap-2">
+                <AccordionTrigger className="flex-1 hover:no-underline py-3">
+                  <div className="flex items-center gap-2 text-left">
+                    <span className="font-serif text-lg">{s.name}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.type}</span>
+                    <span className="text-[10px] text-muted-foreground ml-1">
+                      · {layerCount}L · {subjTechs.length}T
+                    </span>
+                  </div>
+                </AccordionTrigger>
                 <button
-                  onClick={() => removeSubject(s)}
-                  className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-accent"
+                  onClick={(e) => { e.stopPropagation(); removeSubject(s); }}
+                  className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-accent shrink-0"
                   aria-label="Delete subject"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
+              <AccordionContent className="space-y-3 pb-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Layers</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(s.layers ?? []).map((l) => (
+                      <span key={l} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
+                        {l}
+                        <button onClick={() => removeLayer(s, l)} aria-label={`Remove ${l}`}>
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    {!(s.layers ?? []).length && (
+                      <span className="text-xs italic text-muted-foreground">e.g. RH, LH, Both…</span>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Input
+                      value={layerDraft[s.id!] ?? ""}
+                      onChange={(e) => setLayerDraft((d) => ({ ...d, [s.id!]: e.target.value }))}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLayer(s))}
+                      placeholder="Add layer…"
+                      className="h-8 text-sm"
+                    />
+                    <Button size="sm" variant="ghost" onClick={() => addLayer(s)}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Layers</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {(s.layers ?? []).map((l) => (
-                    <span key={l} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
-                      {l}
-                      <button onClick={() => removeLayer(s, l)} aria-label={`Remove ${l}`}>
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                  {!(s.layers ?? []).length && (
-                    <span className="text-xs italic text-muted-foreground">e.g. RH, LH, Both…</span>
-                  )}
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Techniques</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {subjTechs.map((t) => (
+                      <span key={t.id} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
+                        {t.name}
+                        <button onClick={() => t.id && removeTechnique(t.id)} aria-label={`Remove ${t.name}`}>
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    {!subjTechs.length && (
+                      <span className="text-xs italic text-muted-foreground">e.g. legato, tremolo, with pedal…</span>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Input
+                      value={techDraft[s.id!] ?? ""}
+                      onChange={(e) => setTechDraft((d) => ({ ...d, [s.id!]: e.target.value }))}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTechnique(s))}
+                      placeholder="Add technique…"
+                      className="h-8 text-sm"
+                    />
+                    <Button size="sm" variant="ghost" onClick={() => addTechnique(s)}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-1.5">
-                  <Input
-                    value={layerDraft[s.id!] ?? ""}
-                    onChange={(e) => setLayerDraft((d) => ({ ...d, [s.id!]: e.target.value }))}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLayer(s))}
-                    placeholder="Add layer…"
-                    className="h-8 text-sm"
-                  />
-                  <Button size="sm" variant="ghost" onClick={() => addLayer(s)}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Techniques</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {subjTechs.map((t) => (
-                    <span key={t.id} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
-                      {t.name}
-                      <button onClick={() => t.id && removeTechnique(t.id)} aria-label={`Remove ${t.name}`}>
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                  {!subjTechs.length && (
-                    <span className="text-xs italic text-muted-foreground">e.g. legato, tremolo, with pedal…</span>
-                  )}
-                </div>
-                <div className="flex gap-1.5">
-                  <Input
-                    value={techDraft[s.id!] ?? ""}
-                    onChange={(e) => setTechDraft((d) => ({ ...d, [s.id!]: e.target.value }))}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTechnique(s))}
-                    placeholder="Add technique…"
-                    className="h-8 text-sm"
-                  />
-                  <Button size="sm" variant="ghost" onClick={() => addTechnique(s)}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+              </AccordionContent>
+            </AccordionItem>
           );
         })}
-      </div>
+      </Accordion>
     </section>
   );
 }
