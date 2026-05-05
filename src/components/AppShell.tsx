@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +14,22 @@ export default function AppShell() {
     { to: "/profile", label: t("nav.profile"), icon: UserRound },
   ];
 
+  const [hidden, setHidden] = useState(false);
+  const lastY = useRef(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      const delta = y - lastY.current;
+      if (y < 80) setHidden(false);
+      else if (delta > 6) setHidden(true);
+      else if (delta < -6) setHidden(false);
+      lastY.current = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="px-6 pt-8 pb-4 max-w-3xl w-full mx-auto">
@@ -24,7 +41,13 @@ export default function AppShell() {
         <Outlet />
       </main>
 
-      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+      <nav
+        className={cn(
+          "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300",
+          hidden ? "translate-y-[140%] opacity-0 pointer-events-none" : "opacity-100"
+        )}
+        style={{ transform: hidden ? "translate(-50%, 140%)" : "translate(-50%, 0)" }}
+      >
         <div className="paper-raised flex items-center gap-1 px-2 py-2">
           {items.map(({ to, label, icon: Icon, end }) => (
             <NavLink

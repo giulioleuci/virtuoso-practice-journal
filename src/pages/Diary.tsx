@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
+import { pickQuote } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
 
 function todayKey() {
@@ -64,15 +65,7 @@ export default function Diary() {
         </div>
 
         {!tasks?.length ? (
-          <button
-            onClick={() => setNewOpen(true)}
-            className="paper-card p-8 text-center w-full hover:-translate-y-0.5 transition-transform"
-          >
-            <p className="text-muted-foreground italic mb-2">{t("diary.empty")}</p>
-            <span className="inline-flex items-center gap-1 text-primary font-medium text-sm">
-              <Plus className="h-4 w-4" /> New task
-            </span>
-          </button>
+          <EmptyDiary onAdd={() => setNewOpen(true)} hint={t("diary.empty")} />
         ) : (
           <ul className="space-y-2">
             {tasks.map((task) => {
@@ -122,5 +115,26 @@ export default function Diary() {
       <NewTaskSheet open={newOpen} onOpenChange={setNewOpen} date={today} />
       <SessionLogSheet open={logTask !== null} onOpenChange={(o) => !o && setLogTask(null)} task={logTask} />
     </div>
+  );
+}
+
+function EmptyDiary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
+  const quote = useMemo(() => pickQuote(), []);
+  return (
+    <button
+      onClick={onAdd}
+      className="paper-card p-8 text-center w-full hover:-translate-y-0.5 transition-transform group"
+    >
+      <p className="font-serif text-xl italic text-foreground/85 leading-snug">
+        “{quote.text}”
+      </p>
+      <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
+        — {quote.author}
+      </p>
+      <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
+      <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
+        <Plus className="h-4 w-4" /> Begin a task
+      </span>
+    </button>
   );
 }
