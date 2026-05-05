@@ -36,7 +36,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const [layersUsed, setLayersUsed] = useState<string[]>([]);
   const [techniquesUsed, setTechniquesUsed] = useState<number[]>([]);
   const [reps, setReps] = useState<number | undefined>();
-  const [confidence, setConfidence] = useState<number>(3);
+  const [confidence, setConfidence] = useState<number | undefined>(undefined);
 
   const subject = useLiveQuery(
     () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
