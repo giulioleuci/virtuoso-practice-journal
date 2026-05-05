@@ -133,11 +133,23 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                         )}
                       </div>
                       <ul className="space-y-2">
-                        {b.reqs.map((r) => (
+                        {b.reqs.map((r) => {
+                          const task = r.taskId ? taskById.get(r.taskId) : undefined;
+                          return (
                           <li key={r.id} className="text-sm border-l-2 border-border pl-2">
                             <div className="flex items-start gap-2">
                               <HelpCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                               <span className="flex-1">{r.question}</span>
+                              {task && (
+                                <Link
+                                  to={`/history?from=${task.date}&to=${task.date}`}
+                                  onClick={() => onOpenChange(false)}
+                                  title="View task history"
+                                  className="text-muted-foreground hover:text-primary shrink-0 mt-0.5"
+                                >
+                                  <HistoryIcon className="h-3.5 w-3.5" />
+                                </Link>
+                              )}
                               {!r.resolved && (
                                 <button
                                   onClick={() => r.id && resolve(r.id)}
