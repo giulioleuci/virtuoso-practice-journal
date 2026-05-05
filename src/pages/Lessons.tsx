@@ -26,7 +26,6 @@ export default function Lessons() {
   const subjects = useLiveQuery(() => db.subjects.toArray());
   const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().limit(20).toArray());
   const assignments = useLiveQuery(() => db.assignments.toArray());
-  const openHelp = useLiveQuery(() => db.helpRequests.where("resolved").equals(0 as never).count().catch(() => 0));
   const openHelpCount = useLiveQuery(async () => (await db.helpRequests.toArray()).filter((h) => !h.resolved).length);
 
   const [recapOpen, setRecapOpen] = useState(false);
