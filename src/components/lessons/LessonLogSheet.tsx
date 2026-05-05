@@ -128,22 +128,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
               placeholder="What was discussed, what landed, what didn't…" />
           </div>
 
-          {!!library?.length && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Pieces played</Label>
-              <div className="paper-card p-3 space-y-2">
-                {library.map((l) => (
-                  <label key={l.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={piecesPlayed.includes(l.id!)}
-                      onCheckedChange={() => togglePiece(l.id!)}
-                    />
-                    <span className="flex-1 truncate">{l.title}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">
