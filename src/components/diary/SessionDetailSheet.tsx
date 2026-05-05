@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import {
