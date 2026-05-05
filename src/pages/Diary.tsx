@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { Flame, Sparkles, Plus, CheckCircle2, Circle, MessageCircleQuestion } from "lucide-react";
+import { Flame, Sparkles, Plus, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
