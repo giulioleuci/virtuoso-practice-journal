@@ -92,6 +92,15 @@ export default function Profile() {
           />
         </Row>
 
+        <Row label="Carry over uncompleted (days)">
+          <input
+            type="number" min={0} max={14}
+            value={profile.carryoverDays ?? 2}
+            onChange={(e) => update({ carryoverDays: Number(e.target.value) })}
+            className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-20 tabular-nums"
+          />
+        </Row>
+
         <Row label="Grace day for streak">
           <Switch checked={profile.graceDay} onCheckedChange={(v) => update({ graceDay: v })} />
         </Row>

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { Plus, CheckCircle2, Circle, ListChecks, Play } from "lucide-react";
+import { Plus, CheckCircle2, Circle, ListChecks, Play, ArrowRightCircle, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
@@ -37,6 +37,21 @@ export default function Diary() {
     (acc[s.taskId] ||= [] as never).push(s as never);
     return acc;
   }, {});
+
+  const carryoverDays = profile?.carryoverDays ?? 2;
+  const carryoverFrom = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - carryoverDays);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, [carryoverDays]);
+
+  const carryoverTasks = useLiveQuery(
+    () => db.tasks
+      .where("date").between(carryoverFrom, today, true, false)
+      .filter((t) => !t.done && !t.skipped)
+      .toArray(),
+    [carryoverFrom, today]
+  );
 
   const [newOpen, setNewOpen] = useState(false);
   const [logTask, setLogTask] = useState<Task | null>(null);
@@ -142,6 +157,58 @@ export default function Diary() {
           </ul>
         )}
       </section>
+
+      {!!carryoverTasks?.length && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-serif text-2xl">Unfinished</h3>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              from last {carryoverDays} day{carryoverDays === 1 ? "" : "s"}
+            </span>
+          </div>
+          <ul className="space-y-2">
+            {carryoverTasks.map((task) => (
+              <li key={task.id}>
+                <div className="paper-card p-4 w-full flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{task.title}</div>
+                    <div className="text-xs text-muted-foreground tabular-nums">
+                      {task.date}
+                      {task.targetBpm && (
+                        <> · Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}</>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!task.id) return;
+                      const { id, date, done, skipped, ...rest } = task;
+                      await db.tasks.add({ ...rest, date: today, done: false, createdAt: Date.now() });
+                      await db.tasks.update(id, { skipped: true });
+                      toast.success("Moved to today");
+                    }}
+                    className="self-center inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shrink-0"
+                    aria-label="Move to today"
+                  >
+                    <ArrowRightCircle className="h-3.5 w-3.5" /> Today
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!task.id) return;
+                      await db.tasks.update(task.id, { skipped: true });
+                      toast("Ignored");
+                    }}
+                    className="self-center p-2 rounded-xl text-muted-foreground hover:text-destructive shrink-0"
+                    aria-label="Ignore"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <NewTaskSheet open={newOpen} onOpenChange={setNewOpen} date={today} />
       <SessionLogSheet
