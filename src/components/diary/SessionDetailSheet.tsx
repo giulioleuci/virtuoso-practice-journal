@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
+import { StarRating } from "@/components/shared/StarRating";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import {
@@ -52,7 +52,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
   const [layersUsed, setLayersUsed] = useState<string[]>([]);
   const [techniquesUsed, setTechniquesUsed] = useState<number[]>([]);
   const [reps, setReps] = useState<number | undefined>();
-  const [confidence, setConfidence] = useState<number>(3);
+  const [confidence, setConfidence] = useState<number | undefined>(undefined);
   const [confirmDel, setConfirmDel] = useState(false);
 
   const subject = useLiveQuery(
@@ -76,7 +76,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
       setLayersUsed(session.layersUsed ?? []);
       setTechniquesUsed(session.techniquesUsed ?? []);
       setReps(session.reps);
-      setConfidence(session.confidence ?? 3);
+      setConfidence(session.confidence);
     }
   }, [open, session]);
 
@@ -231,13 +231,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Confidence</Label>
-                    <span className="text-sm tabular-nums">{confidence}/5</span>
-                  </div>
-                  <Slider min={1} max={5} step={1} value={[confidence]} onValueChange={(v) => setConfidence(v[0])} />
-                </div>
+                <StarRating label="Confidence" value={confidence} onChange={setConfidence} />
 
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Quality</Label>
