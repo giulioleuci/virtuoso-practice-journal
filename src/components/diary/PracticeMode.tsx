@@ -147,7 +147,8 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
 
   const toggleRun = () => setRunning((r) => !r);
   const reset = () => {
-    setRunning(false);
+    baseRef.current = 0;
+    startRef.current = running ? Date.now() : null;
     setElapsed(0);
   };
 
