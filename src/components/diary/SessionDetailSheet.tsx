@@ -86,6 +86,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     if (!session?.id || errors.length) return;
     await db.sessions.update(session.id, {
       date, bpmReached: bpm, noteVal, quality, notes: notes.trim() || undefined,
+      layersUsed, techniquesUsed,
     });
     toast.success("Session updated");
     setEditing(false);
@@ -140,7 +141,27 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Notes</div>
                     <p className="text-sm whitespace-pre-wrap">{session.notes}</p>
                   </div>
-                )}
+                {(session.layersUsed?.length || session.techniquesUsed?.length) ? (
+                  <div className="paper-card p-3 space-y-2 text-xs">
+                    {!!session.layersUsed?.length && (
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Layers</div>
+                        <div className="flex flex-wrap gap-1.5">{session.layersUsed.map((l) => (
+                          <span key={l} className="px-2 py-0.5 rounded-full bg-accent/60">{l}</span>
+                        ))}</div>
+                      </div>
+                    )}
+                    {!!session.techniquesUsed?.length && (
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Techniques</div>
+                        <div className="flex flex-wrap gap-1.5">{session.techniquesUsed.map((id) => {
+                          const n = (allTechniques ?? []).find((t) => t.id === id)?.name;
+                          return n ? <span key={id} className="px-2 py-0.5 rounded-full bg-accent/60">{n}</span> : null;
+                        })}</div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1" onClick={() => setEditing(true)}>Edit</Button>
@@ -187,6 +208,19 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Notes</Label>
                   <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
                 </div>
+
+                <MultiChipPicker
+                  label="Layers practiced"
+                  options={layerOptions}
+                  value={layersUsed}
+                  onChange={setLayersUsed}
+                />
+                <MultiChipPicker
+                  label="Techniques practiced"
+                  options={techniqueOptions}
+                  value={techniquesUsed}
+                  onChange={setTechniquesUsed}
+                />
 
                 {errors.length > 0 && (
                   <ul className="text-xs text-destructive space-y-0.5">
