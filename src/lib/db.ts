@@ -60,6 +60,15 @@ export interface Segment {
   createdAt: number;
 }
 
+export interface TaskRecurrence {
+  kind: "weekdays" | "interval";
+  days?: number[];               // 0-6, for "weekdays"
+  everyXDays?: number;           // for "interval"
+  startDate: string;             // YYYY-MM-DD
+  endDate?: string;              // optional cap
+  occurrences?: number;          // optional cap
+}
+
 export interface Task {
   id?: number;
   date: string;                  // YYYY-MM-DD
@@ -71,7 +80,8 @@ export interface Task {
   noteVal?: NoteVal;
   done: boolean;
   skipped?: boolean;
-  recurrenceTaskId?: number;
+  recurrenceTaskId?: number;     // points to template task id
+  recurrence?: TaskRecurrence;   // present on template tasks
   createdAt: number;
 }
 
@@ -94,6 +104,8 @@ export interface HelpRequest {
   taskId?: number;
   itemId?: number;
   question: string;
+  answer?: string;
+  answeredAt?: number;
   resolved: boolean;
   createdAt: number;
 }
@@ -127,6 +139,7 @@ export interface Assignment {
   lessonId: number;
   text: string;
   transformed: boolean;
+  taskId?: number;               // populated when transformed
   createdAt: number;
 }
 
