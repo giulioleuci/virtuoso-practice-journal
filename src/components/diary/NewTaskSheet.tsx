@@ -84,6 +84,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       setTitle(prefill?.title ?? "");
       setBpm(undefined);
       setNoteVal(undefined);
+      setLayers([]);
+      setTechniqueIds([]);
       setRepeat(false);
       setRecKind("weekdays");
       setRecDays([new Date(date).getDay()]);
@@ -101,7 +103,21 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     setTitle(`${selectedItem.title}${segLabel}`);
     setBpm(selectedSegment?.targetBpm ?? selectedItem.targetBpm);
     setNoteVal(selectedSegment?.noteVal ?? selectedItem.noteVal);
+    // Pre-seed techniques from item/segment association
+    setTechniqueIds(selectedSegment?.techniqueIds ?? selectedItem.techniqueIds ?? []);
+    setLayers(selectedSegment?.layers ?? []);
   }, [itemId, segmentId, selectedItem, selectedSegment]);
+
+  const subjectLayers = useMemo(
+    () => subjects?.find((s) => s.id === subjectId)?.layers ?? [],
+    [subjects, subjectId]
+  );
+  const techniqueOptions = useMemo(
+    () => (allTechniques ?? [])
+      .filter((t) => t.subjectId === subjectId)
+      .map((t) => ({ value: t.id!, label: t.name })),
+    [allTechniques, subjectId]
+  );
 
   const recurrence: TaskRecurrence | undefined = useMemo(() => {
     if (!repeat) return undefined;
