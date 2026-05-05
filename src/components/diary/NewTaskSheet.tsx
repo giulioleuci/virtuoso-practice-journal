@@ -189,6 +189,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       if (recKind === "weekdays" && !recDays.length) e.push("Pick at least one day");
       if (recKind === "interval" && (everyX < 1 || everyX > 60)) e.push("Interval must be 1–60 days");
       if (endMode === "date" && !endDate) e.push("Set an end date");
+      if (endMode === "nextLesson" && !nextLessonDate) e.push("No upcoming lesson found for this subject");
       if (endMode === "count" && (occurrences < 1 || occurrences > 200)) e.push("Occurrences must be 1–200");
     }
     return e;
