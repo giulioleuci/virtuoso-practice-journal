@@ -117,3 +117,24 @@ export default function Diary() {
     </div>
   );
 }
+
+function EmptyDiary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
+  const quote = useMemo(() => pickQuote(), []);
+  return (
+    <button
+      onClick={onAdd}
+      className="paper-card p-8 text-center w-full hover:-translate-y-0.5 transition-transform group"
+    >
+      <p className="font-serif text-xl italic text-foreground/85 leading-snug">
+        “{quote.text}”
+      </p>
+      <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
+        — {quote.author}
+      </p>
+      <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
+      <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
+        <Plus className="h-4 w-4" /> Begin a task
+      </span>
+    </button>
+  );
+}
