@@ -52,7 +52,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
   const [layersUsed, setLayersUsed] = useState<string[]>([]);
   const [techniquesUsed, setTechniquesUsed] = useState<number[]>([]);
   const [reps, setReps] = useState<number | undefined>();
-  const [confidence, setConfidence] = useState<number>(3);
+  const [confidence, setConfidence] = useState<number | undefined>(undefined);
   const [confirmDel, setConfirmDel] = useState(false);
 
   const subject = useLiveQuery(
