@@ -92,7 +92,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     if (!session?.id || errors.length) return;
     await db.sessions.update(session.id, {
       date, bpmReached: bpm, noteVal, quality, notes: notes.trim() || undefined,
-      layersUsed, techniquesUsed,
+      layersUsed, techniquesUsed, reps, confidence,
     });
     toast.success("Session updated");
     setEditing(false);
