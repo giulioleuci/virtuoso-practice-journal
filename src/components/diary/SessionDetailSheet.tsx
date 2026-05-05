@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
+import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -47,7 +48,19 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
   const [quality, setQuality] = useState<SessionQuality>("well");
   const [notes, setNotes] = useState("");
+  const [layersUsed, setLayersUsed] = useState<string[]>([]);
+  const [techniquesUsed, setTechniquesUsed] = useState<number[]>([]);
   const [confirmDel, setConfirmDel] = useState(false);
+
+  const subject = useLiveQuery(
+    () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
+    [task?.subjectId]
+  );
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const layerOptions = (subject?.layers ?? []).map((l) => ({ value: l, label: l }));
+  const techniqueOptions = (allTechniques ?? [])
+    .filter((t) => t.subjectId === task?.subjectId)
+    .map((t) => ({ value: t.id!, label: t.name }));
 
   useEffect(() => {
     if (open && session) {
@@ -57,6 +70,8 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
       setNoteVal(session.noteVal);
       setQuality(session.quality ?? "well");
       setNotes(session.notes ?? "");
+      setLayersUsed(session.layersUsed ?? []);
+      setTechniquesUsed(session.techniquesUsed ?? []);
     }
   }, [open, session]);
 
