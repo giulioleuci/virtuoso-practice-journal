@@ -1,16 +1,22 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Task } from "@/lib/db";
+import { db, type Task, type Session } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { Plus, CheckCircle2, Circle, ListChecks, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
+import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { PracticeMode } from "@/components/diary/PracticeMode";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { pickQuote } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function todayKey() {
   const d = new Date();
@@ -36,6 +42,8 @@ export default function Diary() {
   const [logTask, setLogTask] = useState<Task | null>(null);
   const [logPrefill, setLogPrefill] = useState<{ bpm?: number; noteVal?: import("@/lib/db").NoteVal; notes?: string } | undefined>();
   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
+  const [detailSession, setDetailSession] = useState<Session | null>(null);
+  const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
 
   const dateLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long", month: "long", day: "numeric",
@@ -82,13 +90,27 @@ export default function Diary() {
                       task.done && "opacity-70"
                     )}
                   >
-                    {task.done ? (
-                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                    ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-                    )}
                     <button
-                      onClick={() => { setLogPrefill(undefined); setLogTask(task); }}
+                      onClick={() => task.done && setConfirmUncomplete(task)}
+                      className="mt-0.5 shrink-0"
+                      aria-label={task.done ? "Mark as not done" : "Pending"}
+                      disabled={!task.done}
+                    >
+                      {task.done ? (
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (task.done && last) {
+                          setDetailSession(last as Session);
+                        } else {
+                          setLogPrefill(undefined);
+                          setLogTask(task);
+                        }
+                      }}
                       className="flex-1 min-w-0 text-left"
                     >
                       <div className={cn("font-medium", task.done && "line-through")}>{task.title}</div>
@@ -106,13 +128,15 @@ export default function Diary() {
                         </div>
                       )}
                     </button>
-                    <button
-                      onClick={() => setPracticeTask(task)}
-                      className="self-center inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shrink-0"
-                      aria-label="Start practice"
-                    >
-                      <Play className="h-3.5 w-3.5" /> Start
-                    </button>
+                    {!task.done && (
+                      <button
+                        onClick={() => setPracticeTask(task)}
+                        className="self-center inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shrink-0"
+                        aria-label="Start practice"
+                      >
+                        <Play className="h-3.5 w-3.5" /> Start
+                      </button>
+                    )}
                   </div>
                 </li>
               );
@@ -144,6 +168,38 @@ export default function Diary() {
           }}
         />
       )}
+      <SessionDetailSheet
+        open={detailSession !== null}
+        onOpenChange={(o) => { if (!o) setDetailSession(null); }}
+        session={detailSession}
+      />
+      <AlertDialog open={confirmUncomplete !== null} onOpenChange={(o) => { if (!o) setConfirmUncomplete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark as not done?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will reopen the task and delete all sessions logged for it today. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                const t = confirmUncomplete;
+                if (!t?.id) return;
+                const sessions = await db.sessions.where("taskId").equals(t.id).and((s) => s.date === t.date).toArray();
+                await db.sessions.bulkDelete(sessions.map((s) => s.id!).filter(Boolean) as number[]);
+                await db.tasks.update(t.id, { done: false });
+                toast.success("Task reopened");
+                setConfirmUncomplete(null);
+              }}
+            >
+              Reopen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
