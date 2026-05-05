@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, X, Check } from "lucide-react";
+import { Plus, X, Check, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
+import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 
 interface Props {
   open: boolean;
@@ -27,15 +28,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
     () => (subjId ? db.library.where("subjectId").equals(subjId).toArray() : Promise.resolve([])),
     [subjId]
   );
-  const helpReqs = useLiveQuery(
-    () => db.helpRequests.toArray().then((rs) => rs.filter((r) => !r.resolved)),
-    []
-  );
-  const helpForSubject = useMemo(() => {
-    if (!subjId || !library) return [];
-    const itemIds = new Set(library.map((l) => l.id));
-    return (helpReqs ?? []).filter((h) => h.itemId && itemIds.has(h.itemId));
-  }, [helpReqs, library, subjId]);
 
   const existingAssignments = useLiveQuery(
     () => (lesson?.id ? db.assignments.where("lessonId").equals(lesson.id).toArray() : Promise.resolve([])),
@@ -45,24 +37,21 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
   const [piecesPlayed, setPiecesPlayed] = useState<number[]>([]);
-  const [resolvedHelp, setResolvedHelp] = useState<number[]>([]);
   const [assignments, setAssignments] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
+  const [recapOpen, setRecapOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setDate(lesson?.date ?? prefilledDate ?? new Date().toISOString().slice(0, 10));
     setNotes(lesson?.notes ?? "");
     setPiecesPlayed(lesson?.piecesPlayed ?? []);
-    setResolvedHelp([]);
     setAssignments(existingAssignments?.map((a) => a.text) ?? []);
     setDraft("");
   }, [open, lesson, existingAssignments]);
 
   const togglePiece = (id: number) =>
     setPiecesPlayed((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  const toggleHelp = (id: number) =>
-    setResolvedHelp((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const addAssignment = () => {
     const t = draft.trim();
@@ -112,9 +101,6 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           }))
         );
       }
-      for (const hid of resolvedHelp) {
-        await db.helpRequests.update(hid, { resolved: true });
-      }
     });
     toast.success(isEdit ? "Lesson updated" : "Lesson logged");
     onOpenChange(false);
@@ -159,25 +145,14 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
             </div>
           )}
 
-          {!!helpForSubject.length && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                Help requests — tick to resolve
-              </Label>
-              <div className="paper-card p-3 space-y-2">
-                {helpForSubject.map((h) => (
-                  <label key={h.id} className="flex items-start gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={resolvedHelp.includes(h.id!)}
-                      onCheckedChange={() => toggleHelp(h.id!)}
-                      className="mt-0.5"
-                    />
-                    <span className="flex-1">{h.question}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              Help requests
+            </Label>
+            <Button type="button" variant="outline" className="w-full justify-start" onClick={() => setRecapOpen(true)}>
+              <HelpCircle className="h-4 w-4 mr-2" /> Open Ask the Teacher recap
+            </Button>
+          </div>
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Assignments</Label>
@@ -224,6 +199,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           </div>
         </div>
       </SheetContent>
+      <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />
     </Sheet>
   );
 }
