@@ -299,6 +299,21 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
             label="Target tempo (optional)"
           />
 
+          <MultiChipPicker
+            label="Layers to practice"
+            options={subjectLayers.map((l) => ({ value: l, label: l }))}
+            value={layers}
+            onChange={setLayers}
+            emptyHint="Define this subject's layers in Profile."
+          />
+          <MultiChipPicker
+            label="Techniques to focus"
+            options={techniqueOptions}
+            value={techniqueIds}
+            onChange={setTechniqueIds}
+            emptyHint="Add techniques in Profile."
+          />
+
           <div className="paper-card p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
