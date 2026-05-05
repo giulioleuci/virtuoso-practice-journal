@@ -82,6 +82,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
         noteVal,
         quality,
         notes: notes.trim() || undefined,
+        layersUsed,
+        techniquesUsed,
         createdAt: now,
       });
       await db.tasks.update(task.id!, { done: true });
@@ -114,6 +116,21 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
             noteVal={noteVal}
             onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }}
             label="BPM reached"
+          />
+
+          <MultiChipPicker
+            label="Layers practiced"
+            options={layerOptions}
+            value={layersUsed}
+            onChange={setLayersUsed}
+            emptyHint="Define this subject's layers in Profile."
+          />
+          <MultiChipPicker
+            label="Techniques practiced"
+            options={techniqueOptions}
+            value={techniquesUsed}
+            onChange={setTechniquesUsed}
+            emptyHint="Add techniques in Profile."
           />
 
           <div className="space-y-2">
