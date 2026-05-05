@@ -368,7 +368,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
                 onChange={setTechniqueIds}
                 emptyHint="Add techniques in Profile to associate them here."
               />
-              <SegmentsEditor segments={segments} onChange={setSegments} />
+              <SegmentsEditor segments={segments} onChange={setSegments} subjectLayers={subjectLayers} techniqueOptions={subjectTechniqueOptions} />
             </>
           )}
 
@@ -418,7 +418,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
                 onChange={setTechniqueIds}
                 emptyHint="Add techniques in Profile to associate them here."
               />
-              <SegmentsEditor segments={segments} onChange={setSegments} />
+              <SegmentsEditor segments={segments} onChange={setSegments} subjectLayers={subjectLayers} techniqueOptions={subjectTechniqueOptions} />
             </>
           )}
 
