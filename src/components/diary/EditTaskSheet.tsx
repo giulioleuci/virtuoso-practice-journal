@@ -56,8 +56,21 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
       setDate(task.date);
       setBpm(task.targetBpm);
       setNoteVal(task.noteVal);
+      setLayers(task.layers ?? []);
+      setTechniqueIds(task.techniqueIds ?? []);
     }
   }, [open, task]);
+
+  const subjectLayers = useMemo(
+    () => subjects?.find((s) => s.id === subjectId)?.layers ?? [],
+    [subjects, subjectId]
+  );
+  const techniqueOptions = useMemo(
+    () => (allTechniques ?? [])
+      .filter((t) => t.subjectId === subjectId)
+      .map((t) => ({ value: t.id!, label: t.name })),
+    [allTechniques, subjectId]
+  );
 
   const errors = useMemo(() => {
     const e: string[] = [];
@@ -73,6 +86,7 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
     await db.tasks.update(task.id, {
       subjectId: subjectId!, itemId, segmentId,
       title: title.trim(), date, targetBpm: bpm, noteVal,
+      layers, techniqueIds,
     });
     toast.success("Task updated");
     onOpenChange(false);
