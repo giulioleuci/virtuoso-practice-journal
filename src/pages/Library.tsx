@@ -233,6 +233,7 @@ export default function Library() {
                                 {s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}={s.targetBpm}
                               </span>
                             )}
+                          </span>
                         </li>
                       ))}
                       {segs.length > 3 && (
