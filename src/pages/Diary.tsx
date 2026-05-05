@@ -168,6 +168,38 @@ export default function Diary() {
           }}
         />
       )}
+      <SessionDetailSheet
+        open={detailSession !== null}
+        onOpenChange={(o) => { if (!o) setDetailSession(null); }}
+        session={detailSession}
+      />
+      <AlertDialog open={confirmUncomplete !== null} onOpenChange={(o) => { if (!o) setConfirmUncomplete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark as not done?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will reopen the task and delete all sessions logged for it today. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                const t = confirmUncomplete;
+                if (!t?.id) return;
+                const sessions = await db.sessions.where("taskId").equals(t.id).and((s) => s.date === t.date).toArray();
+                await db.sessions.bulkDelete(sessions.map((s) => s.id!).filter(Boolean) as number[]);
+                await db.tasks.update(t.id, { done: false });
+                toast.success("Task reopened");
+                setConfirmUncomplete(null);
+              }}
+            >
+              Reopen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
