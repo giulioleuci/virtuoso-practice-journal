@@ -65,6 +65,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       setHelpText("");
       setLayersUsed(task.layers ?? []);
       setTechniquesUsed(task.techniqueIds ?? []);
+      setReps(undefined);
+      setConfidence(3);
     }
   }, [open, task, prefill]);
 
