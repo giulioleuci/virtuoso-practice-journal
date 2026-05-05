@@ -87,16 +87,21 @@ export default function Library() {
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        {KINDS.map(({ key, icon: Icon, tKey }) => (
+        {KINDS.map(({ key, icon: Icon, tKey, tint }) => (
           <button
             key={key}
             onClick={() => setActive(key)}
             className={cn(
-              "paper-card flex flex-col items-center gap-1 py-3 transition-all",
-              active === key ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
+              "paper-card flex flex-col items-center gap-1 py-3 transition-all relative overflow-hidden",
+              active === key ? "-translate-y-0.5" : "hover:-translate-y-0.5"
             )}
+            style={
+              active === key
+                ? { boxShadow: `inset 0 0 0 2px ${tint}, var(--shadow-card)`, background: `color-mix(in oklab, ${tint} 12%, hsl(var(--card)))` }
+                : undefined
+            }
           >
-            <Icon className={cn("h-5 w-5", active === key ? "text-primary" : "text-muted-foreground")} />
+            <Icon className="h-5 w-5" style={{ color: active === key ? tint : "hsl(var(--muted-foreground))" }} />
             <span className="text-[11px] font-medium leading-tight text-center">{t(tKey)}</span>
           </button>
         ))}
