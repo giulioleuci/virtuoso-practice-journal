@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -28,10 +29,20 @@ export default function History() {
   const [sortDir, setSortDir] = useState<SortDir>("newest");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<"all" | LibraryKind>("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [from, setFrom] = useState(searchParams.get("from") ?? "");
+  const [to, setTo] = useState(searchParams.get("to") ?? "");
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<Session | null>(null);
+
+  // Sync URL → state when navigated with date params (e.g. from heatmap)
+  useEffect(() => {
+    const f = searchParams.get("from") ?? "";
+    const t = searchParams.get("to") ?? "";
+    setFrom(f);
+    setTo(t);
+    setPage(0);
+  }, [searchParams]);
 
   const taskById = useMemo(() => new Map((tasks ?? []).map((t) => [t.id!, t])), [tasks]);
   const itemById = useMemo(() => new Map((items ?? []).map((i) => [i.id!, i])), [items]);
