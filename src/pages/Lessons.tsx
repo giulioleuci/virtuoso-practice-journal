@@ -105,19 +105,19 @@ export default function Lessons() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="font-serif text-3xl">{t("nav.lessons")}</h2>
-        <div className="flex items-center gap-1">
-          <Button size="sm" variant="ghost" onClick={() => setRecapOpen(true)}>
-            <HelpCircle className="h-4 w-4 mr-1" /> Recap
-            {openHelpCount ? (
-              <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">{openHelpCount}</span>
-            ) : null}
-          </Button>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-3xl">{t("nav.lessons")}</h2>
           <Button size="sm" variant="ghost" onClick={openNew}>
             <Plus className="h-4 w-4 mr-1" /> {t("lessons.addRecurrence")}
           </Button>
         </div>
+        <Button size="sm" variant="ghost" className="px-2 -ml-2" onClick={() => setRecapOpen(true)}>
+          <HelpCircle className="h-4 w-4 mr-1" /> Recap
+          {openHelpCount ? (
+            <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">{openHelpCount}</span>
+          ) : null}
+        </Button>
       </div>
 
       {/* Recurrences */}
