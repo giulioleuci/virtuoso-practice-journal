@@ -41,15 +41,17 @@ export default function Lessons() {
   const [delLessonId, setDelLessonId] = useState<number | null>(null);
 
   const [taskPrefill, setTaskPrefill] = useState<{ subjectId?: number; title?: string; assignmentId?: number } | null>(null);
+  const [logDate, setLogDate] = useState<string | undefined>();
 
   const openNew = () => { setEditingRec(null); setRecOpen(true); };
   const openEdit = (r: LessonRecurrence) => { setEditingRec(r); setRecOpen(true); };
 
   const subjectName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
 
-  const openLog = (r: LessonRecurrence) => {
+  const openLog = (r: LessonRecurrence, date?: string) => {
     setLogRec(r);
     setEditingLesson(null);
+    setLogDate(date);
     setLogOpen(true);
   };
   const openEditLesson = (l: Lesson) => {
