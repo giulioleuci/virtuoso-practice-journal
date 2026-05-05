@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Download, Upload, Trash2 } from "lucide-react";
+import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
 
 export default function Profile() {
   const { t, lang, setLang } = useI18n();
@@ -94,6 +95,7 @@ export default function Profile() {
         </Row>
       </section>
 
+      <SubjectsEditor />
       <section className="paper-card p-5 space-y-3">
         <h3 className="font-serif text-xl">Data</h3>
         <div className="flex flex-col gap-2">
