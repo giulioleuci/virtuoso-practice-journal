@@ -157,25 +157,14 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
             </div>
           )}
 
-          {!!helpForSubject.length && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                Help requests — tick to resolve
-              </Label>
-              <div className="paper-card p-3 space-y-2">
-                {helpForSubject.map((h) => (
-                  <label key={h.id} className="flex items-start gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={resolvedHelp.includes(h.id!)}
-                      onCheckedChange={() => toggleHelp(h.id!)}
-                      className="mt-0.5"
-                    />
-                    <span className="flex-1">{h.question}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              Help requests
+            </Label>
+            <Button type="button" variant="outline" className="w-full justify-start" onClick={() => setRecapOpen(true)}>
+              <HelpCircle className="h-4 w-4 mr-2" /> Open Ask the Teacher recap
+            </Button>
+          </div>
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Assignments</Label>
