@@ -162,10 +162,17 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       days: recKind === "weekdays" ? [...recDays].sort() : undefined,
       everyXDays: recKind === "interval" ? everyX : undefined,
       startDate,
-      endDate: endMode === "date" && endDate ? endDate : endMode === "never" ? schoolYearEnd(new Date()) : undefined,
+      endDate:
+        endMode === "date" && endDate
+          ? endDate
+          : endMode === "nextLesson" && nextLessonDate
+          ? nextLessonDate
+          : endMode === "never"
+          ? schoolYearEnd(new Date())
+          : undefined,
       occurrences: endMode === "count" ? occurrences : undefined,
     };
-  }, [repeat, recKind, recDays, everyX, startDate, endMode, endDate, occurrences]);
+  }, [repeat, recKind, recDays, everyX, startDate, endMode, endDate, occurrences, nextLessonDate]);
 
   const previewDates = useMemo(
     () => (recurrence ? expandTaskRecurrence(recurrence).slice(0, 6) : []),
