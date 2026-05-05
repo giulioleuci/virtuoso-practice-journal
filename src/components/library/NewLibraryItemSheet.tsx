@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/select";
 import { BpmCoupler } from "./BpmCoupler";
 import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
-import { LayersEditor } from "./LayersEditor";
 import { MasterySliders, type MasteryState } from "./MasterySliders";
+import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -58,6 +58,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const editingKind = item?.kind ?? kind;
 
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
   const existingSegments = useLiveQuery(
     () => (item?.id ? db.segments.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
     [item?.id]
@@ -72,13 +73,20 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const [startBpm, setStartBpm] = useState<number | undefined>();
   const [noteVal, setNoteVal] = useState<LibraryItem["noteVal"]>();
 
-  const [layers, setLayers] = useState<string[]>([]);
+  const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
   const [segments, setSegments] = useState<DraftSegment[]>([]);
 
   const [totalExercises, setTotalExercises] = useState<number | undefined>();
   const [currentExercise, setCurrentExercise] = useState<number | undefined>(1);
 
   const [mastery, setMastery] = useState<MasteryState>(emptyMastery);
+
+  const subjectTechniqueOptions = useMemo(
+    () => (allTechniques ?? [])
+      .filter((t) => t.subjectId === subjectId)
+      .map((t) => ({ value: t.id!, label: t.name })),
+    [allTechniques, subjectId]
+  );
 
   // Default subject when sheet opens / subjects load (create mode)
   useEffect(() => {
@@ -98,7 +106,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setTargetBpm(item.targetBpm);
       setStartBpm(item.startBpm);
       setNoteVal(item.noteVal);
-      setLayers(item.layers ?? []);
+      setTechniqueIds(item.techniqueIds ?? []);
       setTotalExercises(item.totalExercises);
       setCurrentExercise(item.currentExercise ?? 1);
       setMastery(item.mastery ?? emptyMastery);
@@ -116,6 +124,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           noteVal: s.noteVal,
           confidence: s.confidence,
           layers: s.layers ?? [],
+          techniqueIds: s.techniqueIds ?? [],
         }))
       );
     }
@@ -130,7 +139,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setTargetBpm(undefined);
       setStartBpm(undefined);
       setNoteVal(undefined);
-      setLayers([]);
+      setTechniqueIds([]);
       setSegments([]);
       setTotalExercises(undefined);
       setCurrentExercise(1);
