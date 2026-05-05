@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X, Star } from "lucide-react";
+import { Plus, X, Star, ArrowUp, ArrowDown } from "lucide-react";
 import type { NoteVal } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,14 @@ export function SegmentsEditor({ segments, onChange }: Props) {
 
   const remove = (i: number) => onChange(segments.filter((_, idx) => idx !== i));
 
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= segments.length) return;
+    const next = segments.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+
   return (
     <div className="space-y-3">
       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -70,6 +78,24 @@ export function SegmentsEditor({ segments, onChange }: Props) {
                       labelInvalid && "text-destructive"
                     )}
                   />
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0}
+                    className="text-muted-foreground hover:text-foreground p-1 disabled:opacity-30"
+                    aria-label="Move up"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    disabled={i === segments.length - 1}
+                    className="text-muted-foreground hover:text-foreground p-1 disabled:opacity-30"
+                    aria-label="Move down"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => remove(i)}
