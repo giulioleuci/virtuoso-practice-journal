@@ -134,6 +134,31 @@ export default function Profile() {
           </div>
         )}
       </section>
+
+      <Accordion type="single" collapsible>
+        <AccordionItem value="dev" className="paper-card px-5 border-0">
+          <AccordionTrigger className="font-serif text-lg hover:no-underline">
+            <span className="flex items-center gap-2"><FlaskConical className="h-4 w-4" /> Developer Options</span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-3 pt-2">
+            <p className="text-xs text-muted-foreground italic">
+              Wipes the database and seeds it with credible sample data for an advanced piano + harmony student.
+              Task dates are computed from today.
+            </p>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (!confirm("This will erase all data and replace it with sample data. Continue?")) return;
+                await seedSampleData();
+                toast.success("Sample data created");
+                setTimeout(() => location.reload(), 400);
+              }}
+            >
+              <FlaskConical className="h-4 w-4 mr-2" /> Create sample data
+            </Button>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
