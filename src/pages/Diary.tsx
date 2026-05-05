@@ -42,6 +42,8 @@ export default function Diary() {
   const [logTask, setLogTask] = useState<Task | null>(null);
   const [logPrefill, setLogPrefill] = useState<{ bpm?: number; noteVal?: import("@/lib/db").NoteVal; notes?: string } | undefined>();
   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
+  const [detailSession, setDetailSession] = useState<Session | null>(null);
+  const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
 
   const dateLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long", month: "long", day: "numeric",
