@@ -156,121 +156,151 @@ export default function Lessons() {
         )}
       </section>
 
-      {/* Upcoming schedule */}
-      {upcoming.length > 0 && (
-        <section className="space-y-2">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Upcoming</h3>
-          <ul className="space-y-2">
-            {upcoming.map(({ rec, date, isToday }) => (
-              <li key={`${rec.id}-${date}`} className="paper-card p-3 flex items-center gap-3">
-                <CalendarClock className="h-4 w-4 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">
-                    {rec.teacher} · {subjectName(rec.subjectId)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {isToday ? "Today" : date} · {rec.startTime}–{rec.endTime}
-                  </div>
-                </div>
-                <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}>
-                  <NotebookPen className="h-4 w-4 mr-1" /> Log
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* Pending assignments — moved above Upcoming */}
+      {pendingAssignments.length > 0 && (() => {
+        const totalPages = Math.max(1, Math.ceil(pendingAssignments.length / PAGE_SIZE));
+        const page = Math.min(pageAssign, totalPages - 1);
+        const slice = pendingAssignments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+        return (
+          <section className="space-y-2">
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Assignments to schedule</h3>
+            <ul className="space-y-2">
+              {slice.map((a) => {
+                const lesson = lessons?.find((l) => l.id === a.lessonId);
+                return (
+                  <li key={a.id} className="paper-card p-3 flex items-center gap-3">
+                    <Wand2 className="h-4 w-4 text-primary shrink-0" />
+                    <div className="flex-1 text-sm">{a.text}</div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setTaskPrefill({
+                          subjectId: lesson?.subjectId,
+                          title: a.text,
+                          assignmentId: a.id,
+                        })
+                      }
+                    >
+                      Make task
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+            <Pager page={page} totalPages={totalPages} onPage={setPageAssign} />
+          </section>
+        );
+      })()}
 
-      {/* Pending assignments */}
-      {pendingAssignments.length > 0 && (
-        <section className="space-y-2">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Assignments to schedule</h3>
-          <ul className="space-y-2">
-            {pendingAssignments.map((a) => {
-              const lesson = lessons?.find((l) => l.id === a.lessonId);
-              return (
-                <li key={a.id} className="paper-card p-3 flex items-center gap-3">
-                  <Wand2 className="h-4 w-4 text-primary shrink-0" />
-                  <div className="flex-1 text-sm">{a.text}</div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setTaskPrefill({
-                        subjectId: lesson?.subjectId,
-                        title: a.text,
-                        assignmentId: a.id,
-                      })
-                    }
-                  >
-                    Make task
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+      <Accordion type="multiple" className="space-y-2">
+        {/* Upcoming schedule */}
+        {upcoming.length > 0 && (() => {
+          const totalPages = Math.max(1, Math.ceil(upcoming.length / PAGE_SIZE));
+          const page = Math.min(pageUpcoming, totalPages - 1);
+          const slice = upcoming.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+          return (
+            <AccordionItem value="upcoming" className="border-none">
+              <AccordionTrigger className="text-xs uppercase tracking-wider text-muted-foreground hover:no-underline py-2">
+                Upcoming lessons ({upcoming.length})
+              </AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2">
+                  {slice.map(({ rec, date, isToday }) => (
+                    <li key={`${rec.id}-${date}`} className="paper-card p-3 flex items-center gap-3">
+                      <CalendarClock className="h-4 w-4 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {rec.teacher} · {subjectName(rec.subjectId)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {isToday ? "Today" : date} · {rec.startTime}–{rec.endTime}
+                        </div>
+                      </div>
+                      <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}>
+                        <NotebookPen className="h-4 w-4 mr-1" /> Log
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+                <Pager page={page} totalPages={totalPages} onPage={setPageUpcoming} />
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })()}
 
-      {/* Recent lessons */}
-      <section className="space-y-2">
-        <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Recent lessons</h3>
-        {!lessons?.length ? (
-          <p className="paper-card p-6 text-center text-muted-foreground italic">No lessons logged yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {lessons.map((l) => {
-              const las = (assignments ?? []).filter((a) => a.lessonId === l.id);
+        {/* Recent lessons */}
+        <AccordionItem value="recent" className="border-none">
+          <AccordionTrigger className="text-xs uppercase tracking-wider text-muted-foreground hover:no-underline py-2">
+            Recent lessons ({lessons?.length ?? 0})
+          </AccordionTrigger>
+          <AccordionContent>
+            {!lessons?.length ? (
+              <p className="paper-card p-6 text-center text-muted-foreground italic">No lessons logged yet.</p>
+            ) : (() => {
+              const totalPages = Math.max(1, Math.ceil(lessons.length / PAGE_SIZE));
+              const page = Math.min(pageRecent, totalPages - 1);
+              const slice = lessons.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
               return (
-                <li key={l.id} className="paper-card p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-serif text-lg">{subjectName(l.subjectId)}</div>
-                      <div className="text-xs text-muted-foreground">{l.date}</div>
-                      {l.notes && <p className="text-sm mt-1 line-clamp-2">{l.notes}</p>}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => openEditLesson(l)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => l.id && setDelLessonId(l.id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                  {las.length > 0 && (
-                    <ul className="mt-2 pt-2 border-t border-border/60 space-y-1">
-                      {las.map((a) => {
-                        const linkedTask = a.taskId ? tasksAll?.find((tk) => tk.id === a.taskId) : undefined;
-                        return (
-                          <li key={a.id} className="text-xs flex items-center gap-2">
-                            {a.transformed ? (
-                              <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
-                            ) : (
-                              <Wand2 className="h-3 w-3 text-muted-foreground shrink-0" />
-                            )}
-                            <span className="flex-1 truncate">{a.text}</span>
-                            {a.transformed ? (
-                              <span className="text-[10px] uppercase tracking-wider text-primary truncate max-w-[40%]">
-                                → {linkedTask?.title ?? "scheduled"}
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => setTaskPrefill({ subjectId: l.subjectId, title: a.text, assignmentId: a.id })}
-                                className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
-                              >Make task</button>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </li>
+                <>
+                  <ul className="space-y-2">
+                    {slice.map((l) => {
+                      const las = (assignments ?? []).filter((a) => a.lessonId === l.id);
+                      return (
+                        <li key={l.id} className="paper-card p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-serif text-lg">{subjectName(l.subjectId)}</div>
+                              <div className="text-xs text-muted-foreground">{l.date}</div>
+                              {l.notes && <p className="text-sm mt-1 line-clamp-2">{l.notes}</p>}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button onClick={() => openEditLesson(l)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => l.id && setDelLessonId(l.id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                          {las.length > 0 && (
+                            <ul className="mt-2 pt-2 border-t border-border/60 space-y-1">
+                              {las.map((a) => {
+                                const linkedTask = a.taskId ? tasksAll?.find((tk) => tk.id === a.taskId) : undefined;
+                                return (
+                                  <li key={a.id} className="text-xs flex items-center gap-2">
+                                    {a.transformed ? (
+                                      <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
+                                    ) : (
+                                      <Wand2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                                    )}
+                                    <span className="flex-1 truncate">{a.text}</span>
+                                    {a.transformed ? (
+                                      <span className="text-[10px] uppercase tracking-wider text-primary truncate max-w-[40%]">
+                                        → {linkedTask?.title ?? "scheduled"}
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={() => setTaskPrefill({ subjectId: l.subjectId, title: a.text, assignmentId: a.id })}
+                                        className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
+                                      >Make task</button>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <Pager page={page} totalPages={totalPages} onPage={setPageRecent} />
+                </>
               );
-            })}
-          </ul>
-        )}
-      </section>
+            })()}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       <RecurrenceSheet
         open={recOpen}
