@@ -31,7 +31,7 @@ export default function Diary() {
   const { t } = useI18n();
   const profile = useLiveQuery(() => db.profile.get("me"));
   const today = todayKey();
-  const tasks = useLiveQuery(() => db.tasks.where("date").equals(today).toArray(), [today]);
+  const tasks = useLiveQuery(() => db.tasks.where("date").equals(today).filter((t) => !t.deletedAt).toArray(), [today]);
   const allSessions = useLiveQuery(() => db.sessions.toArray(), []);
   const sessionsByTask = (allSessions ?? []).reduce<Record<number, typeof allSessions>>((acc, s) => {
     (acc[s.taskId] ||= [] as never).push(s as never);
