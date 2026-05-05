@@ -55,15 +55,12 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
     setDate(lesson?.date ?? prefilledDate ?? new Date().toISOString().slice(0, 10));
     setNotes(lesson?.notes ?? "");
     setPiecesPlayed(lesson?.piecesPlayed ?? []);
-    setResolvedHelp([]);
     setAssignments(existingAssignments?.map((a) => a.text) ?? []);
     setDraft("");
   }, [open, lesson, existingAssignments]);
 
   const togglePiece = (id: number) =>
     setPiecesPlayed((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  const toggleHelp = (id: number) =>
-    setResolvedHelp((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const addAssignment = () => {
     const t = draft.trim();
