@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { Plus, CheckCircle2, Circle, ListChecks } from "lucide-react";
+import { Plus, CheckCircle2, Circle, ListChecks, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
+import { PracticeMode } from "@/components/diary/PracticeMode";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
 import { pickQuote } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,8 @@ export default function Diary() {
 
   const [newOpen, setNewOpen] = useState(false);
   const [logTask, setLogTask] = useState<Task | null>(null);
+  const [logPrefill, setLogPrefill] = useState<{ bpm?: number; noteVal?: import("@/lib/db").NoteVal; notes?: string } | undefined>();
+  const [practiceTask, setPracticeTask] = useState<Task | null>(null);
 
   const dateLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long", month: "long", day: "numeric",
@@ -73,10 +76,9 @@ export default function Diary() {
               const last = sess[sess.length - 1];
               return (
                 <li key={task.id}>
-                  <button
-                    onClick={() => setLogTask(task)}
+                  <div
                     className={cn(
-                      "paper-card p-4 w-full text-left flex items-start gap-3 transition-all hover:-translate-y-0.5",
+                      "paper-card p-4 w-full flex items-start gap-3 transition-all hover:-translate-y-0.5",
                       task.done && "opacity-70"
                     )}
                   >
@@ -85,7 +87,10 @@ export default function Diary() {
                     ) : (
                       <Circle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
                     )}
-                    <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => { setLogPrefill(undefined); setLogTask(task); }}
+                      className="flex-1 min-w-0 text-left"
+                    >
                       <div className={cn("font-medium", task.done && "line-through")}>{task.title}</div>
                       {task.targetBpm && (
                         <div className="text-xs text-muted-foreground tabular-nums">
@@ -100,11 +105,15 @@ export default function Diary() {
                           {last.quality}
                         </div>
                       )}
-                    </div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground self-center">
-                      {task.done ? "Log again" : "Log"}
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      onClick={() => setPracticeTask(task)}
+                      className="self-center inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shrink-0"
+                      aria-label="Start practice"
+                    >
+                      <Play className="h-3.5 w-3.5" /> Start
+                    </button>
+                  </div>
                 </li>
               );
             })}
@@ -113,7 +122,28 @@ export default function Diary() {
       </section>
 
       <NewTaskSheet open={newOpen} onOpenChange={setNewOpen} date={today} />
-      <SessionLogSheet open={logTask !== null} onOpenChange={(o) => !o && setLogTask(null)} task={logTask} />
+      <SessionLogSheet
+        open={logTask !== null}
+        onOpenChange={(o) => { if (!o) { setLogTask(null); setLogPrefill(undefined); } }}
+        task={logTask}
+        prefill={logPrefill}
+      />
+      {practiceTask && (
+        <PracticeMode
+          task={practiceTask}
+          onClose={() => setPracticeTask(null)}
+          onFinish={({ elapsedMs, bpm, noteVal }) => {
+            const mins = Math.round(elapsedMs / 60000);
+            setLogPrefill({
+              bpm,
+              noteVal,
+              notes: mins > 0 ? `Practiced ${mins} min` : undefined,
+            });
+            setLogTask(practiceTask);
+            setPracticeTask(null);
+          }}
+        />
+      )}
     </div>
   );
 }
