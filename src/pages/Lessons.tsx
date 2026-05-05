@@ -78,6 +78,23 @@ export default function Lessons() {
 
   const pendingAssignments = (assignments ?? []).filter((a) => !a.transformed);
 
+  // Auto-generated upcoming schedule from teacher recurrences
+  const upcoming = useMemo(() => {
+    const today = dayKey(new Date());
+    const loggedDates = new Set(
+      (lessons ?? []).map((l) => `${l.recurrenceId ?? "x"}:${l.date}`)
+    );
+    const out: { rec: LessonRecurrence; date: string; isToday: boolean }[] = [];
+    for (const r of recurrences ?? []) {
+      const dates = upcomingLessonDates(r, 3);
+      for (const d of dates) {
+        if (loggedDates.has(`${r.id}:${d}`)) continue;
+        out.push({ rec: r, date: d, isToday: d === today });
+      }
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 6);
+  }, [recurrences, lessons]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -130,6 +147,31 @@ export default function Lessons() {
           </ul>
         )}
       </section>
+
+      {/* Upcoming schedule */}
+      {upcoming.length > 0 && (
+        <section className="space-y-2">
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Upcoming</h3>
+          <ul className="space-y-2">
+            {upcoming.map(({ rec, date, isToday }) => (
+              <li key={`${rec.id}-${date}`} className="paper-card p-3 flex items-center gap-3">
+                <CalendarClock className="h-4 w-4 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">
+                    {rec.teacher} · {subjectName(rec.subjectId)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {isToday ? "Today" : date} · {rec.startTime}–{rec.endTime}
+                  </div>
+                </div>
+                <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}>
+                  <NotebookPen className="h-4 w-4 mr-1" /> Log
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Pending assignments */}
       {pendingAssignments.length > 0 && (
