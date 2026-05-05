@@ -7,9 +7,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2 } from "lucide-react";
+import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle } from "lucide-react";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet } from "@/components/lessons/LessonLogSheet";
+import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { toast } from "sonner";
 
