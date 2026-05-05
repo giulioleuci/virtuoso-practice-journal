@@ -179,19 +179,24 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
 
       <div className="flex-1 overflow-y-auto px-6 pb-8 max-w-3xl w-full mx-auto space-y-6">
         {/* Timer */}
-        <section className="paper-raised p-8 text-center">
-          <div className="font-numeric text-7xl font-light tabular-nums text-foreground select-none">
+        <section className="flex items-center justify-center gap-3 text-muted-foreground/70">
+          <div className="font-numeric text-2xl font-light tabular-nums select-none">
             {formatTime(elapsed)}
           </div>
-          <div className="flex items-center justify-center gap-2 mt-5">
-            <Button onClick={toggleRun} size="lg" className="px-8">
-              {running ? <Pause className="h-5 w-5 mr-2" /> : <Play className="h-5 w-5 mr-2" />}
-              {running ? "Pause" : elapsed === 0 ? "Start" : "Resume"}
-            </Button>
-            <Button onClick={reset} variant="outline" size="lg" aria-label="Reset">
-              <RotateCcw className="h-5 w-5" />
-            </Button>
-          </div>
+          <button
+            onClick={toggleRun}
+            className="p-1.5 rounded-md hover:text-foreground hover:bg-accent"
+            aria-label={running ? "Pause timer" : "Start timer"}
+          >
+            {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={reset}
+            className="p-1.5 rounded-md hover:text-foreground hover:bg-accent"
+            aria-label="Reset timer"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
         </section>
 
         {/* Metronome */}
