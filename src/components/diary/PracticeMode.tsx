@@ -247,10 +247,10 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground mr-1">Beats/bar</span>
-              {[2, 3, 4, 6].map((n) => (
+              {[1, 2, 3, 4, 6].map((n) => (
                 <button
                   key={n}
                   onClick={() => setBeatsPerBar(n)}
@@ -265,9 +265,24 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
                 </button>
               ))}
             </div>
-            <Button variant="outline" size="sm" onClick={tap}>
-              Tap tempo
-            </Button>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground mr-1">Note</span>
+              {(["half","quarter","eighth","sixteenth"] as NoteVal[]).map((nv) => (
+                <button
+                  key={nv}
+                  onClick={() => setNoteVal(nv)}
+                  className={cn(
+                    "h-8 w-8 rounded-lg text-lg leading-none",
+                    noteVal === nv
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground hover:bg-accent"
+                  )}
+                  title={nv}
+                >
+                  {NOTE_GLYPH[nv]}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
