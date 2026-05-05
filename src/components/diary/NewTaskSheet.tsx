@@ -15,9 +15,15 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   date: string; // YYYY-MM-DD
+  prefill?: {
+    subjectId?: number;
+    title?: string;
+    assignmentId?: number;
+  };
+  onCreated?: (taskId: number) => void;
 }
 
-export function NewTaskSheet({ open, onOpenChange, date }: Props) {
+export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: Props) {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const library = useLiveQuery(() => db.library.toArray(), []);
 
@@ -42,14 +48,14 @@ export function NewTaskSheet({ open, onOpenChange, date }: Props) {
   // Reset on open
   useEffect(() => {
     if (open) {
-      setSubjectId(undefined);
+      setSubjectId(prefill?.subjectId);
       setItemId(undefined);
       setSegmentId(undefined);
-      setTitle("");
+      setTitle(prefill?.title ?? "");
       setBpm(undefined);
       setNoteVal(undefined);
     }
-  }, [open]);
+  }, [open, prefill?.subjectId, prefill?.title]);
 
   // Prefill title + bpm from item/segment
   useEffect(() => {
