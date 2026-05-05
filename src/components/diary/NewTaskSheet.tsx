@@ -11,7 +11,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
-import { expandTaskRecurrence } from "@/lib/recurrence";
+import { expandTaskRecurrence, schoolYearEnd } from "@/lib/recurrence";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -126,7 +126,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       days: recKind === "weekdays" ? [...recDays].sort() : undefined,
       everyXDays: recKind === "interval" ? everyX : undefined,
       startDate,
-      endDate: endMode === "date" && endDate ? endDate : undefined,
+      endDate: endMode === "date" && endDate ? endDate : endMode === "never" ? schoolYearEnd(new Date()) : undefined,
       occurrences: endMode === "count" ? occurrences : undefined,
     };
   }, [repeat, recKind, recDays, everyX, startDate, endMode, endDate, occurrences]);
@@ -375,7 +375,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
                   <Select value={endMode} onValueChange={(v) => setEndMode(v as typeof endMode)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="never">Never (up to a year)</SelectItem>
+                      <SelectItem value="never">End of school year (Jun 30)</SelectItem>
                       <SelectItem value="date">On a date</SelectItem>
                       <SelectItem value="count">After N occurrences</SelectItem>
                     </SelectContent>

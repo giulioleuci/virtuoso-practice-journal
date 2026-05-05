@@ -9,6 +9,12 @@ export function parseDayKey(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/** End of the current school year (June 30). School year runs Sep 1 – Aug 31. */
+export function schoolYearEnd(from = new Date()): string {
+  const y = from.getMonth() >= 8 ? from.getFullYear() + 1 : from.getFullYear();
+  return `${y}-06-30`;
+}
+
 const MAX_GENERATED = 200;
 const HORIZON_DAYS = 365;
 
