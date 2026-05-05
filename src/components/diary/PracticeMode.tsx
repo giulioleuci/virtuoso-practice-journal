@@ -258,29 +258,26 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
           </div>
 
           {/* BPM controls */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setBpm((b) => Math.max(30, b - 1))}
-              className="paper-card p-2 hover:-translate-y-0.5 transition-transform"
-              aria-label="Decrease BPM"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
+          <div className="space-y-2">
             <Slider
               value={[bpm]}
               min={30}
               max={240}
               step={1}
               onValueChange={(v) => setBpm(v[0])}
-              className="flex-1"
             />
-            <button
-              onClick={() => setBpm((b) => Math.min(240, b + 1))}
-              className="paper-card p-2 hover:-translate-y-0.5 transition-transform"
-              aria-label="Increase BPM"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
+            <div className="flex items-center justify-center gap-2">
+              {[-5, -1, +1, +5].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setBpm((b) => Math.min(240, Math.max(30, b + d)))}
+                  className="paper-card px-3 py-1.5 text-sm tabular-nums hover:-translate-y-0.5 transition-transform"
+                  aria-label={`${d > 0 ? "Increase" : "Decrease"} BPM by ${Math.abs(d)}`}
+                >
+                  {d > 0 ? `+${d}` : d}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-center justify-between gap-3 flex-wrap">
