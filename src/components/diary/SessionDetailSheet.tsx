@@ -94,7 +94,12 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
 
   const del = async () => {
     if (!session?.id) return;
+    const taskId = session.taskId;
     await db.sessions.delete(session.id);
+    if (taskId) {
+      const remaining = await db.sessions.where("taskId").equals(taskId).count();
+      if (remaining === 0) await db.tasks.update(taskId, { done: false });
+    }
     toast.success("Session deleted");
     setConfirmDel(false);
     onOpenChange(false);
