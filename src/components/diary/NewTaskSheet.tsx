@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
+import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
