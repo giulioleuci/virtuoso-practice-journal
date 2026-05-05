@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { Flame } from "lucide-react";
@@ -106,14 +107,23 @@ export function StatsDashboard() {
         <div className="flex gap-[3px]">
           {heatmap.map((col, ci) => (
             <div key={ci} className="flex flex-col gap-[3px]">
-              {col.map((cell) => (
-                <div
-                  key={cell.key}
-                  title={`${cell.key} · ${cell.count >= 0 ? cell.count : 0} sessions`}
-                  className="w-3 h-3 rounded-[2px]"
-                  style={{ backgroundColor: heatColor(cell.count) }}
-                />
-              ))}
+              {col.map((cell) => {
+                const isFuture = cell.count < 0;
+                const cellEl = (
+                  <div
+                    title={`${cell.key} · ${cell.count >= 0 ? cell.count : 0} sessions`}
+                    className="w-3 h-3 rounded-[2px] transition-transform hover:scale-125"
+                    style={{ backgroundColor: heatColor(cell.count) }}
+                  />
+                );
+                return isFuture ? (
+                  <div key={cell.key}>{cellEl}</div>
+                ) : (
+                  <Link key={cell.key} to={`/history?from=${cell.key}&to=${cell.key}`}>
+                    {cellEl}
+                  </Link>
+                );
+              })}
             </div>
           ))}
         </div>
