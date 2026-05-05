@@ -27,9 +27,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
     [subjId]
   );
   const helpReqs = useLiveQuery(
-    () => db.helpRequests.where("resolved").equals(0 as never).toArray().then(
-      (rs) => rs.filter((r) => !r.resolved)
-    ),
+    () => db.helpRequests.toArray().then((rs) => rs.filter((r) => !r.resolved)),
     []
   );
   const helpForSubject = useMemo(() => {
