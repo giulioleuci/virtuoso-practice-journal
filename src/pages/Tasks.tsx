@@ -15,7 +15,7 @@ import { EditTaskSheet } from "@/components/diary/EditTaskSheet";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
 const NOTE_GLYPH: Record<string, string> = {
   half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
 };
