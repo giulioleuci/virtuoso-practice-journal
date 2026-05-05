@@ -3,9 +3,10 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type LibraryItem, type Segment } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, Star } from "lucide-react";
+import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, Star, MessageCircleQuestion } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
+import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import {
   AlertDialog,
   AlertDialogAction,
