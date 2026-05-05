@@ -42,6 +42,8 @@ export default function Library() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
+  const allHelp = useLiveQuery(() => db.helpRequests.toArray(), []);
 
   const items = useLiveQuery(
     () => db.library.where("kind").equals(active).toArray(),
