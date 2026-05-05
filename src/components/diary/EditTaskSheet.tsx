@@ -22,6 +22,7 @@ interface Props {
 export function EditTaskSheet({ open, onOpenChange, task }: Props) {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const library = useLiveQuery(() => db.library.toArray(), []);
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [kindFilter, setKindFilter] = useState<LibraryKind | "all">("all");
@@ -31,6 +32,8 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
   const [date, setDate] = useState("");
   const [bpm, setBpm] = useState<number | undefined>();
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
+  const [layers, setLayers] = useState<string[]>([]);
+  const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
 
   const segments = useLiveQuery(
     () => (itemId ? db.segments.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
