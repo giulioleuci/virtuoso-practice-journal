@@ -150,9 +150,9 @@ export async function seedSampleData() {
   // Segments for Ballade
   const seg = async (
     itemId: number, label: string, targetBpm: number, noteVal: any,
-    confidence: number, layers: string[], techniqueIds: number[]
+    _confidence: number, layers: string[], techniqueIds: number[]
   ) => (await db.segments.add({
-    itemId, label, targetBpm, noteVal, confidence, layers, techniqueIds,
+    itemId, label, targetBpm, noteVal, layers, techniqueIds,
     createdAt: now - 1000 * 60 * 60 * 24 * 60,
   })) as number;
 

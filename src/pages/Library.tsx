@@ -115,9 +115,6 @@ export default function Library() {
         <ul className="space-y-2">
           {items.map((it) => {
             const segs = it.id ? (segmentsByItem[it.id] ?? []) : [];
-            const avgConfidence = segs.length
-              ? segs.reduce((sum, s) => sum + (s.confidence ?? 0), 0) / segs.length
-              : 0;
             return (
               <li key={it.id} className="paper-card p-4">
                 {/* Row 1: title + actions */}
