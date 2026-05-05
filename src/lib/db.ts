@@ -28,8 +28,9 @@ export interface Subject {
   id?: number;
   name: string;
   type: SubjectType;
-  layers?: string[];             // allowed practice layers, defined per subject
+  layers?: string[];
   createdAt: number;
+  deletedAt?: number;
 }
 
 export interface Technique {
@@ -37,6 +38,7 @@ export interface Technique {
   subjectId: number;
   name: string;
   createdAt: number;
+  deletedAt?: number;
 }
 
 export interface LibraryItem {
@@ -44,18 +46,18 @@ export interface LibraryItem {
   subjectId: number;
   kind: LibraryKind;
   title: string;
-  composer?: string;             // composer / author (technique manuals)
-  status?: PracticeStatus;       // repertoire
-  startBpm?: number;             // technique
-  targetBpm?: number;            // repertoire/manual/technique
+  composer?: string;
+  status?: PracticeStatus;
+  startBpm?: number;
+  targetBpm?: number;
   noteVal?: NoteVal;
-  techniqueIds?: number[];       // associated techniques
-  totalExercises?: number;       // manual
-  currentExercise?: number;      // manual
-  // theory mastery 0-100
+  techniqueIds?: number[];
+  totalExercises?: number;
+  currentExercise?: number;
   mastery?: { conceptual: number; analytical: number; aural: number; compositional: number };
   tags?: string[];
   createdAt: number;
+  deletedAt?: number;
 }
 
 export interface Segment {
@@ -64,36 +66,51 @@ export interface Segment {
   label: string;
   targetBpm?: number;
   noteVal?: NoteVal;
-  layers: string[];              // values from owning subject's layers
+  layers: string[];
   techniqueIds?: number[];
   createdAt: number;
+  deletedAt?: number;
 }
 
 export interface TaskRecurrence {
   kind: "weekdays" | "interval";
-  days?: number[];               // 0-6, for "weekdays"
-  everyXDays?: number;           // for "interval"
-  startDate: string;             // YYYY-MM-DD
-  endDate?: string;              // optional cap
-  occurrences?: number;          // optional cap
+  days?: number[];
+  everyXDays?: number;
+  startDate: string;
+  endDate?: string;
+  occurrences?: number;
 }
 
 export interface Task {
   id?: number;
-  date: string;                  // YYYY-MM-DD
+  date: string;
   subjectId: number;
   itemId?: number;
   segmentId?: number;
   title: string;
   targetBpm?: number;
   noteVal?: NoteVal;
-  layers?: string[];             // selected practice layers
-  techniqueIds?: number[];       // selected techniques
+  layers?: string[];
+  techniqueIds?: number[];
   done: boolean;
   skipped?: boolean;
-  recurrenceTaskId?: number;     // points to template task id
-  recurrence?: TaskRecurrence;   // present on template tasks
+  recurrenceTaskId?: number;
+  recurrence?: TaskRecurrence;
   createdAt: number;
+  deletedAt?: number;
+}
+
+/** Immutable copy of context at the moment a Session was saved. */
+export interface SessionSnapshot {
+  taskTitle: string;
+  subjectName: string;
+  itemTitle?: string;
+  itemComposer?: string;
+  segmentLabel?: string;
+  targetBpm?: number;
+  noteVal?: NoteVal;
+  layers?: string[];
+  techniqueNames?: string[];
 }
 
 export interface Session {
@@ -108,6 +125,8 @@ export interface Session {
   notes?: string;
   layersUsed?: string[];
   techniquesUsed?: number[];
+  /** Denormalized snapshot — the source of truth for historical display. */
+  snapshot?: SessionSnapshot;
   createdAt: number;
 }
 
@@ -128,13 +147,21 @@ export interface LessonRecurrence {
   subjectId: number;
   teacher: string;
   frequency: "weekly" | "biweekly" | "monthly";
-  dayOfWeek: number;             // 0-6
-  startTime: string;             // HH:MM
+  dayOfWeek: number;
+  startTime: string;
   endTime: string;
-  startDate: string;             // YYYY-MM-DD
+  startDate: string;
   endDate?: string;
   color: ColorKey;
   createdAt: number;
+  deletedAt?: number;
+}
+
+/** Immutable copy of lesson context. */
+export interface LessonSnapshot {
+  subjectName: string;
+  teacher?: string;
+  frequency?: LessonRecurrence["frequency"];
 }
 
 export interface Lesson {
@@ -143,7 +170,10 @@ export interface Lesson {
   subjectId: number;
   date: string;
   notes?: string;
-  piecesPlayed?: number[];       // itemIds
+  piecesPlayed?: number[];
+  /** Titles of pieces played, snapshot at save time. */
+  piecesPlayedTitles?: string[];
+  snapshot?: LessonSnapshot;
   createdAt: number;
 }
 
@@ -153,7 +183,7 @@ export interface Assignment {
   text: string;
   transformed: boolean;
   ignored?: boolean;
-  taskId?: number;               // populated when transformed
+  taskId?: number;
   createdAt: number;
 }
 
@@ -187,10 +217,91 @@ class VirtuosoDB extends Dexie {
     this.version(2).stores({
       techniques: "++id, subjectId, name",
     });
+    // v3: add deletedAt index for soft-deletion of referenced entities
+    this.version(3).stores({
+      subjects: "++id, name, type, deletedAt",
+      library: "++id, subjectId, kind, title, deletedAt",
+      segments: "++id, itemId, deletedAt",
+      tasks: "++id, date, subjectId, itemId, done, deletedAt",
+      recurrences: "++id, subjectId, deletedAt",
+      techniques: "++id, subjectId, name, deletedAt",
+    });
   }
 }
 
 export const db = new VirtuosoDB();
+
+/** Build an immutable snapshot of context needed to render a Session. */
+export async function buildSessionSnapshot(task: Task): Promise<SessionSnapshot> {
+  const [subject, item, segment, techs] = await Promise.all([
+    db.subjects.get(task.subjectId),
+    task.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined),
+    task.segmentId ? db.segments.get(task.segmentId) : Promise.resolve(undefined),
+    task.techniqueIds?.length
+      ? db.techniques.where("id").anyOf(task.techniqueIds).toArray()
+      : Promise.resolve([]),
+  ]);
+  return {
+    taskTitle: task.title,
+    subjectName: subject?.name ?? "—",
+    itemTitle: item?.title,
+    itemComposer: item?.composer,
+    segmentLabel: segment?.label,
+    targetBpm: task.targetBpm,
+    noteVal: task.noteVal,
+    layers: task.layers,
+    techniqueNames: techs.map((t) => t.name),
+  };
+}
+
+/** Build an immutable snapshot of context needed to render a Lesson. */
+export async function buildLessonSnapshot(
+  subjectId: number,
+  recurrence?: LessonRecurrence | null,
+  piecePlayedIds: number[] = [],
+): Promise<{ snapshot: LessonSnapshot; piecesPlayedTitles: string[] }> {
+  const [subject, pieces] = await Promise.all([
+    db.subjects.get(subjectId),
+    piecePlayedIds.length ? db.library.where("id").anyOf(piecePlayedIds).toArray() : Promise.resolve([]),
+  ]);
+  return {
+    snapshot: {
+      subjectName: subject?.name ?? "—",
+      teacher: recurrence?.teacher,
+      frequency: recurrence?.frequency,
+    },
+    piecesPlayedTitles: pieces.map((p) => p.title),
+  };
+}
+
+/** Soft-delete a library item if any of its tasks have logged sessions; otherwise hard-delete. */
+export async function deleteLibraryItem(itemId: number): Promise<"soft" | "hard"> {
+  const taskIds = (await db.tasks.where("itemId").equals(itemId).primaryKeys()) as number[];
+  const hasSession = taskIds.length
+    ? (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0
+    : false;
+  if (hasSession) {
+    await db.library.update(itemId, { deletedAt: Date.now() });
+    return "soft";
+  }
+  await db.transaction("rw", db.library, db.segments, db.tasks, async () => {
+    await db.segments.where("itemId").equals(itemId).delete();
+    await db.tasks.where("itemId").equals(itemId).delete();
+    await db.library.delete(itemId);
+  });
+  return "hard";
+}
+
+/** Soft-delete a task if it has logged sessions; otherwise hard-delete. */
+export async function deleteTaskPreservingHistory(taskId: number): Promise<"soft" | "hard"> {
+  const hasSession = (await db.sessions.where("taskId").equals(taskId).count()) > 0;
+  if (hasSession) {
+    await db.tasks.update(taskId, { deletedAt: Date.now() });
+    return "soft";
+  }
+  await db.tasks.delete(taskId);
+  return "hard";
+}
 
 export async function exportAll(): Promise<string> {
   const dump: Record<string, unknown> = {};

@@ -115,9 +115,24 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
         {!session ? null : (
           <div className="mt-4 space-y-4">
             <div className="paper-card p-3 space-y-1">
-              <div className="font-serif text-lg">{task?.title ?? "—"}</div>
-              {item && <div className="text-xs text-muted-foreground">{item.title}{item.composer ? ` · ${item.composer}` : ""}</div>}
-              {segment && <div className="text-xs text-muted-foreground italic">Segment: {segment.label}</div>}
+              <div className="font-serif text-lg">{session.snapshot?.taskTitle ?? task?.title ?? "—"}</div>
+              {(session.snapshot?.itemTitle || item) && (
+                <div className="text-xs text-muted-foreground">
+                  {session.snapshot?.itemTitle ?? item?.title}
+                  {(session.snapshot?.itemComposer ?? item?.composer)
+                    ? ` · ${session.snapshot?.itemComposer ?? item?.composer}` : ""}
+                </div>
+              )}
+              {(session.snapshot?.segmentLabel || segment) && (
+                <div className="text-xs text-muted-foreground italic">
+                  Segment: {session.snapshot?.segmentLabel ?? segment?.label}
+                </div>
+              )}
+              {session.snapshot && (
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 pt-1">
+                  Snapshot · {session.snapshot.subjectName}
+                </div>
+              )}
             </div>
 
             {!editing ? (

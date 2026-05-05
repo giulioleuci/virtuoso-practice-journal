@@ -39,7 +39,7 @@ const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: Props) {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const library = useLiveQuery(() => db.library.toArray(), []);
+  const library = useLiveQuery(() => db.library.filter((i) => !i.deletedAt).toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
   const [subjectId, setSubjectId] = useState<number | undefined>();

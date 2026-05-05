@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type LibraryKind, type LibraryItem, type Segment } from "@/lib/db";
+import { db, deleteLibraryItem, type LibraryKind, type LibraryItem, type Segment } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, Star, MessageCircleQuestion, MoreVertical } from "lucide-react";
@@ -50,7 +50,7 @@ export default function Library() {
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
   const items = useLiveQuery(
-    () => db.library.where("kind").equals(active).toArray(),
+    () => db.library.where("kind").equals(active).filter((i) => !i.deletedAt).toArray(),
     [active]
   );
   const allSegments = useLiveQuery(() => db.segments.toArray(), []);
@@ -71,11 +71,8 @@ export default function Library() {
 
   const confirmDelete = async () => {
     if (deletingId == null) return;
-    await db.transaction("rw", db.library, db.segments, async () => {
-      await db.segments.where("itemId").equals(deletingId).delete();
-      await db.library.delete(deletingId);
-    });
-    toast.success("Deleted");
+    const mode = await deleteLibraryItem(deletingId);
+    toast.success(mode === "soft" ? "Archived (kept in history)" : "Deleted");
     setDeletingId(null);
   };
 

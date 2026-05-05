@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Task } from "@/lib/db";
+import { db, deleteTaskPreservingHistory, type Task } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,7 +36,7 @@ function summarizeRecurrence(rec: NonNullable<Task["recurrence"]>): string {
 }
 
 export default function Tasks() {
-  const tasks = useLiveQuery(() => db.tasks.toArray());
+  const tasks = useLiveQuery(() => db.tasks.filter((t) => !t.deletedAt).toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
 
   const [view, setView] = useState<"occurrences" | "series">("occurrences");
@@ -88,18 +88,22 @@ export default function Tasks() {
     if (!target) return;
     if (delMode === "series") {
       const seriesId = target.recurrence ? target.id : target.recurrenceTaskId;
-      await db.transaction("rw", db.tasks, async () => {
-        if (seriesId) {
-          await db.tasks.where("recurrenceTaskId").equals(seriesId).delete();
-          await db.tasks.delete(seriesId);
-        } else {
-          await db.tasks.delete(delId);
-        }
-      });
-      toast.success("Series deleted");
+      const ids: number[] = [];
+      if (seriesId) {
+        const children = (await db.tasks.where("recurrenceTaskId").equals(seriesId).primaryKeys()) as number[];
+        ids.push(seriesId, ...children);
+      } else {
+        ids.push(delId);
+      }
+      let softCount = 0;
+      for (const id of ids) {
+        const mode = await deleteTaskPreservingHistory(id);
+        if (mode === "soft") softCount++;
+      }
+      toast.success(softCount ? `Series removed (${softCount} kept in history)` : "Series deleted");
     } else {
-      await db.tasks.delete(delId);
-      toast.success("Task deleted");
+      const mode = await deleteTaskPreservingHistory(delId);
+      toast.success(mode === "soft" ? "Task archived (kept in history)" : "Task deleted");
     }
     setDelId(null);
   };
