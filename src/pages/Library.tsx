@@ -278,6 +278,15 @@ export default function Library() {
         item={editing}
       />
 
+      {helpItem && (
+        <ItemHelpSheet
+          open={helpItem !== null}
+          onOpenChange={(o) => !o && setHelpItem(null)}
+          itemId={helpItem.id!}
+          itemTitle={helpItem.title}
+        />
+      )}
+
       <AlertDialog open={deletingId !== null} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
