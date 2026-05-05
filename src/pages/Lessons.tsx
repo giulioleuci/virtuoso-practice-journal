@@ -28,7 +28,7 @@ export default function Lessons() {
   const { t } = useI18n();
   const recurrences = useLiveQuery(() => db.recurrences.toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
-  const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().limit(20).toArray());
+  const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().toArray());
   const assignments = useLiveQuery(() => db.assignments.toArray());
   const tasksAll = useLiveQuery(() => db.tasks.toArray());
   const openHelpCount = useLiveQuery(async () => (await db.helpRequests.toArray()).filter((h) => !h.resolved).length);
@@ -100,7 +100,7 @@ export default function Lessons() {
         out.push({ rec: r, date: d, isToday: d === today });
       }
     }
-    return out.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 6);
+    return out.sort((a, b) => a.date.localeCompare(b.date));
   }, [recurrences, lessons]);
 
   return (
