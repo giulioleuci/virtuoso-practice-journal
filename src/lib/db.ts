@@ -152,6 +152,7 @@ export interface Assignment {
   lessonId: number;
   text: string;
   transformed: boolean;
+  ignored?: boolean;
   taskId?: number;               // populated when transformed
   createdAt: number;
 }
