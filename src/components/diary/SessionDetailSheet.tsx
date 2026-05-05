@@ -141,6 +141,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Notes</div>
                     <p className="text-sm whitespace-pre-wrap">{session.notes}</p>
                   </div>
+                )}
                 {(session.layersUsed?.length || session.techniquesUsed?.length) ? (
                   <div className="paper-card p-3 space-y-2 text-xs">
                     {!!session.layersUsed?.length && (
