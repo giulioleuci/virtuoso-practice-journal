@@ -31,6 +31,25 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const [notes, setNotes] = useState("");
   const [needHelp, setNeedHelp] = useState(false);
   const [helpText, setHelpText] = useState("");
+  const [layersUsed, setLayersUsed] = useState<string[]>([]);
+  const [techniquesUsed, setTechniquesUsed] = useState<number[]>([]);
+
+  const subject = useLiveQuery(
+    () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
+    [task?.subjectId]
+  );
+  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+
+  const layerOptions = useMemo(() => {
+    const base = task?.layers?.length ? task.layers : (subject?.layers ?? []);
+    return base.map((l) => ({ value: l, label: l }));
+  }, [task, subject]);
+  const techniqueOptions = useMemo(() => {
+    const ids = task?.techniqueIds && task.techniqueIds.length ? task.techniqueIds : null;
+    const all = (allTechniques ?? []).filter((t) => t.subjectId === task?.subjectId);
+    const scoped = ids ? all.filter((t) => ids.includes(t.id!)) : all;
+    return scoped.map((t) => ({ value: t.id!, label: t.name }));
+  }, [allTechniques, task]);
 
   useEffect(() => {
     if (open && task) {
@@ -40,6 +59,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       setNotes(prefill?.notes ?? "");
       setNeedHelp(false);
       setHelpText("");
+      setLayersUsed(task.layers ?? []);
+      setTechniquesUsed(task.techniqueIds ?? []);
     }
   }, [open, task, prefill]);
 
