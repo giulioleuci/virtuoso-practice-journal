@@ -434,7 +434,13 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
                 onChange={(n) => { setTargetBpm(n.bpm); setNoteVal(n.noteVal); }}
                 label="Target tempo"
               />
-              <LayersEditor layers={layers} onChange={setLayers} />
+              <MultiChipPicker
+                label="Techniques covered"
+                options={subjectTechniqueOptions}
+                value={techniqueIds}
+                onChange={setTechniqueIds}
+                emptyHint="Add techniques in Profile to associate them here."
+              />
             </>
           )}
 
