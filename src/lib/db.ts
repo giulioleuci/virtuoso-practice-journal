@@ -17,6 +17,7 @@ export interface Profile {
   reminderFreq: ReminderFreq;
   reminderDays: number[];        // 0-6 if custom
   lateRecoveryDays: number;
+  carryoverDays?: number;        // how many past days to surface uncompleted tasks from
   graceDay: boolean;
   groupByPhase: boolean;
   onboarded: boolean;
