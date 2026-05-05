@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Lesson, type LessonRecurrence } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -7,11 +7,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle, CalendarClock } from "lucide-react";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet } from "@/components/lessons/LessonLogSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
+import { upcomingLessonDates, dayKey } from "@/lib/recurrence";
 import { toast } from "sonner";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
