@@ -223,25 +223,6 @@ export default function Library() {
                     <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground">
                       <span>{segs.length} segment{segs.length === 1 ? "" : "s"}</span>
                     </div>
-                    <ul className="space-y-1">
-                      {segs.slice(0, 3).map((s) => (
-                        <li key={s.id} className="flex items-center justify-between gap-2 text-xs">
-                          <span className="truncate flex-1">{s.label}</span>
-                          <span className="flex items-center gap-2 shrink-0 text-muted-foreground tabular-nums">
-                            {s.targetBpm && (
-                              <span>
-                                {s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}={s.targetBpm}
-                              </span>
-                            )}
-                          </span>
-                        </li>
-                      ))}
-                      {segs.length > 3 && (
-                        <li className="text-[11px] italic text-muted-foreground">
-                          +{segs.length - 3} more…
-                        </li>
-                      )}
-                    </ul>
                   </div>
                 )}
 
