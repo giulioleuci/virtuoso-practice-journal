@@ -75,7 +75,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>(task.noteVal);
   const [meterOn, setMeterOn] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [beatsPerBar, setBeatsPerBar] = useState(4);
+  const [beatsPerBar, setBeatsPerBar] = useState(1);
   const [pulse, setPulse] = useState(0);
   const beatRef = useRef(0);
   const ctxRef = useRef<AudioContext | null>(null);
