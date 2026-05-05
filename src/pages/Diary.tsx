@@ -118,13 +118,3 @@ export default function Diary() {
     </div>
   );
 }
-
-function Stat({ icon: Icon, label, value }: { icon?: typeof Flame; label: string; value: string }) {
-  return (
-    <div className="text-center">
-      {Icon && <Icon className="h-4 w-4 text-primary mx-auto mb-1" />}
-      <div className="font-serif text-2xl tabular-nums">{value}</div>
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
-    </div>
-  );
-}
