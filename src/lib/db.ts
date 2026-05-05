@@ -63,7 +63,6 @@ export interface Segment {
   label: string;
   targetBpm?: number;
   noteVal?: NoteVal;
-  confidence: number;            // 1-5
   layers: string[];              // values from owning subject's layers
   techniqueIds?: number[];
   createdAt: number;

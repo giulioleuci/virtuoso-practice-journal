@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X, Star, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, X, ArrowUp, ArrowDown } from "lucide-react";
 import type { NoteVal } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ export interface DraftSegment {
   label: string;
   targetBpm?: number;
   noteVal?: NoteVal;
-  confidence: number; // 1-5
   layers: string[];
   techniqueIds?: number[];
 }
@@ -32,7 +31,7 @@ export function SegmentsEditor({ segments, onChange, subjectLayers = [], techniq
   const addSegment = () => {
     const trimmed = draftLabel.trim();
     if (!trimmed) return;
-    onChange([...segments, { label: trimmed, confidence: 3, layers: [], techniqueIds: [] }]);
+    onChange([...segments, { label: trimmed, layers: [], techniqueIds: [] }]);
     setDraftLabel("");
   };
 
@@ -123,18 +122,6 @@ export function SegmentsEditor({ segments, onChange, subjectLayers = [], techniq
                   emptyHint="Add techniques in Profile to associate them here."
                 />
 
-                <div className="flex items-center gap-1">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground mr-2">
-                    Confidence
-                  </span>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button key={n} type="button" onClick={() => update(i, { confidence: n })} className="p-0.5">
-                      <Star className={cn("h-5 w-5 transition-colors",
-                        n <= s.confidence ? "fill-primary text-primary" : "text-muted-foreground/40"
-                      )} />
-                    </button>
-                  ))}
-                </div>
               </li>
             );
           })}
