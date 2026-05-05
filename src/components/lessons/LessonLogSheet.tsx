@@ -46,9 +46,9 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
   const [piecesPlayed, setPiecesPlayed] = useState<number[]>([]);
-  const [resolvedHelp, setResolvedHelp] = useState<number[]>([]);
   const [assignments, setAssignments] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
+  const [recapOpen, setRecapOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
