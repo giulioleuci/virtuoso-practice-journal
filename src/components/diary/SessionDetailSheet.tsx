@@ -84,8 +84,9 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     const e: string[] = [];
     if (!date) e.push("Date required");
     if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push("BPM out of range");
+    if (reps !== undefined && (reps < 0 || reps > 9999)) e.push("Reps out of range");
     return e;
-  }, [date, bpm]);
+  }, [date, bpm, reps]);
 
   const save = async () => {
     if (!session?.id || errors.length) return;
