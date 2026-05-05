@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Lesson, type LessonRecurrence } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -7,11 +7,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle, CalendarClock } from "lucide-react";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet } from "@/components/lessons/LessonLogSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
+import { upcomingLessonDates, dayKey } from "@/lib/recurrence";
 import { toast } from "sonner";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -26,6 +27,7 @@ export default function Lessons() {
   const subjects = useLiveQuery(() => db.subjects.toArray());
   const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().limit(20).toArray());
   const assignments = useLiveQuery(() => db.assignments.toArray());
+  const tasksAll = useLiveQuery(() => db.tasks.toArray());
   const openHelpCount = useLiveQuery(async () => (await db.helpRequests.toArray()).filter((h) => !h.resolved).length);
 
   const [recapOpen, setRecapOpen] = useState(false);
@@ -40,15 +42,17 @@ export default function Lessons() {
   const [delLessonId, setDelLessonId] = useState<number | null>(null);
 
   const [taskPrefill, setTaskPrefill] = useState<{ subjectId?: number; title?: string; assignmentId?: number } | null>(null);
+  const [logDate, setLogDate] = useState<string | undefined>();
 
   const openNew = () => { setEditingRec(null); setRecOpen(true); };
   const openEdit = (r: LessonRecurrence) => { setEditingRec(r); setRecOpen(true); };
 
   const subjectName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
 
-  const openLog = (r: LessonRecurrence) => {
+  const openLog = (r: LessonRecurrence, date?: string) => {
     setLogRec(r);
     setEditingLesson(null);
+    setLogDate(date);
     setLogOpen(true);
   };
   const openEditLesson = (l: Lesson) => {
@@ -74,6 +78,23 @@ export default function Lessons() {
   };
 
   const pendingAssignments = (assignments ?? []).filter((a) => !a.transformed);
+
+  // Auto-generated upcoming schedule from teacher recurrences
+  const upcoming = useMemo(() => {
+    const today = dayKey(new Date());
+    const loggedDates = new Set(
+      (lessons ?? []).map((l) => `${l.recurrenceId ?? "x"}:${l.date}`)
+    );
+    const out: { rec: LessonRecurrence; date: string; isToday: boolean }[] = [];
+    for (const r of recurrences ?? []) {
+      const dates = upcomingLessonDates(r, 3);
+      for (const d of dates) {
+        if (loggedDates.has(`${r.id}:${d}`)) continue;
+        out.push({ rec: r, date: d, isToday: d === today });
+      }
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 6);
+  }, [recurrences, lessons]);
 
   return (
     <div className="space-y-6">
@@ -127,6 +148,31 @@ export default function Lessons() {
           </ul>
         )}
       </section>
+
+      {/* Upcoming schedule */}
+      {upcoming.length > 0 && (
+        <section className="space-y-2">
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Upcoming</h3>
+          <ul className="space-y-2">
+            {upcoming.map(({ rec, date, isToday }) => (
+              <li key={`${rec.id}-${date}`} className="paper-card p-3 flex items-center gap-3">
+                <CalendarClock className="h-4 w-4 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">
+                    {rec.teacher} · {subjectName(rec.subjectId)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {isToday ? "Today" : date} · {rec.startTime}–{rec.endTime}
+                  </div>
+                </div>
+                <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}>
+                  <NotebookPen className="h-4 w-4 mr-1" /> Log
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Pending assignments */}
       {pendingAssignments.length > 0 && (
@@ -186,13 +232,31 @@ export default function Lessons() {
                     </div>
                   </div>
                   {las.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-border/60 text-xs text-muted-foreground">
-                      {las.length} assignment{las.length === 1 ? "" : "s"} ·{" "}
-                      <span className="text-primary inline-flex items-center gap-0.5">
-                        <CheckCircle2 className="h-3 w-3" />
-                        {las.filter((a) => a.transformed).length} scheduled
-                      </span>
-                    </div>
+                    <ul className="mt-2 pt-2 border-t border-border/60 space-y-1">
+                      {las.map((a) => {
+                        const linkedTask = a.taskId ? tasksAll?.find((tk) => tk.id === a.taskId) : undefined;
+                        return (
+                          <li key={a.id} className="text-xs flex items-center gap-2">
+                            {a.transformed ? (
+                              <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
+                            ) : (
+                              <Wand2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                            )}
+                            <span className="flex-1 truncate">{a.text}</span>
+                            {a.transformed ? (
+                              <span className="text-[10px] uppercase tracking-wider text-primary truncate max-w-[40%]">
+                                → {linkedTask?.title ?? "scheduled"}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setTaskPrefill({ subjectId: l.subjectId, title: a.text, assignmentId: a.id })}
+                                className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
+                              >Make task</button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </li>
               );
@@ -209,9 +273,10 @@ export default function Lessons() {
 
       <LessonLogSheet
         open={logOpen}
-        onOpenChange={(o) => { setLogOpen(o); if (!o) { setEditingLesson(null); setLogRec(null); } }}
+        onOpenChange={(o) => { setLogOpen(o); if (!o) { setEditingLesson(null); setLogRec(null); setLogDate(undefined); } }}
         recurrence={logRec}
         lesson={editingLesson}
+        prefilledDate={logDate}
       />
 
       <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />

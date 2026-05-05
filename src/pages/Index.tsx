@@ -7,6 +7,7 @@ import Diary from "./Diary";
 import Library from "./Library";
 import Lessons from "./Lessons";
 import History from "./History";
+import Tasks from "./Tasks";
 import Profile from "./Profile";
 import { Routes, Route } from "react-router-dom";
 
@@ -33,6 +34,7 @@ const Index = () => {
           <Route path="library" element={<Library />} />
           <Route path="lessons" element={<Lessons />} />
           <Route path="history" element={<History />} />
+          <Route path="tasks" element={<Tasks />} />
           <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>

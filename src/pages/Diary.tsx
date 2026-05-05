@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { Plus, CheckCircle2, Circle } from "lucide-react";
+import { Plus, CheckCircle2, Circle, ListChecks } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
@@ -52,9 +53,14 @@ export default function Diary() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-serif text-2xl">{t("diary.today")}</h3>
-          <Button size="sm" variant="ghost" onClick={() => setNewOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> New task
-          </Button>
+          <div className="flex items-center gap-1">
+            <Link to="/tasks" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2 py-1">
+              <ListChecks className="h-4 w-4" /> All
+            </Link>
+            <Button size="sm" variant="ghost" onClick={() => setNewOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> New task
+            </Button>
+          </div>
         </div>
 
         {!tasks?.length ? (
