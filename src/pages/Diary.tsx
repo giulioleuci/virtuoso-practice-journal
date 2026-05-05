@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { Flame, Sparkles, Plus, CheckCircle2, Circle } from "lucide-react";
+import { Plus, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
+import { StatsDashboard } from "@/components/diary/StatsDashboard";
 import { cn } from "@/lib/utils";
 
 function todayKey() {
@@ -43,13 +44,10 @@ export default function Diary() {
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{t("diary.today")}</p>
         <h2 className="font-serif text-3xl">Hello, {profile?.name ?? "Musician"}</h2>
         <p className="text-muted-foreground italic mt-1">{dateLabel}</p>
-
-        <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-border/60">
-          <Stat icon={Flame} label="Streak" value="0d" />
-          <Stat icon={Sparkles} label="Today" value={`${doneCount}/${tasks?.length ?? 0}`} />
-          <Stat label="This week" value={`${(allSessions ?? []).length}`} />
-        </div>
+        <p className="text-sm text-muted-foreground tabular-nums mt-3">{doneCount}/{tasks?.length ?? 0} done today</p>
       </section>
+
+      <StatsDashboard />
 
       <section>
         <div className="flex items-center justify-between mb-3">
