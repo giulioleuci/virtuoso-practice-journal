@@ -58,7 +58,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   const [recDays, setRecDays] = useState<number[]>([new Date(date).getDay()]);
   const [everyX, setEveryX] = useState(2);
   const [startDate, setStartDate] = useState(date);
-  const [endMode, setEndMode] = useState<"never" | "date" | "count">("never");
+  const [endMode, setEndMode] = useState<"never" | "nextLesson" | "date" | "count">("never");
   const [endDate, setEndDate] = useState("");
   const [occurrences, setOccurrences] = useState(10);
 
@@ -119,6 +119,42 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     [allTechniques, subjectId]
   );
 
+  // Next lesson date for the selected subject (strictly after startDate)
+  const lessons = useLiveQuery(() => db.lessons.toArray(), []);
+  const lessonRecurrences = useLiveQuery(() => db.recurrences.toArray(), []);
+  const nextLessonDate = useMemo(() => {
+    if (!subjectId) return undefined;
+    const candidates: string[] = [];
+    for (const l of lessons ?? []) {
+      if (l.subjectId === subjectId && l.date > startDate) candidates.push(l.date);
+    }
+    // Also project upcoming dates from recurrences
+    for (const r of lessonRecurrences ?? []) {
+      if (r.subjectId !== subjectId) continue;
+      // simple weekly/biweekly projection within a year
+      const start = new Date(startDate);
+      for (let i = 1; i <= 365; i++) {
+        const d = new Date(start);
+        d.setDate(d.getDate() + i);
+        if (d.getDay() !== r.dayOfWeek) continue;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        if (r.endDate && key > r.endDate) break;
+        if (r.frequency === "biweekly") {
+          const weeks = Math.floor((d.getTime() - new Date(r.startDate).getTime()) / (7 * 86400000));
+          if (weeks % 2 !== 0) continue;
+        } else if (r.frequency === "monthly") {
+          // approx every 4 weeks from startDate
+          const days = Math.floor((d.getTime() - new Date(r.startDate).getTime()) / 86400000);
+          if (days % 28 !== 0) continue;
+        }
+        candidates.push(key);
+        break;
+      }
+    }
+    candidates.sort();
+    return candidates[0];
+  }, [lessons, lessonRecurrences, subjectId, startDate]);
+
   const recurrence: TaskRecurrence | undefined = useMemo(() => {
     if (!repeat) return undefined;
     return {
@@ -126,10 +162,17 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       days: recKind === "weekdays" ? [...recDays].sort() : undefined,
       everyXDays: recKind === "interval" ? everyX : undefined,
       startDate,
-      endDate: endMode === "date" && endDate ? endDate : endMode === "never" ? schoolYearEnd(new Date()) : undefined,
+      endDate:
+        endMode === "date" && endDate
+          ? endDate
+          : endMode === "nextLesson" && nextLessonDate
+          ? nextLessonDate
+          : endMode === "never"
+          ? schoolYearEnd(new Date())
+          : undefined,
       occurrences: endMode === "count" ? occurrences : undefined,
     };
-  }, [repeat, recKind, recDays, everyX, startDate, endMode, endDate, occurrences]);
+  }, [repeat, recKind, recDays, everyX, startDate, endMode, endDate, occurrences, nextLessonDate]);
 
   const previewDates = useMemo(
     () => (recurrence ? expandTaskRecurrence(recurrence).slice(0, 6) : []),
@@ -146,6 +189,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       if (recKind === "weekdays" && !recDays.length) e.push("Pick at least one day");
       if (recKind === "interval" && (everyX < 1 || everyX > 60)) e.push("Interval must be 1–60 days");
       if (endMode === "date" && !endDate) e.push("Set an end date");
+      if (endMode === "nextLesson" && !nextLessonDate) e.push("No upcoming lesson found for this subject");
       if (endMode === "count" && (occurrences < 1 || occurrences > 200)) e.push("Occurrences must be 1–200");
     }
     return e;
@@ -376,6 +420,9 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="never">End of school year (Jun 30)</SelectItem>
+                      <SelectItem value="nextLesson" disabled={!nextLessonDate}>
+                        Until next lesson{nextLessonDate ? ` (${nextLessonDate})` : " — none scheduled"}
+                      </SelectItem>
                       <SelectItem value="date">On a date</SelectItem>
                       <SelectItem value="count">After N occurrences</SelectItem>
                     </SelectContent>
