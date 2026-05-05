@@ -155,6 +155,7 @@ export interface Assignment {
 class VirtuosoDB extends Dexie {
   profile!: Table<Profile, string>;
   subjects!: Table<Subject, number>;
+  techniques!: Table<Technique, number>;
   library!: Table<LibraryItem, number>;
   segments!: Table<Segment, number>;
   tasks!: Table<Task, number>;
@@ -177,6 +178,9 @@ class VirtuosoDB extends Dexie {
       recurrences: "++id, subjectId",
       lessons: "++id, recurrenceId, subjectId, date",
       assignments: "++id, lessonId, transformed",
+    });
+    this.version(2).stores({
+      techniques: "++id, subjectId, name",
     });
   }
 }
