@@ -90,13 +90,27 @@ export default function Diary() {
                       task.done && "opacity-70"
                     )}
                   >
-                    {task.done ? (
-                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                    ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-                    )}
                     <button
-                      onClick={() => { setLogPrefill(undefined); setLogTask(task); }}
+                      onClick={() => task.done && setConfirmUncomplete(task)}
+                      className="mt-0.5 shrink-0"
+                      aria-label={task.done ? "Mark as not done" : "Pending"}
+                      disabled={!task.done}
+                    >
+                      {task.done ? (
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (task.done && last) {
+                          setDetailSession(last as Session);
+                        } else {
+                          setLogPrefill(undefined);
+                          setLogTask(task);
+                        }
+                      }}
                       className="flex-1 min-w-0 text-left"
                     >
                       <div className={cn("font-medium", task.done && "line-through")}>{task.title}</div>
@@ -114,13 +128,15 @@ export default function Diary() {
                         </div>
                       )}
                     </button>
-                    <button
-                      onClick={() => setPracticeTask(task)}
-                      className="self-center inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shrink-0"
-                      aria-label="Start practice"
-                    >
-                      <Play className="h-3.5 w-3.5" /> Start
-                    </button>
+                    {!task.done && (
+                      <button
+                        onClick={() => setPracticeTask(task)}
+                        className="self-center inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shrink-0"
+                        aria-label="Start practice"
+                      >
+                        <Play className="h-3.5 w-3.5" /> Start
+                      </button>
+                    )}
                   </div>
                 </li>
               );
