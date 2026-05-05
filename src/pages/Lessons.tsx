@@ -7,13 +7,16 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle, CalendarClock } from "lucide-react";
+import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet } from "@/components/lessons/LessonLogSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { upcomingLessonDates, dayKey } from "@/lib/recurrence";
 import { toast } from "sonner";
+
+const PAGE_SIZE = 5;
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -43,6 +46,10 @@ export default function Lessons() {
 
   const [taskPrefill, setTaskPrefill] = useState<{ subjectId?: number; title?: string; assignmentId?: number } | null>(null);
   const [logDate, setLogDate] = useState<string | undefined>();
+
+  const [pageAssign, setPageAssign] = useState(0);
+  const [pageUpcoming, setPageUpcoming] = useState(0);
+  const [pageRecent, setPageRecent] = useState(0);
 
   const openNew = () => { setEditingRec(null); setRecOpen(true); };
   const openEdit = (r: LessonRecurrence) => { setEditingRec(r); setRecOpen(true); };
