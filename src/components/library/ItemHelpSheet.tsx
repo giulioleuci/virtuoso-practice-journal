@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { HelpCircle, MessageSquareQuote, Plus, X } from "lucide-react";
+import { HelpCircle, MessageSquareQuote, Plus, X, ChevronDown, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -23,8 +23,9 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
 
   const [draft, setDraft] = useState("");
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  useEffect(() => { if (!open) { setDraft(""); setAnswers({}); } }, [open]);
+  useEffect(() => { if (!open) { setDraft(""); setAnswers({}); setExpandedId(null); } }, [open]);
 
   const addQuestion = async () => {
     if (!draft.trim()) return;
@@ -77,34 +78,53 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
           {sorted.length === 0 ? (
             <p className="paper-card p-6 text-center text-muted-foreground italic">No questions yet.</p>
           ) : (
-            <ul className="space-y-2">
-              {sorted.map((r) => (
-                <li key={r.id} className="paper-card p-3 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <HelpCircle className={`h-4 w-4 mt-0.5 shrink-0 ${r.resolved ? "text-muted-foreground" : "text-primary"}`} />
-                    <span className="flex-1 text-sm">{r.question}</span>
-                    <button onClick={() => r.id && remove(r.id)} className="text-muted-foreground hover:text-destructive">
-                      <X className="h-4 w-4" />
+            <ul className="space-y-1.5">
+              {sorted.map((r) => {
+                const expanded = expandedId === r.id;
+                return (
+                  <li key={r.id} className="paper-card">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(expanded ? null : (r.id ?? null))}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left"
+                    >
+                      {r.resolved ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <HelpCircle className="h-4 w-4 shrink-0 text-primary" />
+                      )}
+                      <span className="flex-1 text-sm truncate">{r.question}</span>
+                      <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
                     </button>
-                  </div>
-                  {r.answer ? (
-                    <div className="ml-6 text-xs text-muted-foreground italic flex items-start gap-1">
-                      <MessageSquareQuote className="h-3 w-3 mt-0.5 shrink-0" />
-                      <span>{r.answer}</span>
-                    </div>
-                  ) : (
-                    <div className="ml-6 space-y-1.5">
-                      <Textarea
-                        rows={2}
-                        value={answers[r.id!] ?? ""}
-                        onChange={(e) => setAnswers((a) => ({ ...a, [r.id!]: e.target.value }))}
-                        placeholder="Record the teacher's answer…"
-                      />
-                      <Button size="sm" variant="outline" onClick={() => r.id && saveAnswer(r.id)}>Save answer</Button>
-                    </div>
-                  )}
-                </li>
-              ))}
+                    {expanded && (
+                      <div className="px-3 pb-3 space-y-2">
+                        {r.answer ? (
+                          <div className="text-xs text-muted-foreground italic flex items-start gap-1">
+                            <MessageSquareQuote className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span className="flex-1">{r.answer}</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            <Textarea
+                              rows={2}
+                              value={answers[r.id!] ?? ""}
+                              onChange={(e) => setAnswers((a) => ({ ...a, [r.id!]: e.target.value }))}
+                              placeholder="Record the teacher's answer…"
+                            />
+                            <Button size="sm" variant="outline" onClick={() => r.id && saveAnswer(r.id)}>Save answer</Button>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => r.id && remove(r.id)}
+                          className="text-xs text-muted-foreground hover:text-destructive inline-flex items-center gap-1"
+                        >
+                          <X className="h-3 w-3" /> Delete
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
