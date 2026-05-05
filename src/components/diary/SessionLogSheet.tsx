@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -33,6 +35,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const [helpText, setHelpText] = useState("");
   const [layersUsed, setLayersUsed] = useState<string[]>([]);
   const [techniquesUsed, setTechniquesUsed] = useState<number[]>([]);
+  const [reps, setReps] = useState<number | undefined>();
+  const [confidence, setConfidence] = useState<number>(3);
 
   const subject = useLiveQuery(
     () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
@@ -61,15 +65,18 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       setHelpText("");
       setLayersUsed(task.layers ?? []);
       setTechniquesUsed(task.techniqueIds ?? []);
+      setReps(undefined);
+      setConfidence(3);
     }
   }, [open, task, prefill]);
 
   const errors = useMemo(() => {
     const e: string[] = [];
     if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push("BPM out of range (20–400)");
+    if (reps !== undefined && (reps < 0 || reps > 9999)) e.push("Reps out of range (0–9999)");
     if (needHelp && !helpText.trim()) e.push("Describe what to ask the teacher");
     return e;
-  }, [bpm, needHelp, helpText]);
+  }, [bpm, reps, needHelp, helpText]);
 
   const save = async () => {
     if (!task?.id || errors.length) return;
@@ -87,6 +94,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
         date: task.date,
         bpmReached: bpm,
         noteVal,
+        reps,
+        confidence,
         quality,
         notes: notes.trim() || undefined,
         layersUsed,
@@ -125,6 +134,33 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
             onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }}
             label="BPM reached"
           />
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Repetitions</Label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={9999}
+              value={reps ?? ""}
+              onChange={(e) => setReps(e.target.value === "" ? undefined : Number(e.target.value))}
+              placeholder="e.g. 10"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Confidence</Label>
+              <span className="text-sm tabular-nums">{confidence}/5</span>
+            </div>
+            <Slider
+              min={1}
+              max={5}
+              step={1}
+              value={[confidence]}
+              onValueChange={(v) => setConfidence(v[0])}
+            />
+          </div>
 
           <MultiChipPicker
             label="Layers practiced"

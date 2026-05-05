@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import {
@@ -50,6 +51,8 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
   const [notes, setNotes] = useState("");
   const [layersUsed, setLayersUsed] = useState<string[]>([]);
   const [techniquesUsed, setTechniquesUsed] = useState<number[]>([]);
+  const [reps, setReps] = useState<number | undefined>();
+  const [confidence, setConfidence] = useState<number>(3);
   const [confirmDel, setConfirmDel] = useState(false);
 
   const subject = useLiveQuery(
@@ -72,6 +75,8 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
       setNotes(session.notes ?? "");
       setLayersUsed(session.layersUsed ?? []);
       setTechniquesUsed(session.techniquesUsed ?? []);
+      setReps(session.reps);
+      setConfidence(session.confidence ?? 3);
     }
   }, [open, session]);
 
@@ -79,14 +84,15 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     const e: string[] = [];
     if (!date) e.push("Date required");
     if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push("BPM out of range");
+    if (reps !== undefined && (reps < 0 || reps > 9999)) e.push("Reps out of range");
     return e;
-  }, [date, bpm]);
+  }, [date, bpm, reps]);
 
   const save = async () => {
     if (!session?.id || errors.length) return;
     await db.sessions.update(session.id, {
       date, bpmReached: bpm, noteVal, quality, notes: notes.trim() || undefined,
-      layersUsed, techniquesUsed,
+      layersUsed, techniquesUsed, reps, confidence,
     });
     toast.success("Session updated");
     setEditing(false);
@@ -154,6 +160,14 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                     <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Note</dt>
                     <dd>{session.noteVal ?? "—"}</dd>
                   </div>
+                  <div>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Reps</dt>
+                    <dd className="tabular-nums">{session.reps ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Confidence</dt>
+                    <dd className="tabular-nums">{session.confidence != null ? `${session.confidence}/5` : "—"}</dd>
+                  </div>
                 </dl>
 
                 {session.notes && (
@@ -204,6 +218,26 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }}
                   label="BPM reached"
                 />
+
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Repetitions</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={9999}
+                    value={reps ?? ""}
+                    onChange={(e) => setReps(e.target.value === "" ? undefined : Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Confidence</Label>
+                    <span className="text-sm tabular-nums">{confidence}/5</span>
+                  </div>
+                  <Slider min={1} max={5} step={1} value={[confidence]} onValueChange={(v) => setConfidence(v[0])} />
+                </div>
 
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Quality</Label>
