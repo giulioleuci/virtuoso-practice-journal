@@ -28,8 +28,9 @@ export interface Subject {
   id?: number;
   name: string;
   type: SubjectType;
-  layers?: string[];             // allowed practice layers, defined per subject
+  layers?: string[];
   createdAt: number;
+  deletedAt?: number;
 }
 
 export interface Technique {
@@ -37,6 +38,7 @@ export interface Technique {
   subjectId: number;
   name: string;
   createdAt: number;
+  deletedAt?: number;
 }
 
 export interface LibraryItem {
@@ -44,18 +46,18 @@ export interface LibraryItem {
   subjectId: number;
   kind: LibraryKind;
   title: string;
-  composer?: string;             // composer / author (technique manuals)
-  status?: PracticeStatus;       // repertoire
-  startBpm?: number;             // technique
-  targetBpm?: number;            // repertoire/manual/technique
+  composer?: string;
+  status?: PracticeStatus;
+  startBpm?: number;
+  targetBpm?: number;
   noteVal?: NoteVal;
-  techniqueIds?: number[];       // associated techniques
-  totalExercises?: number;       // manual
-  currentExercise?: number;      // manual
-  // theory mastery 0-100
+  techniqueIds?: number[];
+  totalExercises?: number;
+  currentExercise?: number;
   mastery?: { conceptual: number; analytical: number; aural: number; compositional: number };
   tags?: string[];
   createdAt: number;
+  deletedAt?: number;
 }
 
 export interface Segment {
@@ -64,36 +66,51 @@ export interface Segment {
   label: string;
   targetBpm?: number;
   noteVal?: NoteVal;
-  layers: string[];              // values from owning subject's layers
+  layers: string[];
   techniqueIds?: number[];
   createdAt: number;
+  deletedAt?: number;
 }
 
 export interface TaskRecurrence {
   kind: "weekdays" | "interval";
-  days?: number[];               // 0-6, for "weekdays"
-  everyXDays?: number;           // for "interval"
-  startDate: string;             // YYYY-MM-DD
-  endDate?: string;              // optional cap
-  occurrences?: number;          // optional cap
+  days?: number[];
+  everyXDays?: number;
+  startDate: string;
+  endDate?: string;
+  occurrences?: number;
 }
 
 export interface Task {
   id?: number;
-  date: string;                  // YYYY-MM-DD
+  date: string;
   subjectId: number;
   itemId?: number;
   segmentId?: number;
   title: string;
   targetBpm?: number;
   noteVal?: NoteVal;
-  layers?: string[];             // selected practice layers
-  techniqueIds?: number[];       // selected techniques
+  layers?: string[];
+  techniqueIds?: number[];
   done: boolean;
   skipped?: boolean;
-  recurrenceTaskId?: number;     // points to template task id
-  recurrence?: TaskRecurrence;   // present on template tasks
+  recurrenceTaskId?: number;
+  recurrence?: TaskRecurrence;
   createdAt: number;
+  deletedAt?: number;
+}
+
+/** Immutable copy of context at the moment a Session was saved. */
+export interface SessionSnapshot {
+  taskTitle: string;
+  subjectName: string;
+  itemTitle?: string;
+  itemComposer?: string;
+  segmentLabel?: string;
+  targetBpm?: number;
+  noteVal?: NoteVal;
+  layers?: string[];
+  techniqueNames?: string[];
 }
 
 export interface Session {
@@ -108,6 +125,8 @@ export interface Session {
   notes?: string;
   layersUsed?: string[];
   techniquesUsed?: number[];
+  /** Denormalized snapshot — the source of truth for historical display. */
+  snapshot?: SessionSnapshot;
   createdAt: number;
 }
 
@@ -128,13 +147,21 @@ export interface LessonRecurrence {
   subjectId: number;
   teacher: string;
   frequency: "weekly" | "biweekly" | "monthly";
-  dayOfWeek: number;             // 0-6
-  startTime: string;             // HH:MM
+  dayOfWeek: number;
+  startTime: string;
   endTime: string;
-  startDate: string;             // YYYY-MM-DD
+  startDate: string;
   endDate?: string;
   color: ColorKey;
   createdAt: number;
+  deletedAt?: number;
+}
+
+/** Immutable copy of lesson context. */
+export interface LessonSnapshot {
+  subjectName: string;
+  teacher?: string;
+  frequency?: LessonRecurrence["frequency"];
 }
 
 export interface Lesson {
@@ -143,7 +170,10 @@ export interface Lesson {
   subjectId: number;
   date: string;
   notes?: string;
-  piecesPlayed?: number[];       // itemIds
+  piecesPlayed?: number[];
+  /** Titles of pieces played, snapshot at save time. */
+  piecesPlayedTitles?: string[];
+  snapshot?: LessonSnapshot;
   createdAt: number;
 }
 
@@ -153,7 +183,7 @@ export interface Assignment {
   text: string;
   transformed: boolean;
   ignored?: boolean;
-  taskId?: number;               // populated when transformed
+  taskId?: number;
   createdAt: number;
 }
 
