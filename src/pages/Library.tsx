@@ -8,6 +8,7 @@ import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, Star, MessageC
 import { Button } from "@/components/ui/button";
 import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
+import { BpmSparkline } from "@/components/library/BpmSparkline";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,11 +21,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-const KINDS: { key: LibraryKind; icon: typeof BookOpen; tKey: string }[] = [
-  { key: "repertoire", icon: Music2, tKey: "library.kind.repertoire" },
-  { key: "manual",     icon: BookOpen, tKey: "library.kind.manual" },
-  { key: "technique",  icon: Activity, tKey: "library.kind.technique" },
-  { key: "theory",     icon: Brain, tKey: "library.kind.theory" },
+const KINDS: { key: LibraryKind; icon: typeof BookOpen; tKey: string; tint: string }[] = [
+  { key: "repertoire", icon: Music2, tKey: "library.kind.repertoire", tint: "hsl(var(--key-terracotta))" },
+  { key: "manual",     icon: BookOpen, tKey: "library.kind.manual",   tint: "hsl(var(--key-gold))" },
+  { key: "technique",  icon: Activity, tKey: "library.kind.technique", tint: "hsl(var(--key-sage))" },
+  { key: "theory",     icon: Brain, tKey: "library.kind.theory",      tint: "hsl(var(--key-blue))" },
 ];
 
 const NOTE_GLYPH: Record<string, string> = {
@@ -86,16 +87,21 @@ export default function Library() {
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        {KINDS.map(({ key, icon: Icon, tKey }) => (
+        {KINDS.map(({ key, icon: Icon, tKey, tint }) => (
           <button
             key={key}
             onClick={() => setActive(key)}
             className={cn(
-              "paper-card flex flex-col items-center gap-1 py-3 transition-all",
-              active === key ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
+              "paper-card flex flex-col items-center gap-1 py-3 transition-all relative overflow-hidden",
+              active === key ? "-translate-y-0.5" : "hover:-translate-y-0.5"
             )}
+            style={
+              active === key
+                ? { boxShadow: `inset 0 0 0 2px ${tint}, var(--shadow-card)`, background: `color-mix(in oklab, ${tint} 12%, hsl(var(--card)))` }
+                : undefined
+            }
           >
-            <Icon className={cn("h-5 w-5", active === key ? "text-primary" : "text-muted-foreground")} />
+            <Icon className="h-5 w-5" style={{ color: active === key ? tint : "hsl(var(--muted-foreground))" }} />
             <span className="text-[11px] font-medium leading-tight text-center">{t(tKey)}</span>
           </button>
         ))}
@@ -132,6 +138,9 @@ export default function Library() {
                       <div className="text-sm font-serif tabular-nums text-primary whitespace-nowrap">
                         {it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}
                       </div>
+                    )}
+                    {it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual") && (
+                      <BpmSparkline itemId={it.id} />
                     )}
                     {(() => {
                       const itemHelp = (allHelp ?? []).filter((h) => h.itemId === it.id);

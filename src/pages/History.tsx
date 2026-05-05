@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -28,10 +29,20 @@ export default function History() {
   const [sortDir, setSortDir] = useState<SortDir>("newest");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<"all" | LibraryKind>("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [from, setFrom] = useState(searchParams.get("from") ?? "");
+  const [to, setTo] = useState(searchParams.get("to") ?? "");
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<Session | null>(null);
+
+  // Sync URL → state when navigated with date params (e.g. from heatmap)
+  useEffect(() => {
+    const f = searchParams.get("from") ?? "";
+    const t = searchParams.get("to") ?? "";
+    setFrom(f);
+    setTo(t);
+    setPage(0);
+  }, [searchParams]);
 
   const taskById = useMemo(() => new Map((tasks ?? []).map((t) => [t.id!, t])), [tasks]);
   const itemById = useMemo(() => new Map((items ?? []).map((i) => [i.id!, i])), [items]);
@@ -110,9 +121,17 @@ export default function History() {
             {KINDS.map((k) => <SelectItem key={k} value={k} className="capitalize">{k === "all" ? "All kinds" : k}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); }} placeholder="From" />
-        <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); }} placeholder="To" />
+        <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("from", e.target.value) : p.delete("from"); return p; }); }} placeholder="From" />
+        <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("to", e.target.value) : p.delete("to"); return p; }); }} placeholder="To" />
       </div>
+      {(from || to) && (
+        <button
+          onClick={() => { setFrom(""); setTo(""); setSearchParams({}); }}
+          className="text-xs text-primary hover:underline"
+        >
+          Clear date filter ({from || "…"} → {to || "…"})
+        </button>
+      )}
 
       <div className="flex justify-end">
         <Button size="sm" variant="ghost" onClick={() => setSortDir((d) => d === "newest" ? "oldest" : "newest")}>
