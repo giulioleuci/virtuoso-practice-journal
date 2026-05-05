@@ -254,9 +254,10 @@ export default function Lessons() {
 
       <LessonLogSheet
         open={logOpen}
-        onOpenChange={(o) => { setLogOpen(o); if (!o) { setEditingLesson(null); setLogRec(null); } }}
+        onOpenChange={(o) => { setLogOpen(o); if (!o) { setEditingLesson(null); setLogRec(null); setLogDate(undefined); } }}
         recurrence={logRec}
         lesson={editingLesson}
+        prefilledDate={logDate}
       />
 
       <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />
