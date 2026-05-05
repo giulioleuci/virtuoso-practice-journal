@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Download, Upload, Trash2 } from "lucide-react";
+import { Download, Upload, Trash2, FlaskConical } from "lucide-react";
 import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { seedSampleData } from "@/lib/sampleData";
 
 export default function Profile() {
   const { t, lang, setLang } = useI18n();
