@@ -148,19 +148,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
             />
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Confidence</Label>
-              <span className="text-sm tabular-nums">{confidence}/5</span>
-            </div>
-            <Slider
-              min={1}
-              max={5}
-              step={1}
-              value={[confidence]}
-              onValueChange={(v) => setConfidence(v[0])}
-            />
-          </div>
+          <StarRating label="Confidence" value={confidence} onChange={setConfidence} />
 
           <MultiChipPicker
             label="Layers practiced"
