@@ -139,6 +139,9 @@ export default function Library() {
                         {it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}
                       </div>
                     )}
+                    {it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual") && (
+                      <BpmSparkline itemId={it.id} />
+                    )}
                     {(() => {
                       const itemHelp = (allHelp ?? []).filter((h) => h.itemId === it.id);
                       const open = itemHelp.filter((h) => !h.resolved).length;
