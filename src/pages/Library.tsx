@@ -192,18 +192,9 @@ export default function Library() {
                   </div>
                 )}
 
-                {/* Layers chips */}
-                {!!it.layers?.length && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {it.layers.map((l) => (
-                      <span
-                        key={l}
-                        className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70"
-                      >
-                        {l}
-                      </span>
-                    ))}
-                  </div>
+                {/* Technique chips */}
+                {!!it.techniqueIds?.length && (
+                  <TechChips ids={it.techniqueIds} all={allTechniques ?? []} />
                 )}
 
                 {/* Segments preview */}
