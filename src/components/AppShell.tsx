@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { BookMarked, CalendarDays, GraduationCap, UserRound } from "lucide-react";
+import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ export default function AppShell() {
     { to: "/", label: t("nav.diary"), icon: CalendarDays, end: true },
     { to: "/library", label: t("nav.library"), icon: BookMarked },
     { to: "/lessons", label: t("nav.lessons"), icon: GraduationCap },
+    { to: "/history", label: "History", icon: HistoryIcon },
     { to: "/profile", label: t("nav.profile"), icon: UserRound },
   ];
 
@@ -32,7 +33,7 @@ export default function AppShell() {
               end={end}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl transition-colors min-w-[64px]",
+                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[56px]",
                   isActive
                     ? "bg-primary text-primary-foreground shadow-soft"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
