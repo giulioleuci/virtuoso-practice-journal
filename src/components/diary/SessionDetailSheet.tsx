@@ -75,6 +75,8 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
       setNotes(session.notes ?? "");
       setLayersUsed(session.layersUsed ?? []);
       setTechniquesUsed(session.techniquesUsed ?? []);
+      setReps(session.reps);
+      setConfidence(session.confidence ?? 3);
     }
   }, [open, session]);
 
