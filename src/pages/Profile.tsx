@@ -50,9 +50,13 @@ export default function Profile() {
     <div className="space-y-6">
       <section className="paper-card p-6">
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">{t("nav.profile")}</p>
+        <label className="block text-xs text-muted-foreground mb-1" htmlFor="profile-name">Name</label>
         <Input
+          id="profile-name"
           value={profile.name}
+          placeholder="Your name"
           onChange={(e) => update({ name: e.target.value })}
+          onBlur={() => toast.success("Name saved")}
           className="font-serif text-2xl bg-transparent border-0 px-0 focus-visible:ring-0 h-auto"
         />
       </section>
