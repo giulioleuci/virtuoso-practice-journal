@@ -321,3 +321,17 @@ function EmptyLibrary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
     </button>
   );
 }
+
+function TechChips({ ids, all }: { ids: number[]; all: { id?: number; name: string }[] }) {
+  const names = ids.map((id) => all.find((t) => t.id === id)?.name).filter(Boolean) as string[];
+  if (!names.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {names.map((n) => (
+        <span key={n} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70">
+          {n}
+        </span>
+      ))}
+    </div>
+  );
+}
