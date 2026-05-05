@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ChevronLeft, ChevronRight, Pencil, Trash2, CheckCircle2, Circle, Repeat } from "lucide-react";
 import { EditTaskSheet } from "@/components/diary/EditTaskSheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -19,11 +20,26 @@ const PAGE_SIZE = 5;
 const NOTE_GLYPH: Record<string, string> = {
   half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
 };
+const DAY_LBL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function summarizeRecurrence(rec: NonNullable<Task["recurrence"]>): string {
+  const parts: string[] = [];
+  if (rec.kind === "weekdays") {
+    const days = (rec.days ?? []).map((d) => DAY_LBL[d]).join(", ");
+    parts.push(days || "—");
+  } else {
+    parts.push(`every ${rec.everyXDays ?? 1}d`);
+  }
+  if (rec.endDate) parts.push(`until ${rec.endDate}`);
+  else if (rec.occurrences) parts.push(`×${rec.occurrences}`);
+  return parts.join(" · ");
+}
 
 export default function Tasks() {
   const tasks = useLiveQuery(() => db.tasks.toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
 
+  const [view, setView] = useState<"occurrences" | "series">("occurrences");
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [q, setQ] = useState("");
@@ -34,6 +50,9 @@ export default function Tasks() {
 
   const filtered = useMemo(() => {
     let arr = tasks ?? [];
+    if (view === "series") {
+      arr = arr.filter((t) => !!t.recurrence);
+    }
     if (filter === "active") arr = arr.filter((t) => !t.done);
     if (filter === "done") arr = arr.filter((t) => t.done);
     if (subjectFilter !== "all") arr = arr.filter((t) => t.subjectId === Number(subjectFilter));
@@ -41,13 +60,12 @@ export default function Tasks() {
       const needle = q.trim().toLowerCase();
       arr = arr.filter((t) => t.title.toLowerCase().includes(needle));
     }
-    // Active first (by date asc), then done (by date desc)
     return [...arr].sort((a, b) => {
       if (a.done !== b.done) return a.done ? 1 : -1;
       if (a.done) return b.date.localeCompare(a.date);
       return a.date.localeCompare(b.date);
     });
-  }, [tasks, filter, subjectFilter, q]);
+  }, [tasks, view, filter, subjectFilter, q]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -94,6 +112,13 @@ export default function Tasks() {
         <span className="text-xs text-muted-foreground tabular-nums">{filtered.length}</span>
       </div>
 
+      <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); }}>
+        <TabsList className="w-full grid grid-cols-2">
+          <TabsTrigger value="occurrences">Occurrences</TabsTrigger>
+          <TabsTrigger value="series">Recurring series</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="grid grid-cols-2 gap-2">
         <Select value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(0); }}>
           <SelectTrigger><SelectValue /></SelectTrigger>
@@ -134,7 +159,9 @@ export default function Tasks() {
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground tabular-nums">
-                  {t.date} · {subjectName(t.subjectId)}
+                  {view === "series" && t.recurrence
+                    ? <>from {t.date} · {summarizeRecurrence(t.recurrence)} · {subjectName(t.subjectId)}</>
+                    : <>{t.date} · {subjectName(t.subjectId)}</>}
                   {t.targetBpm && <> · {t.noteVal ? NOTE_GLYPH[t.noteVal] : "♩"}={t.targetBpm}</>}
                 </div>
               </div>
