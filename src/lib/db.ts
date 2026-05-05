@@ -217,10 +217,91 @@ class VirtuosoDB extends Dexie {
     this.version(2).stores({
       techniques: "++id, subjectId, name",
     });
+    // v3: add deletedAt index for soft-deletion of referenced entities
+    this.version(3).stores({
+      subjects: "++id, name, type, deletedAt",
+      library: "++id, subjectId, kind, title, deletedAt",
+      segments: "++id, itemId, deletedAt",
+      tasks: "++id, date, subjectId, itemId, done, deletedAt",
+      recurrences: "++id, subjectId, deletedAt",
+      techniques: "++id, subjectId, name, deletedAt",
+    });
   }
 }
 
 export const db = new VirtuosoDB();
+
+/** Build an immutable snapshot of context needed to render a Session. */
+export async function buildSessionSnapshot(task: Task): Promise<SessionSnapshot> {
+  const [subject, item, segment, techs] = await Promise.all([
+    db.subjects.get(task.subjectId),
+    task.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined),
+    task.segmentId ? db.segments.get(task.segmentId) : Promise.resolve(undefined),
+    task.techniqueIds?.length
+      ? db.techniques.where("id").anyOf(task.techniqueIds).toArray()
+      : Promise.resolve([]),
+  ]);
+  return {
+    taskTitle: task.title,
+    subjectName: subject?.name ?? "—",
+    itemTitle: item?.title,
+    itemComposer: item?.composer,
+    segmentLabel: segment?.label,
+    targetBpm: task.targetBpm,
+    noteVal: task.noteVal,
+    layers: task.layers,
+    techniqueNames: techs.map((t) => t.name),
+  };
+}
+
+/** Build an immutable snapshot of context needed to render a Lesson. */
+export async function buildLessonSnapshot(
+  subjectId: number,
+  recurrence?: LessonRecurrence | null,
+  piecePlayedIds: number[] = [],
+): Promise<{ snapshot: LessonSnapshot; piecesPlayedTitles: string[] }> {
+  const [subject, pieces] = await Promise.all([
+    db.subjects.get(subjectId),
+    piecePlayedIds.length ? db.library.where("id").anyOf(piecePlayedIds).toArray() : Promise.resolve([]),
+  ]);
+  return {
+    snapshot: {
+      subjectName: subject?.name ?? "—",
+      teacher: recurrence?.teacher,
+      frequency: recurrence?.frequency,
+    },
+    piecesPlayedTitles: pieces.map((p) => p.title),
+  };
+}
+
+/** Soft-delete a library item if any of its tasks have logged sessions; otherwise hard-delete. */
+export async function deleteLibraryItem(itemId: number): Promise<"soft" | "hard"> {
+  const taskIds = (await db.tasks.where("itemId").equals(itemId).primaryKeys()) as number[];
+  const hasSession = taskIds.length
+    ? (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0
+    : false;
+  if (hasSession) {
+    await db.library.update(itemId, { deletedAt: Date.now() });
+    return "soft";
+  }
+  await db.transaction("rw", db.library, db.segments, db.tasks, async () => {
+    await db.segments.where("itemId").equals(itemId).delete();
+    await db.tasks.where("itemId").equals(itemId).delete();
+    await db.library.delete(itemId);
+  });
+  return "hard";
+}
+
+/** Soft-delete a task if it has logged sessions; otherwise hard-delete. */
+export async function deleteTaskPreservingHistory(taskId: number): Promise<"soft" | "hard"> {
+  const hasSession = (await db.sessions.where("taskId").equals(taskId).count()) > 0;
+  if (hasSession) {
+    await db.tasks.update(taskId, { deletedAt: Date.now() });
+    return "soft";
+  }
+  await db.tasks.delete(taskId);
+  return "hard";
+}
 
 export async function exportAll(): Promise<string> {
   const dump: Record<string, unknown> = {};
