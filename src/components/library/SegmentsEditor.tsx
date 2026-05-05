@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BpmCoupler } from "./BpmCoupler";
-import { LayersEditor } from "./LayersEditor";
+import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { cn } from "@/lib/utils";
 
 export interface DraftSegment {
@@ -14,20 +14,25 @@ export interface DraftSegment {
   noteVal?: NoteVal;
   confidence: number; // 1-5
   layers: string[];
+  techniqueIds?: number[];
 }
 
 interface Props {
   segments: DraftSegment[];
   onChange: (next: DraftSegment[]) => void;
+  /** Subject-defined layers (closed vocabulary). */
+  subjectLayers?: string[];
+  /** Subject-defined techniques. */
+  techniqueOptions?: { value: number; label: string }[];
 }
 
-export function SegmentsEditor({ segments, onChange }: Props) {
+export function SegmentsEditor({ segments, onChange, subjectLayers = [], techniqueOptions = [] }: Props) {
   const [draftLabel, setDraftLabel] = useState("");
 
   const addSegment = () => {
     const trimmed = draftLabel.trim();
     if (!trimmed) return;
-    onChange([...segments, { label: trimmed, confidence: 3, layers: [] }]);
+    onChange([...segments, { label: trimmed, confidence: 3, layers: [], techniqueIds: [] }]);
     setDraftLabel("");
   };
 
@@ -43,6 +48,8 @@ export function SegmentsEditor({ segments, onChange }: Props) {
     [next[i], next[j]] = [next[j], next[i]];
     onChange(next);
   };
+
+  const layerOptions = subjectLayers.map((l) => ({ value: l, label: l }));
 
   return (
     <div className="space-y-3">
@@ -78,35 +85,20 @@ export function SegmentsEditor({ segments, onChange }: Props) {
                       labelInvalid && "text-destructive"
                     )}
                   />
-                  <button
-                    type="button"
-                    onClick={() => move(i, -1)}
-                    disabled={i === 0}
-                    className="text-muted-foreground hover:text-foreground p-1 disabled:opacity-30"
-                    aria-label="Move up"
-                  >
+                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0}
+                    className="text-muted-foreground hover:text-foreground p-1 disabled:opacity-30" aria-label="Move up">
                     <ArrowUp className="h-4 w-4" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => move(i, 1)}
-                    disabled={i === segments.length - 1}
-                    className="text-muted-foreground hover:text-foreground p-1 disabled:opacity-30"
-                    aria-label="Move down"
-                  >
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === segments.length - 1}
+                    className="text-muted-foreground hover:text-foreground p-1 disabled:opacity-30" aria-label="Move down">
                     <ArrowDown className="h-4 w-4" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(i)}
-                    className="text-muted-foreground hover:text-destructive p-1"
-                  >
+                  <button type="button" onClick={() => remove(i)}
+                    className="text-muted-foreground hover:text-destructive p-1">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                {labelInvalid && (
-                  <p className="text-xs text-destructive -mt-1">Label required</p>
-                )}
+                {labelInvalid && <p className="text-xs text-destructive -mt-1">Label required</p>}
 
                 <BpmCoupler
                   bpm={s.targetBpm}
@@ -115,10 +107,20 @@ export function SegmentsEditor({ segments, onChange }: Props) {
                   label="Segment target"
                 />
 
-                <LayersEditor
-                  layers={s.layers}
+                <MultiChipPicker
+                  label="Layers"
+                  options={layerOptions}
+                  value={s.layers}
                   onChange={(layers) => update(i, { layers })}
-                  label="Segment layers"
+                  emptyHint="Define this subject's layers in Profile."
+                />
+
+                <MultiChipPicker
+                  label="Techniques"
+                  options={techniqueOptions}
+                  value={s.techniqueIds ?? []}
+                  onChange={(techniqueIds) => update(i, { techniqueIds })}
+                  emptyHint="Add techniques in Profile to associate them here."
                 />
 
                 <div className="flex items-center gap-1">
@@ -126,20 +128,10 @@ export function SegmentsEditor({ segments, onChange }: Props) {
                     Confidence
                   </span>
                   {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => update(i, { confidence: n })}
-                      className="p-0.5"
-                    >
-                      <Star
-                        className={cn(
-                          "h-5 w-5 transition-colors",
-                          n <= s.confidence
-                            ? "fill-primary text-primary"
-                            : "text-muted-foreground/40"
-                        )}
-                      />
+                    <button key={n} type="button" onClick={() => update(i, { confidence: n })} className="p-0.5">
+                      <Star className={cn("h-5 w-5 transition-colors",
+                        n <= s.confidence ? "fill-primary text-primary" : "text-muted-foreground/40"
+                      )} />
                     </button>
                   ))}
                 </div>
