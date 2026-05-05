@@ -120,30 +120,10 @@ export default function Library() {
               : 0;
             return (
               <li key={it.id} className="paper-card p-4">
+                {/* Row 1: title + actions */}
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-serif text-xl truncate">{it.title}</div>
-                    {it.composer && (
-                      <div className="text-sm text-muted-foreground italic truncate">
-                        {it.composer}
-                      </div>
-                    )}
-                    {it.kind === "repertoire" && it.status && (
-                      <div className="inline-block mt-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent text-foreground/80">
-                        {STATUS_LABEL[it.status]}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {it.targetBpm && (
-                      <div className="text-sm font-serif tabular-nums text-primary whitespace-nowrap">
-                        {it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}
-                      </div>
-                    )}
-                    {it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual") && (
-                      <BpmSparkline itemId={it.id} />
-                    )}
+                  <div className="font-serif text-xl flex-1 min-w-0 truncate">{it.title}</div>
+                  <div className="flex items-center gap-1 shrink-0">
                     {(() => {
                       const itemHelp = (allHelp ?? []).filter((h) => h.itemId === it.id);
                       const open = itemHelp.filter((h) => !h.resolved).length;
@@ -162,41 +142,82 @@ export default function Library() {
                         </button>
                       );
                     })()}
-                    <button
-                      onClick={() => openEdit(it)}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                      aria-label="Edit"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => it.id && setDeletingId(it.id)}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
-                      aria-label="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                          aria-label="More"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(it)}>
+                          <Pencil className="h-4 w-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => it.id && setDeletingId(it.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
-                {/* Technique extras */}
-                {it.kind === "technique" && (it.startBpm || it.targetBpm) && (
-                  <div className="text-xs text-muted-foreground tabular-nums mt-1">
-                    {it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM
+                {/* Row 2: composer / author */}
+                {it.composer && (
+                  <div className="text-sm text-muted-foreground italic truncate mt-0.5">
+                    {it.composer}
                   </div>
                 )}
 
-                {/* Manual progress */}
-                {it.kind === "manual" && (it.totalExercises || it.currentExercise) && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Exercise {it.currentExercise ?? 1}
-                    {it.totalExercises ? ` / ${it.totalExercises}` : ""}
+                {/* Row 3: sparkline + bpm (+ status / manual / technique meta) */}
+                <div className="flex items-center justify-between gap-3 mt-2 min-h-[1.5rem]">
+                  <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                    {it.kind === "repertoire" && it.status && (
+                      <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent text-foreground/80">
+                        {STATUS_LABEL[it.status]}
+                      </span>
+                    )}
+                    {it.kind === "technique" && (it.startBpm || it.targetBpm) && (
+                      <span className="tabular-nums">{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>
+                    )}
+                    {it.kind === "manual" && (it.totalExercises || it.currentExercise) && (
+                      <span>Exercise {it.currentExercise ?? 1}{it.totalExercises ? ` / ${it.totalExercises}` : ""}</span>
+                    )}
                   </div>
-                )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual") && (
+                      <BpmSparkline itemId={it.id} />
+                    )}
+                    {it.targetBpm && (
+                      <div className="text-sm font-serif tabular-nums text-primary whitespace-nowrap">
+                        {it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-                {/* Technique chips */}
-                {!!it.techniqueIds?.length && (
-                  <TechChips ids={it.techniqueIds} all={allTechniques ?? []} />
+                {/* Row 4: tags (+ technique chips) */}
+                {(!!it.tags?.length || !!it.techniqueIds?.length) && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {it.tags?.map((tag) => (
+                      <span key={`tag-${tag}`} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        #{tag}
+                      </span>
+                    ))}
+                    {(it.techniqueIds ?? []).map((id) => {
+                      const name = (allTechniques ?? []).find((t) => t.id === id)?.name;
+                      if (!name) return null;
+                      return (
+                        <span key={`tech-${id}`} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70">
+                          {name}
+                        </span>
+                      );
+                    })}
+                  </div>
                 )}
 
                 {/* Segments preview */}
