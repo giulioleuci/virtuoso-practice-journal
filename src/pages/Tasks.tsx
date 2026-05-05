@@ -112,6 +112,13 @@ export default function Tasks() {
         <span className="text-xs text-muted-foreground tabular-nums">{filtered.length}</span>
       </div>
 
+      <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); }}>
+        <TabsList className="w-full grid grid-cols-2">
+          <TabsTrigger value="occurrences">Occurrences</TabsTrigger>
+          <TabsTrigger value="series">Recurring series</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="grid grid-cols-2 gap-2">
         <Select value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(0); }}>
           <SelectTrigger><SelectValue /></SelectTrigger>
@@ -152,7 +159,9 @@ export default function Tasks() {
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground tabular-nums">
-                  {t.date} · {subjectName(t.subjectId)}
+                  {view === "series" && t.recurrence
+                    ? <>from {t.date} · {summarizeRecurrence(t.recurrence)} · {subjectName(t.subjectId)}</>
+                    : <>{t.date} · {subjectName(t.subjectId)}</>}
                   {t.targetBpm && <> · {t.noteVal ? NOTE_GLYPH[t.noteVal] : "♩"}={t.targetBpm}</>}
                 </div>
               </div>
