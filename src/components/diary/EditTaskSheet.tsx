@@ -173,6 +173,21 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
 
           <BpmCoupler bpm={bpm} noteVal={noteVal} onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }} />
 
+          <MultiChipPicker
+            label="Layers"
+            options={subjectLayers.map((l) => ({ value: l, label: l }))}
+            value={layers}
+            onChange={setLayers}
+            emptyHint="Define this subject's layers in Profile."
+          />
+          <MultiChipPicker
+            label="Techniques"
+            options={techniqueOptions}
+            value={techniqueIds}
+            onChange={setTechniqueIds}
+            emptyHint="Add techniques in Profile."
+          />
+
           {errors.length > 0 && (
             <ul className="text-xs text-destructive space-y-0.5">
               {errors.map((e) => <li key={e}>• {e}</li>)}
