@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type LibraryItem, type Segment } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -101,15 +102,7 @@ export default function Library() {
       </div>
 
       {!items?.length ? (
-        <button
-          onClick={openCreate}
-          className="paper-card p-10 text-center w-full hover:-translate-y-0.5 transition-transform"
-        >
-          <p className="text-muted-foreground italic mb-2">{t("library.empty")}</p>
-          <span className="inline-flex items-center gap-1 text-primary font-medium text-sm">
-            <Plus className="h-4 w-4" /> {t("library.add")}
-          </span>
-        </button>
+        <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
       ) : (
         <ul className="space-y-2">
           {items.map((it) => {
