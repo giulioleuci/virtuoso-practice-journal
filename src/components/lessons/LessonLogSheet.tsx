@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, X, Check } from "lucide-react";
+import { Plus, X, Check, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
+import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 
 interface Props {
   open: boolean;
