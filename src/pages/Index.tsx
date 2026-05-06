@@ -5,6 +5,7 @@ import Onboarding from "@/components/onboarding/Onboarding";
 import AppShell from "@/components/AppShell";
 import Diary from "./Diary";
 import Library from "./Library";
+import Collections from "./Collections";
 import Lessons from "./Lessons";
 import History from "./History";
 import Tasks from "./Tasks";
