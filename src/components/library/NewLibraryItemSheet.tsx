@@ -127,6 +127,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setCurrentExercise(item.currentExercise ?? 1);
       setMastery(item.mastery ?? emptyMastery);
     }
+    if (open && !isEdit) setCollectionIds([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isEdit, item?.id]);
 
@@ -145,6 +146,13 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     }
   }, [open, isEdit, existingSegments]);
 
+  // Hydrate collection memberships on edit
+  useEffect(() => {
+    if (open && isEdit && existingMemberships) {
+      setCollectionIds(existingMemberships.map((m) => m.collectionId));
+    }
+  }, [open, isEdit, existingMemberships]);
+
   // Reset when closed
   useEffect(() => {
     if (!open) {
@@ -160,6 +168,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setCurrentExercise(1);
       setMastery(emptyMastery);
       setSubjectId(undefined);
+      setCollectionIds([]);
     }
   }, [open]);
 
