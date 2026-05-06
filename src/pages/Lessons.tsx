@@ -172,33 +172,37 @@ export default function Lessons() {
               {slice.map((a) => {
                 const lesson = lessons?.find((l) => l.id === a.lessonId);
                 return (
-                  <li key={a.id} className="paper-card p-3 flex items-center gap-3">
-                    <Wand2 className="h-4 w-4 text-primary shrink-0" />
-                    <div className="flex-1 text-sm">{a.text}</div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setTaskPrefill({
-                          subjectId: lesson?.subjectId,
-                          title: a.text,
-                          assignmentId: a.id,
-                        })
-                      }
-                    >
-                      Make task
-                    </Button>
-                    <button
-                      onClick={async () => {
-                        if (!a.id) return;
-                        await db.assignments.update(a.id, { ignored: true });
-                        toast("Ignored");
-                      }}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent shrink-0"
-                      aria-label="Ignore"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                  <li key={a.id} className="paper-card p-3 flex gap-3">
+                    <Wand2 className="h-4 w-4 text-primary shrink-0 mt-1" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <p className="text-sm break-words">{a.text}</p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setTaskPrefill({
+                              subjectId: lesson?.subjectId,
+                              title: a.text,
+                              assignmentId: a.id,
+                            })
+                          }
+                        >
+                          Make task
+                        </Button>
+                        <button
+                          onClick={async () => {
+                            if (!a.id) return;
+                            await db.assignments.update(a.id, { ignored: true });
+                            toast("Ignored");
+                          }}
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent ml-auto"
+                          aria-label="Ignore"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   </li>
                 );
               })}
