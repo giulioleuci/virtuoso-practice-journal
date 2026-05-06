@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type LibraryKind, type NoteVal, type Task, type TaskRecurrence } from "@/lib/db";
+import { db, type LibraryKind, type NoteVal, type Task, type TaskRecurrence, type TaskLinkType } from "@/lib/db";
+import { collectionsService } from "@/lib/services";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,24 +11,24 @@ import {
 } from "@/components/ui/select";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+import { LinkTargetFields } from "./LinkTargetFields";
 import { toast } from "sonner";
 
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   task: Task | null;
-  /** When editing a recurring template, propagate changes to upcoming siblings. */
 }
 
 export function EditTaskSheet({ open, onOpenChange, task }: Props) {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const library = useLiveQuery(() => db.library.filter((i) => !i.deletedAt).toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
   const [subjectId, setSubjectId] = useState<number | undefined>();
-  const [kindFilter, setKindFilter] = useState<LibraryKind | "all">("all");
+  const [linkType, setLinkType] = useState<TaskLinkType>("free");
   const [itemId, setItemId] = useState<number | undefined>();
-  const [segmentId, setSegmentId] = useState<number | undefined>();
+  const [segmentIds, setSegmentIds] = useState<number[]>([]);
+  const [collectionId, setCollectionId] = useState<number | undefined>();
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [bpm, setBpm] = useState<number | undefined>();
@@ -35,23 +36,13 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
   const [layers, setLayers] = useState<string[]>([]);
   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
 
-  const segments = useLiveQuery(
-    () => (itemId ? db.segments.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
-    [itemId]
-  );
-  const itemsForSubject = useMemo(
-    () => (library ?? []).filter(
-      (l) => l.subjectId === subjectId && (kindFilter === "all" || l.kind === kindFilter)
-    ),
-    [library, subjectId, kindFilter]
-  );
-
   useEffect(() => {
     if (open && task) {
       setSubjectId(task.subjectId);
-      setKindFilter("all");
+      setLinkType(task.linkType ?? (task.collectionId ? "collection" : task.itemId ? "item" : "free"));
       setItemId(task.itemId);
-      setSegmentId(task.segmentId);
+      setSegmentIds(task.segmentIds ?? []);
+      setCollectionId(task.collectionId);
       setTitle(task.title);
       setDate(task.date);
       setBpm(task.targetBpm);
@@ -77,26 +68,26 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
     if (!subjectId) e.push("Pick a subject");
     if (!title.trim()) e.push("Title is required");
     if (!date) e.push("Date is required");
+    if (linkType === "item" && !itemId) e.push("Pick a library item");
+    if (linkType === "collection" && !collectionId) e.push("Pick a collection");
     if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push("BPM out of range");
     return e;
-  }, [subjectId, title, date, bpm]);
+  }, [subjectId, title, date, bpm, linkType, itemId, collectionId]);
 
   const save = async () => {
     if (!task?.id || errors.length) return;
     await db.tasks.update(task.id, {
-      subjectId: subjectId!, itemId, segmentId,
+      subjectId: subjectId!,
+      linkType,
+      itemId: linkType === "item" ? itemId : undefined,
+      segmentIds: linkType === "item" ? segmentIds : undefined,
+      collectionId: linkType === "collection" ? collectionId : undefined,
       title: title.trim(), date, targetBpm: bpm, noteVal,
       layers, techniqueIds,
     });
     toast.success("Task updated");
     onOpenChange(false);
   };
-
-  const KINDS: { val: LibraryKind | "all"; label: string }[] = [
-    { val: "all", label: "All" }, { val: "repertoire", label: "Repertoire" },
-    { val: "manual", label: "Manuals" }, { val: "technique", label: "Technique" },
-    { val: "theory", label: "Theory" },
-  ];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -113,7 +104,10 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Subject</Label>
-            <Select value={subjectId?.toString() ?? ""} onValueChange={(v) => setSubjectId(Number(v))}>
+            <Select
+              value={subjectId?.toString() ?? ""}
+              onValueChange={(v) => { setSubjectId(Number(v)); setItemId(undefined); setSegmentIds([]); setCollectionId(undefined); }}
+            >
               <SelectTrigger><SelectValue placeholder="Pick a subject" /></SelectTrigger>
               <SelectContent>
                 {(subjects ?? []).map((s) => (
@@ -123,48 +117,17 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
             </Select>
           </div>
 
-          <div className="flex flex-wrap gap-1.5">
-            {KINDS.map((k) => (
-              <button key={k.val} type="button"
-                onClick={() => { setKindFilter(k.val); }}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                  kindFilter === k.val
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >{k.label}</button>
-            ))}
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Library item</Label>
-            <Select
-              value={itemId?.toString() ?? "none"}
-              onValueChange={(v) => { setItemId(v === "none" ? undefined : Number(v)); setSegmentId(undefined); }}
-              disabled={!subjectId}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">— None —</SelectItem>
-                {itemsForSubject.map((i) => (
-                  <SelectItem key={i.id} value={i.id!.toString()}>{i.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {!!segments?.length && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Segment</Label>
-              <Select value={segmentId?.toString() ?? "none"} onValueChange={(v) => setSegmentId(v === "none" ? undefined : Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Whole item —</SelectItem>
-                  {segments.map((s) => <SelectItem key={s.id} value={s.id!.toString()}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <LinkTargetFields
+            subjectId={subjectId}
+            linkType={linkType}
+            setLinkType={setLinkType}
+            itemId={itemId}
+            setItemId={setItemId}
+            segmentIds={segmentIds}
+            setSegmentIds={setSegmentIds}
+            collectionId={collectionId}
+            setCollectionId={setCollectionId}
+          />
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Title</Label>
@@ -204,5 +167,4 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
   );
 }
 
-// Helper exported for Tasks page
 export type EditableTaskRecurrence = TaskRecurrence;

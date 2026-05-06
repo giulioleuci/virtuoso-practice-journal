@@ -305,7 +305,7 @@ export async function seedSampleData() {
 
     // Hanon daily
     taskRows.push({
-      date: d, subjectId: pianoId, itemId: hanon, segmentId: hanonEx18,
+      date: d, subjectId: pianoId, itemId: hanon, segmentIds: [hanonEx18],
       title: "Hanon — Exercise 18", targetBpm: 96, noteVal: "sixteenth",
       layers: ["RH","LH","Both"], techniqueIds: [tLegato],
       done: true, createdAt: now - i * 86400000,
@@ -324,7 +324,7 @@ export async function seedSampleData() {
     // Ballade work every other day
     if (i % 2 === 0) {
       taskRows.push({
-        date: d, subjectId: pianoId, itemId: chopinBallade, segmentId: balladeA,
+        date: d, subjectId: pianoId, itemId: chopinBallade, segmentIds: [balladeA],
         title: "Ballade — first theme", targetBpm: 66, noteVal: "quarter",
         layers: ["RH","LH","Slow"], techniqueIds: [tVoicing, tLegato],
         done: true, createdAt: now - i * 86400000,
@@ -334,7 +334,7 @@ export async function seedSampleData() {
     // Bach 3x/week
     if (i % 3 === 0) {
       taskRows.push({
-        date: d, subjectId: pianoId, itemId: bachWtc, segmentId: wtcFugue,
+        date: d, subjectId: pianoId, itemId: bachWtc, segmentIds: [wtcFugue],
         title: "Bach — Fugue exposition", targetBpm: 56, noteVal: "quarter",
         layers: ["RH","LH","Both"], techniqueIds: [tVoicing],
         done: i > 4, createdAt: now - i * 86400000,
@@ -376,7 +376,7 @@ export async function seedSampleData() {
 
   // Daily Hanon — template + 14 days
   const hanonTpl = (await db.tasks.add({
-    date: ymd(today), subjectId: pianoId, itemId: hanon, segmentId: hanonEx18,
+    date: ymd(today), subjectId: pianoId, itemId: hanon, segmentIds: [hanonEx18],
     title: "Hanon — Exercise 18", targetBpm: 104, noteVal: "sixteenth",
     layers: ["RH","LH","Both"], techniqueIds: [tLegato],
     done: false, createdAt: now,
@@ -384,7 +384,7 @@ export async function seedSampleData() {
   })) as number;
   for (let i = 1; i < 14; i++) {
     upcoming.push({
-      date: ymd(addDays(today, i)), subjectId: pianoId, itemId: hanon, segmentId: hanonEx18,
+      date: ymd(addDays(today, i)), subjectId: pianoId, itemId: hanon, segmentIds: [hanonEx18],
       title: "Hanon — Exercise 18", targetBpm: 104, noteVal: "sixteenth",
       layers: ["RH","LH","Both"], techniqueIds: [tLegato],
       done: false, recurrenceTaskId: hanonTpl, createdAt: now,
@@ -393,7 +393,7 @@ export async function seedSampleData() {
 
   // Ballade work — every other day for next 2 weeks
   const balladeTpl = (await db.tasks.add({
-    date: ymd(today), subjectId: pianoId, itemId: chopinBallade, segmentId: balladeA,
+    date: ymd(today), subjectId: pianoId, itemId: chopinBallade, segmentIds: [balladeA],
     title: "Ballade — first theme (slow, voicing)", targetBpm: 70, noteVal: "quarter",
     layers: ["RH","LH","Slow"], techniqueIds: [tVoicing, tLegato],
     done: false, createdAt: now,
@@ -401,7 +401,7 @@ export async function seedSampleData() {
   })) as number;
   for (let i = 2; i <= 12; i += 2) {
     upcoming.push({
-      date: ymd(addDays(today, i)), subjectId: pianoId, itemId: chopinBallade, segmentId: balladeA,
+      date: ymd(addDays(today, i)), subjectId: pianoId, itemId: chopinBallade, segmentIds: [balladeA],
       title: "Ballade — first theme (slow, voicing)", targetBpm: 70, noteVal: "quarter",
       layers: ["RH","LH","Slow"], techniqueIds: [tVoicing, tLegato],
       done: false, recurrenceTaskId: balladeTpl, createdAt: now,
@@ -410,7 +410,7 @@ export async function seedSampleData() {
 
   // Coda technique day-by-day (single tasks)
   upcoming.push({
-    date: ymd(today), subjectId: pianoId, itemId: chopinBallade, segmentId: balladeCoda,
+    date: ymd(today), subjectId: pianoId, itemId: chopinBallade, segmentIds: [balladeCoda],
     title: "Ballade — Coda octaves (slow)", targetBpm: 90, noteVal: "quarter",
     layers: ["RH","Slow"], techniqueIds: [tOctaves],
     done: false, createdAt: now,
@@ -418,7 +418,7 @@ export async function seedSampleData() {
 
   // Bach fugue exposition — Mon/Wed/Fri
   const bachTpl = (await db.tasks.add({
-    date: ymd(today), subjectId: pianoId, itemId: bachWtc, segmentId: wtcFugue,
+    date: ymd(today), subjectId: pianoId, itemId: bachWtc, segmentIds: [wtcFugue],
     title: "Bach — Fugue exposition", targetBpm: 60, noteVal: "quarter",
     layers: ["RH","LH","Both"], techniqueIds: [tVoicing],
     done: false, createdAt: now,
@@ -428,7 +428,7 @@ export async function seedSampleData() {
     const d = addDays(today, i);
     if ([1, 3, 5].includes(d.getDay())) {
       upcoming.push({
-        date: ymd(d), subjectId: pianoId, itemId: bachWtc, segmentId: wtcFugue,
+        date: ymd(d), subjectId: pianoId, itemId: bachWtc, segmentIds: [wtcFugue],
         title: "Bach — Fugue exposition", targetBpm: 60, noteVal: "quarter",
         layers: ["RH","LH","Both"], techniqueIds: [tVoicing],
         done: false, recurrenceTaskId: bachTpl, createdAt: now,
@@ -458,11 +458,35 @@ export async function seedSampleData() {
 
   // Secondary dominants — solo task today
   upcoming.push({
-    date: ymd(today), subjectId: harmonyId, itemId: secDom,
+    date: ymd(today), subjectId: harmonyId, itemId: secDom, linkType: "item",
     title: "Aural drill — secondary dominants", layers: ["Aural", "At keyboard"],
     techniqueIds: [tChorale, tModulation],
     done: false, createdAt: now,
   });
+
+  // Multi-segment task: Ballade Intro + First theme together
+  upcoming.push({
+    date: ymd(today), subjectId: pianoId, itemId: chopinBallade, linkType: "item",
+    segmentIds: [balladeIntro, balladeA],
+    title: "Ballade — Intro + First theme (slow run-through)",
+    targetBpm: 70, noteVal: "quarter",
+    layers: ["RH", "LH", "Both", "Slow"], techniqueIds: [tVoicing, tLegato, tPedal],
+    done: false, createdAt: now,
+  });
+
+  // Collection-linked task: full Nocturnes Op. 9 review
+  upcoming.push({
+    date: ymd(addDays(today, 1)), subjectId: pianoId,
+    linkType: "collection", collectionId: colNocturnesOp9,
+    title: "Nocturnes Op. 9 — review session",
+    layers: ["Both", "Memorized"], techniqueIds: [tVoicing, tPedal],
+    done: false, createdAt: now,
+  });
+
+  // Backfill linkType="item" on prior item-linked rows for consistency
+  for (const t of upcoming) {
+    if (!t.linkType) t.linkType = t.itemId ? "item" : "free";
+  }
 
   await db.tasks.bulkAdd(upcoming);
 

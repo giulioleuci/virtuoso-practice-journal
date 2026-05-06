@@ -81,12 +81,24 @@ export interface TaskRecurrence {
   occurrences?: number;
 }
 
+/**
+ * A task is mutually-exclusively linked to ONE of:
+ *  - "free":       no library link
+ *  - "item":       a single LibraryItem (optionally narrowed to one or more segments)
+ *  - "collection": a whole Collection (label/grouping; no per-item iteration)
+ */
+export type TaskLinkType = "free" | "item" | "collection";
+
 export interface Task {
   id?: number;
   date: string;
   subjectId: number;
+  linkType?: TaskLinkType;        // optional for legacy rows; treat missing as inferred
   itemId?: number;
-  segmentId?: number;
+  /** Multi-segment scope when linkType==="item". */
+  segmentIds?: number[];
+  /** Set only when linkType==="collection". */
+  collectionId?: number;
   title: string;
   targetBpm?: number;
   noteVal?: NoteVal;
@@ -106,7 +118,10 @@ export interface SessionSnapshot {
   subjectName: string;
   itemTitle?: string;
   itemComposer?: string;
-  segmentLabel?: string;
+  /** Labels of all segments included in the task scope. */
+  segmentLabels?: string[];
+  /** Name of the collection if the task was collection-linked. */
+  collectionName?: string;
   targetBpm?: number;
   noteVal?: NoteVal;
   layers?: string[];
@@ -253,6 +268,17 @@ class VirtuosoDB extends Dexie {
       collections: "++id, name, composer, defaultSubjectId, deletedAt",
       collectionItems: "++id, collectionId, itemId, [collectionId+itemId]",
     });
+    // v5: tasks support multi-segment scope and collection linking
+    this.version(5).stores({
+      tasks: "++id, date, subjectId, itemId, collectionId, done, deletedAt",
+    }).upgrade(async (tx) => {
+      await tx.table("tasks").toCollection().modify((t: Task) => {
+        const legacy = (t as Task & { segmentId?: number }).segmentId;
+        if (legacy && !t.segmentIds?.length) t.segmentIds = [legacy];
+        delete (t as Task & { segmentId?: number }).segmentId;
+        if (!t.linkType) t.linkType = t.itemId ? "item" : "free";
+      });
+    });
   }
 }
 
@@ -260,20 +286,24 @@ export const db = new VirtuosoDB();
 
 /** Build an immutable snapshot of context needed to render a Session. */
 export async function buildSessionSnapshot(task: Task): Promise<SessionSnapshot> {
-  const [subject, item, segment, techs] = await Promise.all([
+  const [subject, item, segs, techs, collection] = await Promise.all([
     db.subjects.get(task.subjectId),
     task.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined),
-    task.segmentId ? db.segments.get(task.segmentId) : Promise.resolve(undefined),
+    task.segmentIds?.length
+      ? db.segments.where("id").anyOf(task.segmentIds).toArray()
+      : Promise.resolve([]),
     task.techniqueIds?.length
       ? db.techniques.where("id").anyOf(task.techniqueIds).toArray()
       : Promise.resolve([]),
+    task.collectionId ? db.collections.get(task.collectionId) : Promise.resolve(undefined),
   ]);
   return {
     taskTitle: task.title,
     subjectName: subject?.name ?? "—",
     itemTitle: item?.title,
     itemComposer: item?.composer,
-    segmentLabel: segment?.label,
+    segmentLabels: segs.map((s) => s.label),
+    collectionName: collection?.name,
     targetBpm: task.targetBpm,
     noteVal: task.noteVal,
     layers: task.layers,

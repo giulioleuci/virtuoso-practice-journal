@@ -70,7 +70,7 @@ export default function History() {
     for (const s of filteredSessions) {
       const task = taskById.get(s.taskId);
       const item = task?.itemId ? itemById.get(task.itemId) : undefined;
-      const seg = task?.segmentId ? segById.get(task.segmentId) : undefined;
+      const seg = task?.segmentIds?.length ? segById.get(task.segmentIds[0]) : undefined;
       let key: string, label: string, sub: string | undefined;
       switch (groupBy) {
         case "task": key = `t:${s.taskId}`; label = task?.title ?? "Untitled"; sub = item?.title; break;
