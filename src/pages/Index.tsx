@@ -40,6 +40,7 @@ const Index = () => {
         <Route element={<AppShell profile={profile} />}>
           <Route index element={<Diary />} />
           <Route path="library" element={<Library />} />
+          <Route path="library/collections" element={<Collections />} />
           <Route path="lessons" element={<Lessons />} />
           <Route path="history" element={<History />} />
           <Route path="tasks" element={<Tasks />} />
