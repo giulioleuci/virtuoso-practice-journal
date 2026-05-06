@@ -147,7 +147,89 @@ export async function seedSampleData() {
     createdAt: now - 1000 * 60 * 60 * 24 * 30,
   })) as number;
 
-  // Segments for Ballade
+  // ---- Extra repertoire to populate collections ----
+  const nocturne9_1 = (await db.library.add({
+    subjectId: pianoId, kind: "repertoire",
+    title: "Nocturne in B♭ minor, Op. 9 No. 1",
+    composer: "Chopin",
+    status: "in_study",
+    targetBpm: 116, noteVal: "eighth",
+    techniqueIds: [tPedal, tLegato, tVoicing],
+    createdAt: now - 1000 * 60 * 60 * 24 * 40,
+  })) as number;
+
+  const nocturne9_2 = (await db.library.add({
+    subjectId: pianoId, kind: "repertoire",
+    title: "Nocturne in E♭ major, Op. 9 No. 2",
+    composer: "Chopin",
+    status: "maintenance",
+    targetBpm: 132, noteVal: "eighth",
+    techniqueIds: [tPedal, tLegato, tTrills],
+    createdAt: now - 1000 * 60 * 60 * 24 * 220,
+  })) as number;
+
+  const nocturne9_3 = (await db.library.add({
+    subjectId: pianoId, kind: "repertoire",
+    title: "Nocturne in B major, Op. 9 No. 3",
+    composer: "Chopin",
+    status: "in_study",
+    targetBpm: 76, noteVal: "quarter",
+    techniqueIds: [tPedal, tLegato, tVoicing],
+    createdAt: now - 1000 * 60 * 60 * 24 * 20,
+  })) as number;
+
+  const wtcCmaj = (await db.library.add({
+    subjectId: pianoId, kind: "repertoire",
+    title: "WTC I — Prelude & Fugue in C major, BWV 846",
+    composer: "Bach",
+    status: "maintenance",
+    targetBpm: 72, noteVal: "quarter",
+    techniqueIds: [tNoPedal, tLegato, tVoicing],
+    createdAt: now - 1000 * 60 * 60 * 24 * 240,
+  })) as number;
+
+  // ---- Collections ----
+  const colNocturnesOp9 = (await db.collections.add({
+    name: "Nocturnes, Op. 9",
+    composer: "Chopin",
+    catalog: "Op. 9",
+    notes: "Three nocturnes dedicated to Madame Camille Pleyel.",
+    color: "plum",
+    defaultSubjectId: pianoId,
+    createdAt: now - 1000 * 60 * 60 * 24 * 60,
+    updatedAt: now,
+  })) as number;
+
+  const colWtcI = (await db.collections.add({
+    name: "Well-Tempered Clavier, Book I",
+    composer: "Bach",
+    catalog: "BWV 846–869",
+    color: "blue",
+    defaultSubjectId: pianoId,
+    createdAt: now - 1000 * 60 * 60 * 24 * 60,
+    updatedAt: now,
+  })) as number;
+
+  const colBeethovenLate = (await db.collections.add({
+    name: "Late Beethoven Sonatas",
+    composer: "Beethoven",
+    catalog: "Op. 101–111",
+    color: "terracotta",
+    defaultSubjectId: pianoId,
+    createdAt: now - 1000 * 60 * 60 * 24 * 60,
+    updatedAt: now,
+  })) as number;
+
+  await db.collectionItems.bulkAdd([
+    { collectionId: colNocturnesOp9, itemId: nocturne9_1, createdAt: now },
+    { collectionId: colNocturnesOp9, itemId: nocturne9_2, createdAt: now },
+    { collectionId: colNocturnesOp9, itemId: nocturne9_3, createdAt: now },
+    { collectionId: colWtcI, itemId: bachWtc, createdAt: now },
+    { collectionId: colWtcI, itemId: wtcCmaj, createdAt: now },
+    { collectionId: colBeethovenLate, itemId: beethoven, createdAt: now },
+  ]);
+
+
   const seg = async (
     itemId: number, label: string, targetBpm: number, noteVal: any,
     _confidence: number, layers: string[], techniqueIds: number[]
