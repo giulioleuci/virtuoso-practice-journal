@@ -5,17 +5,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { StarRating } from "@/components/shared/StarRating";
-import { BpmCoupler } from "@/components/library/BpmCoupler";
-import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
+import { SessionFields, type SessionFieldsValue } from "./SessionFields";
 
 interface Props {
   open: boolean;
