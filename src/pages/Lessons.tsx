@@ -226,19 +226,21 @@ export default function Lessons() {
               <AccordionContent>
                 <ul className="space-y-2">
                   {slice.map(({ rec, date, isToday }) => (
-                    <li key={`${rec.id}-${date}`} className="paper-card p-3 flex items-center gap-3">
-                      <CalendarClock className="h-4 w-4 text-primary shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {rec.teacher} · {subjectName(rec.subjectId)}
+                    <li key={`${rec.id}-${date}`} className="paper-card p-3 flex gap-3">
+                      <CalendarClock className="h-4 w-4 text-primary shrink-0 mt-1" />
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm break-words">
+                            {rec.teacher} · {subjectName(rec.subjectId)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {isToday ? "Today" : date} · {rec.startTime}–{rec.endTime}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {isToday ? "Today" : date} · {rec.startTime}–{rec.endTime}
-                        </div>
+                        <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)} className="-ml-2">
+                          <NotebookPen className="h-4 w-4 mr-1" /> Log
+                        </Button>
                       </div>
-                      <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}>
-                        <NotebookPen className="h-4 w-4 mr-1" /> Log
-                      </Button>
                     </li>
                   ))}
                 </ul>
