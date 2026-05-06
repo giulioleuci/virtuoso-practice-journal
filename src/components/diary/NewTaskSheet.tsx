@@ -89,14 +89,16 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       setNoteVal(undefined);
       setLayers([]);
       setTechniqueIds([]);
-      setRepeat(false);
-      setRecKind("weekdays");
-      setRecDays([new Date(date).getDay()]);
-      setEveryX(2);
-      setStartDate(date);
-      setEndMode("never");
-      setEndDate("");
-      setOccurrences(10);
+      setRecState({
+        enabled: false,
+        kind: "weekdays",
+        days: [new Date(date).getDay()],
+        everyX: 2,
+        startDate: date,
+        endMode: "never",
+        endDate: "",
+        occurrences: 10,
+      });
     }
   }, [open, prefill?.subjectId, prefill?.title, date]);
 
