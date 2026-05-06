@@ -278,34 +278,17 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
           </div>
 
           {(kindFilter === "all" || kindFilter === "repertoire") && !!allCollections?.length && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filter by collection</Label>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => { setCollectionFilter("all"); setItemId(undefined); setSegmentId(undefined); }}
-                  className={cn(
-                    "text-xs px-3 py-1.5 rounded-full border transition-colors",
-                    collectionFilter === "all"
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  )}
-                >All</button>
-                {allCollections.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => { setCollectionFilter(c.id!); setItemId(undefined); setSegmentId(undefined); }}
-                    className={cn(
-                      "text-xs px-3 py-1.5 rounded-full border transition-colors",
-                      collectionFilter === c.id
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    )}
-                  >{c.name}</button>
-                ))}
-              </div>
-            </div>
+            <MultiChipPicker
+              label="Filter by collection"
+              options={allCollections.map((c) => ({ value: c.id!, label: c.name }))}
+              value={collectionFilter === "all" ? [] : [collectionFilter]}
+              onChange={(next) => {
+                setCollectionFilter(next.length ? next[next.length - 1] : "all");
+                setItemId(undefined);
+                setSegmentId(undefined);
+              }}
+              placeholder="All collections"
+            />
           )}
 
           <div className="space-y-2">
