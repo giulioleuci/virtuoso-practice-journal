@@ -328,124 +328,20 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
             </div>
           )}
 
-          {/* Repertoire */}
-          {editingKind === "repertoire" && (
-            <>
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Status
-                </Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {STATUSES.map((s) => (
-                    <button
-                      key={s.key}
-                      type="button"
-                      onClick={() => setStatus(s.key)}
-                      className={cn(
-                        "paper-card py-2.5 text-sm font-medium transition-all",
-                        status === s.key
-                          ? "ring-2 ring-primary"
-                          : "hover:-translate-y-0.5"
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <BpmCoupler bpm={targetBpm} noteVal={noteVal} onChange={(n) => {
-                setTargetBpm(n.bpm); setNoteVal(n.noteVal);
-              }} />
-
-              <MultiChipPicker
-                label="Techniques"
-                options={subjectTechniqueOptions}
-                value={techniqueIds}
-                onChange={setTechniqueIds}
-                emptyHint="Add techniques in Profile to associate them here."
-              />
-              <SegmentsEditor segments={segments} onChange={setSegments} subjectLayers={subjectLayers} techniqueOptions={subjectTechniqueOptions} />
-            </>
-          )}
-
-          {/* Manual */}
-          {editingKind === "manual" && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Current exercise
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={currentExercise ?? ""}
-                    onChange={(e) =>
-                      setCurrentExercise(e.target.value ? Number(e.target.value) : undefined)
-                    }
-                    className="bg-card"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Total exercises
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={totalExercises ?? ""}
-                    onChange={(e) =>
-                      setTotalExercises(e.target.value ? Number(e.target.value) : undefined)
-                    }
-                    className="bg-card"
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-
-              <BpmCoupler bpm={targetBpm} noteVal={noteVal} onChange={(n) => {
-                setTargetBpm(n.bpm); setNoteVal(n.noteVal);
-              }} />
-
-              <MultiChipPicker
-                label="Techniques"
-                options={subjectTechniqueOptions}
-                value={techniqueIds}
-                onChange={setTechniqueIds}
-                emptyHint="Add techniques in Profile to associate them here."
-              />
-              <SegmentsEditor segments={segments} onChange={setSegments} subjectLayers={subjectLayers} techniqueOptions={subjectTechniqueOptions} />
-            </>
-          )}
-
-          {/* Technique */}
-          {editingKind === "technique" && (
-            <>
-              <BpmCoupler
-                bpm={startBpm}
-                noteVal={noteVal}
-                onChange={(n) => { setStartBpm(n.bpm); setNoteVal(n.noteVal); }}
-                label="Starting tempo"
-              />
-              <BpmCoupler
-                bpm={targetBpm}
-                noteVal={noteVal}
-                onChange={(n) => { setTargetBpm(n.bpm); setNoteVal(n.noteVal); }}
-                label="Target tempo"
-              />
-              <MultiChipPicker
-                label="Techniques covered"
-                options={subjectTechniqueOptions}
-                value={techniqueIds}
-                onChange={setTechniqueIds}
-                emptyHint="Add techniques in Profile to associate them here."
-              />
-            </>
-          )}
-
-          {/* Theory */}
-          {editingKind === "theory" && <MasterySliders value={mastery} onChange={setMastery} />}
+          <LibraryItemKindFields
+            kind={editingKind}
+            status={status} setStatus={setStatus}
+            targetBpm={targetBpm} setTargetBpm={setTargetBpm}
+            startBpm={startBpm} setStartBpm={setStartBpm}
+            noteVal={noteVal} setNoteVal={setNoteVal}
+            techniqueIds={techniqueIds} setTechniqueIds={setTechniqueIds}
+            segments={segments} setSegments={setSegments}
+            totalExercises={totalExercises} setTotalExercises={setTotalExercises}
+            currentExercise={currentExercise} setCurrentExercise={setCurrentExercise}
+            mastery={mastery} setMastery={setMastery}
+            techniqueOptions={subjectTechniqueOptions}
+            subjectLayers={subjectLayers}
+          />
 
           {/* Validation summary */}
           {errors.length > 0 && (
