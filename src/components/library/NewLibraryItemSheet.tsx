@@ -19,11 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BpmCoupler } from "./BpmCoupler";
-import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
-import { MasterySliders, type MasteryState } from "./MasterySliders";
-import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
-import { cn } from "@/lib/utils";
+import { LibraryItemKindFields } from "./LibraryItemKindFields";
+import { type DraftSegment } from "./SegmentsEditor";
+import { type MasteryState } from "./MasterySliders";
+import { libraryService } from "@/lib/services";
 import { toast } from "sonner";
 
 interface Props {
@@ -34,11 +33,6 @@ interface Props {
   item?: LibraryItem | null;
 }
 
-const STATUSES: { key: PracticeStatus; label: string }[] = [
-  { key: "in_study",    label: "In study" },
-  { key: "maintenance", label: "Maintenance" },
-  { key: "pause",       label: "Paused" },
-];
 
 const emptyMastery: MasteryState = {
   conceptual: 0,
@@ -199,6 +193,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     if (!canSave || subjectId === undefined) return;
     const now = Date.now();
     const base: LibraryItem = {
+      id: item?.id,
       subjectId,
       kind: editingKind,
       title: title.trim(),
@@ -228,30 +223,18 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       base.mastery = mastery;
     }
 
-    let itemId: number;
-    if (isEdit && item?.id) {
-      await db.library.put({ ...base, id: item.id });
-      itemId = item.id;
-      // Replace segments wholesale for simplicity & correctness
-      await db.segments.where("itemId").equals(itemId).delete();
-    } else {
-      itemId = (await db.library.add(base)) as number;
-    }
+    const segmentsPayload =
+      (editingKind === "repertoire" || editingKind === "manual") && segments.length
+        ? segments.map((s) => ({
+            label: s.label.trim(),
+            targetBpm: s.targetBpm,
+            noteVal: s.noteVal,
+            layers: s.layers ?? [],
+            techniqueIds: s.techniqueIds ?? [],
+          }))
+        : [];
 
-    if ((editingKind === "repertoire" || editingKind === "manual") && segments.length) {
-      await db.segments.bulkAdd(
-        segments.map((s) => ({
-          itemId,
-          label: s.label.trim(),
-          targetBpm: s.targetBpm,
-          noteVal: s.noteVal,
-          layers: s.layers ?? [],
-          techniqueIds: s.techniqueIds ?? [],
-          createdAt: now,
-        }))
-      );
-    }
-
+    await libraryService.upsert(base, segmentsPayload);
     toast.success(isEdit ? `${title.trim()} updated` : `${title.trim()} added to library`);
     onOpenChange(false);
   };
@@ -329,124 +312,20 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
             </div>
           )}
 
-          {/* Repertoire */}
-          {editingKind === "repertoire" && (
-            <>
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Status
-                </Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {STATUSES.map((s) => (
-                    <button
-                      key={s.key}
-                      type="button"
-                      onClick={() => setStatus(s.key)}
-                      className={cn(
-                        "paper-card py-2.5 text-sm font-medium transition-all",
-                        status === s.key
-                          ? "ring-2 ring-primary"
-                          : "hover:-translate-y-0.5"
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <BpmCoupler bpm={targetBpm} noteVal={noteVal} onChange={(n) => {
-                setTargetBpm(n.bpm); setNoteVal(n.noteVal);
-              }} />
-
-              <MultiChipPicker
-                label="Techniques"
-                options={subjectTechniqueOptions}
-                value={techniqueIds}
-                onChange={setTechniqueIds}
-                emptyHint="Add techniques in Profile to associate them here."
-              />
-              <SegmentsEditor segments={segments} onChange={setSegments} subjectLayers={subjectLayers} techniqueOptions={subjectTechniqueOptions} />
-            </>
-          )}
-
-          {/* Manual */}
-          {editingKind === "manual" && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Current exercise
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={currentExercise ?? ""}
-                    onChange={(e) =>
-                      setCurrentExercise(e.target.value ? Number(e.target.value) : undefined)
-                    }
-                    className="bg-card"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Total exercises
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={totalExercises ?? ""}
-                    onChange={(e) =>
-                      setTotalExercises(e.target.value ? Number(e.target.value) : undefined)
-                    }
-                    className="bg-card"
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-
-              <BpmCoupler bpm={targetBpm} noteVal={noteVal} onChange={(n) => {
-                setTargetBpm(n.bpm); setNoteVal(n.noteVal);
-              }} />
-
-              <MultiChipPicker
-                label="Techniques"
-                options={subjectTechniqueOptions}
-                value={techniqueIds}
-                onChange={setTechniqueIds}
-                emptyHint="Add techniques in Profile to associate them here."
-              />
-              <SegmentsEditor segments={segments} onChange={setSegments} subjectLayers={subjectLayers} techniqueOptions={subjectTechniqueOptions} />
-            </>
-          )}
-
-          {/* Technique */}
-          {editingKind === "technique" && (
-            <>
-              <BpmCoupler
-                bpm={startBpm}
-                noteVal={noteVal}
-                onChange={(n) => { setStartBpm(n.bpm); setNoteVal(n.noteVal); }}
-                label="Starting tempo"
-              />
-              <BpmCoupler
-                bpm={targetBpm}
-                noteVal={noteVal}
-                onChange={(n) => { setTargetBpm(n.bpm); setNoteVal(n.noteVal); }}
-                label="Target tempo"
-              />
-              <MultiChipPicker
-                label="Techniques covered"
-                options={subjectTechniqueOptions}
-                value={techniqueIds}
-                onChange={setTechniqueIds}
-                emptyHint="Add techniques in Profile to associate them here."
-              />
-            </>
-          )}
-
-          {/* Theory */}
-          {editingKind === "theory" && <MasterySliders value={mastery} onChange={setMastery} />}
+          <LibraryItemKindFields
+            kind={editingKind}
+            status={status} setStatus={setStatus}
+            targetBpm={targetBpm} setTargetBpm={setTargetBpm}
+            startBpm={startBpm} setStartBpm={setStartBpm}
+            noteVal={noteVal} setNoteVal={setNoteVal}
+            techniqueIds={techniqueIds} setTechniqueIds={setTechniqueIds}
+            segments={segments} setSegments={setSegments}
+            totalExercises={totalExercises} setTotalExercises={setTotalExercises}
+            currentExercise={currentExercise} setCurrentExercise={setCurrentExercise}
+            mastery={mastery} setMastery={setMastery}
+            techniqueOptions={subjectTechniqueOptions}
+            subjectLayers={subjectLayers}
+          />
 
           {/* Validation summary */}
           {errors.length > 0 && (

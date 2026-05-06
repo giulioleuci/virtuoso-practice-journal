@@ -59,15 +59,30 @@ export default function AppShell() {
               end={end}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-200 min-w-[56px]",
+                  "group relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-300 ease-out min-w-[56px]",
                   isActive
-                    ? "bg-primary text-primary-foreground shadow-soft scale-105"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                    ? "bg-primary text-primary-foreground shadow-soft scale-[1.06]"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95"
                 )
               }
             >
-              <Icon className="h-5 w-5 transition-transform" />
-              <span className="text-[11px] font-medium">{label}</span>
+              {({ isActive }) => (
+                <>
+                  <Icon
+                    className={cn(
+                      "h-5 w-5 transition-transform duration-300 ease-out",
+                      isActive ? "-translate-y-0.5 scale-110" : "group-hover:-translate-y-0.5"
+                    )}
+                  />
+                  <span className="text-[11px] font-medium">{label}</span>
+                  <span
+                    className={cn(
+                      "absolute -bottom-0.5 h-1 rounded-full bg-primary-foreground/80 transition-all duration-300 ease-out",
+                      isActive ? "w-5 opacity-100" : "w-0 opacity-0"
+                    )}
+                  />
+                </>
+              )}
             </NavLink>
           ))}
         </div>
