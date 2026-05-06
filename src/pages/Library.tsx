@@ -174,145 +174,185 @@ export default function Library() {
         </div>
       )}
 
-      {items === undefined ? (
-        <ListSkeleton />
-      ) : !filteredItems.length ? (
-        items.length === 0
-          ? <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
-          : <p className="paper-card p-6 text-center text-muted-foreground italic">No items match.</p>
-      ) : (
-        <ul className="space-y-2">
-          {filteredItems.map((it) => {
-            const segs = it.id ? (segmentsByItem[it.id] ?? []) : [];
-            return (
-              <li key={it.id} className="paper-card p-4">
-                {/* Row 1: title + actions */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="font-serif text-xl flex-1 min-w-0 truncate">{it.title}</div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {(() => {
-                      const itemHelp = (allHelp ?? []).filter((h) => h.itemId === it.id);
-                      const open = itemHelp.filter((h) => !h.resolved).length;
-                      return (
-                        <button
-                          onClick={() => setHelpItem(it)}
-                          className="relative p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent"
-                          aria-label="Ask the teacher"
-                        >
-                          <MessageCircleQuestion className="h-4 w-4" />
-                          {itemHelp.length > 0 && (
-                            <span className={`absolute -top-0.5 -right-0.5 text-[9px] tabular-nums rounded-full px-1 ${open ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                              {itemHelp.length}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })()}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                          aria-label="More"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(it)}>
-                          <Pencil className="h-4 w-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => it.id && setDeletingId(it.id)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+      {(() => {
+        const renderCard = (it: LibraryItem) => {
+          const segs = it.id ? (segmentsByItem[it.id] ?? []) : [];
+          return (
+            <li key={it.id} className="paper-card p-4">
+              {/* Row 1: title + actions */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="font-serif text-xl flex-1 min-w-0 truncate">{it.title}</div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {(() => {
+                    const itemHelp = (allHelp ?? []).filter((h) => h.itemId === it.id);
+                    const open = itemHelp.filter((h) => !h.resolved).length;
+                    return (
+                      <button
+                        onClick={() => setHelpItem(it)}
+                        className="relative p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent"
+                        aria-label="Ask the teacher"
+                      >
+                        <MessageCircleQuestion className="h-4 w-4" />
+                        {itemHelp.length > 0 && (
+                          <span className={`absolute -top-0.5 -right-0.5 text-[9px] tabular-nums rounded-full px-1 ${open ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                            {itemHelp.length}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })()}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                        aria-label="More"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEdit(it)}>
+                        <Pencil className="h-4 w-4 mr-2" /> Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => it.id && setDeletingId(it.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
+              </div>
 
-                {/* Row 2: composer / author */}
-                {it.composer && (
-                  <div className="text-sm text-muted-foreground italic truncate mt-0.5">
-                    {it.composer}
-                  </div>
-                )}
+              {it.composer && (
+                <div className="text-sm text-muted-foreground italic truncate mt-0.5">{it.composer}</div>
+              )}
 
-                {/* Row 3: sparkline + bpm (+ status / manual / technique meta) */}
-                <div className="flex items-center justify-between gap-3 mt-2 min-h-[1.5rem]">
-                  <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                    {it.kind === "repertoire" && it.status && (
-                      <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent text-foreground/80">
-                        {STATUS_LABEL[it.status]}
-                      </span>
-                    )}
-                    {it.kind === "technique" && (it.startBpm || it.targetBpm) && (
-                      <span className="tabular-nums">{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>
-                    )}
-                    {it.kind === "manual" && (it.totalExercises || it.currentExercise) && (
-                      <span>Exercise {it.currentExercise ?? 1}{it.totalExercises ? ` / ${it.totalExercises}` : ""}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual") && (
-                      <BpmSparkline itemId={it.id} />
-                    )}
-                    {it.targetBpm && (
-                      <div className="text-sm font-serif tabular-nums text-primary whitespace-nowrap">
-                        {it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}
-                      </div>
-                    )}
-                  </div>
+              <div className="flex items-center justify-between gap-3 mt-2 min-h-[1.5rem]">
+                <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                  {it.kind === "repertoire" && it.status && (
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent text-foreground/80">
+                      {STATUS_LABEL[it.status]}
+                    </span>
+                  )}
+                  {it.kind === "technique" && (it.startBpm || it.targetBpm) && (
+                    <span className="tabular-nums">{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>
+                  )}
+                  {it.kind === "manual" && (it.totalExercises || it.currentExercise) && (
+                    <span>Exercise {it.currentExercise ?? 1}{it.totalExercises ? ` / ${it.totalExercises}` : ""}</span>
+                  )}
                 </div>
-
-                {/* Row 4: tags (+ technique chips) */}
-                {(!!it.tags?.length || !!it.techniqueIds?.length) && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {it.tags?.map((tag) => (
-                      <span key={`tag-${tag}`} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                        #{tag}
-                      </span>
-                    ))}
-                    {(it.techniqueIds ?? []).map((id) => {
-                      const name = (allTechniques ?? []).find((t) => t.id === id)?.name;
-                      if (!name) return null;
-                      return (
-                        <span key={`tech-${id}`} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70">
-                          {name}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Segments preview */}
-                {(it.kind === "repertoire" || it.kind === "manual") && segs.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border/60 space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground">
-                      <span>{segs.length} segment{segs.length === 1 ? "" : "s"}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual") && (
+                    <BpmSparkline itemId={it.id} />
+                  )}
+                  {it.targetBpm && (
+                    <div className="text-sm font-serif tabular-nums text-primary whitespace-nowrap">
+                      {it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              </div>
 
-                {/* Theory mastery */}
-                {it.kind === "theory" && it.mastery && (
-                  <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {(["conceptual","analytical","aural","compositional"] as const).map((k) => (
-                      <div key={k}>
-                        <div>{k.slice(0,4)}</div>
-                        <div className="text-foreground font-serif text-base tabular-nums">
-                          {it.mastery![k]}
-                        </div>
-                      </div>
-                    ))}
+              {(!!it.tags?.length || !!it.techniqueIds?.length) && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {it.tags?.map((tag) => (
+                    <span key={`tag-${tag}`} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                      #{tag}
+                    </span>
+                  ))}
+                  {(it.techniqueIds ?? []).map((id) => {
+                    const name = (allTechniques ?? []).find((t) => t.id === id)?.name;
+                    if (!name) return null;
+                    return (
+                      <span key={`tech-${id}`} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70">
+                        {name}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {(it.kind === "repertoire" || it.kind === "manual") && segs.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border/60 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <span>{segs.length} segment{segs.length === 1 ? "" : "s"}</span>
                   </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                </div>
+              )}
+
+              {it.kind === "theory" && it.mastery && (
+                <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {(["conceptual","analytical","aural","compositional"] as const).map((k) => (
+                    <div key={k}>
+                      <div>{k.slice(0,4)}</div>
+                      <div className="text-foreground font-serif text-base tabular-nums">
+                        {it.mastery![k]}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </li>
+          );
+        };
+
+        if (items === undefined) return <ListSkeleton />;
+        if (!filteredItems.length) {
+          return items.length === 0
+            ? <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
+            : <p className="paper-card p-6 text-center text-muted-foreground italic">No items match.</p>;
+        }
+
+        if (active === "repertoire" && groupByCollection) {
+          const cols = (allCollections ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
+          const links = allCollectionLinks ?? [];
+          const filteredIds = new Set(filteredItems.map((i) => i.id!));
+          const itemsById = new Map(filteredItems.map((i) => [i.id!, i]));
+          const inAnyCollection = new Set<number>();
+          const groups = cols.map((c) => {
+            const ids = links.filter((l) => l.collectionId === c.id).map((l) => l.itemId).filter((id) => filteredIds.has(id));
+            ids.forEach((id) => inAnyCollection.add(id));
+            return { collection: c, items: ids.map((id) => itemsById.get(id)!).sort((a, b) => a.title.localeCompare(b.title)) };
+          });
+          const uncollected = filteredItems.filter((i) => !inAnyCollection.has(i.id!));
+          const allGroups = [...groups, { collection: null as null, items: uncollected }];
+
+          return (
+            <Accordion type="multiple" defaultValue={allGroups.map((_, i) => `g-${i}`)} className="space-y-2">
+              {allGroups.map((g, gi) => (
+                <AccordionItem key={gi} value={`g-${gi}`} className="paper-card border-0 px-3">
+                  <AccordionTrigger className="hover:no-underline py-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {g.collection?.color ? (
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: `hsl(var(--key-${g.collection.color}))` }} />
+                      ) : (
+                        <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="font-serif text-lg truncate">
+                        {g.collection?.name ?? "Uncollected"}
+                      </span>
+                      <span className="text-xs text-muted-foreground tabular-nums ml-auto mr-2">
+                        {g.items.length}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    {g.items.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic px-1 pb-3">Empty.</p>
+                    ) : (
+                      <ul className="space-y-2 pb-2">{g.items.map(renderCard)}</ul>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          );
+        }
+
+        return <ul className="space-y-2">{filteredItems.map(renderCard)}</ul>;
+      })()}
 
       <NewLibraryItemSheet
         open={sheetOpen}
