@@ -110,9 +110,6 @@ export default function Library() {
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-serif text-3xl">{t("nav.library")}</h2>
         <div className="flex items-center gap-1">
-          <Button asChild size="sm" variant="ghost">
-            <Link to="/library/collections"><FolderOpen className="h-4 w-4 mr-1" /> Collections</Link>
-          </Button>
           <Button size="sm" variant="ghost" onClick={openCreate}>
             <Plus className="h-4 w-4 mr-1" /> {t("library.add")}
           </Button>
