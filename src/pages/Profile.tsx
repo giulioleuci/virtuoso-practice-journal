@@ -18,6 +18,8 @@ export default function Profile() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmText, setConfirmText] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
 
   if (!profile) return null;
 
