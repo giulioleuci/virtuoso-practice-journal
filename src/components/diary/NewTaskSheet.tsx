@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type NoteVal } from "@/lib/db";
+import { collectionsService } from "@/lib/services";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,9 +42,13 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const library = useLiveQuery(() => db.library.filter((i) => !i.deletedAt).toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const allCollections = useLiveQuery(() => collectionsService.list(), []);
+  const allCollectionItems = useLiveQuery(() => db.collectionItems.toArray(), []);
 
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [kindFilter, setKindFilter] = useState<LibraryKind | "all">("all");
+  const [collectionFilter, setCollectionFilter] = useState<number | "all">("all");
+  const [sortBy, setSortBy] = useState<"title" | "composer">("title");
   const [itemId, setItemId] = useState<number | undefined>();
   const [segmentId, setSegmentId] = useState<number | undefined>();
   const [title, setTitle] = useState("");
@@ -65,12 +70,31 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   });
   const setRec = (patch: Partial<RecurrenceState>) => setRecState((s) => ({ ...s, ...patch }));
 
-  const itemsForSubject = useMemo(
-    () => (library ?? []).filter(
-      (l) => l.subjectId === subjectId && (kindFilter === "all" || l.kind === kindFilter)
-    ),
-    [library, subjectId, kindFilter]
-  );
+  const itemsForSubject = useMemo(() => {
+    const byCollection = new Map<number, Set<number>>();
+    for (const link of allCollectionItems ?? []) {
+      const set = byCollection.get(link.collectionId) ?? new Set<number>();
+      set.add(link.itemId);
+      byCollection.set(link.collectionId, set);
+    }
+    const collectionSet =
+      collectionFilter !== "all" ? byCollection.get(collectionFilter) ?? new Set<number>() : null;
+    const filtered = (library ?? []).filter((l) => {
+      if (l.subjectId !== subjectId) return false;
+      if (kindFilter !== "all" && l.kind !== kindFilter) return false;
+      if (collectionSet && !collectionSet.has(l.id!)) return false;
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      if (sortBy === "composer") {
+        const ca = (a.composer ?? "").toLocaleLowerCase();
+        const cb = (b.composer ?? "").toLocaleLowerCase();
+        const cmp = ca.localeCompare(cb);
+        if (cmp !== 0) return cmp;
+      }
+      return a.title.localeCompare(b.title);
+    });
+  }, [library, subjectId, kindFilter, collectionFilter, sortBy, allCollectionItems]);
   const segments = useLiveQuery(
     () => (itemId ? db.segments.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
     [itemId]
@@ -82,6 +106,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     if (open) {
       setSubjectId(prefill?.subjectId);
       setKindFilter("all");
+      setCollectionFilter("all");
+      setSortBy("title");
       setItemId(undefined);
       setSegmentId(undefined);
       setTitle(prefill?.title ?? "");
@@ -234,7 +260,12 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
                 <button
                   key={k.val}
                   type="button"
-                  onClick={() => { setKindFilter(k.val); setItemId(undefined); setSegmentId(undefined); }}
+                  onClick={() => {
+                    setKindFilter(k.val);
+                    if (k.val !== "repertoire" && k.val !== "all") setCollectionFilter("all");
+                    setItemId(undefined);
+                    setSegmentId(undefined);
+                  }}
                   className={cn(
                     "text-xs px-3 py-1.5 rounded-full border transition-colors",
                     kindFilter === k.val
@@ -242,6 +273,59 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
                       : "border-border text-muted-foreground hover:text-foreground"
                   )}
                 >{k.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {(kindFilter === "all" || kindFilter === "repertoire") && !!allCollections?.length && (
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filter by collection</Label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => { setCollectionFilter("all"); setItemId(undefined); setSegmentId(undefined); }}
+                  className={cn(
+                    "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                    collectionFilter === "all"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >All</button>
+                {allCollections.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { setCollectionFilter(c.id!); setItemId(undefined); setSegmentId(undefined); }}
+                    className={cn(
+                      "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                      collectionFilter === c.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border text-muted-foreground hover:text-foreground"
+                    )}
+                  >{c.name}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sort by</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                { val: "title", label: "Title" },
+                { val: "composer", label: "Composer / Author" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.val}
+                  type="button"
+                  onClick={() => setSortBy(opt.val)}
+                  className={cn(
+                    "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                    sortBy === opt.val
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >{opt.label}</button>
               ))}
             </div>
           </div>
