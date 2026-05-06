@@ -356,6 +356,10 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
             mastery={mastery} setMastery={setMastery}
             techniqueOptions={subjectTechniqueOptions}
             subjectLayers={subjectLayers}
+            collectionIds={collectionIds}
+            setCollectionIds={setCollectionIds}
+            collectionOptions={collectionOptions}
+            onCreateCollection={() => setNewCollectionOpen(true)}
           />
 
           {/* Validation summary */}
