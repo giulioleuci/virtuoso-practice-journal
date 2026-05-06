@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { NoteVal, Task } from "@/lib/db";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db, type NoteVal, type Task } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { X, Play, Pause, RotateCcw, Volume2, VolumeX, Minus, Plus } from "lucide-react";
@@ -25,6 +26,21 @@ function formatTime(ms: number) {
 }
 
 export function PracticeMode({ task, onClose, onFinish }: Props) {
+  const item = useLiveQuery(
+    () => (task.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
+    [task.itemId]
+  );
+  const segments = useLiveQuery(
+    () => (task.segmentIds?.length
+      ? db.segments.where("id").anyOf(task.segmentIds).toArray()
+      : Promise.resolve([])),
+    [task.segmentIds?.join(",")]
+  );
+  const collection = useLiveQuery(
+    () => (task.collectionId ? db.collections.get(task.collectionId) : Promise.resolve(undefined)),
+    [task.collectionId]
+  );
+
   // Timer — auto-starts and uses wall-clock so backgrounding doesn't lose time
   const [running, setRunning] = useState(true);
   const [elapsed, setElapsed] = useState(0);
@@ -162,6 +178,21 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Practice mode</p>
           <h2 className="font-serif text-2xl truncate">{task.title}</h2>
+          {item && (
+            <p className="text-xs text-muted-foreground truncate">
+              {item.title}{item.composer ? ` · ${item.composer}` : ""}
+            </p>
+          )}
+          {!!segments?.length && (
+            <p className="text-xs text-muted-foreground italic truncate">
+              Segment{segments.length > 1 ? "s" : ""}: {segments.map((s) => s.label).join(", ")}
+            </p>
+          )}
+          {collection && (
+            <p className="text-xs text-muted-foreground italic truncate">
+              Collection: {collection.name}
+            </p>
+          )}
           {task.targetBpm && (
             <p className="text-sm text-muted-foreground tabular-nums">
               Target {targetGlyph} = {task.targetBpm}
