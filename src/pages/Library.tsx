@@ -88,6 +88,13 @@ export default function Library() {
     });
   }, [items, subjectFilter, search, sortBy]);
 
+  const PAGE_SIZE = 5;
+  const [page, setPage] = useState(1);
+  const [pageByGroup, setPageByGroup] = useState<Record<string, number>>({});
+  useEffect(() => { setPage(1); setPageByGroup({}); }, [active, subjectFilter, search, sortBy, groupByCollection]);
+  const setGroupPage = (key: string, p: number) =>
+    setPageByGroup((prev) => ({ ...prev, [key]: p }));
+
   const openCreate = () => {
     setEditing(null);
     setSheetOpen(true);
