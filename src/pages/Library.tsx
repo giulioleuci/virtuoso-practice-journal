@@ -110,9 +110,6 @@ export default function Library() {
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-serif text-3xl">{t("nav.library")}</h2>
         <div className="flex items-center gap-1">
-          <Button asChild size="sm" variant="ghost">
-            <Link to="/library/collections"><FolderOpen className="h-4 w-4 mr-1" /> Collections</Link>
-          </Button>
           <Button size="sm" variant="ghost" onClick={openCreate}>
             <Plus className="h-4 w-4 mr-1" /> {t("library.add")}
           </Button>
@@ -159,7 +156,19 @@ export default function Library() {
           </SelectContent>
         </Select>
       </div>
-      <Input placeholder="Search title or composer…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Search title or composer…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1"
+        />
+        {active === "repertoire" && (
+          <Button asChild size="sm" variant="ghost" className="shrink-0">
+            <Link to="/library/collections"><FolderOpen className="h-4 w-4 mr-1" /> Collections</Link>
+          </Button>
+        )}
+      </div>
 
       {active === "repertoire" && (
         <div className="flex justify-end">
