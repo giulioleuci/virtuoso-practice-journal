@@ -119,72 +119,67 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
               {grouped.map((g) => (
                 <section key={g.subjectName} className="space-y-2">
                   <h3 className="text-xs uppercase tracking-wider text-muted-foreground">{g.subjectName}</h3>
-                  {Array.from(g.items.values()).map((b) => (
-                    <div key={b.itemTitle} className="paper-card p-3 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-serif text-lg truncate">{b.itemTitle}</div>
-                        {b.itemId && (
-                          <Link
-                            to={`/library`}
-                            onClick={() => onOpenChange(false)}
-                            className="text-xs text-primary hover:underline shrink-0 inline-flex items-center gap-0.5"
-                          >
-                            Open <ChevronRight className="h-3 w-3" />
-                          </Link>
-                        )}
-                      </div>
-                      <Accordion type="single" collapsible className="space-y-1">
-                        {b.reqs.map((r) => {
-                          const task = r.taskId ? taskById.get(r.taskId) : undefined;
-                          const isAnswering = answeringId === r.id;
-                          return (
-                            <AccordionItem
-                              key={r.id}
-                              value={String(r.id)}
-                              className="border-l-2 border-border pl-2 border-b-0"
-                            >
-                              <AccordionTrigger className="group py-1.5 hover:no-underline gap-2">
-                                <div className="flex items-start gap-2 flex-1 min-w-0 text-left">
-                                  {r.resolved ? (
-                                    <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                                  ) : (
-                                    <HelpCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                                  )}
-                                  <span className="flex-1 text-sm group-data-[state=closed]:truncate group-data-[state=open]:whitespace-pre-wrap group-data-[state=open]:break-words">
-                                    {r.question}
-                                  </span>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="pb-2">
-                                <div className="ml-6 space-y-2">
-                                  <div className="flex items-center gap-3 flex-wrap">
-                                    {task && (
-                                      <Link
-                                        to={`/history?from=${task.date}&to=${task.date}`}
-                                        onClick={() => onOpenChange(false)}
-                                        title="View task history"
-                                        className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
-                                      >
-                                        <HistoryIcon className="h-3.5 w-3.5" /> History
-                                      </Link>
+                  <Accordion type="multiple" className="space-y-2">
+                    {Array.from(g.items.values()).map((b) => (
+                      <AccordionItem
+                        key={b.itemTitle}
+                        value={b.itemTitle}
+                        className="paper-card border-none px-3"
+                      >
+                        <AccordionTrigger className="py-3 hover:no-underline gap-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                            <span className="font-serif text-lg truncate">{b.itemTitle}</span>
+                            <span className="text-xs text-muted-foreground shrink-0">({b.reqs.length})</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3">
+                          {b.itemId && (
+                            <div className="mb-3">
+                              <Link
+                                to={`/library`}
+                                onClick={() => onOpenChange(false)}
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-0.5"
+                              >
+                                Open in library <ChevronRight className="h-3 w-3" />
+                              </Link>
+                            </div>
+                          )}
+                          <ul className="space-y-4">
+                            {b.reqs.map((r) => {
+                              const task = r.taskId ? taskById.get(r.taskId) : undefined;
+                              const isAnswering = answeringId === r.id;
+                              return (
+                                <li key={r.id} className="space-y-2 border-l-2 border-border pl-3">
+                                  <div className="flex items-start gap-2">
+                                    {r.resolved ? (
+                                      <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
+                                    ) : (
+                                      <HelpCircle className="h-4 w-4 text-primary shrink-0 mt-1" />
                                     )}
-                                    {!r.resolved && !isAnswering && (
-                                      <button
-                                        onClick={() => r.id && resolve(r.id)}
-                                        className="text-xs text-muted-foreground hover:text-primary"
-                                      >Resolve</button>
-                                    )}
+                                    <p className="flex-1 text-base leading-relaxed whitespace-pre-wrap break-words">
+                                      {r.question}
+                                    </p>
                                   </div>
+
                                   {r.answer && !isAnswering && (
-                                    <div className="text-sm text-foreground italic flex items-start gap-1.5">
-                                      <MessageSquareQuote className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-                                      <span className="flex-1 whitespace-pre-wrap break-words">{r.answer}</span>
+                                    <div className="flex items-start gap-2">
+                                      <MessageSquareQuote className="h-4 w-4 mt-1 shrink-0 text-muted-foreground" />
+                                      <p className="flex-1 text-base leading-relaxed whitespace-pre-wrap break-words">
+                                        {r.answer}
+                                      </p>
                                     </div>
                                   )}
-                                  {isAnswering ? (
+
+                                  {r.answeredAt && !isAnswering && (
+                                    <div className="text-xs text-muted-foreground tabular-nums pl-6">
+                                      {new Date(r.answeredAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                                    </div>
+                                  )}
+
+                                  {isAnswering && (
                                     <div className="space-y-2">
                                       <Textarea
-                                        rows={2}
+                                        rows={3}
                                         value={answerDraft}
                                         onChange={(e) => setAnswerDraft(e.target.value)}
                                         placeholder="Teacher said…"
@@ -194,22 +189,42 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                                         <Button size="sm" onClick={() => r.id && saveAnswer(r.id)}>Save answer</Button>
                                       </div>
                                     </div>
-                                  ) : (
-                                    <button
-                                      onClick={() => startAnswer(r)}
-                                      className="text-xs text-primary hover:underline"
-                                    >
-                                      {r.answer ? "Edit answer" : "Record answer"}
-                                    </button>
                                   )}
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          );
-                        })}
-                      </Accordion>
-                    </div>
-                  ))}
+
+                                  {!isAnswering && (
+                                    <div className="flex items-center gap-3 flex-wrap pl-6">
+                                      <button
+                                        onClick={() => startAnswer(r)}
+                                        className="text-xs text-primary hover:underline"
+                                      >
+                                        {r.answer ? "Edit answer" : "Record answer"}
+                                      </button>
+                                      {!r.resolved && (
+                                        <button
+                                          onClick={() => r.id && resolve(r.id)}
+                                          className="text-xs text-muted-foreground hover:text-primary"
+                                        >Resolve</button>
+                                      )}
+                                      {task && (
+                                        <Link
+                                          to={`/history?from=${task.date}&to=${task.date}`}
+                                          onClick={() => onOpenChange(false)}
+                                          title="View task history"
+                                          className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+                                        >
+                                          <HistoryIcon className="h-3.5 w-3.5" /> History
+                                        </Link>
+                                      )}
+                                    </div>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
                 </section>
               ))}
             </>
