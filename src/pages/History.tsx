@@ -121,7 +121,7 @@ export default function History() {
         <span className="text-xs text-muted-foreground tabular-nums">{filteredSessions.length} sessions</span>
       </div>
 
-      <StatsDashboard from={from || undefined} to={to || undefined} />
+      
 
       <Tabs value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setPage(0); }}>
         <TabsList className="w-full">
