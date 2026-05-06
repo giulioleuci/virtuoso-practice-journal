@@ -187,6 +187,27 @@ export interface Assignment {
   createdAt: number;
 }
 
+export interface Collection {
+  id?: number;
+  name: string;
+  composer?: string;
+  catalog?: string;
+  notes?: string;
+  color?: ColorKey;
+  defaultSubjectId?: number;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt?: number;
+}
+
+export interface CollectionItem {
+  id?: number;
+  collectionId: number;
+  itemId: number;
+  position?: number;
+  createdAt: number;
+}
+
 class VirtuosoDB extends Dexie {
   profile!: Table<Profile, string>;
   subjects!: Table<Subject, number>;
@@ -199,6 +220,8 @@ class VirtuosoDB extends Dexie {
   recurrences!: Table<LessonRecurrence, number>;
   lessons!: Table<Lesson, number>;
   assignments!: Table<Assignment, number>;
+  collections!: Table<Collection, number>;
+  collectionItems!: Table<CollectionItem, number>;
 
   constructor() {
     super("virtuoso");
@@ -217,7 +240,6 @@ class VirtuosoDB extends Dexie {
     this.version(2).stores({
       techniques: "++id, subjectId, name",
     });
-    // v3: add deletedAt index for soft-deletion of referenced entities
     this.version(3).stores({
       subjects: "++id, name, type, deletedAt",
       library: "++id, subjectId, kind, title, deletedAt",
@@ -225,6 +247,11 @@ class VirtuosoDB extends Dexie {
       tasks: "++id, date, subjectId, itemId, done, deletedAt",
       recurrences: "++id, subjectId, deletedAt",
       techniques: "++id, subjectId, name, deletedAt",
+    });
+    // v4: repertoire collections (many-to-many)
+    this.version(4).stores({
+      collections: "++id, name, composer, defaultSubjectId, deletedAt",
+      collectionItems: "++id, collectionId, itemId, [collectionId+itemId]",
     });
   }
 }

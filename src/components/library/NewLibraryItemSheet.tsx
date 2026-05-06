@@ -22,7 +22,8 @@ import {
 import { LibraryItemKindFields } from "./LibraryItemKindFields";
 import { type DraftSegment } from "./SegmentsEditor";
 import { type MasteryState } from "./MasterySliders";
-import { libraryService } from "@/lib/services";
+import { libraryService, collectionsService } from "@/lib/services";
+import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet";
 import { toast } from "sonner";
 
 interface Props {
@@ -74,6 +75,24 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const [currentExercise, setCurrentExercise] = useState<number | undefined>(1);
 
   const [mastery, setMastery] = useState<MasteryState>(emptyMastery);
+  const [collectionIds, setCollectionIds] = useState<number[]>([]);
+  const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+
+  const allCollections = useLiveQuery(
+    () => db.collections.filter((c) => !c.deletedAt).toArray(),
+    []
+  );
+  const existingMemberships = useLiveQuery(
+    () => item?.id ? db.collectionItems.where("itemId").equals(item.id).toArray() : Promise.resolve([]),
+    [item?.id]
+  );
+  const collectionOptions = useMemo(
+    () => (allCollections ?? [])
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((c) => ({ value: c.id!, label: c.name })),
+    [allCollections]
+  );
 
   const subjectTechniqueOptions = useMemo(
     () => (allTechniques ?? [])
@@ -108,6 +127,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setCurrentExercise(item.currentExercise ?? 1);
       setMastery(item.mastery ?? emptyMastery);
     }
+    if (open && !isEdit) setCollectionIds([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isEdit, item?.id]);
 
@@ -126,6 +146,13 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     }
   }, [open, isEdit, existingSegments]);
 
+  // Hydrate collection memberships on edit
+  useEffect(() => {
+    if (open && isEdit && existingMemberships) {
+      setCollectionIds(existingMemberships.map((m) => m.collectionId));
+    }
+  }, [open, isEdit, existingMemberships]);
+
   // Reset when closed
   useEffect(() => {
     if (!open) {
@@ -141,6 +168,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setCurrentExercise(1);
       setMastery(emptyMastery);
       setSubjectId(undefined);
+      setCollectionIds([]);
     }
   }, [open]);
 
@@ -234,7 +262,10 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           }))
         : [];
 
-    await libraryService.upsert(base, segmentsPayload);
+    const savedId = await libraryService.upsert(base, segmentsPayload);
+    if (editingKind === "repertoire") {
+      await collectionsService.setItemCollections(savedId, collectionIds);
+    }
     toast.success(isEdit ? `${title.trim()} updated` : `${title.trim()} added to library`);
     onOpenChange(false);
   };

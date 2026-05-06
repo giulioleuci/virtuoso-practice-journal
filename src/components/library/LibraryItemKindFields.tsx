@@ -28,6 +28,9 @@ interface Props {
   mastery: MasteryState; setMastery: (v: MasteryState) => void;
   techniqueOptions: { value: number; label: string }[];
   subjectLayers: string[];
+  collectionIds?: number[]; setCollectionIds?: (v: number[]) => void;
+  collectionOptions?: { value: number; label: string }[];
+  onCreateCollection?: () => void;
 }
 
 export function LibraryItemKindFields(p: Props) {
@@ -96,6 +99,26 @@ export function LibraryItemKindFields(p: Props) {
         onChange={p.setTechniqueIds}
         emptyHint="Add techniques in Profile to associate them here."
       />
+
+      {p.kind === "repertoire" && p.setCollectionIds && (
+        <div className="space-y-2">
+          <MultiChipPicker
+            label="Collections"
+            options={p.collectionOptions ?? []}
+            value={p.collectionIds ?? []}
+            onChange={p.setCollectionIds}
+            emptyHint="No collections yet."
+            placeholder="Add to one or more collections…"
+          />
+          {p.onCreateCollection && (
+            <button
+              type="button"
+              onClick={p.onCreateCollection}
+              className="text-xs text-primary hover:underline"
+            >+ New collection</button>
+          )}
+        </div>
+      )}
 
       {(p.kind === "repertoire" || p.kind === "manual") && (
         <SegmentsEditor
