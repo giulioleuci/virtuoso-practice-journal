@@ -32,6 +32,18 @@ export const taskInputSchema = z.object({
 });
 export type TaskInput = z.infer<typeof taskInputSchema>;
 
+export const colorKeySchema = z.enum(["terracotta", "sage", "gold", "blue", "plum"]);
+
+export const collectionInputSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  composer: z.string().trim().max(120).optional(),
+  catalog: z.string().trim().max(60).optional(),
+  notes: z.string().trim().max(2000).optional(),
+  color: colorKeySchema.optional(),
+  defaultSubjectId: z.number().int().positive().optional(),
+});
+export type CollectionInput = z.infer<typeof collectionInputSchema>;
+
 /** Tiny helper: returns string[] of error messages (empty = valid). */
 export function flattenErrors<T>(res: z.SafeParseReturnType<unknown, T>): string[] {
   if (res.success) return [];
