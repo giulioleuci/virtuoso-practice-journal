@@ -50,8 +50,12 @@ export default function Library() {
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
+  const [search, setSearch] = useState("");
+  const [subjectFilter, setSubjectFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
   const allHelp = useLiveQuery(() => db.helpRequests.toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const subjects = useSubjects();
 
   const items = useLiveQuery(
     () => db.library.where("kind").equals(active).filter((i) => !i.deletedAt).toArray(),
@@ -62,6 +66,22 @@ export default function Library() {
     (acc[s.itemId] ||= []).push(s);
     return acc;
   }, {});
+
+  const filteredItems = useMemo(() => {
+    let arr = items ?? [];
+    if (subjectFilter !== "all") arr = arr.filter((i) => i.subjectId === Number(subjectFilter));
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      arr = arr.filter(
+        (i) => i.title.toLowerCase().includes(q) || (i.composer ?? "").toLowerCase().includes(q)
+      );
+    }
+    return [...arr].sort((a, b) => {
+      if (sortBy === "title") return a.title.localeCompare(b.title);
+      if (sortBy === "composer") return (a.composer ?? "").localeCompare(b.composer ?? "");
+      return b.createdAt - a.createdAt;
+    });
+  }, [items, subjectFilter, search, sortBy]);
 
   const openCreate = () => {
     setEditing(null);
