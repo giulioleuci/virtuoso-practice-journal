@@ -70,12 +70,31 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   });
   const setRec = (patch: Partial<RecurrenceState>) => setRecState((s) => ({ ...s, ...patch }));
 
-  const itemsForSubject = useMemo(
-    () => (library ?? []).filter(
-      (l) => l.subjectId === subjectId && (kindFilter === "all" || l.kind === kindFilter)
-    ),
-    [library, subjectId, kindFilter]
-  );
+  const itemsForSubject = useMemo(() => {
+    const byCollection = new Map<number, Set<number>>();
+    for (const link of allCollectionItems ?? []) {
+      const set = byCollection.get(link.collectionId) ?? new Set<number>();
+      set.add(link.itemId);
+      byCollection.set(link.collectionId, set);
+    }
+    const collectionSet =
+      collectionFilter !== "all" ? byCollection.get(collectionFilter) ?? new Set<number>() : null;
+    const filtered = (library ?? []).filter((l) => {
+      if (l.subjectId !== subjectId) return false;
+      if (kindFilter !== "all" && l.kind !== kindFilter) return false;
+      if (collectionSet && !collectionSet.has(l.id!)) return false;
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      if (sortBy === "composer") {
+        const ca = (a.composer ?? "").toLocaleLowerCase();
+        const cb = (b.composer ?? "").toLocaleLowerCase();
+        const cmp = ca.localeCompare(cb);
+        if (cmp !== 0) return cmp;
+      }
+      return a.title.localeCompare(b.title);
+    });
+  }, [library, subjectId, kindFilter, collectionFilter, sortBy, allCollectionItems]);
   const segments = useLiveQuery(
     () => (itemId ? db.segments.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
     [itemId]
