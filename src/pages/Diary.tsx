@@ -60,7 +60,17 @@ export default function Diary() {
   const [detailSession, setDetailSession] = useState<Session | null>(null);
   const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
   const [carryPage, setCarryPage] = useState(0);
+  const [ignoredPage, setIgnoredPage] = useState(0);
   const CARRY_PAGE_SIZE = 4;
+  const IGNORED_PAGE_SIZE = 5;
+
+  const ignoredTasks = useLiveQuery(
+    () => db.tasks
+      .where("date").between(carryoverFrom, today, true, false)
+      .filter((t) => !!t.skipped && !t.done && !t.deletedAt)
+      .toArray(),
+    [carryoverFrom, today]
+  );
 
   const dateLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long", month: "long", day: "numeric",
