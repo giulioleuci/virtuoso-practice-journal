@@ -178,6 +178,21 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Practice mode</p>
           <h2 className="font-serif text-2xl truncate">{task.title}</h2>
+          {item && (
+            <p className="text-xs text-muted-foreground truncate">
+              {item.title}{item.composer ? ` · ${item.composer}` : ""}
+            </p>
+          )}
+          {!!segments?.length && (
+            <p className="text-xs text-muted-foreground italic truncate">
+              Segment{segments.length > 1 ? "s" : ""}: {segments.map((s) => s.label).join(", ")}
+            </p>
+          )}
+          {collection && (
+            <p className="text-xs text-muted-foreground italic truncate">
+              Collection: {collection.name}
+            </p>
+          )}
           {task.targetBpm && (
             <p className="text-sm text-muted-foreground tabular-nums">
               Target {targetGlyph} = {task.targetBpm}
