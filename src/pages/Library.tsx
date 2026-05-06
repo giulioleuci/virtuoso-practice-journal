@@ -385,15 +385,21 @@ export default function Library() {
               </Accordion>
 
               {uncollected.length > 0 && (
-                <div className="space-y-2 pt-2">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground px-1">
-                    <FolderOpen className="h-3.5 w-3.5" />
-                    <span>Uncollected</span>
-                    <span className="tabular-nums ml-auto">{uncollected.length}</span>
-                  </div>
-                  <ul className="space-y-2">{paginate(uncollected, uncollectedPage).map(renderCard)}</ul>
-                  <Pager current={uncollectedPage} total={uncollectedTotalPages} onChange={(np) => setGroupPage("__uncollected", np)} />
-                </div>
+                <Accordion type="multiple" className="space-y-2 pt-2">
+                  <AccordionItem value="__uncollected" className="paper-card border-0 px-3">
+                    <AccordionTrigger className="hover:no-underline py-3">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="font-serif text-lg truncate">Uncollected</span>
+                        <span className="text-xs text-muted-foreground tabular-nums ml-auto mr-2">{uncollected.length}</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="space-y-2 pb-2">{paginate(uncollected, uncollectedPage).map(renderCard)}</ul>
+                      <Pager current={uncollectedPage} total={uncollectedTotalPages} onChange={(np) => setGroupPage("__uncollected", np)} />
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               )}
             </div>
           );
