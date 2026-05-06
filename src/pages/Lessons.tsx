@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Lesson, type LessonRecurrence } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
