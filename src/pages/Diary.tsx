@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Task, type Session } from "@/lib/db";
+import { db, type Task, type Session, type Profile } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { Plus, CheckCircle2, Circle, ListChecks, Play, ArrowRightCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
@@ -29,7 +29,7 @@ const NOTE_GLYPH: Record<string, string> = {
 
 export default function Diary() {
   const { t } = useI18n();
-  const profile = useLiveQuery(() => db.profile.get("me"));
+  const { profile } = useOutletContext<{ profile: Profile }>();
   const today = todayKey();
   const tasks = useLiveQuery(() => db.tasks.where("date").equals(today).filter((t) => !t.deletedAt).toArray(), [today]);
   const allSessions = useLiveQuery(() => db.sessions.toArray(), []);
