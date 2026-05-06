@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type LibraryKind, type NoteVal, type TaskRecurrence } from "@/lib/db";
+import { db, type LibraryKind, type NoteVal } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
-import { expandTaskRecurrence, schoolYearEnd } from "@/lib/recurrence";
+import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "./RecurrenceFields";
+import { tasksService } from "@/lib/services";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
