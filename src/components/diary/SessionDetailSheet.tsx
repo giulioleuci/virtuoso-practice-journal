@@ -205,63 +205,11 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                 </div>
 
-                <BpmCoupler
-                  bpm={bpm}
-                  noteVal={noteVal}
-                  onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }}
-                  label="BPM reached"
-                />
-
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Repetitions</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={9999}
-                    value={reps ?? ""}
-                    onChange={(e) => setReps(e.target.value === "" ? undefined : Number(e.target.value))}
-                  />
-                </div>
-
-                <StarRating label="Confidence" value={confidence} onChange={setConfidence} />
-
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Quality</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {QUALITIES.map((q) => (
-                      <button
-                        key={q.val}
-                        type="button"
-                        onClick={() => setQuality(q.val)}
-                        className={cn(
-                          "paper-card flex flex-col items-center py-3 transition-all",
-                          quality === q.val ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
-                        )}
-                      >
-                        <span className="text-2xl">{q.emoji}</span>
-                        <span className="text-xs mt-1">{q.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Notes</Label>
-                  <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-                </div>
-
-                <MultiChipPicker
-                  label="Layers practiced"
-                  options={layerOptions}
-                  value={layersUsed}
-                  onChange={setLayersUsed}
-                />
-                <MultiChipPicker
-                  label="Techniques practiced"
-                  options={techniqueOptions}
-                  value={techniquesUsed}
-                  onChange={setTechniquesUsed}
+                <SessionFields
+                  value={v}
+                  onChange={(patch) => setV((cur) => ({ ...cur, ...patch }))}
+                  layerOptions={layerOptions}
+                  techniqueOptions={techniqueOptions}
                 />
 
                 {errors.length > 0 && (
