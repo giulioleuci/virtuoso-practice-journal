@@ -36,7 +36,7 @@ const Index = () => {
   return (
     <I18nProvider initial={profile.lang}>
       <Routes>
-        <Route element={<AppShell />}>
+        <Route element={<AppShell profile={profile} />}>
           <Route index element={<Diary />} />
           <Route path="library" element={<Library />} />
           <Route path="lessons" element={<Lessons />} />
