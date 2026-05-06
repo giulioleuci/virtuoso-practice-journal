@@ -161,6 +161,19 @@ export default function Library() {
       </div>
       <Input placeholder="Search title or composer…" value={search} onChange={(e) => setSearch(e.target.value)} />
 
+      {active === "repertoire" && (
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant={groupByCollection ? "secondary" : "ghost"}
+            onClick={() => setGroupByCollection((v) => !v)}
+          >
+            <Layers className="h-4 w-4 mr-1" />
+            {groupByCollection ? "Grouped by collection" : "Group by collection"}
+          </Button>
+        </div>
+      )}
+
       {items === undefined ? (
         <ListSkeleton />
       ) : !filteredItems.length ? (
