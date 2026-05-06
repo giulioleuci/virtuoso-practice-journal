@@ -71,28 +71,45 @@ export default function History() {
   }, [sessions, from, to, subjectFilter, kindFilter, taskById, itemById]);
 
   const groups = useMemo(() => {
-    const map = new Map<string, { sortKey: number; label: string; sub?: string; sessions: Session[] }>();
+    const map = new Map<string, { sortKey: string; label: string; sub?: string; sessions: Session[] }>();
     for (const s of filteredSessions) {
       const task = taskById.get(s.taskId);
       const item = task?.itemId ? itemById.get(task.itemId) : undefined;
-      const seg = task?.segmentIds?.length ? segById.get(task.segmentIds[0]) : undefined;
+      const collection = task?.collectionId ? collectionById.get(task.collectionId) : undefined;
+      const segIds = task?.segmentIds ?? [];
+      const seg = segIds.length ? segById.get(segIds[0]) : undefined;
       let key: string, label: string, sub: string | undefined;
       switch (groupBy) {
-        case "task": key = `t:${s.taskId}`; label = task?.title ?? "Untitled"; sub = item?.title; break;
-        case "day": key = `d:${s.date}`; label = s.date; break;
-        case "item": key = `i:${item?.id ?? "none"}`; label = item?.title ?? "No item"; break;
-        case "segment": key = `s:${seg?.id ?? "none"}`; label = seg?.label ?? "No segment"; sub = item?.title; break;
+        case "task":
+          key = `t:${s.taskId}`;
+          label = task?.title ?? "Untitled";
+          sub = item?.title ?? collection?.name;
+          break;
+        case "day":
+          key = `d:${s.date}`;
+          label = s.date;
+          break;
+        case "item":
+          // Collection-linked tasks group under their collection bucket
+          if (collection) { key = `c:${collection.id}`; label = collection.name; sub = "Collection"; }
+          else { key = `i:${item?.id ?? "none"}`; label = item?.title ?? "No item"; }
+          break;
+        case "segment":
+          key = `s:${seg?.id ?? "none"}`;
+          label = seg?.label ?? "No segment";
+          sub = item?.title ?? collection?.name;
+          break;
       }
-      if (!map.has(key)) map.set(key, { sortKey: 0, label, sub, sessions: [] });
+      if (!map.has(key)) map.set(key, { sortKey: "", label, sub, sessions: [] });
       map.get(key)!.sessions.push(s);
     }
-    // Stable sort: sort sessions in each group, then groups
+    const cmp = (a: string, b: string) => sortDir === "newest" ? b.localeCompare(a) : a.localeCompare(b);
     for (const g of map.values()) {
-      g.sessions.sort((a, b) => sortDir === "newest" ? b.createdAt - a.createdAt : a.createdAt - b.createdAt);
-      g.sortKey = sortDir === "newest" ? Math.max(...g.sessions.map((s) => s.createdAt)) : Math.min(...g.sessions.map((s) => s.createdAt));
+      g.sessions.sort((a, b) => cmp(sessionSortKey(a), sessionSortKey(b)));
+      g.sortKey = sessionSortKey(g.sessions[sortDir === "newest" ? 0 : g.sessions.length - 1]);
     }
-    return Array.from(map.values()).sort((a, b) => sortDir === "newest" ? b.sortKey - a.sortKey : a.sortKey - b.sortKey);
-  }, [filteredSessions, taskById, itemById, segById, groupBy, sortDir]);
+    return Array.from(map.values()).sort((a, b) => cmp(a.sortKey, b.sortKey));
+  }, [filteredSessions, taskById, itemById, segById, collectionById, groupBy, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
   const pageGroups = groups.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
