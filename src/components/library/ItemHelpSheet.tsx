@@ -5,7 +5,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { HelpCircle, MessageSquareQuote, Plus, X, ChevronDown, CheckCircle2 } from "lucide-react";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { HelpCircle, MessageSquareQuote, Plus, X, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -23,9 +24,8 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
 
   const [draft, setDraft] = useState("");
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  useEffect(() => { if (!open) { setDraft(""); setAnswers({}); setExpandedId(null); } }, [open]);
+  useEffect(() => { if (!open) { setDraft(""); setAnswers({}); } }, [open]);
 
   const addQuestion = async () => {
     if (!draft.trim()) return;
@@ -78,63 +78,59 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
           {sorted.length === 0 ? (
             <p className="paper-card p-6 text-center text-muted-foreground italic">No questions yet.</p>
           ) : (
-            <ul className="space-y-1.5">
-              {sorted.map((r) => {
-                const expanded = expandedId === r.id;
-                return (
-                  <li key={r.id} className="paper-card">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(expanded ? null : (r.id ?? null))}
-                      className="w-full flex items-start gap-2 px-3 py-2 text-left"
-                    >
+            <Accordion type="single" collapsible className="space-y-1.5">
+              {sorted.map((r) => (
+                <AccordionItem
+                  key={r.id}
+                  value={String(r.id)}
+                  className="paper-card border-none"
+                >
+                  <AccordionTrigger className="px-3 py-2 hover:no-underline gap-2">
+                    <div className="flex items-start gap-2 flex-1 min-w-0 text-left">
                       {r.resolved ? (
                         <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                       ) : (
                         <HelpCircle className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
                       )}
-                      <span className={`flex-1 text-sm ${expanded ? "whitespace-pre-wrap break-words" : "truncate"}`}>
+                      <span className="flex-1 text-sm truncate group-data-[state=open]:whitespace-pre-wrap group-data-[state=open]:break-words group-data-[state=open]:truncate-none">
                         {r.question}
                       </span>
-                      <ChevronDown className={`h-4 w-4 mt-0.5 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
-                    </button>
-                    {expanded && (
-                      <div className="px-3 pb-3 space-y-2">
-                        {r.answer ? (
-                          <div className="space-y-1">
-                            <div className="text-sm text-foreground flex items-start gap-1.5 leading-relaxed">
-                              <MessageSquareQuote className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-                              <span className="flex-1 whitespace-pre-wrap break-words">{r.answer}</span>
-                            </div>
-                            {r.answeredAt && (
-                              <div className="text-xs text-muted-foreground tabular-nums pl-[22px]">
-                                {new Date(r.answeredAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-1.5">
-                            <Textarea
-                              rows={2}
-                              value={answers[r.id!] ?? ""}
-                              onChange={(e) => setAnswers((a) => ({ ...a, [r.id!]: e.target.value }))}
-                              placeholder="Record the teacher's answer…"
-                            />
-                            <Button size="sm" variant="outline" onClick={() => r.id && saveAnswer(r.id)}>Save answer</Button>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-3 pb-3 space-y-2">
+                    {r.answer ? (
+                      <div className="space-y-1">
+                        <div className="text-sm text-foreground flex items-start gap-1.5 leading-relaxed">
+                          <MessageSquareQuote className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                          <span className="flex-1 whitespace-pre-wrap break-words">{r.answer}</span>
+                        </div>
+                        {r.answeredAt && (
+                          <div className="text-xs text-muted-foreground tabular-nums pl-[22px]">
+                            {new Date(r.answeredAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
                           </div>
                         )}
-                        <button
-                          onClick={() => r.id && remove(r.id)}
-                          className="text-xs text-muted-foreground hover:text-destructive inline-flex items-center gap-1"
-                        >
-                          <X className="h-3 w-3" /> Delete
-                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <Textarea
+                          rows={2}
+                          value={answers[r.id!] ?? ""}
+                          onChange={(e) => setAnswers((a) => ({ ...a, [r.id!]: e.target.value }))}
+                          placeholder="Record the teacher's answer…"
+                        />
+                        <Button size="sm" variant="outline" onClick={() => r.id && saveAnswer(r.id)}>Save answer</Button>
                       </div>
                     )}
-                  </li>
-                );
-              })}
-            </ul>
+                    <button
+                      onClick={() => r.id && remove(r.id)}
+                      className="text-xs text-muted-foreground hover:text-destructive inline-flex items-center gap-1"
+                    >
+                      <X className="h-3 w-3" /> Delete
+                    </button>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           )}
         </div>
       </SheetContent>
