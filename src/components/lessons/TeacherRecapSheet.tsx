@@ -4,7 +4,8 @@ import { db, type HelpRequest } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, HelpCircle, MessageSquareQuote, ChevronDown, ChevronRight, History as HistoryIcon } from "lucide-react";
+import { CheckCircle2, HelpCircle, MessageSquareQuote, ChevronRight, History as HistoryIcon } from "lucide-react";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -132,63 +133,81 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                           </Link>
                         )}
                       </div>
-                      <ul className="space-y-2">
+                      <Accordion type="single" collapsible className="space-y-1">
                         {b.reqs.map((r) => {
                           const task = r.taskId ? taskById.get(r.taskId) : undefined;
+                          const isAnswering = answeringId === r.id;
                           return (
-                          <li key={r.id} className="text-sm border-l-2 border-border pl-2">
-                            <div className="flex items-start gap-2">
-                              <HelpCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                              <span className="flex-1">{r.question}</span>
-                              {task && (
-                                <Link
-                                  to={`/history?from=${task.date}&to=${task.date}`}
-                                  onClick={() => onOpenChange(false)}
-                                  title="View task history"
-                                  className="text-muted-foreground hover:text-primary shrink-0 mt-0.5"
-                                >
-                                  <HistoryIcon className="h-3.5 w-3.5" />
-                                </Link>
-                              )}
-                              {!r.resolved && (
-                                <button
-                                  onClick={() => r.id && resolve(r.id)}
-                                  className="text-xs text-muted-foreground hover:text-primary shrink-0"
-                                >Resolve</button>
-                              )}
-                            </div>
-                            {r.answer && answeringId !== r.id && (
-                              <div className="mt-1 ml-6 text-xs text-muted-foreground italic flex items-start gap-1">
-                                <MessageSquareQuote className="h-3 w-3 mt-0.5 shrink-0" />
-                                <span className="flex-1">{r.answer}</span>
-                              </div>
-                            )}
-                            {answeringId === r.id ? (
-                              <div className="ml-6 mt-2 space-y-2">
-                                <Textarea
-                                  rows={2}
-                                  value={answerDraft}
-                                  onChange={(e) => setAnswerDraft(e.target.value)}
-                                  placeholder="Teacher said…"
-                                />
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" onClick={() => setAnsweringId(null)}>Cancel</Button>
-                                  <Button size="sm" onClick={() => r.id && saveAnswer(r.id)}>Save answer</Button>
+                            <AccordionItem
+                              key={r.id}
+                              value={String(r.id)}
+                              className="border-l-2 border-border pl-2 border-b-0"
+                            >
+                              <AccordionTrigger className="group py-1.5 hover:no-underline gap-2">
+                                <div className="flex items-start gap-2 flex-1 min-w-0 text-left">
+                                  {r.resolved ? (
+                                    <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                                  ) : (
+                                    <HelpCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                  )}
+                                  <span className="flex-1 text-sm group-data-[state=closed]:truncate group-data-[state=open]:whitespace-pre-wrap group-data-[state=open]:break-words">
+                                    {r.question}
+                                  </span>
                                 </div>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => startAnswer(r)}
-                                className="ml-6 mt-1 text-xs text-primary hover:underline inline-flex items-center gap-0.5"
-                              >
-                                {r.answer ? "Edit answer" : "Record answer"}
-                                <ChevronDown className="h-3 w-3" />
-                              </button>
-                            )}
-                          </li>
+                              </AccordionTrigger>
+                              <AccordionContent className="pb-2">
+                                <div className="ml-6 space-y-2">
+                                  <div className="flex items-center gap-3 flex-wrap">
+                                    {task && (
+                                      <Link
+                                        to={`/history?from=${task.date}&to=${task.date}`}
+                                        onClick={() => onOpenChange(false)}
+                                        title="View task history"
+                                        className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+                                      >
+                                        <HistoryIcon className="h-3.5 w-3.5" /> History
+                                      </Link>
+                                    )}
+                                    {!r.resolved && !isAnswering && (
+                                      <button
+                                        onClick={() => r.id && resolve(r.id)}
+                                        className="text-xs text-muted-foreground hover:text-primary"
+                                      >Resolve</button>
+                                    )}
+                                  </div>
+                                  {r.answer && !isAnswering && (
+                                    <div className="text-sm text-foreground italic flex items-start gap-1.5">
+                                      <MessageSquareQuote className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                                      <span className="flex-1 whitespace-pre-wrap break-words">{r.answer}</span>
+                                    </div>
+                                  )}
+                                  {isAnswering ? (
+                                    <div className="space-y-2">
+                                      <Textarea
+                                        rows={2}
+                                        value={answerDraft}
+                                        onChange={(e) => setAnswerDraft(e.target.value)}
+                                        placeholder="Teacher said…"
+                                      />
+                                      <div className="flex gap-2">
+                                        <Button size="sm" variant="outline" onClick={() => setAnsweringId(null)}>Cancel</Button>
+                                        <Button size="sm" onClick={() => r.id && saveAnswer(r.id)}>Save answer</Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => startAnswer(r)}
+                                      className="text-xs text-primary hover:underline"
+                                    >
+                                      {r.answer ? "Edit answer" : "Record answer"}
+                                    </button>
+                                  )}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
                           );
                         })}
-                      </ul>
+                      </Accordion>
                     </div>
                   ))}
                 </section>
