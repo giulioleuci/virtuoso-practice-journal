@@ -3,8 +3,9 @@ import { NavLink, Outlet } from "react-router-dom";
 import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import type { Profile } from "@/lib/db";
 
-export default function AppShell() {
+export default function AppShell({ profile }: { profile: Profile }) {
   const { t } = useI18n();
   const items = [
     { to: "/", label: t("nav.diary"), icon: CalendarDays, end: true },
