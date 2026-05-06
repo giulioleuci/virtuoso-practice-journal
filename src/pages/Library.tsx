@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -87,6 +87,13 @@ export default function Library() {
       return b.createdAt - a.createdAt;
     });
   }, [items, subjectFilter, search, sortBy]);
+
+  const PAGE_SIZE = 5;
+  const [page, setPage] = useState(1);
+  const [pageByGroup, setPageByGroup] = useState<Record<string, number>>({});
+  useEffect(() => { setPage(1); setPageByGroup({}); }, [active, subjectFilter, search, sortBy, groupByCollection]);
+  const setGroupPage = (key: string, p: number) =>
+    setPageByGroup((prev) => ({ ...prev, [key]: p }));
 
   const openCreate = () => {
     setEditing(null);
@@ -314,6 +321,19 @@ export default function Library() {
             : <p className="paper-card p-6 text-center text-muted-foreground italic">No items match.</p>;
         }
 
+        const Pager = ({ current, total, onChange }: { current: number; total: number; onChange: (p: number) => void }) => {
+          if (total <= 1) return null;
+          return (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <Button size="sm" variant="ghost" disabled={current <= 1} onClick={() => onChange(current - 1)}>Prev</Button>
+              <span className="text-xs text-muted-foreground tabular-nums">{current} / {total}</span>
+              <Button size="sm" variant="ghost" disabled={current >= total} onClick={() => onChange(current + 1)}>Next</Button>
+            </div>
+          );
+        };
+
+        const paginate = <T,>(arr: T[], p: number) => arr.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE);
+
         if (active === "repertoire" && groupByCollection) {
           const cols = (allCollections ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
           const links = allCollectionLinks ?? [];
@@ -326,41 +346,67 @@ export default function Library() {
             return { collection: c, items: ids.map((id) => itemsById.get(id)!).sort((a, b) => a.title.localeCompare(b.title)) };
           });
           const uncollected = filteredItems.filter((i) => !inAnyCollection.has(i.id!));
-          const allGroups = [...groups, { collection: null as null, items: uncollected }];
+          const uncollectedPage = pageByGroup["__uncollected"] ?? 1;
+          const uncollectedTotalPages = Math.max(1, Math.ceil(uncollected.length / PAGE_SIZE));
 
           return (
-            <Accordion type="multiple" defaultValue={allGroups.map((_, i) => `g-${i}`)} className="space-y-2">
-              {allGroups.map((g, gi) => (
-                <AccordionItem key={gi} value={`g-${gi}`} className="paper-card border-0 px-3">
-                  <AccordionTrigger className="hover:no-underline py-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {g.collection?.color ? (
-                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: `hsl(var(--key-${g.collection.color}))` }} />
-                      ) : (
-                        <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                      )}
-                      <span className="font-serif text-lg truncate">
-                        {g.collection?.name ?? "Uncollected"}
-                      </span>
-                      <span className="text-xs text-muted-foreground tabular-nums ml-auto mr-2">
-                        {g.items.length}
-                      </span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    {g.items.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic px-1 pb-3">Empty.</p>
-                    ) : (
-                      <ul className="space-y-2 pb-2">{g.items.map(renderCard)}</ul>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+            <div className="space-y-2">
+              <Accordion type="multiple" className="space-y-2">
+                {groups.map((g, gi) => {
+                  const key = `c-${g.collection.id}`;
+                  const p = pageByGroup[key] ?? 1;
+                  const totalPages = Math.max(1, Math.ceil(g.items.length / PAGE_SIZE));
+                  return (
+                    <AccordionItem key={gi} value={key} className="paper-card border-0 px-3">
+                      <AccordionTrigger className="hover:no-underline py-3">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {g.collection?.color ? (
+                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: `hsl(var(--key-${g.collection.color}))` }} />
+                          ) : (
+                            <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                          )}
+                          <span className="font-serif text-lg truncate">{g.collection.name}</span>
+                          <span className="text-xs text-muted-foreground tabular-nums ml-auto mr-2">{g.items.length}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        {g.items.length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic px-1 pb-3">Empty.</p>
+                        ) : (
+                          <>
+                            <ul className="space-y-2 pb-2">{paginate(g.items, p).map(renderCard)}</ul>
+                            <Pager current={p} total={totalPages} onChange={(np) => setGroupPage(key, np)} />
+                          </>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+
+              {uncollected.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground px-1">
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    <span>Uncollected</span>
+                    <span className="tabular-nums ml-auto">{uncollected.length}</span>
+                  </div>
+                  <ul className="space-y-2">{paginate(uncollected, uncollectedPage).map(renderCard)}</ul>
+                  <Pager current={uncollectedPage} total={uncollectedTotalPages} onChange={(np) => setGroupPage("__uncollected", np)} />
+                </div>
+              )}
+            </div>
           );
         }
 
-        return <ul className="space-y-2">{filteredItems.map(renderCard)}</ul>;
+        const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+        const currentPage = Math.min(page, totalPages);
+        return (
+          <>
+            <ul className="space-y-2">{paginate(filteredItems, currentPage).map(renderCard)}</ul>
+            <Pager current={currentPage} total={totalPages} onChange={setPage} />
+          </>
+        );
       })()}
 
       <NewLibraryItemSheet
