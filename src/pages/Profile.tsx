@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Download, Upload, Trash2, FlaskConical } from "lucide-react";
+import { Download, Upload, Trash2, FlaskConical, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { seedSampleData } from "@/lib/sampleData";
@@ -17,6 +18,8 @@ export default function Profile() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmText, setConfirmText] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
 
   if (!profile) return null;
 
@@ -50,16 +53,43 @@ export default function Profile() {
     <div className="space-y-6">
       <section className="paper-card p-6">
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">{t("nav.profile")}</p>
-        <label className="block text-xs text-muted-foreground mb-1" htmlFor="profile-name">Name</label>
-        <Input
-          id="profile-name"
-          value={profile.name}
-          placeholder="Your name"
-          onChange={(e) => update({ name: e.target.value })}
-          onBlur={() => toast.success("Name saved")}
-          className="font-serif text-2xl bg-transparent border-0 px-0 focus-visible:ring-0 h-auto"
-        />
+        <div className="text-xs text-muted-foreground mb-1">Name</div>
+        <div className="flex items-center justify-between gap-2">
+          <div id="profile-name" className="font-serif text-2xl break-words min-w-0">
+            {profile.name || <span className="italic text-muted-foreground">Unnamed</span>}
+          </div>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label="Edit name"
+            onClick={() => { setNameDraft(profile.name ?? ""); setEditingName(true); }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
       </section>
+
+      <Dialog open={editingName} onOpenChange={setEditingName}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit name</DialogTitle>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={nameDraft}
+            placeholder="Your name"
+            onChange={(e) => setNameDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); update({ name: nameDraft.trim() }).then(() => { setEditingName(false); toast.success("Name saved"); }); }
+            }}
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditingName(false)}>Cancel</Button>
+            <Button onClick={async () => { await update({ name: nameDraft.trim() }); setEditingName(false); toast.success("Name saved"); }}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <section className="paper-card p-5 space-y-4">
         <h3 className="font-serif text-xl">{t("profile.settings")}</h3>
