@@ -193,6 +193,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     if (!canSave || subjectId === undefined) return;
     const now = Date.now();
     const base: LibraryItem = {
+      id: item?.id,
       subjectId,
       kind: editingKind,
       title: title.trim(),
@@ -222,30 +223,18 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       base.mastery = mastery;
     }
 
-    let itemId: number;
-    if (isEdit && item?.id) {
-      await db.library.put({ ...base, id: item.id });
-      itemId = item.id;
-      // Replace segments wholesale for simplicity & correctness
-      await db.segments.where("itemId").equals(itemId).delete();
-    } else {
-      itemId = (await db.library.add(base)) as number;
-    }
+    const segmentsPayload =
+      (editingKind === "repertoire" || editingKind === "manual") && segments.length
+        ? segments.map((s) => ({
+            label: s.label.trim(),
+            targetBpm: s.targetBpm,
+            noteVal: s.noteVal,
+            layers: s.layers ?? [],
+            techniqueIds: s.techniqueIds ?? [],
+          }))
+        : [];
 
-    if ((editingKind === "repertoire" || editingKind === "manual") && segments.length) {
-      await db.segments.bulkAdd(
-        segments.map((s) => ({
-          itemId,
-          label: s.label.trim(),
-          targetBpm: s.targetBpm,
-          noteVal: s.noteVal,
-          layers: s.layers ?? [],
-          techniqueIds: s.techniqueIds ?? [],
-          createdAt: now,
-        }))
-      );
-    }
-
+    await libraryService.upsert(base, segmentsPayload);
     toast.success(isEdit ? `${title.trim()} updated` : `${title.trim()} added to library`);
     onOpenChange(false);
   };
