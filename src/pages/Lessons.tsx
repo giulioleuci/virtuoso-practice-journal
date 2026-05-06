@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Lesson, type LessonRecurrence } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -124,12 +125,7 @@ export default function Lessons() {
       <section className="space-y-2">
         <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Teachers</h3>
         {!recurrences?.length ? (
-          <button onClick={openNew} className="paper-card p-8 text-center w-full hover:-translate-y-0.5 transition-transform">
-            <p className="text-muted-foreground italic mb-2">{t("lessons.empty")}</p>
-            <span className="inline-flex items-center gap-1 text-primary font-medium text-sm">
-              <Plus className="h-4 w-4" /> {t("lessons.addRecurrence")}
-            </span>
-          </button>
+          <EmptyLessons onAdd={openNew} hint={t("lessons.empty")} />
         ) : (
           <ul className="space-y-2">
             {recurrences.map((r) => (
@@ -402,5 +398,26 @@ function Pager({ page, totalPages, onPage }: { page: number; totalPages: number;
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>
+  );
+}
+
+function EmptyLessons({ onAdd, hint }: { onAdd: () => void; hint: string }) {
+  const quote = useMemo(() => pickQuote(LESSON_QUOTES), []);
+  return (
+    <button
+      onClick={onAdd}
+      className="paper-card p-10 text-center w-full hover:-translate-y-0.5 transition-transform group"
+    >
+      <p className="font-serif text-xl italic text-foreground/85 leading-snug">
+        “{quote.text}”
+      </p>
+      <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
+        — {quote.author}
+      </p>
+      <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
+      <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
+        <Plus className="h-4 w-4" /> Add teacher
+      </span>
+    </button>
   );
 }
