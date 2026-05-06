@@ -103,7 +103,7 @@ export default function Diary() {
                 <li key={task.id}>
                   <div
                     className={cn(
-                      "paper-card p-4 w-full flex items-start gap-3 transition-all hover:-translate-y-0.5",
+                      "paper-card p-4 w-full flex gap-3 transition-all hover:-translate-y-0.5",
                       task.done && "opacity-70"
                     )}
                   >
@@ -119,41 +119,43 @@ export default function Diary() {
                         <Circle className="h-5 w-5 text-muted-foreground" />
                       )}
                     </button>
-                    <button
-                      onClick={() => {
-                        if (task.done && last) {
-                          setDetailSession(last as Session);
-                        } else {
-                          setLogPrefill(undefined);
-                          setLogTask(task);
-                        }
-                      }}
-                      className="flex-1 min-w-0 text-left"
-                    >
-                      <div className={cn("font-medium", task.done && "line-through")}>{task.title}</div>
-                      {task.targetBpm && (
-                        <div className="text-xs text-muted-foreground tabular-nums">
-                          Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}
-                        </div>
-                      )}
-                      {last && (
-                        <div className="text-xs text-primary tabular-nums mt-0.5 inline-flex items-center gap-1">
-                          {last.bpmReached && (
-                            <>{last.noteVal ? NOTE_GLYPH[last.noteVal] : "♩"} = {last.bpmReached} ·</>
-                          )}
-                          {last.quality}
-                        </div>
-                      )}
-                    </button>
-                    {!task.done && (
+                    <div className="flex-1 min-w-0 space-y-2">
                       <button
-                        onClick={() => setPracticeTask(task)}
-                        className="self-center inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shrink-0"
-                        aria-label="Start practice"
+                        onClick={() => {
+                          if (task.done && last) {
+                            setDetailSession(last as Session);
+                          } else {
+                            setLogPrefill(undefined);
+                            setLogTask(task);
+                          }
+                        }}
+                        className="w-full text-left"
                       >
-                        <Play className="h-3.5 w-3.5" /> Start
+                        <div className={cn("font-medium break-words", task.done && "line-through")}>{task.title}</div>
+                        {task.targetBpm && (
+                          <div className="text-xs text-muted-foreground tabular-nums">
+                            Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}
+                          </div>
+                        )}
+                        {last && (
+                          <div className="text-xs text-primary tabular-nums mt-0.5 inline-flex items-center gap-1">
+                            {last.bpmReached && (
+                              <>{last.noteVal ? NOTE_GLYPH[last.noteVal] : "♩"} = {last.bpmReached} ·</>
+                            )}
+                            {last.quality}
+                          </div>
+                        )}
                       </button>
-                    )}
+                      {!task.done && (
+                        <button
+                          onClick={() => setPracticeTask(task)}
+                          className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
+                          aria-label="Start practice"
+                        >
+                          <Play className="h-3.5 w-3.5" /> Start
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </li>
               );
@@ -180,40 +182,42 @@ export default function Diary() {
                 <ul className="space-y-2">
                   {slice.map((task) => (
                     <li key={task.id}>
-                      <div className="paper-card p-4 w-full flex items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{task.title}</div>
-                          <div className="text-xs text-muted-foreground tabular-nums">
+                      <div className="paper-card p-4 w-full flex flex-col gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium break-words">{task.title}</div>
+                          <div className="text-xs text-muted-foreground tabular-nums break-words">
                             {task.date}
                             {task.targetBpm && (
                               <> · Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}</>
                             )}
                           </div>
                         </div>
-                        <button
-                          onClick={async () => {
-                            if (!task.id) return;
-                            const { id, date, done, skipped, ...rest } = task;
-                            await db.tasks.add({ ...rest, date: today, done: false, createdAt: Date.now() });
-                            await db.tasks.update(id, { skipped: true });
-                            toast.success("Moved to today");
-                          }}
-                          className="self-center inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shrink-0"
-                          aria-label="Move to today"
-                        >
-                          <ArrowRightCircle className="h-3.5 w-3.5" /> Today
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (!task.id) return;
-                            await db.tasks.update(task.id, { skipped: true });
-                            toast("Ignored");
-                          }}
-                          className="self-center p-2 rounded-xl text-muted-foreground hover:text-destructive shrink-0"
-                          aria-label="Ignore"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              if (!task.id) return;
+                              const { id, date, done, skipped, ...rest } = task;
+                              await db.tasks.add({ ...rest, date: today, done: false, createdAt: Date.now() });
+                              await db.tasks.update(id, { skipped: true });
+                              toast.success("Moved to today");
+                            }}
+                            className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
+                            aria-label="Move to today"
+                          >
+                            <ArrowRightCircle className="h-3.5 w-3.5" /> Today
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!task.id) return;
+                              await db.tasks.update(task.id, { skipped: true });
+                              toast("Ignored");
+                            }}
+                            className="ml-auto p-2 rounded-xl text-muted-foreground hover:text-destructive"
+                            aria-label="Ignore"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     </li>
                   ))}
