@@ -46,7 +46,6 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number | null>(Date.now());
   const baseRef = useRef<number>(0);
-  const baseRef = useRef<number>(0);
 
   useEffect(() => {
     if (!running) {
