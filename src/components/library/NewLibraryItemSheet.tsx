@@ -19,11 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BpmCoupler } from "./BpmCoupler";
-import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
-import { MasterySliders, type MasteryState } from "./MasterySliders";
-import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
-import { cn } from "@/lib/utils";
+import { LibraryItemKindFields } from "./LibraryItemKindFields";
+import { type DraftSegment } from "./SegmentsEditor";
+import { type MasteryState } from "./MasterySliders";
+import { libraryService } from "@/lib/services";
 import { toast } from "sonner";
 
 interface Props {
