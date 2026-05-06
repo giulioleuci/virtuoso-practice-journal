@@ -131,13 +131,11 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     if (!subjectId) return undefined;
     const candidates: string[] = [];
     for (const l of lessons ?? []) {
-      if (l.subjectId === subjectId && l.date > startDate) candidates.push(l.date);
+      if (l.subjectId === subjectId && l.date > rec.startDate) candidates.push(l.date);
     }
-    // Also project upcoming dates from recurrences
     for (const r of lessonRecurrences ?? []) {
       if (r.subjectId !== subjectId) continue;
-      // simple weekly/biweekly projection within a year
-      const start = new Date(startDate);
+      const start = new Date(rec.startDate);
       for (let i = 1; i <= 365; i++) {
         const d = new Date(start);
         d.setDate(d.getDate() + i);
@@ -148,7 +146,6 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
           const weeks = Math.floor((d.getTime() - new Date(r.startDate).getTime()) / (7 * 86400000));
           if (weeks % 2 !== 0) continue;
         } else if (r.frequency === "monthly") {
-          // approx every 4 weeks from startDate
           const days = Math.floor((d.getTime() - new Date(r.startDate).getTime()) / 86400000);
           if (days % 28 !== 0) continue;
         }
@@ -158,31 +155,9 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     }
     candidates.sort();
     return candidates[0];
-  }, [lessons, lessonRecurrences, subjectId, startDate]);
+  }, [lessons, lessonRecurrences, subjectId, rec.startDate]);
 
-  const recurrence: TaskRecurrence | undefined = useMemo(() => {
-    if (!repeat) return undefined;
-    return {
-      kind: recKind,
-      days: recKind === "weekdays" ? [...recDays].sort() : undefined,
-      everyXDays: recKind === "interval" ? everyX : undefined,
-      startDate,
-      endDate:
-        endMode === "date" && endDate
-          ? endDate
-          : endMode === "nextLesson" && nextLessonDate
-          ? nextLessonDate
-          : endMode === "never"
-          ? schoolYearEnd(new Date())
-          : undefined,
-      occurrences: endMode === "count" ? occurrences : undefined,
-    };
-  }, [repeat, recKind, recDays, everyX, startDate, endMode, endDate, occurrences, nextLessonDate]);
-
-  const previewDates = useMemo(
-    () => (recurrence ? expandTaskRecurrence(recurrence).slice(0, 6) : []),
-    [recurrence]
-  );
+  const recurrence = useMemo(() => buildRecurrence(rec, nextLessonDate), [rec, nextLessonDate]);
 
   const errors = useMemo(() => {
     const e: string[] = [];
@@ -190,22 +165,18 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     if (!itemId) e.push("Pick a library item");
     if (!title.trim()) e.push("Title is required");
     if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push("BPM out of range");
-    if (repeat) {
-      if (recKind === "weekdays" && !recDays.length) e.push("Pick at least one day");
-      if (recKind === "interval" && (everyX < 1 || everyX > 60)) e.push("Interval must be 1–60 days");
-      if (endMode === "date" && !endDate) e.push("Set an end date");
-      if (endMode === "nextLesson" && !nextLessonDate) e.push("No upcoming lesson found for this subject");
-      if (endMode === "count" && (occurrences < 1 || occurrences > 200)) e.push("Occurrences must be 1–200");
+    if (rec.enabled) {
+      if (rec.kind === "weekdays" && !rec.days.length) e.push("Pick at least one day");
+      if (rec.kind === "interval" && (rec.everyX < 1 || rec.everyX > 60)) e.push("Interval must be 1–60 days");
+      if (rec.endMode === "date" && !rec.endDate) e.push("Set an end date");
+      if (rec.endMode === "nextLesson" && !nextLessonDate) e.push("No upcoming lesson found for this subject");
+      if (rec.endMode === "count" && (rec.occurrences < 1 || rec.occurrences > 200)) e.push("Occurrences must be 1–200");
     }
     return e;
-  }, [subjectId, itemId, title, bpm, repeat, recKind, recDays, everyX, endMode, endDate, occurrences]);
-
-  const toggleDay = (d: number) =>
-    setRecDays((arr) => (arr.includes(d) ? arr.filter((x) => x !== d) : [...arr, d]));
+  }, [subjectId, itemId, title, bpm, rec, nextLessonDate]);
 
   const save = async () => {
     if (errors.length) return;
-    const now = Date.now();
     const baseTask = {
       subjectId: subjectId!,
       itemId,
@@ -215,42 +186,22 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       noteVal,
       layers,
       techniqueIds,
-      done: false,
-      createdAt: now,
     };
-
-    let firstId: number;
-    if (recurrence) {
-      const dates = expandTaskRecurrence(recurrence);
-      if (!dates.length) {
-        toast.error("Recurrence produced no dates");
-        return;
-      }
-      await db.transaction("rw", db.tasks, db.assignments, async () => {
-        firstId = (await db.tasks.add({
-          ...baseTask,
-          date: dates[0],
-          recurrence,
-        })) as number;
-        if (dates.length > 1) {
-          await db.tasks.bulkAdd(
-            dates.slice(1).map((d) => ({ ...baseTask, date: d, recurrenceTaskId: firstId }))
-          );
-        }
-        if (prefill?.assignmentId) {
-          await db.assignments.update(prefill.assignmentId, { transformed: true, taskId: firstId });
-        }
+    try {
+      const firstId = await tasksService.create({
+        ...baseTask,
+        date: recurrence ? recurrence.startDate : date,
+        recurrence,
       });
-      toast.success(`Created ${dates.length} occurrences`);
-    } else {
-      firstId = (await db.tasks.add({ ...baseTask, date })) as number;
       if (prefill?.assignmentId) {
         await db.assignments.update(prefill.assignmentId, { transformed: true, taskId: firstId });
       }
-      toast.success("Task added");
+      toast.success(recurrence ? "Recurring task created" : "Task added");
+      onCreated?.(firstId);
+      onOpenChange(false);
+    } catch (err) {
+      toast.error((err as Error).message);
     }
-    onCreated?.(firstId!);
-    onOpenChange(false);
   };
 
   return (
