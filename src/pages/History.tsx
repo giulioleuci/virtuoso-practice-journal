@@ -160,6 +160,8 @@ export default function History() {
         </button>
       )}
 
+      <StatsDashboard from={from || undefined} to={to || undefined} sessions={filteredSessions} />
+
       <div className="flex justify-end">
         <Button size="sm" variant="ghost" onClick={() => setSortDir((d) => d === "newest" ? "oldest" : "newest")}>
           <ArrowDownUp className="h-4 w-4 mr-1" /> {sortDir === "newest" ? "Newest first" : "Oldest first"}
