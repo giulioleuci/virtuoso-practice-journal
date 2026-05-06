@@ -5,6 +5,7 @@ import Onboarding from "@/components/onboarding/Onboarding";
 import AppShell from "@/components/AppShell";
 import Diary from "./Diary";
 import Library from "./Library";
+import Collections from "./Collections";
 import Lessons from "./Lessons";
 import History from "./History";
 import Tasks from "./Tasks";
@@ -39,6 +40,7 @@ const Index = () => {
         <Route element={<AppShell profile={profile} />}>
           <Route index element={<Diary />} />
           <Route path="library" element={<Library />} />
+          <Route path="library/collections" element={<Collections />} />
           <Route path="lessons" element={<Lessons />} />
           <Route path="history" element={<History />} />
           <Route path="tasks" element={<Tasks />} />

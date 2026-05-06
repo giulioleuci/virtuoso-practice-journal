@@ -356,6 +356,10 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
             mastery={mastery} setMastery={setMastery}
             techniqueOptions={subjectTechniqueOptions}
             subjectLayers={subjectLayers}
+            collectionIds={collectionIds}
+            setCollectionIds={setCollectionIds}
+            collectionOptions={collectionOptions}
+            onCreateCollection={() => setNewCollectionOpen(true)}
           />
 
           {/* Validation summary */}
@@ -382,6 +386,12 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           </div>
         </SheetFooter>
       </SheetContent>
+      <NewCollectionSheet
+        open={newCollectionOpen}
+        onOpenChange={setNewCollectionOpen}
+        collection={null}
+        onSaved={(id) => setCollectionIds([...collectionIds, id])}
+      />
     </Sheet>
   );
 }
