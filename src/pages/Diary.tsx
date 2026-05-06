@@ -90,7 +90,9 @@ export default function Diary() {
           </div>
         </div>
 
-        {!tasks?.length ? (
+        {tasks === undefined ? (
+          <div className="space-y-2"><div className="paper-skeleton h-20" /><div className="paper-skeleton h-20" /></div>
+        ) : !tasks?.length ? (
           <EmptyDiary onAdd={() => setNewOpen(true)} hint={t("diary.empty")} />
         ) : (
           <ul className="space-y-2">

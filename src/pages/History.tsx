@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
+import { ListSkeleton } from "@/components/shared/Loading";
 
 const NOTE_GLYPH: Record<string, string> = {
   half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
@@ -142,7 +143,9 @@ export default function History() {
         </Button>
       </div>
 
-      {pageGroups.length === 0 ? (
+      {sessions === undefined ? (
+        <ListSkeleton />
+      ) : pageGroups.length === 0 ? (
         <p className="paper-card p-6 text-center text-muted-foreground italic">No sessions match.</p>
       ) : (
         <ul className="space-y-3">

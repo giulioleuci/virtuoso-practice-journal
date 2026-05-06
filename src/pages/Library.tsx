@@ -4,12 +4,16 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, deleteLibraryItem, type LibraryKind, type LibraryItem, type Segment } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, Star, MessageCircleQuestion, MoreVertical } from "lucide-react";
+import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, Star, MessageCircleQuestion, MoreVertical, ArrowDownUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { BpmSparkline } from "@/components/library/BpmSparkline";
+import { ListSkeleton } from "@/components/shared/Loading";
+import { useSubjects } from "@/hooks/useEntities";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,8 +50,12 @@ export default function Library() {
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
+  const [search, setSearch] = useState("");
+  const [subjectFilter, setSubjectFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
   const allHelp = useLiveQuery(() => db.helpRequests.toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const subjects = useSubjects();
 
   const items = useLiveQuery(
     () => db.library.where("kind").equals(active).filter((i) => !i.deletedAt).toArray(),
@@ -58,6 +66,22 @@ export default function Library() {
     (acc[s.itemId] ||= []).push(s);
     return acc;
   }, {});
+
+  const filteredItems = useMemo(() => {
+    let arr = items ?? [];
+    if (subjectFilter !== "all") arr = arr.filter((i) => i.subjectId === Number(subjectFilter));
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      arr = arr.filter(
+        (i) => i.title.toLowerCase().includes(q) || (i.composer ?? "").toLowerCase().includes(q)
+      );
+    }
+    return [...arr].sort((a, b) => {
+      if (sortBy === "title") return a.title.localeCompare(b.title);
+      if (sortBy === "composer") return (a.composer ?? "").localeCompare(b.composer ?? "");
+      return b.createdAt - a.createdAt;
+    });
+  }, [items, subjectFilter, search, sortBy]);
 
   const openCreate = () => {
     setEditing(null);
@@ -106,11 +130,36 @@ export default function Library() {
         ))}
       </div>
 
-      {!items?.length ? (
-        <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
+      <div className="grid grid-cols-2 gap-2">
+        <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All subjects</SelectItem>
+            {(subjects ?? []).map((s) => (
+              <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recent"><span className="inline-flex items-center gap-2"><ArrowDownUp className="h-3 w-3" /> Recent</span></SelectItem>
+            <SelectItem value="title">Title (A→Z)</SelectItem>
+            <SelectItem value="composer">Composer (A→Z)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Input placeholder="Search title or composer…" value={search} onChange={(e) => setSearch(e.target.value)} />
+
+      {items === undefined ? (
+        <ListSkeleton />
+      ) : !filteredItems.length ? (
+        items.length === 0
+          ? <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
+          : <p className="paper-card p-6 text-center text-muted-foreground italic">No items match.</p>
       ) : (
         <ul className="space-y-2">
-          {items.map((it) => {
+          {filteredItems.map((it) => {
             const segs = it.id ? (segmentsByItem[it.id] ?? []) : [];
             return (
               <li key={it.id} className="paper-card p-4">

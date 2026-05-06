@@ -5,17 +5,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { StarRating } from "@/components/shared/StarRating";
-import { BpmCoupler } from "@/components/library/BpmCoupler";
-import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
+import { SessionFields, type SessionFieldsValue } from "./SessionFields";
 
 interface Props {
   open: boolean;
@@ -23,11 +20,16 @@ interface Props {
   session: Session | null;
 }
 
-const QUALITIES: { val: SessionQuality; label: string; emoji: string }[] = [
-  { val: "hard", label: "Hard", emoji: "🥵" },
-  { val: "well", label: "Well", emoji: "🙂" },
-  { val: "great", label: "Great", emoji: "✨" },
-];
+const initial = (s?: Session | null): SessionFieldsValue => ({
+  bpm: s?.bpmReached,
+  noteVal: s?.noteVal,
+  reps: s?.reps,
+  confidence: s?.confidence,
+  quality: (s?.quality ?? "well") as SessionQuality,
+  notes: s?.notes ?? "",
+  layersUsed: s?.layersUsed ?? [],
+  techniquesUsed: s?.techniquesUsed ?? [],
+});
 
 export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
   const task = useLiveQuery(
@@ -45,14 +47,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
 
   const [editing, setEditing] = useState(false);
   const [date, setDate] = useState("");
-  const [bpm, setBpm] = useState<number | undefined>();
-  const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
-  const [quality, setQuality] = useState<SessionQuality>("well");
-  const [notes, setNotes] = useState("");
-  const [layersUsed, setLayersUsed] = useState<string[]>([]);
-  const [techniquesUsed, setTechniquesUsed] = useState<number[]>([]);
-  const [reps, setReps] = useState<number | undefined>();
-  const [confidence, setConfidence] = useState<number | undefined>(undefined);
+  const [v, setV] = useState<SessionFieldsValue>(() => initial(session));
   const [confirmDel, setConfirmDel] = useState(false);
 
   const subject = useLiveQuery(
@@ -69,34 +64,32 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     if (open && session) {
       setEditing(false);
       setDate(session.date);
-      setBpm(session.bpmReached);
-      setNoteVal(session.noteVal);
-      setQuality(session.quality ?? "well");
-      setNotes(session.notes ?? "");
-      setLayersUsed(session.layersUsed ?? []);
-      setTechniquesUsed(session.techniquesUsed ?? []);
-      setReps(session.reps);
-      setConfidence(session.confidence);
+      setV(initial(session));
     }
   }, [open, session]);
 
   const errors = useMemo(() => {
     const e: string[] = [];
     if (!date) e.push("Date required");
-    if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push("BPM out of range");
-    if (reps !== undefined && (reps < 0 || reps > 9999)) e.push("Reps out of range");
-    return e;
-  }, [date, bpm, reps]);
+    const res = sessionInputSchema.safeParse({
+      bpmReached: v.bpm, noteVal: v.noteVal, reps: v.reps, confidence: v.confidence,
+      quality: v.quality, notes: v.notes, layersUsed: v.layersUsed, techniquesUsed: v.techniquesUsed,
+    });
+    return [...e, ...flattenErrors(res)];
+  }, [date, v]);
 
   const save = async () => {
     if (!session?.id || errors.length) return;
     await db.sessions.update(session.id, {
-      date, bpmReached: bpm, noteVal, quality, notes: notes.trim() || undefined,
-      layersUsed, techniquesUsed, reps, confidence,
+      date, bpmReached: v.bpm, noteVal: v.noteVal, quality: v.quality,
+      notes: v.notes.trim() || undefined,
+      layersUsed: v.layersUsed, techniquesUsed: v.techniquesUsed,
+      reps: v.reps, confidence: v.confidence,
     });
     toast.success("Session updated");
     setEditing(false);
   };
+
 
   const del = async () => {
     if (!session?.id) return;
@@ -113,7 +106,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-3xl">
+      <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl">Session</SheetTitle>
         </SheetHeader>
@@ -212,63 +205,11 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                 </div>
 
-                <BpmCoupler
-                  bpm={bpm}
-                  noteVal={noteVal}
-                  onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }}
-                  label="BPM reached"
-                />
-
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Repetitions</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={9999}
-                    value={reps ?? ""}
-                    onChange={(e) => setReps(e.target.value === "" ? undefined : Number(e.target.value))}
-                  />
-                </div>
-
-                <StarRating label="Confidence" value={confidence} onChange={setConfidence} />
-
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Quality</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {QUALITIES.map((q) => (
-                      <button
-                        key={q.val}
-                        type="button"
-                        onClick={() => setQuality(q.val)}
-                        className={cn(
-                          "paper-card flex flex-col items-center py-3 transition-all",
-                          quality === q.val ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
-                        )}
-                      >
-                        <span className="text-2xl">{q.emoji}</span>
-                        <span className="text-xs mt-1">{q.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Notes</Label>
-                  <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-                </div>
-
-                <MultiChipPicker
-                  label="Layers practiced"
-                  options={layerOptions}
-                  value={layersUsed}
-                  onChange={setLayersUsed}
-                />
-                <MultiChipPicker
-                  label="Techniques practiced"
-                  options={techniqueOptions}
-                  value={techniquesUsed}
-                  onChange={setTechniquesUsed}
+                <SessionFields
+                  value={v}
+                  onChange={(patch) => setV((cur) => ({ ...cur, ...patch }))}
+                  layerOptions={layerOptions}
+                  techniqueOptions={techniqueOptions}
                 />
 
                 {errors.length > 0 && (

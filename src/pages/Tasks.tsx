@@ -3,6 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, deleteTaskPreservingHistory, type Task } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -15,6 +16,7 @@ import { EditTaskSheet } from "@/components/diary/EditTaskSheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { ListSkeleton } from "@/components/shared/Loading";
 
 const PAGE_SIZE = 5;
 const NOTE_GLYPH: Record<string, string> = {
@@ -47,6 +49,8 @@ export default function Tasks() {
   const [editing, setEditing] = useState<Task | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
   const [delMode, setDelMode] = useState<"one" | "series">("one");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkDel, setBulkDel] = useState(false);
 
   const filtered = useMemo(() => {
     let arr = tasks ?? [];
@@ -69,12 +73,31 @@ export default function Tasks() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const pageIds = pageItems.map((t) => t.id!).filter(Boolean);
+  const allSelectedOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
 
   const subjectName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
 
   const toggleDone = async (t: Task) => {
     if (!t.id) return;
     await db.tasks.update(t.id, { done: !t.done });
+  };
+
+  const toggleSel = (id: number) => {
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+
+  const togglePage = () => {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (allSelectedOnPage) pageIds.forEach((id) => n.delete(id));
+      else pageIds.forEach((id) => n.add(id));
+      return n;
+    });
   };
 
   const askDelete = (t: Task) => {
@@ -108,6 +131,29 @@ export default function Tasks() {
     setDelId(null);
   };
 
+  const bulkMarkDone = async (done: boolean) => {
+    const ids = [...selected];
+    if (!ids.length) return;
+    await db.transaction("rw", db.tasks, async () => {
+      for (const id of ids) await db.tasks.update(id, { done });
+    });
+    toast.success(`${ids.length} task${ids.length === 1 ? "" : "s"} ${done ? "completed" : "reopened"}`);
+    setSelected(new Set());
+  };
+
+  const bulkDelete = async () => {
+    const ids = [...selected];
+    if (!ids.length) return;
+    let soft = 0;
+    for (const id of ids) {
+      const m = await deleteTaskPreservingHistory(id);
+      if (m === "soft") soft++;
+    }
+    toast.success(`${ids.length} deleted${soft ? ` (${soft} kept in history)` : ""}`);
+    setSelected(new Set());
+    setBulkDel(false);
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
@@ -116,7 +162,7 @@ export default function Tasks() {
         <span className="text-xs text-muted-foreground tabular-nums">{filtered.length}</span>
       </div>
 
-      <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); }}>
+      <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); setSelected(new Set()); }}>
         <TabsList className="w-full grid grid-cols-2">
           <TabsTrigger value="occurrences">Occurrences</TabsTrigger>
           <TabsTrigger value="series">Recurring series</TabsTrigger>
@@ -144,40 +190,65 @@ export default function Tasks() {
       </div>
       <Input placeholder="Search by title…" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
 
-      {pageItems.length === 0 ? (
+      {tasks === undefined ? (
+        <ListSkeleton />
+      ) : pageItems.length === 0 ? (
         <p className="paper-card p-6 text-center text-muted-foreground italic">No tasks.</p>
       ) : (
-        <ul className="space-y-2">
-          {pageItems.map((t) => (
-            <li key={t.id} className="paper-card p-3 flex items-start gap-2">
-              <button onClick={() => toggleDone(t)} className="mt-0.5 shrink-0">
-                {t.done
-                  ? <CheckCircle2 className="h-5 w-5 text-primary" />
-                  : <Circle className="h-5 w-5 text-muted-foreground" />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span className={`font-medium truncate ${t.done ? "line-through opacity-70" : ""}`}>{t.title}</span>
-                  {(t.recurrence || t.recurrenceTaskId) && (
-                    <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground tabular-nums">
-                  {view === "series" && t.recurrence
-                    ? <>from {t.date} · {summarizeRecurrence(t.recurrence)} · {subjectName(t.subjectId)}</>
-                    : <>{t.date} · {subjectName(t.subjectId)}</>}
-                  {t.targetBpm && <> · {t.noteVal ? NOTE_GLYPH[t.noteVal] : "♩"}={t.targetBpm}</>}
-                </div>
+        <>
+          <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <Checkbox checked={allSelectedOnPage} onCheckedChange={togglePage} />
+              <span>{selected.size > 0 ? `${selected.size} selected` : "Select all on page"}</span>
+            </label>
+            {selected.size > 0 && (
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="ghost" onClick={() => bulkMarkDone(true)}>Mark done</Button>
+                <Button size="sm" variant="ghost" onClick={() => bulkMarkDone(false)}>Reopen</Button>
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setBulkDel(true)}>
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                </Button>
               </div>
-              <button onClick={() => setEditing(t)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button onClick={() => askDelete(t)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
+            )}
+          </div>
+          <ul className="space-y-2">
+            {pageItems.map((t) => (
+              <li key={t.id} className="paper-card p-3 flex items-start gap-2">
+                <Checkbox
+                  className="mt-1 shrink-0"
+                  checked={t.id ? selected.has(t.id) : false}
+                  onCheckedChange={() => t.id && toggleSel(t.id)}
+                  aria-label="Select"
+                />
+                <button onClick={() => toggleDone(t)} className="mt-0.5 shrink-0">
+                  {t.done
+                    ? <CheckCircle2 className="h-5 w-5 text-primary" />
+                    : <Circle className="h-5 w-5 text-muted-foreground" />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className={`font-medium truncate ${t.done ? "line-through opacity-70" : ""}`}>{t.title}</span>
+                    {(t.recurrence || t.recurrenceTaskId) && (
+                      <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground tabular-nums">
+                    {view === "series" && t.recurrence
+                      ? <>from {t.date} · {summarizeRecurrence(t.recurrence)} · {subjectName(t.subjectId)}</>
+                      : <>{t.date} · {subjectName(t.subjectId)}</>}
+                    {t.targetBpm && <> · {t.noteVal ? NOTE_GLYPH[t.noteVal] : "♩"}={t.targetBpm}</>}
+                  </div>
+                </div>
+                <button onClick={() => setEditing(t)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button onClick={() => askDelete(t)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       {totalPages > 1 && (
@@ -226,6 +297,21 @@ export default function Tasks() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDel} onOpenChange={setBulkDel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selected.size} task{selected.size === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tasks with logged sessions will be archived (kept in history). Others are removed permanently.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={bulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
