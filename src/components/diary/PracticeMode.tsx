@@ -26,10 +26,26 @@ function formatTime(ms: number) {
 }
 
 export function PracticeMode({ task, onClose, onFinish }: Props) {
+  const item = useLiveQuery(
+    () => (task.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
+    [task.itemId]
+  );
+  const segments = useLiveQuery(
+    () => (task.segmentIds?.length
+      ? db.segments.where("id").anyOf(task.segmentIds).toArray()
+      : Promise.resolve([])),
+    [task.segmentIds?.join(",")]
+  );
+  const collection = useLiveQuery(
+    () => (task.collectionId ? db.collections.get(task.collectionId) : Promise.resolve(undefined)),
+    [task.collectionId]
+  );
+
   // Timer — auto-starts and uses wall-clock so backgrounding doesn't lose time
   const [running, setRunning] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number | null>(Date.now());
+  const baseRef = useRef<number>(0);
   const baseRef = useRef<number>(0);
 
   useEffect(() => {
