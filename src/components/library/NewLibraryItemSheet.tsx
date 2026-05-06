@@ -386,6 +386,12 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           </div>
         </SheetFooter>
       </SheetContent>
+      <NewCollectionSheet
+        open={newCollectionOpen}
+        onOpenChange={setNewCollectionOpen}
+        collection={null}
+        onCreated={(id) => setCollectionIds([...collectionIds, id])}
+      />
     </Sheet>
   );
 }
