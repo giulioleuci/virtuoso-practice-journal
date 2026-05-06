@@ -33,11 +33,6 @@ interface Props {
   item?: LibraryItem | null;
 }
 
-const STATUSES: { key: PracticeStatus; label: string }[] = [
-  { key: "in_study",    label: "In study" },
-  { key: "maintenance", label: "Maintenance" },
-  { key: "pause",       label: "Paused" },
-];
 
 const emptyMastery: MasteryState = {
   conceptual: 0,
