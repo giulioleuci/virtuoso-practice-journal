@@ -106,6 +106,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     if (open) {
       setSubjectId(prefill?.subjectId);
       setKindFilter("all");
+      setCollectionFilter("all");
+      setSortBy("title");
       setItemId(undefined);
       setSegmentId(undefined);
       setTitle(prefill?.title ?? "");
