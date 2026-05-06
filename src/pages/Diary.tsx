@@ -29,7 +29,7 @@ const NOTE_GLYPH: Record<string, string> = {
 
 export default function Diary() {
   const { t } = useI18n();
-  const profile = useLiveQuery(() => db.profile.get("me"));
+  const { profile } = useOutletContext<{ profile: Profile }>();
   const today = todayKey();
   const tasks = useLiveQuery(() => db.tasks.where("date").equals(today).filter((t) => !t.deletedAt).toArray(), [today]);
   const allSessions = useLiveQuery(() => db.sessions.toArray(), []);
