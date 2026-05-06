@@ -151,35 +151,38 @@ export default function History() {
         <ul className="space-y-3">
           {pageGroups.map((g, i) => (
             <li key={i} className="paper-card p-4">
-              <div className="flex items-baseline justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-serif text-lg truncate">{g.label}</div>
-                  {g.sub && <div className="text-xs text-muted-foreground truncate">{g.sub}</div>}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-serif text-lg break-words">{g.label}</div>
+                  {g.sub && <div className="text-xs text-muted-foreground break-words">{g.sub}</div>}
                 </div>
-                <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                <span className="text-xs text-muted-foreground tabular-nums shrink-0 mt-1">
                   {g.sessions.length} session{g.sessions.length === 1 ? "" : "s"}
                 </span>
               </div>
-              <ul className="mt-2 pt-2 border-t border-border/60 space-y-1 text-sm">
+              <ul className="mt-3 pt-3 border-t border-border/60 space-y-1">
                 {g.sessions.slice(0, 6).map((s) => {
                   const task = taskById.get(s.taskId);
                   return (
                     <li key={s.id}>
                       <button
                         onClick={() => setDetail(s)}
-                        className="w-full flex items-center justify-between gap-2 text-muted-foreground hover:text-foreground"
+                        className="w-full flex flex-col gap-0.5 text-left py-2 px-2 -mx-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 active:bg-accent/60 min-h-[44px]"
                       >
-                        <span className="truncate text-left">{groupBy === "day" ? task?.title : s.date}</span>
-                        <span className="tabular-nums shrink-0">
-                          {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}
-                          {s.quality ? ` · ${s.quality}` : ""}
-                        </span>
+                        <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : s.date}</span>
+                        {(s.bpmReached || s.quality) && (
+                          <span className="text-xs tabular-nums">
+                            {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}
+                            {s.bpmReached && s.quality ? " · " : ""}
+                            {s.quality ?? ""}
+                          </span>
+                        )}
                       </button>
                     </li>
                   );
                 })}
                 {g.sessions.length > 6 && (
-                  <li className="text-xs text-muted-foreground italic">+{g.sessions.length - 6} more…</li>
+                  <li className="text-xs text-muted-foreground italic px-2">+{g.sessions.length - 6} more…</li>
                 )}
               </ul>
             </li>
