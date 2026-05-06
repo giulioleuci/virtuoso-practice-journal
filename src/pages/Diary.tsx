@@ -103,7 +103,7 @@ export default function Diary() {
                 <li key={task.id}>
                   <div
                     className={cn(
-                      "paper-card p-4 w-full flex items-start gap-3 transition-all hover:-translate-y-0.5",
+                      "paper-card p-4 w-full flex gap-3 transition-all hover:-translate-y-0.5",
                       task.done && "opacity-70"
                     )}
                   >
@@ -119,41 +119,43 @@ export default function Diary() {
                         <Circle className="h-5 w-5 text-muted-foreground" />
                       )}
                     </button>
-                    <button
-                      onClick={() => {
-                        if (task.done && last) {
-                          setDetailSession(last as Session);
-                        } else {
-                          setLogPrefill(undefined);
-                          setLogTask(task);
-                        }
-                      }}
-                      className="flex-1 min-w-0 text-left"
-                    >
-                      <div className={cn("font-medium", task.done && "line-through")}>{task.title}</div>
-                      {task.targetBpm && (
-                        <div className="text-xs text-muted-foreground tabular-nums">
-                          Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}
-                        </div>
-                      )}
-                      {last && (
-                        <div className="text-xs text-primary tabular-nums mt-0.5 inline-flex items-center gap-1">
-                          {last.bpmReached && (
-                            <>{last.noteVal ? NOTE_GLYPH[last.noteVal] : "♩"} = {last.bpmReached} ·</>
-                          )}
-                          {last.quality}
-                        </div>
-                      )}
-                    </button>
-                    {!task.done && (
+                    <div className="flex-1 min-w-0 space-y-2">
                       <button
-                        onClick={() => setPracticeTask(task)}
-                        className="self-center inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shrink-0"
-                        aria-label="Start practice"
+                        onClick={() => {
+                          if (task.done && last) {
+                            setDetailSession(last as Session);
+                          } else {
+                            setLogPrefill(undefined);
+                            setLogTask(task);
+                          }
+                        }}
+                        className="w-full text-left"
                       >
-                        <Play className="h-3.5 w-3.5" /> Start
+                        <div className={cn("font-medium break-words", task.done && "line-through")}>{task.title}</div>
+                        {task.targetBpm && (
+                          <div className="text-xs text-muted-foreground tabular-nums">
+                            Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}
+                          </div>
+                        )}
+                        {last && (
+                          <div className="text-xs text-primary tabular-nums mt-0.5 inline-flex items-center gap-1">
+                            {last.bpmReached && (
+                              <>{last.noteVal ? NOTE_GLYPH[last.noteVal] : "♩"} = {last.bpmReached} ·</>
+                            )}
+                            {last.quality}
+                          </div>
+                        )}
                       </button>
-                    )}
+                      {!task.done && (
+                        <button
+                          onClick={() => setPracticeTask(task)}
+                          className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
+                          aria-label="Start practice"
+                        >
+                          <Play className="h-3.5 w-3.5" /> Start
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </li>
               );
