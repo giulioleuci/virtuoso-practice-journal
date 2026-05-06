@@ -121,7 +121,7 @@ export default function History() {
         <span className="text-xs text-muted-foreground tabular-nums">{filteredSessions.length} sessions</span>
       </div>
 
-      <StatsDashboard from={from || undefined} to={to || undefined} />
+      
 
       <Tabs value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setPage(0); }}>
         <TabsList className="w-full">
@@ -159,6 +159,8 @@ export default function History() {
           Clear date filter ({from || "…"} → {to || "…"})
         </button>
       )}
+
+      <StatsDashboard from={from || undefined} to={to || undefined} sessions={filteredSessions} />
 
       <div className="flex justify-end">
         <Button size="sm" variant="ghost" onClick={() => setSortDir((d) => d === "newest" ? "oldest" : "newest")}>

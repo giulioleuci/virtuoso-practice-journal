@@ -25,19 +25,13 @@ interface Props {
   from?: string;
   /** YYYY-MM-DD inclusive upper bound */
   to?: string;
+  /** Optional pre-filtered sessions; when provided, stats reflect these instead of the full DB. */
+  sessions?: { date: string; createdAt?: number }[] & any[];
 }
 
-export function StatsDashboard({ from, to }: Props = {}) {
-  const sessions = useLiveQuery(() => db.sessions.toArray());
-
-  const rangeSessions = useMemo(
-    () => (sessions ?? []).filter((s) => {
-      if (from && s.date < from) return false;
-      if (to && s.date > to) return false;
-      return true;
-    }),
-    [sessions, from, to]
-  );
+export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {}) {
+  const liveSessions = useLiveQuery(() => db.sessions.toArray());
+  const sessions = sessionsProp ?? liveSessions;
 
   const hasRange = !!(from || to);
 
