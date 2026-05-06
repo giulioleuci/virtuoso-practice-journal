@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type LibraryKind, type NoteVal } from "@/lib/db";
-import { collectionsService } from "@/lib/services";
+import { db, type NoteVal, type TaskLinkType } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +10,9 @@ import {
 } from "@/components/ui/select";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+import { LinkTargetFields } from "./LinkTargetFields";
 import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "./RecurrenceFields";
 import { tasksService } from "@/lib/services";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface Props {
@@ -28,29 +27,15 @@ interface Props {
   onCreated?: (taskId: number) => void;
 }
 
-const KINDS: { val: LibraryKind | "all"; label: string }[] = [
-  { val: "all", label: "All" },
-  { val: "repertoire", label: "Repertoire" },
-  { val: "manual", label: "Manuals" },
-  { val: "technique", label: "Technique" },
-  { val: "theory", label: "Theory" },
-];
-
-
-
 export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: Props) {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const library = useLiveQuery(() => db.library.filter((i) => !i.deletedAt).toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
-  const allCollections = useLiveQuery(() => collectionsService.list(), []);
-  const allCollectionItems = useLiveQuery(() => db.collectionItems.toArray(), []);
 
   const [subjectId, setSubjectId] = useState<number | undefined>();
-  const [kindFilter, setKindFilter] = useState<LibraryKind | "all">("all");
-  const [collectionFilter, setCollectionFilter] = useState<number | "all">("all");
-  const [sortBy, setSortBy] = useState<"title" | "composer">("title");
+  const [linkType, setLinkType] = useState<TaskLinkType>("free");
   const [itemId, setItemId] = useState<number | undefined>();
-  const [segmentId, setSegmentId] = useState<number | undefined>();
+  const [segmentIds, setSegmentIds] = useState<number[]>([]);
+  const [collectionId, setCollectionId] = useState<number | undefined>();
   const [title, setTitle] = useState("");
   const [bpm, setBpm] = useState<number | undefined>();
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
@@ -70,46 +55,26 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   });
   const setRec = (patch: Partial<RecurrenceState>) => setRecState((s) => ({ ...s, ...patch }));
 
-  const itemsForSubject = useMemo(() => {
-    const byCollection = new Map<number, Set<number>>();
-    for (const link of allCollectionItems ?? []) {
-      const set = byCollection.get(link.collectionId) ?? new Set<number>();
-      set.add(link.itemId);
-      byCollection.set(link.collectionId, set);
-    }
-    const collectionSet =
-      collectionFilter !== "all" ? byCollection.get(collectionFilter) ?? new Set<number>() : null;
-    const filtered = (library ?? []).filter((l) => {
-      if (l.subjectId !== subjectId) return false;
-      if (kindFilter !== "all" && l.kind !== kindFilter) return false;
-      if (collectionSet && !collectionSet.has(l.id!)) return false;
-      return true;
-    });
-    return filtered.sort((a, b) => {
-      if (sortBy === "composer") {
-        const ca = (a.composer ?? "").toLocaleLowerCase();
-        const cb = (b.composer ?? "").toLocaleLowerCase();
-        const cmp = ca.localeCompare(cb);
-        if (cmp !== 0) return cmp;
-      }
-      return a.title.localeCompare(b.title);
-    });
-  }, [library, subjectId, kindFilter, collectionFilter, sortBy, allCollectionItems]);
-  const segments = useLiveQuery(
-    () => (itemId ? db.segments.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
+  const selectedItem = useLiveQuery(
+    () => (itemId ? db.library.get(itemId) : Promise.resolve(undefined)),
     [itemId]
   );
-  const selectedItem = library?.find((l) => l.id === itemId);
-  const selectedSegment = segments?.find((s) => s.id === segmentId);
+  const selectedSegments = useLiveQuery(
+    () => (segmentIds.length ? db.segments.where("id").anyOf(segmentIds).toArray() : Promise.resolve([])),
+    [segmentIds.join(",")]
+  );
+  const selectedCollection = useLiveQuery(
+    () => (collectionId ? db.collections.get(collectionId) : Promise.resolve(undefined)),
+    [collectionId]
+  );
 
   useEffect(() => {
     if (open) {
       setSubjectId(prefill?.subjectId);
-      setKindFilter("all");
-      setCollectionFilter("all");
-      setSortBy("title");
+      setLinkType("free");
       setItemId(undefined);
-      setSegmentId(undefined);
+      setSegmentIds([]);
+      setCollectionId(undefined);
       setTitle(prefill?.title ?? "");
       setBpm(undefined);
       setNoteVal(undefined);
@@ -128,16 +93,27 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     }
   }, [open, prefill?.subjectId, prefill?.title, date]);
 
+  // Auto-fill title/BPM/layers from item or segments selection
   useEffect(() => {
-    if (!selectedItem) return;
-    const segLabel = selectedSegment ? ` — ${selectedSegment.label}` : "";
+    if (linkType !== "item" || !selectedItem) return;
+    const segLabel = selectedSegments?.length === 1
+      ? ` — ${selectedSegments[0].label}`
+      : selectedSegments && selectedSegments.length > 1
+        ? ` — ${selectedSegments.length} segments`
+        : "";
     setTitle(`${selectedItem.title}${segLabel}`);
-    setBpm(selectedSegment?.targetBpm ?? selectedItem.targetBpm);
-    setNoteVal(selectedSegment?.noteVal ?? selectedItem.noteVal);
-    // Pre-seed techniques from item/segment association
-    setTechniqueIds(selectedSegment?.techniqueIds ?? selectedItem.techniqueIds ?? []);
-    setLayers(selectedSegment?.layers ?? []);
-  }, [itemId, segmentId, selectedItem, selectedSegment]);
+    const firstSeg = selectedSegments?.[0];
+    setBpm(firstSeg?.targetBpm ?? selectedItem.targetBpm);
+    setNoteVal(firstSeg?.noteVal ?? selectedItem.noteVal);
+    setTechniqueIds(firstSeg?.techniqueIds ?? selectedItem.techniqueIds ?? []);
+    setLayers(firstSeg?.layers ?? []);
+  }, [linkType, itemId, segmentIds.join(","), selectedItem, selectedSegments]);
+
+  // Auto-fill title from collection
+  useEffect(() => {
+    if (linkType !== "collection" || !selectedCollection) return;
+    setTitle(selectedCollection.name);
+  }, [linkType, collectionId, selectedCollection]);
 
   const subjectLayers = useMemo(
     () => subjects?.find((s) => s.id === subjectId)?.layers ?? [],
@@ -188,7 +164,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   const errors = useMemo(() => {
     const e: string[] = [];
     if (!subjectId) e.push("Pick a subject");
-    if (!itemId) e.push("Pick a library item");
+    if (linkType === "item" && !itemId) e.push("Pick a library item");
+    if (linkType === "collection" && !collectionId) e.push("Pick a collection");
     if (!title.trim()) e.push("Title is required");
     if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push("BPM out of range");
     if (rec.enabled) {
@@ -199,14 +176,16 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       if (rec.endMode === "count" && (rec.occurrences < 1 || rec.occurrences > 200)) e.push("Occurrences must be 1–200");
     }
     return e;
-  }, [subjectId, itemId, title, bpm, rec, nextLessonDate]);
+  }, [subjectId, linkType, itemId, collectionId, title, bpm, rec, nextLessonDate]);
 
   const save = async () => {
     if (errors.length) return;
     const baseTask = {
       subjectId: subjectId!,
-      itemId,
-      segmentId,
+      linkType,
+      itemId: linkType === "item" ? itemId : undefined,
+      segmentIds: linkType === "item" ? segmentIds : undefined,
+      collectionId: linkType === "collection" ? collectionId : undefined,
       title: title.trim(),
       targetBpm: bpm,
       noteVal,
@@ -242,7 +221,10 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Subject</Label>
             <Select
               value={subjectId?.toString() ?? ""}
-              onValueChange={(v) => { setSubjectId(Number(v)); setItemId(undefined); setSegmentId(undefined); }}
+              onValueChange={(v) => {
+                setSubjectId(Number(v));
+                setItemId(undefined); setSegmentIds([]); setCollectionId(undefined);
+              }}
             >
               <SelectTrigger><SelectValue placeholder="Pick a subject" /></SelectTrigger>
               <SelectContent>
@@ -253,106 +235,17 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filter by kind</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {KINDS.map((k) => (
-                <button
-                  key={k.val}
-                  type="button"
-                  onClick={() => {
-                    setKindFilter(k.val);
-                    if (k.val !== "repertoire" && k.val !== "all") setCollectionFilter("all");
-                    setItemId(undefined);
-                    setSegmentId(undefined);
-                  }}
-                  className={cn(
-                    "text-xs px-3 py-1.5 rounded-full border transition-colors",
-                    kindFilter === k.val
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  )}
-                >{k.label}</button>
-              ))}
-            </div>
-          </div>
-
-          {(kindFilter === "all" || kindFilter === "repertoire") && !!allCollections?.length && (
-            <MultiChipPicker
-              label="Filter by collection"
-              options={allCollections.map((c) => ({ value: c.id!, label: c.name }))}
-              value={collectionFilter === "all" ? [] : [collectionFilter]}
-              onChange={(next) => {
-                setCollectionFilter(next.length ? next[next.length - 1] : "all");
-                setItemId(undefined);
-                setSegmentId(undefined);
-              }}
-              placeholder="All collections"
-            />
-          )}
-
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sort by</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {([
-                { val: "title", label: "Title" },
-                { val: "composer", label: "Composer / Author" },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.val}
-                  type="button"
-                  onClick={() => setSortBy(opt.val)}
-                  className={cn(
-                    "text-xs px-3 py-1.5 rounded-full border transition-colors",
-                    sortBy === opt.val
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  )}
-                >{opt.label}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Library item</Label>
-            <Select
-              value={itemId?.toString() ?? ""}
-              onValueChange={(v) => { setItemId(Number(v)); setSegmentId(undefined); }}
-              disabled={!subjectId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={subjectId ? "Pick an item" : "Pick a subject first"} />
-              </SelectTrigger>
-              <SelectContent>
-                {itemsForSubject.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">No items</div>
-                )}
-                {itemsForSubject.map((i) => (
-                  <SelectItem key={i.id} value={i.id!.toString()}>
-                    {i.title}{i.composer ? ` — ${i.composer}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {!!segments?.length && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Segment (optional)</Label>
-              <Select
-                value={segmentId?.toString() ?? "none"}
-                onValueChange={(v) => setSegmentId(v === "none" ? undefined : Number(v))}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Whole item —</SelectItem>
-                  {segments.map((s) => (
-                    <SelectItem key={s.id} value={s.id!.toString()}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <LinkTargetFields
+            subjectId={subjectId}
+            linkType={linkType}
+            setLinkType={setLinkType}
+            itemId={itemId}
+            setItemId={setItemId}
+            segmentIds={segmentIds}
+            setSegmentIds={setSegmentIds}
+            collectionId={collectionId}
+            setCollectionId={setCollectionId}
+          />
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Title</Label>
