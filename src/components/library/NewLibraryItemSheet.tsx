@@ -262,7 +262,10 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           }))
         : [];
 
-    await libraryService.upsert(base, segmentsPayload);
+    const savedId = await libraryService.upsert(base, segmentsPayload);
+    if (editingKind === "repertoire") {
+      await collectionsService.setItemCollections(savedId, collectionIds);
+    }
     toast.success(isEdit ? `${title.trim()} updated` : `${title.trim()} added to library`);
     onOpenChange(false);
   };
