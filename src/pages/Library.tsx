@@ -156,7 +156,19 @@ export default function Library() {
           </SelectContent>
         </Select>
       </div>
-      <Input placeholder="Search title or composer…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Search title or composer…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1"
+        />
+        {active === "repertoire" && (
+          <Button asChild size="sm" variant="ghost" className="shrink-0">
+            <Link to="/library/collections"><FolderOpen className="h-4 w-4 mr-1" /> Collections</Link>
+          </Button>
+        )}
+      </div>
 
       {active === "repertoire" && (
         <div className="flex justify-end">
