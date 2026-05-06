@@ -133,23 +133,27 @@ export default function Lessons() {
         ) : (
           <ul className="space-y-2">
             {recurrences.map((r) => (
-              <li key={r.id} className="paper-card p-4 flex items-center gap-3">
-                <span className="h-12 w-1.5 rounded-full" style={{ backgroundColor: `hsl(var(--key-${r.color}))` }} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-serif text-xl truncate">{r.teacher}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {subjectName(r.subjectId)} · {r.frequency} · {DAYS[r.dayOfWeek]} {r.startTime}–{r.endTime}
+              <li key={r.id} className="paper-card p-4 flex gap-3">
+                <span className="w-1.5 rounded-full self-stretch shrink-0" style={{ backgroundColor: `hsl(var(--key-${r.color}))` }} />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="min-w-0">
+                    <div className="font-serif text-xl break-words">{r.teacher}</div>
+                    <div className="text-xs text-muted-foreground break-words">
+                      {subjectName(r.subjectId)} · {r.frequency} · {DAYS[r.dayOfWeek]} {r.startTime}–{r.endTime}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 -ml-2">
+                    <Button size="sm" variant="ghost" onClick={() => openLog(r)}>
+                      <NotebookPen className="h-4 w-4 mr-1" /> Log
+                    </Button>
+                    <button onClick={() => openEdit(r)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent ml-auto">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => r.id && setDelRecId(r.id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => openLog(r)}>
-                  <NotebookPen className="h-4 w-4 mr-1" /> Log
-                </Button>
-                <button onClick={() => openEdit(r)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button onClick={() => r.id && setDelRecId(r.id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </li>
             ))}
           </ul>
@@ -168,33 +172,37 @@ export default function Lessons() {
               {slice.map((a) => {
                 const lesson = lessons?.find((l) => l.id === a.lessonId);
                 return (
-                  <li key={a.id} className="paper-card p-3 flex items-center gap-3">
-                    <Wand2 className="h-4 w-4 text-primary shrink-0" />
-                    <div className="flex-1 text-sm">{a.text}</div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setTaskPrefill({
-                          subjectId: lesson?.subjectId,
-                          title: a.text,
-                          assignmentId: a.id,
-                        })
-                      }
-                    >
-                      Make task
-                    </Button>
-                    <button
-                      onClick={async () => {
-                        if (!a.id) return;
-                        await db.assignments.update(a.id, { ignored: true });
-                        toast("Ignored");
-                      }}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent shrink-0"
-                      aria-label="Ignore"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                  <li key={a.id} className="paper-card p-3 flex gap-3">
+                    <Wand2 className="h-4 w-4 text-primary shrink-0 mt-1" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <p className="text-sm break-words">{a.text}</p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setTaskPrefill({
+                              subjectId: lesson?.subjectId,
+                              title: a.text,
+                              assignmentId: a.id,
+                            })
+                          }
+                        >
+                          Make task
+                        </Button>
+                        <button
+                          onClick={async () => {
+                            if (!a.id) return;
+                            await db.assignments.update(a.id, { ignored: true });
+                            toast("Ignored");
+                          }}
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent ml-auto"
+                          aria-label="Ignore"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   </li>
                 );
               })}
@@ -218,19 +226,21 @@ export default function Lessons() {
               <AccordionContent>
                 <ul className="space-y-2">
                   {slice.map(({ rec, date, isToday }) => (
-                    <li key={`${rec.id}-${date}`} className="paper-card p-3 flex items-center gap-3">
-                      <CalendarClock className="h-4 w-4 text-primary shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {rec.teacher} · {subjectName(rec.subjectId)}
+                    <li key={`${rec.id}-${date}`} className="paper-card p-3 flex gap-3">
+                      <CalendarClock className="h-4 w-4 text-primary shrink-0 mt-1" />
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm break-words">
+                            {rec.teacher} · {subjectName(rec.subjectId)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {isToday ? "Today" : date} · {rec.startTime}–{rec.endTime}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {isToday ? "Today" : date} · {rec.startTime}–{rec.endTime}
-                        </div>
+                        <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)} className="-ml-2">
+                          <NotebookPen className="h-4 w-4 mr-1" /> Log
+                        </Button>
                       </div>
-                      <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}>
-                        <NotebookPen className="h-4 w-4 mr-1" /> Log
-                      </Button>
                     </li>
                   ))}
                 </ul>
