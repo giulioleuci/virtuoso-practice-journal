@@ -106,7 +106,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-3xl">
+      <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl">Session</SheetTitle>
         </SheetHeader>
