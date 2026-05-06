@@ -124,12 +124,7 @@ export default function Lessons() {
       <section className="space-y-2">
         <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Teachers</h3>
         {!recurrences?.length ? (
-          <button onClick={openNew} className="paper-card p-8 text-center w-full hover:-translate-y-0.5 transition-transform">
-            <p className="text-muted-foreground italic mb-2">{t("lessons.empty")}</p>
-            <span className="inline-flex items-center gap-1 text-primary font-medium text-sm">
-              <Plus className="h-4 w-4" /> {t("lessons.addRecurrence")}
-            </span>
-          </button>
+          <EmptyLessons onAdd={openNew} hint={t("lessons.empty")} />
         ) : (
           <ul className="space-y-2">
             {recurrences.map((r) => (
