@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
 import { ListSkeleton } from "@/components/shared/Loading";
@@ -148,46 +149,50 @@ export default function History() {
       ) : pageGroups.length === 0 ? (
         <p className="paper-card p-6 text-center text-muted-foreground italic">No sessions match.</p>
       ) : (
-        <ul className="space-y-3">
+        <Accordion type="multiple" className="space-y-3">
           {pageGroups.map((g, i) => (
-            <li key={i} className="paper-card p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="font-serif text-lg break-words">{g.label}</div>
-                  {g.sub && <div className="text-xs text-muted-foreground break-words">{g.sub}</div>}
+            <AccordionItem key={i} value={`g-${i}`} className="paper-card border-none px-4">
+              <AccordionTrigger className="py-4 hover:no-underline gap-2">
+                <div className="flex items-start justify-between gap-2 flex-1 min-w-0 text-left">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-serif text-lg break-words">{g.label}</div>
+                    {g.sub && <div className="text-xs text-muted-foreground break-words">{g.sub}</div>}
+                  </div>
+                  <span className="text-xs text-muted-foreground tabular-nums shrink-0 mt-1">
+                    {g.sessions.length} session{g.sessions.length === 1 ? "" : "s"}
+                  </span>
                 </div>
-                <span className="text-xs text-muted-foreground tabular-nums shrink-0 mt-1">
-                  {g.sessions.length} session{g.sessions.length === 1 ? "" : "s"}
-                </span>
-              </div>
-              <ul className="mt-3 pt-3 border-t border-border/60 space-y-1">
-                {g.sessions.slice(0, 6).map((s) => {
-                  const task = taskById.get(s.taskId);
-                  return (
-                    <li key={s.id}>
-                      <button
-                        onClick={() => setDetail(s)}
-                        className="w-full flex flex-col gap-0.5 text-left py-2 px-2 -mx-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 active:bg-accent/60 min-h-[44px]"
-                      >
-                        <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : s.date}</span>
-                        {(s.bpmReached || s.quality) && (
-                          <span className="text-xs tabular-nums">
-                            {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}
-                            {s.bpmReached && s.quality ? " · " : ""}
-                            {s.quality ?? ""}
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-                {g.sessions.length > 6 && (
-                  <li className="text-xs text-muted-foreground italic px-2">+{g.sessions.length - 6} more…</li>
-                )}
-              </ul>
-            </li>
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <ul className="pt-2 border-t border-border/60 space-y-1">
+                  {g.sessions.slice(0, 6).map((s) => {
+                    const task = taskById.get(s.taskId);
+                    return (
+                      <li key={s.id}>
+                        <button
+                          onClick={() => setDetail(s)}
+                          className="w-full flex flex-col gap-0.5 text-left py-2 px-2 -mx-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 active:bg-accent/60 min-h-[44px]"
+                        >
+                          <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : s.date}</span>
+                          {(s.bpmReached || s.quality) && (
+                            <span className="text-xs tabular-nums">
+                              {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}
+                              {s.bpmReached && s.quality ? " · " : ""}
+                              {s.quality ?? ""}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {g.sessions.length > 6 && (
+                    <li className="text-xs text-muted-foreground italic px-2">+{g.sessions.length - 6} more…</li>
+                  )}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
           ))}
-        </ul>
+        </Accordion>
       )}
 
       {totalPages > 1 && (
