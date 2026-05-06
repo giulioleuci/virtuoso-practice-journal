@@ -42,9 +42,13 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const library = useLiveQuery(() => db.library.filter((i) => !i.deletedAt).toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const allCollections = useLiveQuery(() => collectionsService.list(), []);
+  const allCollectionItems = useLiveQuery(() => db.collectionItems.toArray(), []);
 
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [kindFilter, setKindFilter] = useState<LibraryKind | "all">("all");
+  const [collectionFilter, setCollectionFilter] = useState<number | "all">("all");
+  const [sortBy, setSortBy] = useState<"title" | "composer">("title");
   const [itemId, setItemId] = useState<number | undefined>();
   const [segmentId, setSegmentId] = useState<number | undefined>();
   const [title, setTitle] = useState("");
