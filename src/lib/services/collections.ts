@@ -15,7 +15,17 @@ export const collectionsService = {
   async create(input: CollectionInput): Promise<number> {
     const data = collectionInputSchema.parse(input);
     const now = Date.now();
-    return (await db.collections.add({ ...data, createdAt: now, updatedAt: now })) as number;
+    const row: Collection = {
+      name: data.name,
+      composer: data.composer,
+      catalog: data.catalog,
+      notes: data.notes,
+      color: data.color,
+      defaultSubjectId: data.defaultSubjectId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    return (await db.collections.add(row)) as number;
   },
 
   async update(id: number, patch: Partial<CollectionInput>): Promise<void> {
