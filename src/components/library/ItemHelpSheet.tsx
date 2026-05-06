@@ -85,14 +85,14 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
                   value={String(r.id)}
                   className="paper-card border-none"
                 >
-                  <AccordionTrigger className="px-3 py-2 hover:no-underline gap-2">
+                  <AccordionTrigger className="group px-3 py-2 hover:no-underline gap-2">
                     <div className="flex items-start gap-2 flex-1 min-w-0 text-left">
                       {r.resolved ? (
                         <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                       ) : (
                         <HelpCircle className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
                       )}
-                      <span className="flex-1 text-sm truncate group-data-[state=open]:whitespace-pre-wrap group-data-[state=open]:break-words group-data-[state=open]:truncate-none">
+                      <span className="flex-1 text-sm group-data-[state=closed]:truncate group-data-[state=open]:whitespace-pre-wrap group-data-[state=open]:break-words">
                         {r.question}
                       </span>
                     </div>
