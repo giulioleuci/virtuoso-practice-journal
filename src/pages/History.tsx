@@ -51,6 +51,10 @@ export default function History() {
   const taskById = useMemo(() => new Map((tasks ?? []).map((t) => [t.id!, t])), [tasks]);
   const itemById = useMemo(() => new Map((items ?? []).map((i) => [i.id!, i])), [items]);
   const segById = useMemo(() => new Map((segments ?? []).map((s) => [s.id!, s])), [segments]);
+  const collectionById = useMemo(() => new Map((collections ?? []).map((c) => [c.id!, c])), [collections]);
+
+  // Sort key: chronological session date (YYYY-MM-DD), then createdAt as tiebreaker
+  const sessionSortKey = (s: Session) => `${s.date}|${String(s.createdAt).padStart(16, "0")}`;
 
   const filteredSessions = useMemo(() => {
     return (sessions ?? []).filter((s) => {
