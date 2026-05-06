@@ -53,14 +53,17 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
 
   // Recurrence
-  const [repeat, setRepeat] = useState(false);
-  const [recKind, setRecKind] = useState<"weekdays" | "interval">("weekdays");
-  const [recDays, setRecDays] = useState<number[]>([new Date(date).getDay()]);
-  const [everyX, setEveryX] = useState(2);
-  const [startDate, setStartDate] = useState(date);
-  const [endMode, setEndMode] = useState<"never" | "nextLesson" | "date" | "count">("never");
-  const [endDate, setEndDate] = useState("");
-  const [occurrences, setOccurrences] = useState(10);
+  const [rec, setRecState] = useState<RecurrenceState>({
+    enabled: false,
+    kind: "weekdays",
+    days: [new Date(date).getDay()],
+    everyX: 2,
+    startDate: date,
+    endMode: "never",
+    endDate: "",
+    occurrences: 10,
+  });
+  const setRec = (patch: Partial<RecurrenceState>) => setRecState((s) => ({ ...s, ...patch }));
 
   const itemsForSubject = useMemo(
     () => (library ?? []).filter(
