@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session, type Profile } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { Plus, CheckCircle2, Circle, ListChecks, Play, ArrowRightCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, CheckCircle2, Circle, ListChecks, Play, ArrowRightCircle, X, ChevronLeft, ChevronRight, RotateCcw, EyeOff } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
@@ -60,7 +61,17 @@ export default function Diary() {
   const [detailSession, setDetailSession] = useState<Session | null>(null);
   const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
   const [carryPage, setCarryPage] = useState(0);
+  const [ignoredPage, setIgnoredPage] = useState(0);
   const CARRY_PAGE_SIZE = 4;
+  const IGNORED_PAGE_SIZE = 5;
+
+  const ignoredTasks = useLiveQuery(
+    () => db.tasks
+      .where("date").between(carryoverFrom, today, true, false)
+      .filter((t) => !!t.skipped && !t.done && !t.deletedAt)
+      .toArray(),
+    [carryoverFrom, today]
+  );
 
   const dateLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long", month: "long", day: "numeric",
@@ -238,6 +249,69 @@ export default function Diary() {
           })()}
         </section>
       )}
+
+      {!!ignoredTasks?.length && (() => {
+        const total = ignoredTasks.length;
+        const totalPages = Math.max(1, Math.ceil(total / IGNORED_PAGE_SIZE));
+        const page = Math.min(ignoredPage, totalPages - 1);
+        const slice = ignoredTasks.slice(page * IGNORED_PAGE_SIZE, page * IGNORED_PAGE_SIZE + IGNORED_PAGE_SIZE);
+        return (
+          <section>
+            <Accordion type="single" collapsible className="paper-card border-0 px-3">
+              <AccordionItem value="ignored" className="border-b-0">
+                <AccordionTrigger className="text-xs uppercase tracking-widest text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    <EyeOff className="h-4 w-4" /> Ignored ({total})
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ul className="space-y-2">
+                    {slice.map((task) => (
+                      <li key={task.id}>
+                        <div className="paper-card p-4 w-full flex flex-col gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium break-words">{task.title}</div>
+                            <div className="text-xs text-muted-foreground tabular-nums break-words">
+                              {task.date}
+                              {task.targetBpm && (
+                                <> · Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}</>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                if (!task.id) return;
+                                await db.tasks.update(task.id, { skipped: false });
+                                toast.success("Restored");
+                              }}
+                              className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
+                              aria-label="Unignore"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" /> Unignore
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">
+                      <Button size="icon" variant="ghost" disabled={page === 0} onClick={() => setIgnoredPage(page - 1)}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="tabular-nums">{page + 1} / {totalPages}</span>
+                      <Button size="icon" variant="ghost" disabled={page >= totalPages - 1} onClick={() => setIgnoredPage(page + 1)}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </section>
+        );
+      })()}
 
       <NewTaskSheet open={newOpen} onOpenChange={setNewOpen} date={today} />
       <SessionLogSheet
