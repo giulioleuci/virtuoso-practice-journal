@@ -19,17 +19,29 @@ export const sessionInputSchema = z.object({
 });
 export type SessionInput = z.infer<typeof sessionInputSchema>;
 
+export const taskLinkTypeSchema = z.enum(["free", "item", "collection"]);
+
 export const taskInputSchema = z.object({
   title: z.string().trim().min(1).max(140),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   subjectId: z.number().int().positive(),
+  linkType: taskLinkTypeSchema.optional(),
   itemId: z.number().int().positive().optional(),
-  segmentId: z.number().int().positive().optional(),
+  segmentIds: z.array(z.number().int().positive()).optional(),
+  collectionId: z.number().int().positive().optional(),
   targetBpm: bpmSchema.optional(),
   noteVal: noteValSchema.optional(),
   layers: z.array(z.string()).optional(),
   techniqueIds: z.array(z.number()).optional(),
-});
+}).refine(
+  (v) => {
+    // Mutual exclusivity: collection ⇒ no item/segments; segments ⇒ requires item
+    if (v.collectionId && (v.itemId || v.segmentIds?.length)) return false;
+    if (v.segmentIds?.length && !v.itemId) return false;
+    return true;
+  },
+  { message: "Invalid link: collection excludes item; segments require an item" },
+);
 export type TaskInput = z.infer<typeof taskInputSchema>;
 
 export const colorKeySchema = z.enum(["terracotta", "sage", "gold", "blue", "plum"]);
