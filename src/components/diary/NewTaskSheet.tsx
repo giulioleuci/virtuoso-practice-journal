@@ -35,7 +35,7 @@ const KINDS: { val: LibraryKind | "all"; label: string }[] = [
   { val: "theory", label: "Theory" },
 ];
 
-const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
 
 export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: Props) {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
