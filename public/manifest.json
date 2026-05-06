@@ -1,0 +1,14 @@
+{
+  "name": "Virtuoso — Your Musical Taccuino",
+  "short_name": "Virtuoso",
+  "description": "An elegant, local-first practice journal for musicians.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f9f3e6",
+  "theme_color": "#b8552e",
+  "icons": [
+    { "src": "/placeholder.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
