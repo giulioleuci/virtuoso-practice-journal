@@ -27,6 +27,7 @@ export default function History() {
   const items = useLiveQuery(() => db.library.toArray());
   const segments = useLiveQuery(() => db.segments.toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
+  const collections = useLiveQuery(() => db.collections.toArray());
 
   const [groupBy, setGroupBy] = useState<GroupKey>("day");
   const [sortDir, setSortDir] = useState<SortDir>("newest");
