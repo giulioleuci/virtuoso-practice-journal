@@ -458,11 +458,35 @@ export async function seedSampleData() {
 
   // Secondary dominants — solo task today
   upcoming.push({
-    date: ymd(today), subjectId: harmonyId, itemId: secDom,
+    date: ymd(today), subjectId: harmonyId, itemId: secDom, linkType: "item",
     title: "Aural drill — secondary dominants", layers: ["Aural", "At keyboard"],
     techniqueIds: [tChorale, tModulation],
     done: false, createdAt: now,
   });
+
+  // Multi-segment task: Ballade Intro + First theme together
+  upcoming.push({
+    date: ymd(today), subjectId: pianoId, itemId: chopinBallade, linkType: "item",
+    segmentIds: [balladeIntro, balladeA],
+    title: "Ballade — Intro + First theme (slow run-through)",
+    targetBpm: 70, noteVal: "quarter",
+    layers: ["RH", "LH", "Both", "Slow"], techniqueIds: [tVoicing, tLegato, tPedal],
+    done: false, createdAt: now,
+  });
+
+  // Collection-linked task: full Nocturnes Op. 9 review
+  upcoming.push({
+    date: ymd(addDays(today, 1)), subjectId: pianoId,
+    linkType: "collection", collectionId: colNocturnesOp9,
+    title: "Nocturnes Op. 9 — review session",
+    layers: ["Both", "Memorized"], techniqueIds: [tVoicing, tPedal],
+    done: false, createdAt: now,
+  });
+
+  // Backfill linkType="item" on prior item-linked rows for consistency
+  for (const t of upcoming) {
+    if (!t.linkType) t.linkType = t.itemId ? "item" : "free";
+  }
 
   await db.tasks.bulkAdd(upcoming);
 
