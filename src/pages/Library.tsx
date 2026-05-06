@@ -55,9 +55,12 @@ export default function Library() {
   const [search, setSearch] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
+  const [groupByCollection, setGroupByCollection] = useState(false);
   const allHelp = useLiveQuery(() => db.helpRequests.toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
   const subjects = useSubjects();
+  const allCollections = useLiveQuery(() => db.collections.filter((c) => !c.deletedAt).toArray(), []);
+  const allCollectionLinks = useLiveQuery(() => db.collectionItems.toArray(), []);
 
   const items = useLiveQuery(
     () => db.library.where("kind").equals(active).filter((i) => !i.deletedAt).toArray(),
