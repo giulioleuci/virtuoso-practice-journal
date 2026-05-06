@@ -130,11 +130,36 @@ export default function Library() {
         ))}
       </div>
 
-      {!items?.length ? (
-        <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
+      <div className="grid grid-cols-2 gap-2">
+        <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All subjects</SelectItem>
+            {(subjects ?? []).map((s) => (
+              <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recent"><span className="inline-flex items-center gap-2"><ArrowDownUp className="h-3 w-3" /> Recent</span></SelectItem>
+            <SelectItem value="title">Title (A→Z)</SelectItem>
+            <SelectItem value="composer">Composer (A→Z)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Input placeholder="Search title or composer…" value={search} onChange={(e) => setSearch(e.target.value)} />
+
+      {items === undefined ? (
+        <ListSkeleton />
+      ) : !filteredItems.length ? (
+        items.length === 0
+          ? <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
+          : <p className="paper-card p-6 text-center text-muted-foreground italic">No items match.</p>
       ) : (
         <ul className="space-y-2">
-          {items.map((it) => {
+          {filteredItems.map((it) => {
             const segs = it.id ? (segmentsByItem[it.id] ?? []) : [];
             return (
               <li key={it.id} className="paper-card p-4">
