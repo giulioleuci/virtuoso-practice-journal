@@ -40,9 +40,11 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     () => (task?.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
     [task?.itemId]
   );
-  const segment = useLiveQuery(
-    () => (task?.segmentId ? db.segments.get(task.segmentId) : Promise.resolve(undefined)),
-    [task?.segmentId]
+  const segments = useLiveQuery(
+    () => (task?.segmentIds?.length
+      ? db.segments.where("id").anyOf(task.segmentIds).toArray()
+      : Promise.resolve([])),
+    [task?.segmentIds?.join(",")]
   );
 
   const [editing, setEditing] = useState(false);
@@ -122,11 +124,27 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                     ? ` · ${session.snapshot?.itemComposer ?? item?.composer}` : ""}
                 </div>
               )}
-              {(session.snapshot?.segmentLabel || segment) && (
-                <div className="text-xs text-muted-foreground italic">
-                  Segment: {session.snapshot?.segmentLabel ?? segment?.label}
-                </div>
-              )}
+              {(() => {
+                const labels =
+                  session.snapshot?.segmentLabels?.length
+                    ? session.snapshot.segmentLabels
+                    : segments?.map((s) => s.label) ?? [];
+                if (!labels.length && !session.snapshot?.collectionName) return null;
+                return (
+                  <>
+                    {!!labels.length && (
+                      <div className="text-xs text-muted-foreground italic">
+                        Segment{labels.length > 1 ? "s" : ""}: {labels.join(", ")}
+                      </div>
+                    )}
+                    {session.snapshot?.collectionName && (
+                      <div className="text-xs text-muted-foreground italic">
+                        Collection: {session.snapshot.collectionName}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               {session.snapshot && (
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 pt-1">
                   Snapshot · {session.snapshot.subjectName}
