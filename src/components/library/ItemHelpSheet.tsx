@@ -86,22 +86,31 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
                     <button
                       type="button"
                       onClick={() => setExpandedId(expanded ? null : (r.id ?? null))}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-left"
+                      className="w-full flex items-start gap-2 px-3 py-2 text-left"
                     >
                       {r.resolved ? (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                       ) : (
-                        <HelpCircle className="h-4 w-4 shrink-0 text-primary" />
+                        <HelpCircle className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
                       )}
-                      <span className="flex-1 text-sm truncate">{r.question}</span>
-                      <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+                      <span className={`flex-1 text-sm ${expanded ? "whitespace-pre-wrap break-words" : "truncate"}`}>
+                        {r.question}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 mt-0.5 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
                     </button>
                     {expanded && (
                       <div className="px-3 pb-3 space-y-2">
                         {r.answer ? (
-                          <div className="text-xs text-muted-foreground italic flex items-start gap-1">
-                            <MessageSquareQuote className="h-3 w-3 mt-0.5 shrink-0" />
-                            <span className="flex-1">{r.answer}</span>
+                          <div className="space-y-1">
+                            <div className="text-sm text-foreground flex items-start gap-1.5 leading-relaxed">
+                              <MessageSquareQuote className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                              <span className="flex-1 whitespace-pre-wrap break-words">{r.answer}</span>
+                            </div>
+                            {r.answeredAt && (
+                              <div className="text-xs text-muted-foreground tabular-nums pl-[22px]">
+                                {new Date(r.answeredAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="space-y-1.5">
