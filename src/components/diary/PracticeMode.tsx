@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { NoteVal, Task } from "@/lib/db";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db, type NoteVal, type Task } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { X, Play, Pause, RotateCcw, Volume2, VolumeX, Minus, Plus } from "lucide-react";
