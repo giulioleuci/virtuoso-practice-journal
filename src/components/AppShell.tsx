@@ -38,8 +38,8 @@ export default function AppShell({ profile }: { profile: Profile }) {
         <p className="text-sm text-muted-foreground italic mt-0.5">{t("app.tagline")}</p>
       </header>
 
-      <main className="flex-1 px-6 pb-32 max-w-3xl w-full mx-auto animate-fade-in">
-        <Outlet />
+      <main className="flex-1 px-6 pb-32 max-w-3xl w-full mx-auto">
+        <Outlet context={{ profile }} />
       </main>
 
       <nav
