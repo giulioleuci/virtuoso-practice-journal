@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+// @ts-expect-error - no types for /auto subpath
 import "fake-indexeddb/auto";
 import { db } from "@/lib/db";
 import { collectionsService } from "@/lib/services/collections";
