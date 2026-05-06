@@ -133,23 +133,27 @@ export default function Lessons() {
         ) : (
           <ul className="space-y-2">
             {recurrences.map((r) => (
-              <li key={r.id} className="paper-card p-4 flex items-center gap-3">
-                <span className="h-12 w-1.5 rounded-full" style={{ backgroundColor: `hsl(var(--key-${r.color}))` }} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-serif text-xl truncate">{r.teacher}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {subjectName(r.subjectId)} · {r.frequency} · {DAYS[r.dayOfWeek]} {r.startTime}–{r.endTime}
+              <li key={r.id} className="paper-card p-4 flex gap-3">
+                <span className="w-1.5 rounded-full self-stretch shrink-0" style={{ backgroundColor: `hsl(var(--key-${r.color}))` }} />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="min-w-0">
+                    <div className="font-serif text-xl break-words">{r.teacher}</div>
+                    <div className="text-xs text-muted-foreground break-words">
+                      {subjectName(r.subjectId)} · {r.frequency} · {DAYS[r.dayOfWeek]} {r.startTime}–{r.endTime}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 -ml-2">
+                    <Button size="sm" variant="ghost" onClick={() => openLog(r)}>
+                      <NotebookPen className="h-4 w-4 mr-1" /> Log
+                    </Button>
+                    <button onClick={() => openEdit(r)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent ml-auto">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => r.id && setDelRecId(r.id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => openLog(r)}>
-                  <NotebookPen className="h-4 w-4 mr-1" /> Log
-                </Button>
-                <button onClick={() => openEdit(r)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button onClick={() => r.id && setDelRecId(r.id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </li>
             ))}
           </ul>
