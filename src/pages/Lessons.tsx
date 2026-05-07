@@ -156,57 +156,20 @@ export default function Lessons() {
         )}
       </section>
 
-      {/* Pending assignments — moved above Upcoming */}
-      {pendingAssignments.length > 0 && (() => {
-        const totalPages = Math.max(1, Math.ceil(pendingAssignments.length / PAGE_SIZE));
-        const page = Math.min(pageAssign, totalPages - 1);
-        const slice = pendingAssignments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-        return (
-          <section className="space-y-2">
-            <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Assignments to schedule</h3>
-            <ul className="space-y-2">
-              {slice.map((a) => {
-                const lesson = lessons?.find((l) => l.id === a.lessonId);
-                return (
-                  <li key={a.id} className="paper-card p-3 flex gap-3">
-                    <Wand2 className="h-4 w-4 text-primary shrink-0 mt-1" />
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <p className="text-sm break-words">{a.text}</p>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            setTaskPrefill({
-                              subjectId: lesson?.subjectId,
-                              title: a.text,
-                              assignmentId: a.id,
-                            })
-                          }
-                        >
-                          Make task
-                        </Button>
-                        <button
-                          onClick={async () => {
-                            if (!a.id) return;
-                            await db.assignments.update(a.id, { ignored: true });
-                            toast("Ignored");
-                          }}
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent ml-auto"
-                          aria-label="Ignore"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-            <Pager page={page} totalPages={totalPages} onPage={setPageAssign} />
-          </section>
-        );
-      })()}
+      {/* Pending assignments — link to dedicated page */}
+      {pendingAssignments.length > 0 && (
+        <Link
+          to="/lessons/assignments"
+          className="paper-card p-4 flex items-center gap-3 hover:-translate-y-0.5 transition-transform"
+        >
+          <Wand2 className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm flex-1 min-w-0 break-words">
+            <span className="tabular-nums font-medium">{pendingAssignments.length}</span>{" "}
+            {pendingAssignments.length === 1 ? "assignment" : "assignments"} to schedule
+          </span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
+      )}
 
       <Accordion type="multiple" className="space-y-2">
         {/* Upcoming schedule */}
