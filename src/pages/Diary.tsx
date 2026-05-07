@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session, type Profile } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { Plus, CheckCircle2, Circle, ListChecks, Play, ArrowRightCircle, X, ChevronLeft, ChevronRight, RotateCcw, EyeOff } from "lucide-react";
+import { Plus, CheckCircle2, Circle, ListChecks, Play, ArrowRightCircle, X, ChevronLeft, ChevronRight, RotateCcw, EyeOff, GraduationCap, ArrowRight } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,12 @@ export default function Diary() {
     (acc[s.taskId] ||= [] as never).push(s as never);
     return acc;
   }, {});
+
+  const pendingAssignments = useLiveQuery(
+    () => db.assignments.filter((a) => !a.transformed && !a.ignored).toArray(),
+    []
+  );
+  const pendingCount = pendingAssignments?.length ?? 0;
 
   const carryoverDays = profile?.carryoverDays ?? 2;
   const carryoverFrom = useMemo(() => {
@@ -100,6 +106,20 @@ export default function Diary() {
             </Button>
           </div>
         </div>
+
+        {pendingCount > 0 && (
+          <Link
+            to="/lessons"
+            className="paper-card p-3 mb-3 flex items-center gap-3 hover:-translate-y-0.5 transition-transform"
+          >
+            <GraduationCap className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-sm flex-1 min-w-0 break-words">
+              <span className="tabular-nums font-medium">{pendingCount}</span>{" "}
+              {pendingCount === 1 ? "homework assignment" : "homework assignments"} to convert
+            </span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </Link>
+        )}
 
         {tasks === undefined ? (
           <div className="space-y-2"><div className="paper-skeleton h-20" /><div className="paper-skeleton h-20" /></div>
