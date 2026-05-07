@@ -469,12 +469,13 @@ const dicts: Record<Lang, Dict> = {
     // Preset subject names (onboarding)
     "preset.piano": "Piano",
     "preset.guitar": "Guitar",
+    "preset.flute": "Flute",
     "preset.violin": "Violin",
-    "preset.voice": "Voice",
-    "preset.counterpoint": "Counterpoint",
+    "preset.singing": "Singing",
     "preset.harmony": "Harmony",
     "preset.composition": "Composition",
     "preset.earTraining": "Ear Training",
+    "preset.history": "History",
 
     // Library item sheet
     "library.editItem": "Edit item",
@@ -1011,12 +1012,13 @@ const dicts: Record<Lang, Dict> = {
 
     "preset.piano": "Pianoforte",
     "preset.guitar": "Chitarra",
+    "preset.flute": "Flauto",
     "preset.violin": "Violino",
-    "preset.voice": "Voce",
-    "preset.counterpoint": "Contrappunto",
+    "preset.singing": "Canto",
     "preset.harmony": "Armonia",
     "preset.composition": "Composizione",
     "preset.earTraining": "Solfeggio",
+    "preset.history": "Storia",
 
     "library.editItem": "Modifica elemento",
     "library.newPiece": "Nuovo brano",
@@ -1546,12 +1548,13 @@ const dicts: Record<Lang, Dict> = {
 
     "preset.piano": "Piano",
     "preset.guitar": "Guitarra",
+    "preset.flute": "Flauta",
     "preset.violin": "Violín",
-    "preset.voice": "Voz",
-    "preset.counterpoint": "Contrapunto",
+    "preset.singing": "Canto",
     "preset.harmony": "Armonía",
     "preset.composition": "Composición",
     "preset.earTraining": "Solfeo",
+    "preset.history": "Historia",
 
     "library.editItem": "Editar elemento",
     "library.newPiece": "Nueva pieza",
@@ -2081,12 +2084,13 @@ const dicts: Record<Lang, Dict> = {
 
     "preset.piano": "Klavier",
     "preset.guitar": "Gitarre",
+    "preset.flute": "Flöte",
     "preset.violin": "Geige",
-    "preset.voice": "Gesang",
-    "preset.counterpoint": "Kontrapunkt",
+    "preset.singing": "Gesang",
     "preset.harmony": "Harmonielehre",
     "preset.composition": "Komposition",
     "preset.earTraining": "Gehörbildung",
+    "preset.history": "Geschichte",
 
     "library.editItem": "Eintrag bearbeiten",
     "library.newPiece": "Neues Stück",
