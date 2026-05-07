@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Collection, type LibraryItem } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
+  const { t } = useI18n();
   const repertoire = useLiveQuery(
     () => db.library.where("kind").equals("repertoire").filter((i) => !i.deletedAt).toArray(),
     []
@@ -62,13 +64,13 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
   const addPiece = async (id: number) => {
     if (!collection?.id) return;
     await collectionsService.addItems(collection.id, [id]);
-    toast.success("Piece added");
+    toast.success(t("toast.pieceAdded"));
   };
 
   const removePiece = async (id: number) => {
     if (!collection?.id) return;
     await collectionsService.removeItems(collection.id, [id]);
-    toast.success("Piece removed");
+    toast.success(t("toast.pieceRemoved"));
   };
 
   return (
@@ -76,20 +78,20 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="bottom" className="h-[88vh] rounded-t-3xl bg-background p-0 flex flex-col">
           <SheetHeader className="px-6 pt-6 pb-2 text-left">
-            <SheetTitle className="font-serif text-2xl">Pieces in collection</SheetTitle>
+            <SheetTitle className="font-serif text-2xl">{t("collections.piecesInCollection")}</SheetTitle>
             <SheetDescription className="italic">{collection?.name}</SheetDescription>
           </SheetHeader>
 
           <div className="px-6 pt-3 pb-2">
             <Button onClick={() => setPickerOpen(true)} className="w-full" variant="outline">
-              <Plus className="h-4 w-4 mr-1" /> Add a piece
+              <Plus className="h-4 w-4 mr-1" /> {t("collections.addPiece")}
             </Button>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 pb-6">
             {!included.length ? (
               <p className="paper-card p-6 text-center text-muted-foreground italic">
-                No pieces in this collection yet.
+                {t("collections.noPiecesYet")}
               </p>
             ) : (
               <ul className="space-y-1.5">
@@ -108,7 +110,7 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
                       type="button"
                       onClick={() => setEditing(it)}
                       className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                      aria-label="Edit piece"
+                      aria-label={t("common.edit")}
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -116,7 +118,7 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
                       type="button"
                       onClick={() => it.id && removePiece(it.id)}
                       className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
-                      aria-label="Remove from collection"
+                      aria-label={t("common.remove")}
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -129,9 +131,9 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
           <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
             <div className="flex gap-3 w-full items-center">
               <span className="text-xs text-muted-foreground tabular-nums mr-auto">
-                {included.length} piece{included.length === 1 ? "" : "s"}
+                {t("collections.pieces", { count: included.length })}
               </span>
-              <Button onClick={() => onOpenChange(false)}>Done</Button>
+              <Button onClick={() => onOpenChange(false)}>{t("common.done")}</Button>
             </div>
           </SheetFooter>
         </SheetContent>
@@ -141,15 +143,15 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
       <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
         <SheetContent side="bottom" className="h-[88vh] rounded-t-3xl bg-background p-0 flex flex-col">
           <SheetHeader className="px-6 pt-6 pb-2 text-left">
-            <SheetTitle className="font-serif text-2xl">Add a piece</SheetTitle>
-            <SheetDescription className="italic">Pick from your repertoire</SheetDescription>
+            <SheetTitle className="font-serif text-2xl">{t("collections.addPiece")}</SheetTitle>
+            <SheetDescription className="italic">{t("collections.pickFromRepertoire")}</SheetDescription>
           </SheetHeader>
 
           <div className="px-6 pt-2 pb-3 space-y-2">
             <div className="relative">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search title or composer…"
+                placeholder={t("library.searchTitleComposer")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="bg-card pl-9"
@@ -166,7 +168,7 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
                       : "border-input bg-card text-muted-foreground hover:bg-accent/40"
                   }`}
                 >
-                  All composers
+                  {t("collections.allComposers")}
                 </button>
                 {composers.map((c) => (
                   <button
@@ -189,7 +191,7 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
           <div className="flex-1 overflow-y-auto px-6 pb-6">
             {!filteredCandidates.length ? (
               <p className="paper-card p-6 text-center text-muted-foreground italic">
-                {candidates.length === 0 ? "All your repertoire is already here." : "No pieces match."}
+                {candidates.length === 0 ? t("collections.allInCollection") : t("collections.noPiecesMatch")}
               </p>
             ) : (
               <ul className="space-y-1.5">
@@ -213,7 +215,7 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
           </div>
 
           <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
-            <Button onClick={() => setPickerOpen(false)} className="w-full">Done</Button>
+            <Button onClick={() => setPickerOpen(false)} className="w-full">{t("common.done")}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

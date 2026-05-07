@@ -109,7 +109,7 @@ export function SubjectsEditor() {
                 <AccordionTrigger className="flex-1 hover:no-underline py-3">
                   <div className="flex items-center gap-2 text-left">
                     <span className="font-serif text-lg">{s.name}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.type}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t(`subjects.type.${s.type}`)}</span>
                     <span className="text-[10px] text-muted-foreground ml-1">
                       · {layerCount}L · {subjTechs.length}T
                     </span>

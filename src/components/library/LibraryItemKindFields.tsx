@@ -8,12 +8,7 @@ import { MasterySliders, type MasteryState } from "./MasterySliders";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { cn } from "@/lib/utils";
 import type { LibraryKind, NoteVal, PracticeStatus } from "@/lib/db";
-
-const STATUSES: { key: PracticeStatus; label: string }[] = [
-  { key: "in_study",    label: "In study" },
-  { key: "maintenance", label: "Maintenance" },
-  { key: "pause",       label: "Paused" },
-];
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   kind: LibraryKind;
@@ -33,7 +28,11 @@ interface Props {
   onCreateCollection?: () => void;
 }
 
+const STATUSES: PracticeStatus[] = ["in_study", "maintenance", "pause"];
+
 export function LibraryItemKindFields(p: Props) {
+  const { t } = useI18n();
+
   if (p.kind === "theory") {
     return <MasterySliders value={p.mastery} onChange={p.setMastery} />;
   }
@@ -42,18 +41,18 @@ export function LibraryItemKindFields(p: Props) {
     <>
       {p.kind === "repertoire" && (
         <div className="space-y-2">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status</Label>
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("library.labelStatus")}</Label>
           <div className="grid grid-cols-3 gap-2">
-            {STATUSES.map((s) => (
+            {STATUSES.map((key) => (
               <button
-                key={s.key}
+                key={key}
                 type="button"
-                onClick={() => p.setStatus(s.key)}
+                onClick={() => p.setStatus(key)}
                 className={cn(
                   "paper-card py-2.5 text-sm font-medium transition-all",
-                  p.status === s.key ? "ring-2 ring-primary" : "hover:-translate-y-0.5",
+                  p.status === key ? "ring-2 ring-primary" : "hover:-translate-y-0.5",
                 )}
-              >{s.label}</button>
+              >{t(`library.status.${key}`)}</button>
             ))}
           </div>
         </div>
@@ -62,7 +61,7 @@ export function LibraryItemKindFields(p: Props) {
       {p.kind === "manual" && (
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Current exercise</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("library.currentExercise")}</Label>
             <Input
               type="number" min={1}
               value={p.currentExercise ?? ""}
@@ -71,13 +70,13 @@ export function LibraryItemKindFields(p: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Total exercises</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("library.totalExercises")}</Label>
             <Input
               type="number" min={1}
               value={p.totalExercises ?? ""}
               onChange={(e) => p.setTotalExercises(e.target.value ? Number(e.target.value) : undefined)}
               className="bg-card"
-              placeholder="Optional"
+              placeholder={t("common.optional")}
             />
           </div>
         </div>
@@ -85,37 +84,37 @@ export function LibraryItemKindFields(p: Props) {
 
       {p.kind === "technique" ? (
         <>
-          <BpmCoupler bpm={p.startBpm} noteVal={p.noteVal} onChange={(n) => { p.setStartBpm(n.bpm); p.setNoteVal(n.noteVal); }} label="Starting tempo" />
-          <BpmCoupler bpm={p.targetBpm} noteVal={p.noteVal} onChange={(n) => { p.setTargetBpm(n.bpm); p.setNoteVal(n.noteVal); }} label="Target tempo" />
+          <BpmCoupler bpm={p.startBpm} noteVal={p.noteVal} onChange={(n) => { p.setStartBpm(n.bpm); p.setNoteVal(n.noteVal); }} label={t("library.startingTempo")} />
+          <BpmCoupler bpm={p.targetBpm} noteVal={p.noteVal} onChange={(n) => { p.setTargetBpm(n.bpm); p.setNoteVal(n.noteVal); }} label={t("library.targetTempo")} />
         </>
       ) : (
         <BpmCoupler bpm={p.targetBpm} noteVal={p.noteVal} onChange={(n) => { p.setTargetBpm(n.bpm); p.setNoteVal(n.noteVal); }} />
       )}
 
       <MultiChipPicker
-        label={p.kind === "technique" ? "Techniques covered" : "Techniques"}
+        label={p.kind === "technique" ? t("library.techniquesCovered") : t("common.subject")}
         options={p.techniqueOptions}
         value={p.techniqueIds}
         onChange={p.setTechniqueIds}
-        emptyHint="Add techniques in Profile to associate them here."
+        emptyHint={t("library.addTechniquesHint2")}
       />
 
       {p.kind === "repertoire" && p.setCollectionIds && (
         <div className="space-y-2">
           <MultiChipPicker
-            label="Collections"
+            label={t("library.collections")}
             options={p.collectionOptions ?? []}
             value={p.collectionIds ?? []}
             onChange={p.setCollectionIds}
-            emptyHint="No collections yet."
-            placeholder="Add to one or more collections…"
+            emptyHint={t("collections.empty")}
+            placeholder={t("link.assignToCollections")}
           />
           {p.onCreateCollection && (
             <button
               type="button"
               onClick={p.onCreateCollection}
               className="text-xs text-primary hover:underline"
-            >+ New collection</button>
+            >{t("library.newCollectionBtn")}</button>
           )}
         </div>
       )}

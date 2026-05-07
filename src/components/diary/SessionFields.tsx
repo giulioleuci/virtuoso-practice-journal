@@ -7,11 +7,12 @@ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { StarRating } from "@/components/shared/StarRating";
 import { cn } from "@/lib/utils";
 import type { NoteVal, SessionQuality } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 
-const QUALITIES: { val: SessionQuality; label: string; emoji: string }[] = [
-  { val: "hard", label: "Hard", emoji: "🥵" },
-  { val: "well", label: "Well", emoji: "🙂" },
-  { val: "great", label: "Great", emoji: "✨" },
+const QUALITY_VALS: { val: SessionQuality; emoji: string }[] = [
+  { val: "hard", emoji: "🥵" },
+  { val: "well", emoji: "🙂" },
+  { val: "great", emoji: "✨" },
 ];
 
 export interface SessionFieldsValue {
@@ -37,17 +38,18 @@ interface Props {
 export function SessionFields({
   value, onChange, layerOptions, techniqueOptions, layerEmptyHint, techniqueEmptyHint,
 }: Props) {
+  const { t } = useI18n();
   return (
     <>
       <BpmCoupler
         bpm={value.bpm}
         noteVal={value.noteVal}
         onChange={({ bpm: b, noteVal: n }) => onChange({ bpm: b, noteVal: n })}
-        label="BPM reached"
+        label={t("session.bpmReached")}
       />
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Repetitions</Label>
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("session.repetitions")}</Label>
         <Input
           type="number" inputMode="numeric" min={0} max={9999}
           value={value.reps ?? ""}
@@ -57,20 +59,20 @@ export function SessionFields({
       </div>
 
       <StarRating
-        label="Confidence"
+        label={t("session.confidenceLabel")}
         value={value.confidence}
         onChange={(c) => onChange({ confidence: c })}
       />
 
       <MultiChipPicker
-        label="Layers practiced"
+        label={t("session.layers")}
         options={layerOptions}
         value={value.layersUsed}
         onChange={(v) => onChange({ layersUsed: v })}
         emptyHint={layerEmptyHint}
       />
       <MultiChipPicker
-        label="Techniques practiced"
+        label={t("session.techniquesPracticed")}
         options={techniqueOptions}
         value={value.techniquesUsed}
         onChange={(v) => onChange({ techniquesUsed: v })}
@@ -78,9 +80,9 @@ export function SessionFields({
       />
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">How did it go?</Label>
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("session.qualityLabel")}</Label>
         <div className="grid grid-cols-3 gap-2">
-          {QUALITIES.map((q) => (
+          {QUALITY_VALS.map((q) => (
             <button
               key={q.val}
               type="button"
@@ -91,19 +93,19 @@ export function SessionFields({
               )}
             >
               <span className="text-2xl">{q.emoji}</span>
-              <span className="text-xs mt-1">{q.label}</span>
+              <span className="text-xs mt-1">{{ hard: t("session.qualityHard"), well: t("session.qualityWell"), great: t("session.qualityGreat") }[q.val]}</span>
             </button>
           ))}
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Notes</Label>
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("session.notes")}</Label>
         <Textarea
           rows={3}
           value={value.notes}
           onChange={(e) => onChange({ notes: e.target.value })}
-          placeholder="A thought, a difficulty, a small win…"
+          placeholder={t("session.notesPlaceholder")}
         />
       </div>
     </>

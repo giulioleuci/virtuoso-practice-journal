@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Flame } from "lucide-react";
 
 function dayKey(d: Date) {
@@ -30,6 +31,7 @@ interface Props {
 }
 
 export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {}) {
+  const { t } = useI18n();
   const liveSessions = useLiveQuery(() => db.sessions.toArray());
   const sessions = sessionsProp ?? liveSessions;
 
@@ -104,11 +106,15 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
       rangeCount,
       rangeMinutes: rangeCount * 10,
       rangeDays: dayCount,
-      rangeLabel: hasRange ? "In range" : "All time",
-      last14Label: hasRange ? `${dayCount} day${dayCount === 1 ? "" : "s"}` : "Last 14 days",
-      heatmapLabel: hasRange ? `${weeksNeeded} week${weeksNeeded === 1 ? "" : "s"}` : "Last 12 weeks",
+      rangeLabel: hasRange ? t("stats.inRange") : t("stats.allTime"),
+      last14Label: hasRange
+        ? t("stats.daysWindow", { count: dayCount })
+        : t("stats.last14Days"),
+      heatmapLabel: hasRange
+        ? t("stats.weeksWindow", { count: weeksNeeded })
+        : t("stats.last12Weeks"),
     };
-  }, [sessions, from, to, hasRange]);
+  }, [sessions, from, to, hasRange, t]);
 
   const max = Math.max(1, ...last14.map((d) => d.count));
   const w = 220, h = 36, step = w / Math.max(1, last14.length - 1);
@@ -126,8 +132,8 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
   return (
     <section className="paper-card p-5 space-y-4">
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="Streak" value={`${streak}d`} icon={<Flame className="h-4 w-4 text-primary mx-auto" />} />
-        <Stat label="This week" value={`${totalWeek}`} sub="sessions" />
+        <Stat label={t("stats.streak")} value={`${streak}d`} icon={<Flame className="h-4 w-4 text-primary mx-auto" />} />
+        <Stat label={t("stats.thisWeek")} value={`${totalWeek}`} sub={t("stats.sessions")} />
         <Stat label={rangeLabel} value={`${hasRange ? rangeCount : (sessions ?? []).length}`} sub={`~${hasRange ? rangeMinutes : (sessions ?? []).length * 10}m`} />
       </div>
 
@@ -150,7 +156,7 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
                 const isFuture = cell.count < 0;
                 const cellEl = (
                   <div
-                    title={`${cell.key} · ${cell.count >= 0 ? cell.count : 0} sessions`}
+                    title={`${cell.key} · ${cell.count >= 0 ? cell.count : 0} ${t("stats.sessions")}`}
                     className="w-3 h-3 rounded-[2px] transition-transform hover:scale-125"
                     style={{ backgroundColor: heatColor(cell.count) }}
                   />

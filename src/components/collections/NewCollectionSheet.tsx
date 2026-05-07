@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Collection, type ColorKey } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: Props) {
+  const { t } = useI18n();
   const isEdit = !!collection?.id;
   const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
 
@@ -60,16 +62,16 @@ export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: 
     try {
       if (isEdit && collection?.id) {
         await collectionsService.update(collection.id, input);
-        toast.success("Collection updated");
+        toast.success(t("toast.collectionUpdated"));
         onSaved?.(collection.id);
       } else {
         const id = await collectionsService.create(input);
-        toast.success("Collection created");
+        toast.success(t("toast.collectionCreated"));
         onSaved?.(id);
       }
       onOpenChange(false);
     } catch (e) {
-      toast.error("Could not save");
+      toast.error(t("toast.saved"));
     }
   };
 
@@ -78,16 +80,16 @@ export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: 
       <SheetContent side="bottom" className="h-[88vh] rounded-t-3xl bg-background p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-2 text-left">
           <SheetTitle className="font-serif text-3xl">
-            {isEdit ? "Edit collection" : "New collection"}
+            {isEdit ? t("collections.editCollection") : t("collections.new")}
           </SheetTitle>
           <SheetDescription className="italic">
-            Group repertoire pieces (e.g. an opus or book).
+            {t("collections.groupHint")}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Name</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("common.name")}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -99,23 +101,23 @@ export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Composer</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("library.labelComposer")}</Label>
               <Input value={composer} onChange={(e) => setComposer(e.target.value)} placeholder="Chopin" className="bg-card" />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Catalog</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelCatalog")}</Label>
               <Input value={catalog} onChange={(e) => setCatalog(e.target.value)} placeholder="Op. 9" className="bg-card" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Color</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelColor")}</Label>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setColor(undefined)}
                 className={cn("h-9 px-3 rounded-full text-xs border", !color ? "border-foreground" : "border-input text-muted-foreground")}
-              >None</button>
+              >{t("collections.colorNone")}</button>
               {COLORS.map((c) => (
                 <button
                   key={c}
@@ -133,14 +135,14 @@ export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: 
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Default subject</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelDefaultSubject")}</Label>
             <Select
               value={defaultSubjectId !== undefined ? String(defaultSubjectId) : "none"}
               onValueChange={(v) => setDefaultSubjectId(v === "none" ? undefined : Number(v))}
             >
-              <SelectTrigger className="bg-card"><SelectValue placeholder="Optional" /></SelectTrigger>
+              <SelectTrigger className="bg-card"><SelectValue placeholder={t("common.optional")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="none">{t("collections.colorNone")}</SelectItem>
                 {(subjects ?? []).map((s) => (
                   <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                 ))}
@@ -149,16 +151,16 @@ export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: 
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Notes (optional)</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelNotesOptional")}</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything worth remembering…" className="bg-card" rows={3} />
           </div>
         </div>
 
         <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
           <div className="flex gap-3 w-full">
-            <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1">Cancel</Button>
+            <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1">{t("common.cancel")}</Button>
             <Button onClick={save} disabled={!canSave} className="flex-1">
-              {isEdit ? "Save changes" : "Create collection"}
+              {isEdit ? t("collections.saveChanges") : t("collections.createCollection")}
             </Button>
           </div>
         </SheetFooter>

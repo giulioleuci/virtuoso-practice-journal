@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { db, buildSessionSnapshot, type NoteVal, type SessionQuality, type Task } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +29,7 @@ const initial = (task?: Task | null, prefill?: Props["prefill"]): SessionFieldsV
 });
 
 export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
+  const { t } = useI18n();
   const [v, setV] = useState<SessionFieldsValue>(() => initial(task, prefill));
   const [needHelp, setNeedHelp] = useState(false);
   const [helpText, setHelpText] = useState("");
@@ -63,7 +65,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       quality: v.quality, notes: v.notes, layersUsed: v.layersUsed, techniquesUsed: v.techniquesUsed,
     });
     const e = flattenErrors(res);
-    if (needHelp && !helpText.trim()) e.push("Describe what to ask the teacher");
+    if (needHelp && !helpText.trim()) e.push(t("session.helpDescribe"));
     return e;
   }, [v, needHelp, helpText]);
 
@@ -104,7 +106,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
         });
       }
     });
-    toast.success("Session logged");
+    toast.success(t("toast.sessionLogged"));
     onOpenChange(false);
   };
 
@@ -112,7 +114,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
         <SheetHeader>
-          <SheetTitle className="font-serif text-2xl">Log session</SheetTitle>
+          <SheetTitle className="font-serif text-2xl">{t("session.log")}</SheetTitle>
           {task && <p className="text-sm text-muted-foreground italic">{task.title}</p>}
         </SheetHeader>
 
@@ -122,15 +124,13 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
             onChange={(patch) => setV((cur) => ({ ...cur, ...patch }))}
             layerOptions={layerOptions}
             techniqueOptions={techniqueOptions}
-            layerEmptyHint="Define this subject's layers in Profile."
-            techniqueEmptyHint="Add techniques in Profile."
           />
 
           <div className="paper-card p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium">Ask the teacher</div>
-                <div className="text-xs text-muted-foreground">Flag this for the next lesson</div>
+                <div className="font-medium">{t("session.needHelp")}</div>
+                <div className="text-xs text-muted-foreground">{t("session.flagLesson")}</div>
               </div>
               <Switch checked={needHelp} onCheckedChange={setNeedHelp} />
             </div>
@@ -138,7 +138,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
               <Textarea
                 value={helpText}
                 onChange={(e) => setHelpText(e.target.value)}
-                placeholder="What would you like to ask?"
+                placeholder={t("session.helpPlaceholder")}
                 rows={3}
               />
             )}
@@ -152,10 +152,10 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
 
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button className="flex-1" disabled={errors.length > 0} onClick={save}>
-              Save session
+              {t("session.saveSession")}
             </Button>
           </div>
         </div>

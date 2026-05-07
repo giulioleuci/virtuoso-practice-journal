@@ -453,8 +453,8 @@ export default function Library() {
 }
 
 function EmptyLibrary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
-  const { t } = useI18n();
-  const quote = useMemo(() => pickQuote(LIBRARY_QUOTES), []);
+  const { t, lang } = useI18n();
+  const quote = useMemo(() => pickQuote(LIBRARY_QUOTES, lang), [lang]);
   return (
     <button
       onClick={onAdd}

@@ -396,8 +396,8 @@ export default function Diary() {
 }
 
 function EmptyDiary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
-  const { t } = useI18n();
-  const quote = useMemo(() => pickQuote(), []);
+  const { t, lang } = useI18n();
+  const quote = useMemo(() => pickQuote(undefined, lang), [lang]);
   return (
     <button
       onClick={onAdd}
