@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type NoteVal, type Task } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { X, Play, Pause, RotateCcw, Volume2, VolumeX, Minus, Plus } from "lucide-react";
@@ -26,6 +27,7 @@ function formatTime(ms: number) {
 }
 
 export function PracticeMode({ task, onClose, onFinish }: Props) {
+  const { t } = useI18n();
   const item = useLiveQuery(
     () => (task.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
     [task.itemId]
@@ -176,7 +178,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
       {/* Grain stays visible underneath via parent body overlay */}
       <div className="px-6 pt-6 pb-2 flex items-start justify-between max-w-3xl w-full mx-auto">
         <div className="min-w-0">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Practice mode</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("practice.practiceMode")}</p>
           <h2 className="font-serif text-2xl truncate">{task.title}</h2>
           {item && (
             <p className="text-xs text-muted-foreground truncate">
@@ -185,12 +187,12 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
           )}
           {!!segments?.length && (
             <p className="text-xs text-muted-foreground italic truncate">
-              Segment{segments.length > 1 ? "s" : ""}: {segments.map((s) => s.label).join(", ")}
+              {segments.length > 1 ? t("practice.segmentsLabel") : t("practice.segmentLabel")}: {segments.map((s) => s.label).join(", ")}
             </p>
           )}
           {collection && (
             <p className="text-xs text-muted-foreground italic truncate">
-              Collection: {collection.name}
+              {t("practice.collectionLabel")}: {collection.name}
             </p>
           )}
           {task.targetBpm && (
@@ -202,7 +204,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
         <button
           onClick={onClose}
           className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent"
-          aria-label="Close practice mode"
+          aria-label={t("practice.close")}
         >
           <X className="h-5 w-5" />
         </button>
@@ -217,14 +219,14 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
           <button
             onClick={toggleRun}
             className="p-1.5 rounded-md hover:text-foreground hover:bg-accent"
-            aria-label={running ? "Pause timer" : "Start timer"}
+            aria-label={running ? t("practice.pauseTimer") : t("practice.startTimer")}
           >
             {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </button>
           <button
             onClick={reset}
             className="p-1.5 rounded-md hover:text-foreground hover:bg-accent"
-            aria-label="Reset timer"
+            aria-label={t("practice.resetTimer")}
           >
             <RotateCcw className="h-4 w-4" />
           </button>
@@ -234,7 +236,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
         <section className="paper-card p-6 space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Metronome</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("practice.metronome")}</p>
               <p className="font-serif text-xl">
                 {targetGlyph} = <span className="tabular-nums">{bpm}</span>
               </p>
@@ -243,7 +245,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
               <button
                 onClick={() => setMuted((m) => !m)}
                 className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent"
-                aria-label={muted ? "Unmute" : "Mute"}
+                aria-label={muted ? t("practice.unmute") : t("practice.mute")}
               >
                 {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
               </button>
@@ -251,7 +253,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
                 variant={meterOn ? "default" : "outline"}
                 onClick={() => setMeterOn((v) => !v)}
               >
-                {meterOn ? "Stop" : "Start"}
+                {meterOn ? t("practice.stop") : t("practice.start")}
               </Button>
             </div>
           </div>
@@ -303,7 +305,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
                   key={d}
                   onClick={() => setBpm((b) => Math.min(240, Math.max(30, b + d)))}
                   className="paper-card px-3 py-1.5 text-sm tabular-nums hover:-translate-y-0.5 transition-transform"
-                  aria-label={`${d > 0 ? "Increase" : "Decrease"} BPM by ${Math.abs(d)}`}
+                  aria-label={d > 0 ? t("practice.bpmIncrease", { step: d }) : t("practice.bpmDecrease", { step: Math.abs(d) })}
                 >
                   {d > 0 ? `+${d}` : d}
                 </button>
@@ -313,7 +315,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
 
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground mr-1">Beats/bar</span>
+              <span className="text-xs text-muted-foreground mr-1">{t("practice.beatsPerBar")}</span>
               {[1, 2, 3, 4, 6].map((n) => (
                 <button
                   key={n}
@@ -330,7 +332,7 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
               ))}
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground mr-1">Note</span>
+              <span className="text-xs text-muted-foreground mr-1">{t("practice.noteLabel")}</span>
               {(["half","quarter","eighth","sixteenth"] as NoteVal[]).map((nv) => (
                 <button
                   key={nv}
@@ -353,10 +355,10 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
         {/* Finish */}
         <div className="flex gap-2">
           <Button variant="outline" className="flex-1" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button className="flex-1" onClick={finish}>
-            Finish & log session
+            {t("practice.finishLog")}
           </Button>
         </div>
       </div>

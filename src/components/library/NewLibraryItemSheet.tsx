@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type LibraryItem, type PracticeStatus } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import {
   Sheet,
   SheetContent,
@@ -49,6 +50,7 @@ const isValidBpm = (n: number | undefined) =>
   n === undefined || (Number.isFinite(n) && n >= BPM_MIN && n <= BPM_MAX);
 
 export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
+  const { t } = useI18n();
   const isEdit = !!item?.id;
   const editingKind = item?.kind ?? kind;
 
@@ -173,47 +175,47 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   }, [open]);
 
   const titleLabel = useMemo(() => {
-    if (isEdit) return "Edit item";
+    if (isEdit) return t("library.editItem");
     switch (editingKind) {
-      case "repertoire": return "New piece";
-      case "manual":     return "New manual";
-      case "technique":  return "New technique";
-      case "theory":     return "New theory topic";
+      case "repertoire": return t("library.newPiece");
+      case "manual":     return t("library.newManual");
+      case "technique":  return t("library.newTechnique");
+      case "theory":     return t("library.newTheoryTopic");
     }
-  }, [editingKind, isEdit]);
+  }, [editingKind, isEdit, t]);
 
   // ---- Validation ----
   const errors = useMemo(() => {
     const e: string[] = [];
-    if (!title.trim()) e.push("Title is required");
-    if (subjectId === undefined) e.push("Pick a subject");
+    if (!title.trim()) e.push(t("errors.titleRequired"));
+    if (subjectId === undefined) e.push(t("errors.pickSubject"));
 
-    if (!isValidBpm(targetBpm)) e.push(`Target BPM must be ${BPM_MIN}–${BPM_MAX}`);
-    if (!isValidBpm(startBpm)) e.push(`Start BPM must be ${BPM_MIN}–${BPM_MAX}`);
+    if (!isValidBpm(targetBpm)) e.push(t("errors.bpmRange"));
+    if (!isValidBpm(startBpm)) e.push(t("errors.bpmRange"));
 
     if (editingKind === "technique" && startBpm !== undefined && targetBpm !== undefined && startBpm > targetBpm) {
-      e.push("Start BPM cannot exceed target BPM");
+      e.push(t("errors.bpmRange"));
     }
 
     if (editingKind === "manual") {
-      if (currentExercise === undefined || currentExercise < 1) e.push("Current exercise required (≥ 1)");
-      if (totalExercises !== undefined && totalExercises < 1) e.push("Total exercises must be ≥ 1");
+      if (currentExercise === undefined || currentExercise < 1) e.push(t("errors.bpmRange"));
+      if (totalExercises !== undefined && totalExercises < 1) e.push(t("errors.bpmRange"));
       if (
         currentExercise !== undefined &&
         totalExercises !== undefined &&
         currentExercise > totalExercises
       ) {
-        e.push("Current cannot exceed total");
+        e.push(t("errors.bpmRange"));
       }
     }
 
     if ((editingKind === "repertoire" || editingKind === "manual") && segments.length) {
-      if (segments.some((s) => !s.label.trim())) e.push("Every segment needs a label");
-      if (segments.some((s) => !isValidBpm(s.targetBpm))) e.push("Segment BPM out of range");
+      if (segments.some((s) => !s.label.trim())) e.push(t("errors.titleRequired"));
+      if (segments.some((s) => !isValidBpm(s.targetBpm))) e.push(t("errors.bpmRange"));
     }
 
     return e;
-  }, [title, subjectId, targetBpm, startBpm, editingKind, currentExercise, totalExercises, segments]);
+  }, [title, subjectId, targetBpm, startBpm, editingKind, currentExercise, totalExercises, segments, t]);
 
   const canSave = errors.length === 0;
 
@@ -266,7 +268,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     if (editingKind === "repertoire") {
       await collectionsService.setItemCollections(savedId, collectionIds);
     }
-    toast.success(isEdit ? `${title.trim()} updated` : `${title.trim()} added to library`);
+    toast.success(isEdit ? t("toast.updated") : t("toast.added"));
     onOpenChange(false);
   };
 
@@ -279,7 +281,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
         <SheetHeader className="px-6 pt-6 pb-2 text-left">
           <SheetTitle className="font-serif text-3xl">{titleLabel}</SheetTitle>
           <SheetDescription className="italic">
-            Capture only what's useful — you can refine later.
+            {t("library.captureHint")}
           </SheetDescription>
         </SheetHeader>
 
@@ -287,14 +289,14 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           {/* Subject */}
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-              Subject
+              {t("common.subject")}
             </Label>
             <Select
               value={subjectId !== undefined ? String(subjectId) : ""}
               onValueChange={(v) => setSubjectId(Number(v))}
             >
               <SelectTrigger className="bg-card">
-                <SelectValue placeholder="Pick a subject" />
+                <SelectValue placeholder={t("tasks.pickSubject")} />
               </SelectTrigger>
               <SelectContent>
                 {subjects?.map((s) => (
@@ -309,30 +311,22 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           {/* Title */}
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-              Title
+              {t("common.title")}
             </Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={
-                editingKind === "repertoire"
-                  ? "Sonata in C major, K.545…"
-                  : editingKind === "manual"
-                  ? "Hanon — The Virtuoso Pianist"
-                  : editingKind === "technique"
-                  ? "C major scale, hands together"
-                  : "Secondary dominants"
-              }
+              placeholder={t(`library.placeholder.${editingKind}`)}
               className="bg-card text-lg h-12"
               autoFocus
             />
           </div>
 
-          {/* Composer */}
+          {/* Composer / Author */}
           {(editingKind === "repertoire" || editingKind === "manual") && (
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                {editingKind === "manual" ? "Author" : "Composer"}
+                {editingKind === "manual" ? t("library.labelAuthor") : t("library.labelComposer")}
               </Label>
               <Input
                 value={composer}
@@ -366,7 +360,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           {errors.length > 0 && (
             <div className="paper-card p-3 border border-destructive/30">
               <p className="text-xs uppercase tracking-wider text-destructive mb-1">
-                Fix to save
+                {t("library.fixToSave")}
               </p>
               <ul className="text-sm text-destructive/90 list-disc pl-5 space-y-0.5">
                 {errors.map((e) => <li key={e}>{e}</li>)}
@@ -378,10 +372,10 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
         <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
           <div className="flex gap-3 w-full">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1">
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={save} disabled={!canSave} className="flex-1">
-              {isEdit ? "Save changes" : "Save to library"}
+              {isEdit ? t("library.saveChanges") : t("library.saveToLibrary")}
             </Button>
           </div>
         </SheetFooter>

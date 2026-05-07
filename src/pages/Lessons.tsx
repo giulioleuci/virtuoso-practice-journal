@@ -365,8 +365,8 @@ function Pager({ page, totalPages, onPage }: { page: number; totalPages: number;
 }
 
 function EmptyLessons({ onAdd, hint }: { onAdd: () => void; hint: string }) {
-  const { t } = useI18n();
-  const quote = useMemo(() => pickQuote(LESSON_QUOTES), []);
+  const { t, lang } = useI18n();
+  const quote = useMemo(() => pickQuote(LESSON_QUOTES, lang), [lang]);
   return (
     <button
       onClick={onAdd}

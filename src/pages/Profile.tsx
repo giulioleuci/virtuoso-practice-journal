@@ -172,10 +172,10 @@ export default function Profile() {
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              {t("profile.typeDelete").replace("DELETE", <code className="px-1 bg-muted rounded">DELETE</code> as unknown as string)}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Type <code className="px-1 bg-muted rounded">DELETE</code> to confirm.
+              {(() => {
+                const [pre, post] = t("profile.typeDelete").split("DELETE");
+                return <>{pre}<code className="px-1 bg-muted rounded">DELETE</code>{post}</>;
+              })()}
             </p>
             <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
             <div className="flex gap-2">

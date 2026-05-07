@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Music, Piano, BookOpen, FileText, Sparkles, Check, X, Plus, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,18 +8,18 @@ import { cn } from "@/lib/utils";
 
 interface DraftSubject { name: string; type: SubjectType }
 
-const PRESET_SUBJECTS: { name: string; type: SubjectType; icon: typeof Piano }[] = [
-  { name: "Piano", type: "instrument", icon: Piano },
-  { name: "Guitar", type: "instrument", icon: Music },
-  { name: "Violin", type: "instrument", icon: Music },
-  { name: "Voice", type: "instrument", icon: Music },
-  { name: "Counterpoint", type: "theory", icon: FileText },
-  { name: "Harmony", type: "theory", icon: FileText },
-  { name: "Composition", type: "composition", icon: BookOpen },
-  { name: "Ear Training", type: "theory", icon: Sparkles },
-];
+type PresetKey = { key: string; type: SubjectType; icon: typeof Piano };
 
-const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
+const PRESET_KEYS: PresetKey[] = [
+  { key: "piano",        type: "instrument",  icon: Piano },
+  { key: "guitar",       type: "instrument",  icon: Music },
+  { key: "violin",       type: "instrument",  icon: Music },
+  { key: "voice",        type: "instrument",  icon: Music },
+  { key: "counterpoint", type: "theory",      icon: FileText },
+  { key: "harmony",      type: "theory",      icon: FileText },
+  { key: "composition",  type: "composition", icon: BookOpen },
+  { key: "earTraining",  type: "theory",      icon: Sparkles },
+];
 
 export default function Onboarding({ onDone }: { onDone: () => void }) {
   const { t, setLang, lang } = useI18n();
@@ -31,6 +31,13 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const [reminderTime, setReminderTime] = useState("18:00");
   const [reminderFreq, setReminderFreq] = useState<"daily" | "weekdays" | "custom">("daily");
   const [reminderDays, setReminderDays] = useState<number[]>([1, 2, 3, 4, 5]);
+
+  const DAYS = useMemo(() => [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`)), [lang]);
+
+  const PRESET_SUBJECTS = useMemo(
+    () => PRESET_KEYS.map((p) => ({ name: t(`preset.${p.key}`), type: p.type, icon: p.icon })),
+    [lang]
+  );
 
   const togglePreset = (p: DraftSubject) => {
     setChosen((prev) =>
@@ -175,10 +182,10 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                 onChange={(e) => setCustomType(e.target.value as SubjectType)}
                 className="bg-background border border-border rounded-md px-2 py-1.5 text-sm"
               >
-                <option value="instrument">Instrument</option>
-                <option value="theory">Theory</option>
-                <option value="composition">Composition</option>
-                <option value="other">Other</option>
+                <option value="instrument">{t("subjects.type.instrument")}</option>
+                <option value="theory">{t("subjects.type.theory")}</option>
+                <option value="composition">{t("subjects.type.composition")}</option>
+                <option value="other">{t("subjects.type.other")}</option>
               </select>
               <Button size="icon" variant="ghost" onClick={addCustom}>
                 <Plus className="h-4 w-4" />

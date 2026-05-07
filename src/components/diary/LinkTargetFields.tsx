@@ -4,6 +4,7 @@
 import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type TaskLinkType } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { collectionsService } from "@/lib/services";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,25 +28,15 @@ interface Props {
   onSegmentsSelected?: (ids: number[]) => void;
 }
 
-const KINDS: { val: LibraryKind | "all"; label: string }[] = [
-  { val: "all", label: "All" },
-  { val: "repertoire", label: "Repertoire" },
-  { val: "manual", label: "Manuals" },
-  { val: "technique", label: "Technique" },
-  { val: "theory", label: "Theory" },
-];
-
-const LINK_OPTS: { val: TaskLinkType; label: string }[] = [
-  { val: "free", label: "Free task" },
-  { val: "item", label: "Library item" },
-  { val: "collection", label: "Collection" },
-];
+const KIND_VALS: (LibraryKind | "all")[] = ["all", "repertoire", "manual", "technique", "theory"];
+const LINK_TYPE_VALS: TaskLinkType[] = ["free", "item", "collection"];
 
 export function LinkTargetFields({
   subjectId, linkType, setLinkType,
   itemId, setItemId, segmentIds, setSegmentIds,
   collectionId, setCollectionId,
 }: Props) {
+  const { t } = useI18n();
   const library = useLiveQuery(() => db.library.filter((i) => !i.deletedAt).toArray(), []);
   const allCollections = useLiveQuery(() => collectionsService.list(), []);
   const allCollectionItems = useLiveQuery(() => db.collectionItems.toArray(), []);
@@ -61,24 +52,24 @@ export function LinkTargetFields({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Link to</Label>
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.linkTo")}</Label>
         <div className="flex flex-wrap gap-1.5">
-          {LINK_OPTS.map((o) => (
+          {LINK_TYPE_VALS.map((val) => (
             <button
-              key={o.val}
+              key={val}
               type="button"
               onClick={() => {
-                setLinkType(o.val);
-                if (o.val !== "item") { setItemId(undefined); setSegmentIds([]); }
-                if (o.val !== "collection") setCollectionId(undefined);
+                setLinkType(val);
+                if (val !== "item") { setItemId(undefined); setSegmentIds([]); }
+                if (val !== "collection") setCollectionId(undefined);
               }}
               className={cn(
                 "text-xs px-3 py-1.5 rounded-full border transition-colors",
-                linkType === o.val
+                linkType === val
                   ? "bg-primary text-primary-foreground border-primary"
                   : "border-border text-muted-foreground hover:text-foreground"
               )}
-            >{o.label}</button>
+            >{val === "free" ? t("link.freeTask") : val === "item" ? t("link.item") : t("link.collection")}</button>
           ))}
         </div>
       </div>
@@ -96,25 +87,25 @@ export function LinkTargetFields({
 
       {linkType === "item" && itemId && !!segments?.length && (
         <MultiChipPicker
-          label="Segments (optional)"
+          label={t("link.segmentsOptional")}
           options={segments.map((s) => ({ value: s.id!, label: s.label }))}
           value={segmentIds}
           onChange={setSegmentIds}
-          placeholder="— Whole item —"
+          placeholder={t("link.wholeItem")}
         />
       )}
 
       {linkType === "collection" && (
         <div className="space-y-2">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Collection</Label>
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.collection")}</Label>
           <Select
             value={collectionId?.toString() ?? ""}
             onValueChange={(v) => setCollectionId(Number(v))}
           >
-            <SelectTrigger><SelectValue placeholder="Pick a collection" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("link.pickCollection")} /></SelectTrigger>
             <SelectContent>
               {(allCollections ?? []).length === 0 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">No collections yet</div>
+                <div className="px-3 py-2 text-sm text-muted-foreground">{t("link.noCollections")}</div>
               )}
               {(allCollections ?? []).map((c) => (
                 <SelectItem key={c.id} value={c.id!.toString()}>
@@ -142,6 +133,7 @@ function ItemPicker({
   itemId: number | undefined;
   setItemId: (id: number | undefined) => void;
 }) {
+  const { t } = useI18n();
   const [kindFilter, setKindFilter] = useState<LibraryKind | "all">("all");
   const [collectionFilter, setCollectionFilter] = useState<number | "all">("all");
   const [sortBy, setSortBy] = useState<"title" | "composer">("title");
@@ -172,72 +164,69 @@ function ItemPicker({
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filter by kind</Label>
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.filterByKind")}</Label>
         <div className="flex flex-wrap gap-1.5">
-          {KINDS.map((k) => (
+          {KIND_VALS.map((val) => (
             <button
-              key={k.val}
+              key={val}
               type="button"
               onClick={() => {
-                setKindFilter(k.val);
-                if (k.val !== "repertoire" && k.val !== "all") setCollectionFilter("all");
+                setKindFilter(val);
+                if (val !== "repertoire" && val !== "all") setCollectionFilter("all");
               }}
               className={cn(
                 "text-xs px-3 py-1.5 rounded-full border transition-colors",
-                kindFilter === k.val
+                kindFilter === val
                   ? "bg-primary text-primary-foreground border-primary"
                   : "border-border text-muted-foreground hover:text-foreground"
               )}
-            >{k.label}</button>
+            >{val === "all" ? t("common.all") : t(`library.kind.${val}`)}</button>
           ))}
         </div>
       </div>
 
       {(kindFilter === "all" || kindFilter === "repertoire") && allCollections.length > 0 && (
         <MultiChipPicker
-          label="Filter by collection"
+          label={t("link.filterByCollection")}
           options={allCollections.map((c) => ({ value: c.id!, label: c.name }))}
           value={collectionFilter === "all" ? [] : [collectionFilter]}
           onChange={(next) => setCollectionFilter(next.length ? next[next.length - 1] : "all")}
-          placeholder="All collections"
+          placeholder={t("link.allCollections")}
         />
       )}
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sort by</Label>
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.sortBy")}</Label>
         <div className="flex flex-wrap gap-1.5">
-          {([
-            { val: "title", label: "Title" },
-            { val: "composer", label: "Composer / Author" },
-          ] as const).map((opt) => (
+          {(["title", "composer"] as const).map((val) => (
             <button
-              key={opt.val}
+              key={val}
               type="button"
-              onClick={() => setSortBy(opt.val)}
+              onClick={() => setSortBy(val)}
               className={cn(
                 "text-xs px-3 py-1.5 rounded-full border transition-colors",
-                sortBy === opt.val
+                sortBy === val
                   ? "bg-primary text-primary-foreground border-primary"
                   : "border-border text-muted-foreground hover:text-foreground"
               )}
-            >{opt.label}</button>
+            >{val === "title" ? t("common.title") : t("link.sortByComposerAuthor")}</button>
           ))}
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Library item</Label>
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.item")}</Label>
         <Select
           value={itemId?.toString() ?? ""}
           onValueChange={(v) => setItemId(Number(v))}
           disabled={!subjectId}
         >
           <SelectTrigger>
-            <SelectValue placeholder={subjectId ? "Pick an item" : "Pick a subject first"} />
+            <SelectValue placeholder={subjectId ? t("link.pickItem") : t("link.pickSubjectFirst")} />
           </SelectTrigger>
           <SelectContent>
             {items.length === 0 && (
-              <div className="px-3 py-2 text-sm text-muted-foreground">No items</div>
+              <div className="px-3 py-2 text-sm text-muted-foreground">{t("link.noItems")}</div>
             )}
             {items.map((i) => (
               <SelectItem key={i.id} value={i.id!.toString()}>

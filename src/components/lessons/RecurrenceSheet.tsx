@@ -18,11 +18,11 @@ interface Props {
   recurrence?: LessonRecurrence | null;
 }
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const COLORS: ColorKey[] = ["terracotta", "sage", "gold", "blue", "plum"];
 
 export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
   const { t } = useI18n();
+  const DAYS = [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`));
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const isEdit = !!recurrence?.id;
 

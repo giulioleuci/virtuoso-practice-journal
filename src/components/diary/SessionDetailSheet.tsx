@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type NoteVal, type Session, type SessionQuality } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,7 @@ const initial = (s?: Session | null): SessionFieldsValue => ({
 });
 
 export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
+  const { t } = useI18n();
   const task = useLiveQuery(
     () => (session?.taskId ? db.tasks.get(session.taskId) : Promise.resolve(undefined)),
     [session?.taskId]
@@ -72,7 +74,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
 
   const errors = useMemo(() => {
     const e: string[] = [];
-    if (!date) e.push("Date required");
+    if (!date) e.push(t("session.dateRequired"));
     const res = sessionInputSchema.safeParse({
       bpmReached: v.bpm, noteVal: v.noteVal, reps: v.reps, confidence: v.confidence,
       quality: v.quality, notes: v.notes, layersUsed: v.layersUsed, techniquesUsed: v.techniquesUsed,
@@ -88,7 +90,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
       layersUsed: v.layersUsed, techniquesUsed: v.techniquesUsed,
       reps: v.reps, confidence: v.confidence,
     });
-    toast.success("Session updated");
+    toast.success(t("toast.sessionUpdated"));
     setEditing(false);
   };
 
@@ -101,7 +103,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
       const remaining = await db.sessions.where("taskId").equals(taskId).count();
       if (remaining === 0) await db.tasks.update(taskId, { done: false });
     }
-    toast.success("Session deleted");
+    toast.success(t("toast.sessionDeleted"));
     setConfirmDel(false);
     onOpenChange(false);
   };
@@ -110,7 +112,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]">
         <SheetHeader>
-          <SheetTitle className="font-serif text-2xl">Session</SheetTitle>
+          <SheetTitle className="font-serif text-2xl">{t("session.sessionTitle")}</SheetTitle>
         </SheetHeader>
 
         {!session ? null : (
@@ -134,12 +136,12 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   <>
                     {!!labels.length && (
                       <div className="text-xs text-muted-foreground italic">
-                        Segment{labels.length > 1 ? "s" : ""}: {labels.join(", ")}
+                        {labels.length > 1 ? t("session.segmentTitle_plural") : t("session.segmentTitle")}: {labels.join(", ")}
                       </div>
                     )}
                     {session.snapshot?.collectionName && (
                       <div className="text-xs text-muted-foreground italic">
-                        Collection: {session.snapshot.collectionName}
+                        {t("session.collectionLabel")}: {session.snapshot.collectionName}
                       </div>
                     )}
                   </>
@@ -147,7 +149,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
               })()}
               {session.snapshot && (
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 pt-1">
-                  Snapshot · {session.snapshot.subjectName}
+                  {t("session.snapshotLabel")} · {session.snapshot.subjectName}
                 </div>
               )}
             </div>
@@ -156,34 +158,34 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
               <>
                 <dl className="paper-card p-3 grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</dt>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("common.date")}</dt>
                     <dd className="tabular-nums">{session.date}</dd>
                   </div>
                   <div>
-                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Quality</dt>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.qualityFieldLabel")}</dt>
                     <dd className="capitalize">{session.quality ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">BPM</dt>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.bpmLabel")}</dt>
                     <dd className="tabular-nums">{session.bpmReached ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Note</dt>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.noteValLabel")}</dt>
                     <dd>{session.noteVal ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Reps</dt>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.repsLabel")}</dt>
                     <dd className="tabular-nums">{session.reps ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Confidence</dt>
+                    <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.confidenceLabel")}</dt>
                     <dd className="tabular-nums">{session.confidence != null ? `${session.confidence}/5` : "—"}</dd>
                   </div>
                 </dl>
 
                 {session.notes && (
                   <div className="paper-card p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Notes</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("session.notes")}</div>
                     <p className="text-sm whitespace-pre-wrap">{session.notes}</p>
                   </div>
                 )}
@@ -191,7 +193,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   <div className="paper-card p-3 space-y-2 text-xs">
                     {!!session.layersUsed?.length && (
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Layers</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("session.layersLabel")}</div>
                         <div className="flex flex-wrap gap-1.5">{session.layersUsed.map((l) => (
                           <span key={l} className="px-2 py-0.5 rounded-full bg-accent/60">{l}</span>
                         ))}</div>
@@ -199,9 +201,9 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                     )}
                     {!!session.techniquesUsed?.length && (
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Techniques</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("session.techniquesLabel")}</div>
                         <div className="flex flex-wrap gap-1.5">{session.techniquesUsed.map((id) => {
-                          const n = (allTechniques ?? []).find((t) => t.id === id)?.name;
+                          const n = (allTechniques ?? []).find((tech) => tech.id === id)?.name;
                           return n ? <span key={id} className="px-2 py-0.5 rounded-full bg-accent/60">{n}</span> : null;
                         })}</div>
                       </div>
@@ -210,7 +212,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                 ) : null}
 
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setEditing(true)}>Edit</Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
                   <Button variant="outline" className="text-destructive" onClick={() => setConfirmDel(true)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -219,7 +221,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("common.date")}</Label>
                   <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                 </div>
 
@@ -237,8 +239,8 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                 )}
 
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
-                  <Button className="flex-1" disabled={errors.length > 0} onClick={save}>Save</Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
+                  <Button className="flex-1" disabled={errors.length > 0} onClick={save}>{t("common.save")}</Button>
                 </div>
               </>
             )}
@@ -248,12 +250,12 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
         <AlertDialog open={confirmDel} onOpenChange={setConfirmDel}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete this session?</AlertDialogTitle>
-              <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+              <AlertDialogTitle>{t("session.delete")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("dialog.deleteSessionDesc")}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={del} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction onClick={del} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
