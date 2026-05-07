@@ -16,6 +16,7 @@ import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { upcomingLessonDates, dayKey } from "@/lib/recurrence";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 const PAGE_SIZE = 5;
 
