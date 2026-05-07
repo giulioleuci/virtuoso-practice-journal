@@ -39,12 +39,6 @@ const NOTE_GLYPH: Record<string, string> = {
   half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  in_study: "In study",
-  maintenance: "Maintenance",
-  pause: "Paused",
-};
-
 export default function Library() {
   const { t } = useI18n();
   const [active, setActive] = useState<LibraryKind>("repertoire");
@@ -108,7 +102,7 @@ export default function Library() {
   const confirmDelete = async () => {
     if (deletingId == null) return;
     const mode = await deleteLibraryItem(deletingId);
-    toast.success(mode === "soft" ? "Archived (kept in history)" : "Deleted");
+    toast.success(mode === "soft" ? t("toast.archivedKeptInHistory") : t("toast.deleted"));
     setDeletingId(null);
   };
 
@@ -148,7 +142,7 @@ export default function Library() {
         <Select value={subjectFilter} onValueChange={setSubjectFilter}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All subjects</SelectItem>
+            <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
             {(subjects ?? []).map((s) => (
               <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
             ))}
@@ -157,22 +151,22 @@ export default function Library() {
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="recent"><span className="inline-flex items-center gap-2"><ArrowDownUp className="h-3 w-3" /> Recent</span></SelectItem>
-            <SelectItem value="title">Title (A→Z)</SelectItem>
-            <SelectItem value="composer">Composer (A→Z)</SelectItem>
+            <SelectItem value="recent"><span className="inline-flex items-center gap-2"><ArrowDownUp className="h-3 w-3" /> {t("library.sortRecent")}</span></SelectItem>
+            <SelectItem value="title">{t("library.sortTitle")}</SelectItem>
+            <SelectItem value="composer">{t("library.sortComposer")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
       <div className="flex items-center gap-2">
         <Input
-          placeholder="Search title or composer…"
+          placeholder={t("library.searchTitleComposer")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1"
         />
         {active === "repertoire" && (
           <Button asChild size="sm" variant="ghost" className="shrink-0">
-            <Link to="/library/collections"><FolderOpen className="h-4 w-4 mr-1" /> Collections</Link>
+            <Link to="/library/collections"><FolderOpen className="h-4 w-4 mr-1" /> {t("library.collections")}</Link>
           </Button>
         )}
       </div>
@@ -185,7 +179,7 @@ export default function Library() {
             onClick={() => setGroupByCollection((v) => !v)}
           >
             <Layers className="h-4 w-4 mr-1" />
-            {groupByCollection ? "Grouped by collection" : "Group by collection"}
+            {groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}
           </Button>
         </div>
       )}
@@ -206,7 +200,7 @@ export default function Library() {
                       <button
                         onClick={() => setHelpItem(it)}
                         className="relative p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent"
-                        aria-label="Ask the teacher"
+                        aria-label={t("library.askTeacher")}
                       >
                         <MessageCircleQuestion className="h-4 w-4" />
                         {itemHelp.length > 0 && (
@@ -221,20 +215,20 @@ export default function Library() {
                     <DropdownMenuTrigger asChild>
                       <button
                         className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                        aria-label="More"
+                        aria-label={t("common.more")}
                       >
                         <MoreVertical className="h-4 w-4" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => openEdit(it)}>
-                        <Pencil className="h-4 w-4 mr-2" /> Edit
+                        <Pencil className="h-4 w-4 mr-2" /> {t("common.edit")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => it.id && setDeletingId(it.id)}
                         className="text-destructive focus:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        <Trash2 className="h-4 w-4 mr-2" /> {t("common.delete")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -249,14 +243,18 @@ export default function Library() {
                 <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
                   {it.kind === "repertoire" && it.status && (
                     <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent text-foreground/80">
-                      {STATUS_LABEL[it.status]}
+                      {t(`library.status.${it.status}`)}
                     </span>
                   )}
                   {it.kind === "technique" && (it.startBpm || it.targetBpm) && (
                     <span className="tabular-nums">{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>
                   )}
                   {it.kind === "manual" && (it.totalExercises || it.currentExercise) && (
-                    <span>Exercise {it.currentExercise ?? 1}{it.totalExercises ? ` / ${it.totalExercises}` : ""}</span>
+                    <span>
+                      {it.totalExercises
+                        ? t("library.exerciseOf", { current: it.currentExercise ?? 1, total: it.totalExercises })
+                        : t("library.exercise", { current: it.currentExercise ?? 1 })}
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -279,7 +277,7 @@ export default function Library() {
                     </span>
                   ))}
                   {(it.techniqueIds ?? []).map((id) => {
-                    const name = (allTechniques ?? []).find((t) => t.id === id)?.name;
+                    const name = (allTechniques ?? []).find((tech) => tech.id === id)?.name;
                     if (!name) return null;
                     return (
                       <span key={`tech-${id}`} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70">
@@ -293,7 +291,7 @@ export default function Library() {
               {(it.kind === "repertoire" || it.kind === "manual") && segs.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border/60 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <span>{segs.length} segment{segs.length === 1 ? "" : "s"}</span>
+                    <span>{t("library.segments", { count: segs.length })}</span>
                   </div>
                 </div>
               )}
@@ -318,16 +316,16 @@ export default function Library() {
         if (!filteredItems.length) {
           return items.length === 0
             ? <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
-            : <p className="paper-card p-6 text-center text-muted-foreground italic">No items match.</p>;
+            : <p className="paper-card p-6 text-center text-muted-foreground italic">{t("library.noItemsMatch")}</p>;
         }
 
         const Pager = ({ current, total, onChange }: { current: number; total: number; onChange: (p: number) => void }) => {
           if (total <= 1) return null;
           return (
             <div className="flex items-center justify-center gap-2 pt-2">
-              <Button size="sm" variant="ghost" disabled={current <= 1} onClick={() => onChange(current - 1)}>Prev</Button>
+              <Button size="sm" variant="ghost" disabled={current <= 1} onClick={() => onChange(current - 1)}>{t("common.prev")}</Button>
               <span className="text-xs text-muted-foreground tabular-nums">{current} / {total}</span>
-              <Button size="sm" variant="ghost" disabled={current >= total} onClick={() => onChange(current + 1)}>Next</Button>
+              <Button size="sm" variant="ghost" disabled={current >= total} onClick={() => onChange(current + 1)}>{t("common.next")}</Button>
             </div>
           );
         };
@@ -371,7 +369,7 @@ export default function Library() {
                       </AccordionTrigger>
                       <AccordionContent>
                         {g.items.length === 0 ? (
-                          <p className="text-xs text-muted-foreground italic px-1 pb-3">Empty.</p>
+                          <p className="text-xs text-muted-foreground italic px-1 pb-3">{t("library.emptyCollection")}</p>
                         ) : (
                           <>
                             <ul className="space-y-2 pb-2">{paginate(g.items, p).map(renderCard)}</ul>
@@ -390,7 +388,7 @@ export default function Library() {
                     <AccordionTrigger className="hover:no-underline py-3">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="font-serif text-lg truncate">Uncollected</span>
+                        <span className="font-serif text-lg truncate">{t("library.uncollected")}</span>
                         <span className="text-xs text-muted-foreground tabular-nums ml-auto mr-2">{uncollected.length}</span>
                       </div>
                     </AccordionTrigger>
@@ -437,15 +435,15 @@ export default function Library() {
       <AlertDialog open={deletingId !== null} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this item?</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialog.deleteItem")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the item and all its segments. This action cannot be undone.
+              {t("dialog.deleteItemDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -455,6 +453,7 @@ export default function Library() {
 }
 
 function EmptyLibrary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
+  const { t } = useI18n();
   const quote = useMemo(() => pickQuote(LIBRARY_QUOTES), []);
   return (
     <button
@@ -462,29 +461,15 @@ function EmptyLibrary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
       className="paper-card p-10 text-center w-full hover:-translate-y-0.5 transition-transform group"
     >
       <p className="font-serif text-xl italic text-foreground/85 leading-snug">
-        “{quote.text}”
+        "{quote.text}"
       </p>
       <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
         — {quote.author}
       </p>
       <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
       <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
-        <Plus className="h-4 w-4" /> Add to library
+        <Plus className="h-4 w-4" /> {t("library.addToLibrary")}
       </span>
     </button>
-  );
-}
-
-function TechChips({ ids, all }: { ids: number[]; all: { id?: number; name: string }[] }) {
-  const names = ids.map((id) => all.find((t) => t.id === id)?.name).filter(Boolean) as string[];
-  if (!names.length) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5 mt-2">
-      {names.map((n) => (
-        <span key={n} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70">
-          {n}
-        </span>
-      ))}
-    </div>
   );
 }

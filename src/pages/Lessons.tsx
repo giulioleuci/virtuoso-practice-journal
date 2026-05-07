@@ -32,7 +32,7 @@ export default function Lessons() {
   const subjects = useLiveQuery(() => db.subjects.toArray());
   const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().toArray());
   const assignments = useLiveQuery(() => db.assignments.toArray());
-  const tasksAll = useLiveQuery(() => db.tasks.filter((t) => !t.deletedAt).toArray());
+  const tasksAll = useLiveQuery(() => db.tasks.filter((task) => !task.deletedAt).toArray());
   const openHelpCount = useLiveQuery(async () => (await db.helpRequests.toArray()).filter((h) => !h.resolved).length);
 
   const [recapOpen, setRecapOpen] = useState(false);
@@ -73,7 +73,7 @@ export default function Lessons() {
   const deleteRec = async () => {
     if (delRecId == null) return;
     await db.recurrences.delete(delRecId);
-    toast.success("Removed");
+    toast.success(t("toast.removed"));
     setDelRecId(null);
   };
   const deleteLesson = async () => {
@@ -82,13 +82,12 @@ export default function Lessons() {
       await db.assignments.where("lessonId").equals(delLessonId).delete();
       await db.lessons.delete(delLessonId);
     });
-    toast.success("Lesson deleted");
+    toast.success(t("toast.lessonDeleted"));
     setDelLessonId(null);
   };
 
   const pendingAssignments = (assignments ?? []).filter((a) => !a.transformed && !a.ignored);
 
-  // Auto-generated upcoming schedule from teacher recurrences
   const upcoming = useMemo(() => {
     const today = dayKey(new Date());
     const loggedDates = new Set(
@@ -115,7 +114,7 @@ export default function Lessons() {
           </Button>
         </div>
         <Button size="sm" variant="ghost" className="px-2 -ml-2" onClick={() => setRecapOpen(true)}>
-          <HelpCircle className="h-4 w-4 mr-1" /> Recap
+          <HelpCircle className="h-4 w-4 mr-1" /> {t("lessons.recap")}
           {openHelpCount ? (
             <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">{openHelpCount}</span>
           ) : null}
@@ -124,7 +123,7 @@ export default function Lessons() {
 
       {/* Recurrences */}
       <section className="space-y-2">
-        <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Teachers</h3>
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground">{t("lessons.teachers")}</h3>
         {!recurrences?.length ? (
           <EmptyLessons onAdd={openNew} hint={t("lessons.empty")} />
         ) : (
@@ -141,7 +140,7 @@ export default function Lessons() {
                   </div>
                   <div className="flex items-center gap-1 -ml-2">
                     <Button size="sm" variant="ghost" onClick={() => openLog(r)}>
-                      <NotebookPen className="h-4 w-4 mr-1" /> Log
+                      <NotebookPen className="h-4 w-4 mr-1" /> {t("lessons.log")}
                     </Button>
                     <button onClick={() => openEdit(r)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent ml-auto">
                       <Pencil className="h-4 w-4" />
@@ -166,7 +165,7 @@ export default function Lessons() {
           <Wand2 className="h-4 w-4 text-primary shrink-0" />
           <span className="text-sm flex-1 min-w-0 break-words">
             <span className="tabular-nums font-medium">{pendingAssignments.length}</span>{" "}
-            {pendingAssignments.length === 1 ? "assignment" : "assignments"} to schedule
+            {t("lessons.assignments", { count: pendingAssignments.length })}
           </span>
           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </Link>
@@ -181,7 +180,7 @@ export default function Lessons() {
           return (
             <AccordionItem value="upcoming" className="border-none">
               <AccordionTrigger className="text-xs uppercase tracking-wider text-muted-foreground hover:no-underline py-2">
-                Upcoming lessons ({upcoming.length})
+                {t("lessons.upcoming", { count: upcoming.length })}
               </AccordionTrigger>
               <AccordionContent>
                 <ul className="space-y-2">
@@ -194,11 +193,11 @@ export default function Lessons() {
                             {rec.teacher} · {subjectName(rec.subjectId)}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {isToday ? "Today" : date} · {rec.startTime}–{rec.endTime}
+                            {isToday ? t("lessons.today") : date} · {rec.startTime}–{rec.endTime}
                           </div>
                         </div>
                         <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)} className="-ml-2">
-                          <NotebookPen className="h-4 w-4 mr-1" /> Log
+                          <NotebookPen className="h-4 w-4 mr-1" /> {t("lessons.log")}
                         </Button>
                       </div>
                     </li>
@@ -213,11 +212,11 @@ export default function Lessons() {
         {/* Recent lessons */}
         <AccordionItem value="recent" className="border-none">
           <AccordionTrigger className="text-xs uppercase tracking-wider text-muted-foreground hover:no-underline py-2">
-            Recent lessons ({lessons?.length ?? 0})
+            {t("lessons.recent", { count: lessons?.length ?? 0 })}
           </AccordionTrigger>
           <AccordionContent>
             {!lessons?.length ? (
-              <p className="paper-card p-6 text-center text-muted-foreground italic">No lessons logged yet.</p>
+              <p className="paper-card p-6 text-center text-muted-foreground italic">{t("lessons.noLessonsLogged")}</p>
             ) : (() => {
               const totalPages = Math.max(1, Math.ceil(lessons.length / PAGE_SIZE));
               const page = Math.min(pageRecent, totalPages - 1);
@@ -258,23 +257,23 @@ export default function Lessons() {
                                     <span className="flex-1 truncate">{a.text}</span>
                                     {a.transformed ? (
                                       <span className="text-[10px] uppercase tracking-wider text-primary truncate max-w-[40%]">
-                                        → {linkedTask?.title ?? "scheduled"}
+                                        → {linkedTask?.title ?? t("lessons.scheduled")}
                                       </span>
                                     ) : a.ignored ? (
                                       <button
-                                        onClick={async () => { if (a.id) { await db.assignments.update(a.id, { ignored: false }); toast("Restored"); } }}
+                                        onClick={async () => { if (a.id) { await db.assignments.update(a.id, { ignored: false }); toast(t("toast.restored")); } }}
                                         className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary italic"
-                                      >Ignored · restore</button>
+                                      >{t("lessons.ignoredRestore")}</button>
                                     ) : (
                                       <>
                                         <button
                                           onClick={() => setTaskPrefill({ subjectId: l.subjectId, title: a.text, assignmentId: a.id })}
                                           className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
-                                        >Make task</button>
+                                        >{t("lessons.makeTask")}</button>
                                         <button
-                                          onClick={async () => { if (a.id) { await db.assignments.update(a.id, { ignored: true }); toast("Ignored"); } }}
+                                          onClick={async () => { if (a.id) { await db.assignments.update(a.id, { ignored: true }); toast(t("toast.ignored")); } }}
                                           className="text-muted-foreground hover:text-destructive"
-                                          aria-label="Ignore"
+                                          aria-label={t("common.ignore")}
                                         >
                                           <X className="h-3 w-3" />
                                         </button>
@@ -323,12 +322,12 @@ export default function Lessons() {
       <AlertDialog open={delRecId !== null} onOpenChange={(o) => !o && setDelRecId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove this teacher?</AlertDialogTitle>
-            <AlertDialogDescription>Logged lessons are kept.</AlertDialogDescription>
+            <AlertDialogTitle>{t("dialog.removeTeacher")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("dialog.removeTeacherDesc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={deleteRec} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteRec} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.remove")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -336,12 +335,12 @@ export default function Lessons() {
       <AlertDialog open={delLessonId !== null} onOpenChange={(o) => !o && setDelLessonId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this lesson?</AlertDialogTitle>
-            <AlertDialogDescription>Its assignments will be removed too.</AlertDialogDescription>
+            <AlertDialogTitle>{t("dialog.deleteLesson")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("dialog.deleteLessonDesc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={deleteLesson} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteLesson} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -366,6 +365,7 @@ function Pager({ page, totalPages, onPage }: { page: number; totalPages: number;
 }
 
 function EmptyLessons({ onAdd, hint }: { onAdd: () => void; hint: string }) {
+  const { t } = useI18n();
   const quote = useMemo(() => pickQuote(LESSON_QUOTES), []);
   return (
     <button
@@ -373,14 +373,14 @@ function EmptyLessons({ onAdd, hint }: { onAdd: () => void; hint: string }) {
       className="paper-card p-10 text-center w-full hover:-translate-y-0.5 transition-transform group"
     >
       <p className="font-serif text-xl italic text-foreground/85 leading-snug">
-        “{quote.text}”
+        "{quote.text}"
       </p>
       <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
         — {quote.author}
       </p>
       <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
       <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
-        <Plus className="h-4 w-4" /> Add teacher
+        <Plus className="h-4 w-4" /> {t("lessons.addRecurrence")}
       </span>
     </button>
   );

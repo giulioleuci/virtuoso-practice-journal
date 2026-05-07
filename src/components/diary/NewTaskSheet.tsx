@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type NoteVal, type TaskLinkType } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: Props) {
+  const { t } = useI18n();
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
@@ -121,8 +123,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   );
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])
-      .filter((t) => t.subjectId === subjectId)
-      .map((t) => ({ value: t.id!, label: t.name })),
+      .filter((tech) => tech.subjectId === subjectId)
+      .map((tech) => ({ value: tech.id!, label: tech.name })),
     [allTechniques, subjectId]
   );
 
@@ -163,20 +165,20 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
 
   const errors = useMemo(() => {
     const e: string[] = [];
-    if (!subjectId) e.push("Pick a subject");
-    if (linkType === "item" && !itemId) e.push("Pick a library item");
-    if (linkType === "collection" && !collectionId) e.push("Pick a collection");
-    if (!title.trim()) e.push("Title is required");
-    if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push("BPM out of range");
+    if (!subjectId) e.push(t("errors.pickSubject"));
+    if (linkType === "item" && !itemId) e.push(t("errors.pickItem"));
+    if (linkType === "collection" && !collectionId) e.push(t("errors.pickCollection"));
+    if (!title.trim()) e.push(t("errors.titleRequired"));
+    if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push(t("errors.bpmRange"));
     if (rec.enabled) {
-      if (rec.kind === "weekdays" && !rec.days.length) e.push("Pick at least one day");
-      if (rec.kind === "interval" && (rec.everyX < 1 || rec.everyX > 60)) e.push("Interval must be 1–60 days");
-      if (rec.endMode === "date" && !rec.endDate) e.push("Set an end date");
-      if (rec.endMode === "nextLesson" && !nextLessonDate) e.push("No upcoming lesson found for this subject");
-      if (rec.endMode === "count" && (rec.occurrences < 1 || rec.occurrences > 200)) e.push("Occurrences must be 1–200");
+      if (rec.kind === "weekdays" && !rec.days.length) e.push(t("errors.pickOneDay"));
+      if (rec.kind === "interval" && (rec.everyX < 1 || rec.everyX > 60)) e.push(t("errors.intervalRange"));
+      if (rec.endMode === "date" && !rec.endDate) e.push(t("errors.setEndDate"));
+      if (rec.endMode === "nextLesson" && !nextLessonDate) e.push(t("errors.noUpcomingLesson"));
+      if (rec.endMode === "count" && (rec.occurrences < 1 || rec.occurrences > 200)) e.push(t("errors.occurrencesRange"));
     }
     return e;
-  }, [subjectId, linkType, itemId, collectionId, title, bpm, rec, nextLessonDate]);
+  }, [subjectId, linkType, itemId, collectionId, title, bpm, rec, nextLessonDate, t]);
 
   const save = async () => {
     if (errors.length) return;
@@ -201,7 +203,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       if (prefill?.assignmentId) {
         await db.assignments.update(prefill.assignmentId, { transformed: true, taskId: firstId });
       }
-      toast.success(recurrence ? "Recurring task created" : "Task added");
+      toast.success(recurrence ? t("toast.recurringTaskCreated") : t("toast.taskAdded"));
       onCreated?.(firstId);
       onOpenChange(false);
     } catch (err) {
@@ -213,12 +215,12 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[92vh] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
-          <SheetTitle className="font-serif text-2xl">New task</SheetTitle>
+          <SheetTitle className="font-serif text-2xl">{t("tasks.newTask")}</SheetTitle>
         </SheetHeader>
 
         <div className="space-y-5 mt-5">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Subject</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
             <Select
               value={subjectId?.toString() ?? ""}
               onValueChange={(v) => {
@@ -226,7 +228,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
                 setItemId(undefined); setSegmentIds([]); setCollectionId(undefined);
               }}
             >
-              <SelectTrigger><SelectValue placeholder="Pick a subject" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
               <SelectContent>
                 {(subjects ?? []).map((s) => (
                   <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
@@ -248,30 +250,30 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
           />
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Title</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title" />
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("common.title")}</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("tasks.taskTitle")} />
           </div>
 
           <BpmCoupler
             bpm={bpm}
             noteVal={noteVal}
             onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }}
-            label="Target tempo (optional)"
+            label={t("tasks.targetTempo")}
           />
 
           <MultiChipPicker
-            label="Layers to practice"
+            label={t("tasks.layersToPractice")}
             options={subjectLayers.map((l) => ({ value: l, label: l }))}
             value={layers}
             onChange={setLayers}
-            emptyHint="Define this subject's layers in Profile."
+            emptyHint={t("tasks.defineLayersHint")}
           />
           <MultiChipPicker
-            label="Techniques to focus"
+            label={t("tasks.techniquesToFocus")}
             options={techniqueOptions}
             value={techniqueIds}
             onChange={setTechniqueIds}
-            emptyHint="Add techniques in Profile."
+            emptyHint={t("tasks.addTechniquesHint")}
           />
 
           <RecurrenceFields state={rec} setState={setRec} nextLessonDate={nextLessonDate} />
@@ -283,9 +285,9 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
           )}
 
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
             <Button className="flex-1" disabled={errors.length > 0} onClick={save}>
-              Add task
+              {t("tasks.addTask")}
             </Button>
           </div>
         </div>

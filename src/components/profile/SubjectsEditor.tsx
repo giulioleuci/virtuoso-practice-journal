@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Subject, type SubjectType } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,14 +9,10 @@ import { Plus, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-const SUBJECT_TYPES: { val: SubjectType; label: string }[] = [
-  { val: "instrument", label: "Instrument" },
-  { val: "theory", label: "Theory" },
-  { val: "composition", label: "Composition" },
-  { val: "other", label: "Other" },
-];
+const SUBJECT_TYPE_VALS: SubjectType[] = ["instrument", "theory", "composition", "other"];
 
 export function SubjectsEditor() {
+  const { t } = useI18n();
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const techniques = useLiveQuery(() => db.techniques.toArray(), []);
 
@@ -28,7 +25,7 @@ export function SubjectsEditor() {
     const name = newName.trim();
     if (!name) return;
     if (subjects?.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
-      toast.error("Subject already exists"); return;
+      toast.error(t("errors.subjectExists")); return;
     }
     await db.subjects.add({ name, type: newType, layers: [], createdAt: Date.now() });
     setNewName("");
@@ -36,12 +33,12 @@ export function SubjectsEditor() {
 
   const removeSubject = async (s: Subject) => {
     if (!s.id) return;
-    if (!confirm(`Delete subject "${s.name}"? This will also remove its techniques.`)) return;
+    if (!confirm(t("subjects.confirmDelete", { name: s.name }))) return;
     await db.transaction("rw", db.subjects, db.techniques, async () => {
       await db.techniques.where("subjectId").equals(s.id!).delete();
       await db.subjects.delete(s.id!);
     });
-    toast.success("Subject deleted");
+    toast.success(t("toast.subjectDeleted"));
   };
 
   const addLayer = async (s: Subject) => {
@@ -64,7 +61,7 @@ export function SubjectsEditor() {
     const v = (techDraft[s.id] ?? "").trim();
     if (!v) return;
     const exists = (techniques ?? []).some(
-      (t) => t.subjectId === s.id && t.name.toLowerCase() === v.toLowerCase()
+      (tech) => tech.subjectId === s.id && tech.name.toLowerCase() === v.toLowerCase()
     );
     if (exists) return;
     await db.techniques.add({ subjectId: s.id, name: v, createdAt: Date.now() });
@@ -77,9 +74,9 @@ export function SubjectsEditor() {
 
   return (
     <section className="paper-card p-5 space-y-4">
-      <h3 className="font-serif text-xl">Subjects, layers & techniques</h3>
+      <h3 className="font-serif text-xl">{t("subjects.title")}</h3>
       <p className="text-xs text-muted-foreground italic -mt-2">
-        Layers and techniques you define here become the only options usable elsewhere.
+        {t("subjects.desc")}
       </p>
 
       <div className="paper-card p-3 flex flex-wrap gap-2 items-center">
@@ -87,7 +84,7 @@ export function SubjectsEditor() {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addSubject()}
-          placeholder="New subject (e.g. Piano)"
+          placeholder={t("subjects.new")}
           className="border-0 bg-transparent focus-visible:ring-0 flex-1 min-w-[160px]"
         />
         <select
@@ -95,7 +92,7 @@ export function SubjectsEditor() {
           onChange={(e) => setNewType(e.target.value as SubjectType)}
           className="bg-background border border-border rounded-md px-2 py-1.5 text-sm"
         >
-          {SUBJECT_TYPES.map((t) => <option key={t.val} value={t.val}>{t.label}</option>)}
+          {SUBJECT_TYPE_VALS.map((val) => <option key={val} value={val}>{t(`subjects.type.${val}`)}</option>)}
         </select>
         <Button size="icon" variant="ghost" onClick={addSubject}>
           <Plus className="h-4 w-4" />
@@ -121,25 +118,25 @@ export function SubjectsEditor() {
                 <button
                   onClick={(e) => { e.stopPropagation(); removeSubject(s); }}
                   className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-accent shrink-0"
-                  aria-label="Delete subject"
+                  aria-label={t("subjects.deleteSubject")}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
               <AccordionContent className="space-y-3 pb-3">
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Layers</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("subjects.layers")}</Label>
                   <div className="flex flex-wrap gap-1.5">
                     {(s.layers ?? []).map((l) => (
                       <span key={l} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
                         {l}
-                        <button onClick={() => removeLayer(s, l)} aria-label={`Remove ${l}`}>
+                        <button onClick={() => removeLayer(s, l)} aria-label={t("subjects.removeLayer", { name: l })}>
                           <X className="h-3 w-3" />
                         </button>
                       </span>
                     ))}
                     {!(s.layers ?? []).length && (
-                      <span className="text-xs italic text-muted-foreground">e.g. RH, LH, Both…</span>
+                      <span className="text-xs italic text-muted-foreground">{t("subjects.layersHint")}</span>
                     )}
                   </div>
                   <div className="flex gap-1.5">
@@ -147,7 +144,7 @@ export function SubjectsEditor() {
                       value={layerDraft[s.id!] ?? ""}
                       onChange={(e) => setLayerDraft((d) => ({ ...d, [s.id!]: e.target.value }))}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLayer(s))}
-                      placeholder="Add layer…"
+                      placeholder={t("subjects.addLayer")}
                       className="h-8 text-sm"
                     />
                     <Button size="sm" variant="ghost" onClick={() => addLayer(s)}>
@@ -157,18 +154,18 @@ export function SubjectsEditor() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Techniques</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("subjects.techniques")}</Label>
                   <div className="flex flex-wrap gap-1.5">
-                    {subjTechs.map((t) => (
-                      <span key={t.id} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
-                        {t.name}
-                        <button onClick={() => t.id && removeTechnique(t.id)} aria-label={`Remove ${t.name}`}>
+                    {subjTechs.map((tech) => (
+                      <span key={tech.id} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
+                        {tech.name}
+                        <button onClick={() => tech.id && removeTechnique(tech.id)} aria-label={t("subjects.removeTechnique", { name: tech.name })}>
                           <X className="h-3 w-3" />
                         </button>
                       </span>
                     ))}
                     {!subjTechs.length && (
-                      <span className="text-xs italic text-muted-foreground">e.g. legato, tremolo, with pedal…</span>
+                      <span className="text-xs italic text-muted-foreground">{t("subjects.techniquesHint")}</span>
                     )}
                   </div>
                   <div className="flex gap-1.5">
@@ -176,7 +173,7 @@ export function SubjectsEditor() {
                       value={techDraft[s.id!] ?? ""}
                       onChange={(e) => setTechDraft((d) => ({ ...d, [s.id!]: e.target.value }))}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTechnique(s))}
-                      placeholder="Add technique…"
+                      placeholder={t("subjects.addTechnique")}
                       className="h-8 text-sm"
                     />
                     <Button size="sm" variant="ghost" onClick={() => addTechnique(s)}>

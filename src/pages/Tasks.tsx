@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, deleteTaskPreservingHistory, type Task } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,7 +39,8 @@ function summarizeRecurrence(rec: NonNullable<Task["recurrence"]>): string {
 }
 
 export default function Tasks() {
-  const tasks = useLiveQuery(() => db.tasks.filter((t) => !t.deletedAt).toArray());
+  const { t } = useI18n();
+  const tasks = useLiveQuery(() => db.tasks.filter((task) => !task.deletedAt).toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
 
   const [view, setView] = useState<"occurrences" | "series">("occurrences");
@@ -55,14 +57,14 @@ export default function Tasks() {
   const filtered = useMemo(() => {
     let arr = tasks ?? [];
     if (view === "series") {
-      arr = arr.filter((t) => !!t.recurrence);
+      arr = arr.filter((task) => !!task.recurrence);
     }
-    if (filter === "active") arr = arr.filter((t) => !t.done);
-    if (filter === "done") arr = arr.filter((t) => t.done);
-    if (subjectFilter !== "all") arr = arr.filter((t) => t.subjectId === Number(subjectFilter));
+    if (filter === "active") arr = arr.filter((task) => !task.done);
+    if (filter === "done") arr = arr.filter((task) => task.done);
+    if (subjectFilter !== "all") arr = arr.filter((task) => task.subjectId === Number(subjectFilter));
     if (q.trim()) {
       const needle = q.trim().toLowerCase();
-      arr = arr.filter((t) => t.title.toLowerCase().includes(needle));
+      arr = arr.filter((task) => task.title.toLowerCase().includes(needle));
     }
     return [...arr].sort((a, b) => {
       if (a.done !== b.done) return a.done ? 1 : -1;
@@ -73,14 +75,14 @@ export default function Tasks() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const pageIds = pageItems.map((t) => t.id!).filter(Boolean);
+  const pageIds = pageItems.map((task) => task.id!).filter(Boolean);
   const allSelectedOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
 
   const subjectName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
 
-  const toggleDone = async (t: Task) => {
-    if (!t.id) return;
-    await db.tasks.update(t.id, { done: !t.done });
+  const toggleDone = async (task: Task) => {
+    if (!task.id) return;
+    await db.tasks.update(task.id, { done: !task.done });
   };
 
   const toggleSel = (id: number) => {
@@ -100,14 +102,14 @@ export default function Tasks() {
     });
   };
 
-  const askDelete = (t: Task) => {
-    setDelId(t.id ?? null);
-    setDelMode(t.recurrence || t.recurrenceTaskId ? "one" : "one");
+  const askDelete = (task: Task) => {
+    setDelId(task.id ?? null);
+    setDelMode(task.recurrence || task.recurrenceTaskId ? "one" : "one");
   };
 
   const confirmDelete = async () => {
     if (delId == null) return;
-    const target = tasks?.find((t) => t.id === delId);
+    const target = tasks?.find((task) => task.id === delId);
     if (!target) return;
     if (delMode === "series") {
       const seriesId = target.recurrence ? target.id : target.recurrenceTaskId;
@@ -123,10 +125,12 @@ export default function Tasks() {
         const mode = await deleteTaskPreservingHistory(id);
         if (mode === "soft") softCount++;
       }
-      toast.success(softCount ? `Series removed (${softCount} kept in history)` : "Series deleted");
+      toast.success(softCount
+        ? t("toast.seriesRemoved", { count: softCount })
+        : t("toast.seriesDeleted"));
     } else {
       const mode = await deleteTaskPreservingHistory(delId);
-      toast.success(mode === "soft" ? "Task archived (kept in history)" : "Task deleted");
+      toast.success(mode === "soft" ? t("toast.taskArchived") : t("toast.taskDeleted"));
     }
     setDelId(null);
   };
@@ -137,7 +141,9 @@ export default function Tasks() {
     await db.transaction("rw", db.tasks, async () => {
       for (const id of ids) await db.tasks.update(id, { done });
     });
-    toast.success(`${ids.length} task${ids.length === 1 ? "" : "s"} ${done ? "completed" : "reopened"}`);
+    toast.success(done
+      ? t("toast.tasksBulkDone", { count: ids.length })
+      : t("toast.tasksBulkReopened", { count: ids.length }));
     setSelected(new Set());
   };
 
@@ -149,7 +155,9 @@ export default function Tasks() {
       const m = await deleteTaskPreservingHistory(id);
       if (m === "soft") soft++;
     }
-    toast.success(`${ids.length} deleted${soft ? ` (${soft} kept in history)` : ""}`);
+    toast.success(soft
+      ? t("toast.tasksBulkDeleted", { count: ids.length, soft })
+      : t("toast.tasksBulkDeletedClean", { count: ids.length }));
     setSelected(new Set());
     setBulkDel(false);
   };
@@ -158,14 +166,14 @@ export default function Tasks() {
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></Link>
-        <h2 className="font-serif text-3xl flex-1">All tasks</h2>
+        <h2 className="font-serif text-3xl flex-1">{t("tasks.allTasks")}</h2>
         <span className="text-xs text-muted-foreground tabular-nums">{filtered.length}</span>
       </div>
 
       <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); setSelected(new Set()); }}>
         <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="occurrences">Occurrences</TabsTrigger>
-          <TabsTrigger value="series">Recurring series</TabsTrigger>
+          <TabsTrigger value="occurrences">{t("tasks.occurrences")}</TabsTrigger>
+          <TabsTrigger value="series">{t("tasks.recurringSeries")}</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -173,76 +181,76 @@ export default function Tasks() {
         <Select value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(0); }}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="done">Done</SelectItem>
+            <SelectItem value="all">{t("common.all")}</SelectItem>
+            <SelectItem value="active">{t("tasks.active")}</SelectItem>
+            <SelectItem value="done">{t("common.done")}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(0); }}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All subjects</SelectItem>
+            <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
             {(subjects ?? []).map((s) => (
               <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-      <Input placeholder="Search by title…" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
+      <Input placeholder={t("tasks.searchByTitle")} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
 
       {tasks === undefined ? (
         <ListSkeleton />
       ) : pageItems.length === 0 ? (
-        <p className="paper-card p-6 text-center text-muted-foreground italic">No tasks.</p>
+        <p className="paper-card p-6 text-center text-muted-foreground italic">{t("tasks.noTasks")}</p>
       ) : (
         <>
           <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
             <label className="inline-flex items-center gap-2 cursor-pointer">
               <Checkbox checked={allSelectedOnPage} onCheckedChange={togglePage} />
-              <span>{selected.size > 0 ? `${selected.size} selected` : "Select all on page"}</span>
+              <span>{selected.size > 0 ? t("common.selected", { count: selected.size }) : t("common.selectAll")}</span>
             </label>
             {selected.size > 0 && (
               <div className="flex items-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => bulkMarkDone(true)}>Mark done</Button>
-                <Button size="sm" variant="ghost" onClick={() => bulkMarkDone(false)}>Reopen</Button>
+                <Button size="sm" variant="ghost" onClick={() => bulkMarkDone(true)}>{t("tasks.markDone")}</Button>
+                <Button size="sm" variant="ghost" onClick={() => bulkMarkDone(false)}>{t("common.reopen")}</Button>
                 <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setBulkDel(true)}>
-                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("common.delete")}
                 </Button>
               </div>
             )}
           </div>
           <ul className="space-y-2">
-            {pageItems.map((t) => (
-              <li key={t.id} className="paper-card p-3 flex items-start gap-2">
+            {pageItems.map((task) => (
+              <li key={task.id} className="paper-card p-3 flex items-start gap-2">
                 <Checkbox
                   className="mt-1 shrink-0"
-                  checked={t.id ? selected.has(t.id) : false}
-                  onCheckedChange={() => t.id && toggleSel(t.id)}
-                  aria-label="Select"
+                  checked={task.id ? selected.has(task.id) : false}
+                  onCheckedChange={() => task.id && toggleSel(task.id)}
+                  aria-label={t("common.select")}
                 />
-                <button onClick={() => toggleDone(t)} className="mt-0.5 shrink-0">
-                  {t.done
+                <button onClick={() => toggleDone(task)} className="mt-0.5 shrink-0">
+                  {task.done
                     ? <CheckCircle2 className="h-5 w-5 text-primary" />
                     : <Circle className="h-5 w-5 text-muted-foreground" />}
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className={`font-medium truncate ${t.done ? "line-through opacity-70" : ""}`}>{t.title}</span>
-                    {(t.recurrence || t.recurrenceTaskId) && (
+                    <span className={`font-medium truncate ${task.done ? "line-through opacity-70" : ""}`}>{task.title}</span>
+                    {(task.recurrence || task.recurrenceTaskId) && (
                       <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground tabular-nums">
-                    {view === "series" && t.recurrence
-                      ? <>from {t.date} · {summarizeRecurrence(t.recurrence)} · {subjectName(t.subjectId)}</>
-                      : <>{t.date} · {subjectName(t.subjectId)}</>}
-                    {t.targetBpm && <> · {t.noteVal ? NOTE_GLYPH[t.noteVal] : "♩"}={t.targetBpm}</>}
+                    {view === "series" && task.recurrence
+                      ? <>{t("tasks.fromDate", { date: task.date })} · {summarizeRecurrence(task.recurrence)} · {subjectName(task.subjectId)}</>
+                      : <>{task.date} · {subjectName(task.subjectId)}</>}
+                    {task.targetBpm && <> · {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}</>}
                   </div>
                 </div>
-                <button onClick={() => setEditing(t)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
+                <button onClick={() => setEditing(task)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
                   <Pencil className="h-4 w-4" />
                 </button>
-                <button onClick={() => askDelete(t)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
+                <button onClick={() => askDelete(task)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>
@@ -268,35 +276,35 @@ export default function Tasks() {
       <AlertDialog open={delId !== null} onOpenChange={(o) => !o && setDelId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialog.deleteTask")}</AlertDialogTitle>
             <AlertDialogDescription>
               {(() => {
-                const t = tasks?.find((x) => x.id === delId);
-                if (!t) return null;
-                if (t.recurrence || t.recurrenceTaskId) {
+                const target = tasks?.find((x) => x.id === delId);
+                if (!target) return null;
+                if (target.recurrence || target.recurrenceTaskId) {
                   return (
                     <span className="block space-y-2">
-                      <span>Part of a recurring series.</span>
+                      <span>{t("tasks.partOfSeries")}</span>
                       <span className="flex gap-2 mt-2">
                         <button
                           onClick={() => setDelMode("one")}
                           className={`text-xs px-3 py-1 rounded-full border ${delMode === "one" ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}
-                        >Just this one</button>
+                        >{t("tasks.justThisOne")}</button>
                         <button
                           onClick={() => setDelMode("series")}
                           className={`text-xs px-3 py-1 rounded-full border ${delMode === "series" ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}
-                        >Entire series</button>
+                        >{t("tasks.entireSeries")}</button>
                       </span>
                     </span>
                   );
                 }
-                return "This cannot be undone.";
+                return t("tasks.cannotBeUndone");
               })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -304,14 +312,14 @@ export default function Tasks() {
       <AlertDialog open={bulkDel} onOpenChange={setBulkDel}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selected.size} task{selected.size === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialog.deleteTasksBulk", { count: selected.size })}</AlertDialogTitle>
             <AlertDialogDescription>
-              Tasks with logged sessions will be archived (kept in history). Others are removed permanently.
+              {t("dialog.deleteTasksBulkDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={bulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={bulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

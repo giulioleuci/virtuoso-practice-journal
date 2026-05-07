@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, buildLessonSnapshot, type Lesson, type LessonRecurrence } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, lesson, prefilledDate }: Props) {
+  const { t } = useI18n();
   const isEdit = !!lesson?.id;
   const subjId = lesson?.subjectId ?? recurrence?.subjectId ?? subjectId;
 
@@ -44,18 +46,18 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
 
 
   const addAssignment = () => {
-    const t = draft.trim();
-    if (!t) return;
-    setAssignments((a) => [...a, t]);
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    setAssignments((a) => [...a, trimmed]);
     setDraft("");
   };
 
   const errors = useMemo(() => {
     const e: string[] = [];
-    if (!subjId) e.push("No subject linked");
-    if (!date) e.push("Date required");
+    if (!subjId) e.push(t("errors.noSubjectLinked"));
+    if (!date) e.push(t("errors.dateRequired"));
     return e;
-  }, [subjId, date]);
+  }, [subjId, date, t]);
 
   const save = async () => {
     if (errors.length) return;
@@ -102,7 +104,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
         );
       }
     });
-    toast.success(isEdit ? "Lesson updated" : "Lesson logged");
+    toast.success(isEdit ? t("toast.lessonUpdated") : t("toast.lessonLogged"));
     onOpenChange(false);
   };
 
@@ -111,30 +113,30 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
       <SheetContent side="bottom" className="h-[92vh] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl">
-            {isEdit ? "Edit lesson" : "Log lesson"}
+            {isEdit ? t("lesson.edit") : t("lesson.log")}
           </SheetTitle>
-          {recurrence && <p className="text-sm text-muted-foreground italic">with {recurrence.teacher}</p>}
+          {recurrence && <p className="text-sm text-muted-foreground italic">{t("lesson.with", { teacher: recurrence.teacher })}</p>}
         </SheetHeader>
 
         <div className="space-y-5 mt-5">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("lesson.date")}</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Notes</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("lesson.notes")}</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
-              placeholder="What was discussed, what landed, what didn't…" />
+              placeholder={t("lesson.notesPlaceholder")} />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Assignments</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("lesson.assignments")}</Label>
             <div className="flex gap-2">
               <Input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAssignment(); } }}
-                placeholder="Practice this scale at 80…"
+                placeholder={t("lesson.assignmentPlaceholder")}
               />
               <Button type="button" onClick={addAssignment} size="icon" variant="outline">
                 <Plus className="h-4 w-4" />
@@ -165,9 +167,9 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
           )}
 
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
             <Button className="flex-1" disabled={errors.length > 0} onClick={save}>
-              {isEdit ? "Save" : "Log lesson"}
+              {isEdit ? t("common.save") : t("lesson.log")}
             </Button>
           </div>
         </div>
