@@ -2,6 +2,9 @@ import Dexie, { type Table } from "dexie";
 
 export type Lang = "en" | "it" | "es" | "de";
 export type SubjectType = "instrument" | "theory" | "composition" | "other";
+
+export const THEORY_LAYERS = ["conceptual", "analytical", "aural", "compositional"] as const;
+export type TheoryLayer = typeof THEORY_LAYERS[number];
 export type LibraryKind = "repertoire" | "manual" | "technique" | "theory";
 export type NoteVal = "half" | "quarter" | "eighth" | "sixteenth";
 export type PracticeStatus = "in_study" | "maintenance" | "pause";
@@ -141,6 +144,8 @@ export interface Session {
   notes?: string;
   layersUsed?: string[];
   techniquesUsed?: number[];
+  /** Per-layer scores 0-100 for theory sessions. */
+  layerScores?: Record<string, number>;
   /** Denormalized snapshot — the source of truth for historical display. */
   snapshot?: SessionSnapshot;
   createdAt: number;

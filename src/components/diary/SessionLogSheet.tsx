@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { db, buildSessionSnapshot, type NoteVal, type SessionQuality, type Task } from "@/lib/db";
+import { db, buildSessionSnapshot, THEORY_LAYERS, type NoteVal, type SessionQuality, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,9 @@ interface Props {
   prefill?: { bpm?: number; noteVal?: NoteVal; notes?: string };
 }
 
+const emptyLayerScores = () =>
+  Object.fromEntries(THEORY_LAYERS.map((l) => [l, 0])) as Record<string, number>;
+
 const initial = (task?: Task | null, prefill?: Props["prefill"]): SessionFieldsValue => ({
   bpm: prefill?.bpm ?? task?.targetBpm,
   noteVal: prefill?.noteVal ?? task?.noteVal,
@@ -26,6 +29,7 @@ const initial = (task?: Task | null, prefill?: Props["prefill"]): SessionFieldsV
   notes: prefill?.notes ?? "",
   layersUsed: task?.layers ?? [],
   techniquesUsed: task?.techniqueIds ?? [],
+  layerScores: emptyLayerScores(),
 });
 
 export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
@@ -39,6 +43,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     [task?.subjectId]
   );
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+
+  const isTheory = subject?.type === "theory";
 
   const layerOptions = useMemo(() => {
     const base = task?.layers?.length ? task.layers : (subject?.layers ?? []);
@@ -72,9 +78,15 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const save = async () => {
     if (!task?.id || errors.length) return;
     const now = Date.now();
+
+    // For theory sessions, derive layersUsed from dimensions with non-zero scores
+    const layersUsed = isTheory
+      ? THEORY_LAYERS.filter((l) => (v.layerScores[l] ?? 0) > 0)
+      : v.layersUsed;
+
     const snapshot = await buildSessionSnapshot({
       ...task,
-      layers: v.layersUsed,
+      layers: layersUsed,
       techniqueIds: v.techniquesUsed,
       targetBpm: v.bpm ?? task.targetBpm,
       noteVal: v.noteVal ?? task.noteVal,
@@ -83,14 +95,15 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       const sessionId = await db.sessions.add({
         taskId: task.id!,
         date: task.date,
-        bpmReached: v.bpm,
-        noteVal: v.noteVal,
-        reps: v.reps,
+        bpmReached: isTheory ? undefined : v.bpm,
+        noteVal: isTheory ? undefined : v.noteVal,
+        reps: isTheory ? undefined : v.reps,
         confidence: v.confidence,
         quality: v.quality,
         notes: v.notes.trim() || undefined,
-        layersUsed: v.layersUsed,
+        layersUsed,
         techniquesUsed: v.techniquesUsed,
+        layerScores: isTheory ? v.layerScores : undefined,
         snapshot,
         createdAt: now,
       });
@@ -124,6 +137,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
             onChange={(patch) => setV((cur) => ({ ...cur, ...patch }))}
             layerOptions={layerOptions}
             techniqueOptions={techniqueOptions}
+            isTheory={isTheory}
           />
 
           <div className="paper-card p-4 space-y-3">

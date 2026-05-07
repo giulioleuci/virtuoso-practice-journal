@@ -588,6 +588,20 @@ const dicts: Record<Lang, Dict> = {
     "toast.sessionDeleted": "Session deleted",
     "toast.pieceAdded": "Piece added",
     "toast.pieceRemoved": "Piece removed",
+
+    // Theory mastery dimensions
+    "library.mastery.label": "Mastery",
+    "library.mastery.conceptual": "Conceptual",
+    "library.mastery.conceptual.hint": "Understanding the rules",
+    "library.mastery.analytical": "Analytical",
+    "library.mastery.analytical.hint": "Recognizing on the page",
+    "library.mastery.aural": "Aural",
+    "library.mastery.aural.hint": "Hearing it",
+    "library.mastery.compositional": "Compositional",
+    "library.mastery.compositional.hint": "Writing with it",
+    "session.theoryScores": "Scores per dimension",
+    "subjects.theoryLayersFixed": "Theory subjects use 4 fixed dimensions (set from sessions).",
+    "library.masteryFromSessions": "Mastery is tracked from logged sessions.",
   },
 
   // ---------------------------------------------------------------------------
@@ -1109,6 +1123,20 @@ const dicts: Record<Lang, Dict> = {
     "toast.sessionDeleted": "Sessione eliminata",
     "toast.pieceAdded": "Brano aggiunto",
     "toast.pieceRemoved": "Brano rimosso",
+
+    // Theory mastery dimensions
+    "library.mastery.label": "Maestria",
+    "library.mastery.conceptual": "Concettuale",
+    "library.mastery.conceptual.hint": "Comprensione delle regole",
+    "library.mastery.analytical": "Analitico",
+    "library.mastery.analytical.hint": "Riconoscimento sulla pagina",
+    "library.mastery.aural": "Uditivo",
+    "library.mastery.aural.hint": "Riconoscimento uditivo",
+    "library.mastery.compositional": "Compositivo",
+    "library.mastery.compositional.hint": "Scrivere con esso",
+    "session.theoryScores": "Punteggi per dimensione",
+    "subjects.theoryLayersFixed": "Le materie teoriche usano 4 dimensioni fisse (derivate dalle sessioni).",
+    "library.masteryFromSessions": "La maestria viene registrata dalle sessioni.",
   },
 
   // ---------------------------------------------------------------------------
@@ -1630,6 +1658,20 @@ const dicts: Record<Lang, Dict> = {
     "toast.sessionDeleted": "Sesión eliminada",
     "toast.pieceAdded": "Pieza añadida",
     "toast.pieceRemoved": "Pieza eliminada",
+
+    // Theory mastery dimensions
+    "library.mastery.label": "Dominio",
+    "library.mastery.conceptual": "Conceptual",
+    "library.mastery.conceptual.hint": "Comprensión de las reglas",
+    "library.mastery.analytical": "Analítico",
+    "library.mastery.analytical.hint": "Reconocimiento en la página",
+    "library.mastery.aural": "Auditivo",
+    "library.mastery.aural.hint": "Escucharlo",
+    "library.mastery.compositional": "Compositivo",
+    "library.mastery.compositional.hint": "Escribir con ello",
+    "session.theoryScores": "Puntuaciones por dimensión",
+    "subjects.theoryLayersFixed": "Las materias de teoría usan 4 dimensiones fijas (derivadas de las sesiones).",
+    "library.masteryFromSessions": "El dominio se registra desde las sesiones.",
   },
 
   // ---------------------------------------------------------------------------
@@ -2151,6 +2193,20 @@ const dicts: Record<Lang, Dict> = {
     "toast.sessionDeleted": "Sitzung gelöscht",
     "toast.pieceAdded": "Stück hinzugefügt",
     "toast.pieceRemoved": "Stück entfernt",
+
+    // Theory mastery dimensions
+    "library.mastery.label": "Beherrschung",
+    "library.mastery.conceptual": "Konzeptuell",
+    "library.mastery.conceptual.hint": "Regeln verstehen",
+    "library.mastery.analytical": "Analytisch",
+    "library.mastery.analytical.hint": "Auf der Seite erkennen",
+    "library.mastery.aural": "Auditiv",
+    "library.mastery.aural.hint": "Es hören",
+    "library.mastery.compositional": "Kompositorisch",
+    "library.mastery.compositional.hint": "Damit schreiben",
+    "session.theoryScores": "Bewertungen pro Dimension",
+    "subjects.theoryLayersFixed": "Theoriefächer verwenden 4 feste Dimensionen (aus Sitzungen abgeleitet).",
+    "library.masteryFromSessions": "Die Beherrschung wird aus den Sitzungen erfasst.",
   },
 };
 
