@@ -39,6 +39,12 @@ export default function Diary() {
     return acc;
   }, {});
 
+  const pendingAssignments = useLiveQuery(
+    () => db.assignments.filter((a) => !a.transformed && !a.ignored).toArray(),
+    []
+  );
+  const pendingCount = pendingAssignments?.length ?? 0;
+
   const carryoverDays = profile?.carryoverDays ?? 2;
   const carryoverFrom = useMemo(() => {
     const d = new Date();
