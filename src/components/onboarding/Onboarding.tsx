@@ -11,14 +11,15 @@ interface DraftSubject { name: string; type: SubjectType }
 type PresetKey = { key: string; type: SubjectType; icon: typeof Piano };
 
 const PRESET_KEYS: PresetKey[] = [
-  { key: "piano",        type: "instrument",  icon: Piano },
-  { key: "guitar",       type: "instrument",  icon: Music },
-  { key: "violin",       type: "instrument",  icon: Music },
-  { key: "voice",        type: "instrument",  icon: Music },
-  { key: "counterpoint", type: "theory",      icon: FileText },
-  { key: "harmony",      type: "theory",      icon: FileText },
-  { key: "composition",  type: "composition", icon: BookOpen },
-  { key: "earTraining",  type: "theory",      icon: Sparkles },
+  { key: "piano",       type: "instrument", icon: Piano },
+  { key: "guitar",      type: "instrument", icon: Music },
+  { key: "flute",       type: "instrument", icon: Music },
+  { key: "violin",      type: "instrument", icon: Music },
+  { key: "singing",     type: "instrument", icon: Music },
+  { key: "harmony",     type: "theory",     icon: FileText },
+  { key: "composition", type: "theory",     icon: BookOpen },
+  { key: "earTraining", type: "theory",     icon: Sparkles },
+  { key: "history",     type: "theory",     icon: BookOpen },
 ];
 
 export default function Onboarding({ onDone }: { onDone: () => void }) {
@@ -184,8 +185,6 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               >
                 <option value="instrument">{t("subjects.type.instrument")}</option>
                 <option value="theory">{t("subjects.type.theory")}</option>
-                <option value="composition">{t("subjects.type.composition")}</option>
-                <option value="other">{t("subjects.type.other")}</option>
               </select>
               <Button size="icon" variant="ghost" onClick={addCustom}>
                 <Plus className="h-4 w-4" />

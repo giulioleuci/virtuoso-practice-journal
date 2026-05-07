@@ -9,7 +9,7 @@ import { Plus, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-const SUBJECT_TYPE_VALS: SubjectType[] = ["instrument", "theory", "composition", "other"];
+const SUBJECT_TYPE_VALS: SubjectType[] = ["instrument", "theory"];
 
 export function SubjectsEditor() {
   const { t } = useI18n();
