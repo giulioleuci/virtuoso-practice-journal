@@ -21,6 +21,7 @@ export interface Profile {
   graceDay: boolean;
   groupByPhase: boolean;
   onboarded: boolean;
+  introSeen?: boolean;
   createdAt: number;
 }
 

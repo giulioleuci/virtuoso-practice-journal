@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Download, Upload, Trash2, FlaskConical, Pencil } from "lucide-react";
+import { Download, Upload, Trash2, FlaskConical, Pencil, PlayCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -138,6 +138,16 @@ export default function Profile() {
         <Row label={t("profile.groupByPhase")}>
           <Switch checked={profile.groupByPhase} onCheckedChange={(v) => update({ groupByPhase: v })} />
         </Row>
+
+        <div className="pt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => update({ introSeen: false })}
+          >
+            <PlayCircle className="h-4 w-4 mr-2" />{t("profile.introTour")}
+          </Button>
+        </div>
       </section>
 
       <SubjectsEditor />

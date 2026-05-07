@@ -2,6 +2,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { I18nProvider } from "@/lib/i18n";
 import Onboarding from "@/components/onboarding/Onboarding";
+import IntroSlides from "@/components/onboarding/IntroSlides";
 import AppShell from "@/components/AppShell";
 import Diary from "./Diary";
 import Library from "./Library";
@@ -31,6 +32,14 @@ const Index = () => {
     return (
       <I18nProvider initial="en">
         <Onboarding onDone={() => { /* live query refreshes automatically */ }} />
+      </I18nProvider>
+    );
+  }
+
+  if (!profile.introSeen) {
+    return (
+      <I18nProvider initial={profile.lang}>
+        <IntroSlides onDone={() => db.profile.update("me", { introSeen: true })} />
       </I18nProvider>
     );
   }

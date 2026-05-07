@@ -430,6 +430,19 @@ const dicts: Record<Lang, Dict> = {
     "dialog.reopen": "Reopen",
     "dialog.deleteSession": "Delete this session?",
     "dialog.deleteSessionDesc": "This cannot be undone.",
+
+    // Intro tour slides
+    "intro.skip": "Skip intro",
+    "intro.getStarted": "Get started",
+    "intro.slide1.title": "Your practice journal",
+    "intro.slide1.body": "Log every session. Track your BPM, quality, and observations. Build a daily habit, one session at a time.",
+    "intro.slide2.title": "Your music library",
+    "intro.slide2.body": "Organize repertoire, technique exercises, manuals, and theory. Link items to tasks for precise, focused practice.",
+    "intro.slide3.title": "Your lessons",
+    "intro.slide3.body": "Set up recurring lessons, log each session with your teacher, and convert assignments into practice tasks.",
+    "intro.slide4.title": "Ready to grow",
+    "intro.slide4.body": "Study with intention, every day. Virtuoso keeps your progress visible so you can focus on what matters: the music.",
+    "profile.introTour": "Review intro tour",
   },
 
   // ---------------------------------------------------------------------------
@@ -803,6 +816,19 @@ const dicts: Record<Lang, Dict> = {
     "dialog.reopen": "Riapri",
     "dialog.deleteSession": "Eliminare questa sessione?",
     "dialog.deleteSessionDesc": "Questa azione non può essere annullata.",
+
+    // Intro tour slides
+    "intro.skip": "Salta l'intro",
+    "intro.getStarted": "Inizia",
+    "intro.slide1.title": "Il tuo diario di pratica",
+    "intro.slide1.body": "Registra ogni sessione. Monitora BPM, qualità e osservazioni. Costruisci un'abitudine quotidiana, una sessione alla volta.",
+    "intro.slide2.title": "La tua libreria musicale",
+    "intro.slide2.body": "Organizza repertorio, esercizi tecnici, manuali e teoria. Collega gli elementi agli esercizi per una pratica precisa e mirata.",
+    "intro.slide3.title": "Le tue lezioni",
+    "intro.slide3.body": "Configura lezioni ricorrenti, registra ogni incontro con il tuo insegnante e converti i compiti in esercizi di pratica.",
+    "intro.slide4.title": "Pronto a crescere",
+    "intro.slide4.body": "Studia con intenzione, ogni giorno. Virtuoso tiene i tuoi progressi in evidenza così puoi concentrarti su ciò che conta: la musica.",
+    "profile.introTour": "Rivedi il tour introduttivo",
   },
 
   // ---------------------------------------------------------------------------
@@ -1176,6 +1202,19 @@ const dicts: Record<Lang, Dict> = {
     "dialog.reopen": "Reabrir",
     "dialog.deleteSession": "¿Eliminar esta sesión?",
     "dialog.deleteSessionDesc": "Esta acción no se puede deshacer.",
+
+    // Intro tour slides
+    "intro.skip": "Saltar intro",
+    "intro.getStarted": "Empezar",
+    "intro.slide1.title": "Tu diario de práctica",
+    "intro.slide1.body": "Registra cada sesión. Sigue tu BPM, calidad y observaciones. Construye un hábito diario, una sesión a la vez.",
+    "intro.slide2.title": "Tu biblioteca musical",
+    "intro.slide2.body": "Organiza repertorio, ejercicios de técnica, manuales y teoría. Vincula elementos a tareas para una práctica precisa y enfocada.",
+    "intro.slide3.title": "Tus clases",
+    "intro.slide3.body": "Configura clases recurrentes, registra cada sesión con tu profesor y convierte las tareas en ejercicios de práctica.",
+    "intro.slide4.title": "Listo para crecer",
+    "intro.slide4.body": "Estudia con intención, cada día. Virtuoso mantiene tu progreso visible para que puedas concentrarte en lo que importa: la música.",
+    "profile.introTour": "Revisar el tour de introducción",
   },
 
   // ---------------------------------------------------------------------------
@@ -1549,6 +1588,19 @@ const dicts: Record<Lang, Dict> = {
     "dialog.reopen": "Wiedereröffnen",
     "dialog.deleteSession": "Diese Sitzung löschen?",
     "dialog.deleteSessionDesc": "Diese Aktion kann nicht rückgängig gemacht werden.",
+
+    // Intro tour slides
+    "intro.skip": "Intro überspringen",
+    "intro.getStarted": "Loslegen",
+    "intro.slide1.title": "Dein Übungstagebuch",
+    "intro.slide1.body": "Protokolliere jede Einheit. Verfolge BPM, Qualität und Beobachtungen. Baue eine tägliche Gewohnheit auf, eine Sitzung nach der anderen.",
+    "intro.slide2.title": "Deine Musikbibliothek",
+    "intro.slide2.body": "Organisiere Repertoire, Technikübungen, Handbücher und Theorie. Verknüpfe Einträge mit Aufgaben für präzises, fokussiertes Üben.",
+    "intro.slide3.title": "Deine Unterrichtsstunden",
+    "intro.slide3.body": "Richte wiederkehrende Stunden ein, protokolliere jede Sitzung mit deinem Lehrer und wandle Hausaufgaben in Übungsaufgaben um.",
+    "intro.slide4.title": "Bereit zu wachsen",
+    "intro.slide4.body": "Studiere mit Absicht, jeden Tag. Virtuoso hält deinen Fortschritt sichtbar, damit du dich auf das Wesentliche konzentrieren kannst: die Musik.",
+    "profile.introTour": "Einführungstour erneut ansehen",
   },
 };
 
