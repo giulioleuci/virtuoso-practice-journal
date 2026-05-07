@@ -94,6 +94,20 @@ export default function Diary() {
         <p className="text-sm text-muted-foreground tabular-nums mt-3">{doneCount}/{tasks?.length ?? 0} done today</p>
       </section>
 
+      {pendingCount > 0 && (
+        <Link
+          to="/lessons/assignments"
+          className="paper-card p-3 flex items-center gap-3 hover:-translate-y-0.5 transition-transform border-2 border-destructive/60 bg-destructive/5"
+        >
+          <GraduationCap className="h-4 w-4 text-destructive shrink-0" />
+          <span className="text-sm flex-1 min-w-0 break-words">
+            <span className="tabular-nums font-semibold text-destructive">{pendingCount}</span>{" "}
+            {pendingCount === 1 ? "homework assignment" : "homework assignments"} to convert
+          </span>
+          <ArrowRight className="h-4 w-4 text-destructive shrink-0" />
+        </Link>
+      )}
+
       <section>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-serif text-2xl">{t("diary.today")}</h3>
@@ -107,19 +121,6 @@ export default function Diary() {
           </div>
         </div>
 
-        {pendingCount > 0 && (
-          <Link
-            to="/lessons/assignments"
-            className="paper-card p-3 mb-3 flex items-center gap-3 hover:-translate-y-0.5 transition-transform border-2 border-destructive/60 bg-destructive/5"
-          >
-            <GraduationCap className="h-4 w-4 text-destructive shrink-0" />
-            <span className="text-sm flex-1 min-w-0 break-words">
-              <span className="tabular-nums font-semibold text-destructive">{pendingCount}</span>{" "}
-              {pendingCount === 1 ? "homework assignment" : "homework assignments"} to convert
-            </span>
-            <ArrowRight className="h-4 w-4 text-destructive shrink-0" />
-          </Link>
-        )}
 
         {tasks === undefined ? (
           <div className="space-y-2"><div className="paper-skeleton h-20" /><div className="paper-skeleton h-20" /></div>
