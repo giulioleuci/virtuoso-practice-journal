@@ -103,8 +103,7 @@ export default function Diary() {
         >
           <GraduationCap className="h-4 w-4 text-destructive shrink-0" />
           <span className="text-sm flex-1 min-w-0 break-words">
-            <span className="tabular-nums font-semibold text-destructive">{pendingCount}</span>{" "}
-            {t("diary.homework", { count: pendingCount })}
+            <span className="tabular-nums font-semibold text-destructive">{t("diary.homework", { count: pendingCount })}
           </span>
           <ArrowRight className="h-4 w-4 text-destructive shrink-0" />
         </Link>
