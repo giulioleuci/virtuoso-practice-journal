@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,14 @@ import { ChevronLeft, ChevronRight, Wand2, X, ArrowLeft } from "lucide-react";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { toast } from "sonner";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 5;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
 export default function Assignments() {
+  const navigate = useNavigate();
   const assignments = useLiveQuery(() => db.assignments.toArray());
   const lessons = useLiveQuery(() => db.lessons.toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
@@ -31,9 +32,13 @@ export default function Assignments() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Link to="/lessons" className="inline-flex items-center gap-1 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-3.5 w-3.5" /> Lessons
-        </Link>
+        <button
+          type="button"
+          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/lessons"))}
+          className="inline-flex items-center gap-1 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back
+        </button>
         <h2 className="font-serif text-3xl">Assignments to schedule</h2>
         <p className="text-sm text-muted-foreground italic">
           Convert homework from your teachers into practice tasks.
