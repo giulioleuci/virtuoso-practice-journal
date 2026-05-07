@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session, type Profile } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { Plus, CheckCircle2, Circle, ListChecks, Play, ArrowRightCircle, X, ChevronLeft, ChevronRight, RotateCcw, EyeOff } from "lucide-react";
+import { Plus, CheckCircle2, Circle, ListChecks, Play, ArrowRightCircle, X, ChevronLeft, ChevronRight, RotateCcw, EyeOff, GraduationCap, ArrowRight } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
