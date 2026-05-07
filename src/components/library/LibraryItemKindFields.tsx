@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BpmCoupler } from "./BpmCoupler";
 import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
-import { MasterySliders, type MasteryState } from "./MasterySliders";
+import { type MasteryState } from "./MasterySliders";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { cn } from "@/lib/utils";
 import type { LibraryKind, NoteVal, PracticeStatus } from "@/lib/db";
@@ -34,7 +34,11 @@ export function LibraryItemKindFields(p: Props) {
   const { t } = useI18n();
 
   if (p.kind === "theory") {
-    return <MasterySliders value={p.mastery} onChange={p.setMastery} />;
+    return (
+      <p className="text-xs text-muted-foreground italic">
+        {t("library.masteryFromSessions")}
+      </p>
+    );
   }
 
   return (

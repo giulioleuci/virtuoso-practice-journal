@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type NoteVal, type TaskLinkType } from "@/lib/db";
+import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -117,9 +117,14 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     setTitle(selectedCollection.name);
   }, [linkType, collectionId, selectedCollection]);
 
-  const subjectLayers = useMemo(
-    () => subjects?.find((s) => s.id === subjectId)?.layers ?? [],
+  const selectedSubject = useMemo(
+    () => subjects?.find((s) => s.id === subjectId),
     [subjects, subjectId]
+  );
+  const isTheorySubject = selectedSubject?.type === "theory";
+  const subjectLayers = useMemo(
+    () => isTheorySubject ? [...THEORY_LAYERS] : (selectedSubject?.layers ?? []),
+    [selectedSubject, isTheorySubject]
   );
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])
@@ -191,7 +196,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       title: title.trim(),
       targetBpm: bpm,
       noteVal,
-      layers,
+      layers: isTheorySubject ? [...THEORY_LAYERS] : layers,
       techniqueIds,
     };
     try {
@@ -261,13 +266,15 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
             label={t("tasks.targetTempo")}
           />
 
-          <MultiChipPicker
-            label={t("tasks.layersToPractice")}
-            options={subjectLayers.map((l) => ({ value: l, label: l }))}
-            value={layers}
-            onChange={setLayers}
-            emptyHint={t("tasks.defineLayersHint")}
-          />
+          {!isTheorySubject && (
+            <MultiChipPicker
+              label={t("tasks.layersToPractice")}
+              options={subjectLayers.map((l) => ({ value: l, label: l }))}
+              value={layers}
+              onChange={setLayers}
+              emptyHint={t("tasks.defineLayersHint")}
+            />
+          )}
           <MultiChipPicker
             label={t("tasks.techniquesToFocus")}
             options={techniqueOptions}

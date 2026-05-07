@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Subject, type SubjectType } from "@/lib/db";
+import { db, THEORY_LAYERS, type Subject, type SubjectType } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,31 +126,46 @@ export function SubjectsEditor() {
               <AccordionContent className="space-y-3 pb-3">
                 <div className="space-y-1.5">
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("subjects.layers")}</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(s.layers ?? []).map((l) => (
-                      <span key={l} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
-                        {l}
-                        <button onClick={() => removeLayer(s, l)} aria-label={t("subjects.removeLayer", { name: l })}>
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                    {!(s.layers ?? []).length && (
-                      <span className="text-xs italic text-muted-foreground">{t("subjects.layersHint")}</span>
-                    )}
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Input
-                      value={layerDraft[s.id!] ?? ""}
-                      onChange={(e) => setLayerDraft((d) => ({ ...d, [s.id!]: e.target.value }))}
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLayer(s))}
-                      placeholder={t("subjects.addLayer")}
-                      className="h-8 text-sm"
-                    />
-                    <Button size="sm" variant="ghost" onClick={() => addLayer(s)}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {s.type === "theory" ? (
+                    <>
+                      <div className="flex flex-wrap gap-1.5">
+                        {THEORY_LAYERS.map((l) => (
+                          <span key={l} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
+                            {t(`library.mastery.${l}`)}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-xs italic text-muted-foreground">{t("subjects.theoryLayersFixed")}</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(s.layers ?? []).map((l) => (
+                          <span key={l} className="inline-flex items-center gap-1 bg-accent px-2.5 py-1 rounded-full text-xs">
+                            {l}
+                            <button onClick={() => removeLayer(s, l)} aria-label={t("subjects.removeLayer", { name: l })}>
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                        {!(s.layers ?? []).length && (
+                          <span className="text-xs italic text-muted-foreground">{t("subjects.layersHint")}</span>
+                        )}
+                      </div>
+                      <div className="flex gap-1.5">
+                        <Input
+                          value={layerDraft[s.id!] ?? ""}
+                          onChange={(e) => setLayerDraft((d) => ({ ...d, [s.id!]: e.target.value }))}
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLayer(s))}
+                          placeholder={t("subjects.addLayer")}
+                          className="h-8 text-sm"
+                        />
+                        <Button size="sm" variant="ghost" onClick={() => addLayer(s)}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">

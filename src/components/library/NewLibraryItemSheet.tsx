@@ -249,9 +249,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       base.targetBpm = targetBpm;
       base.noteVal = noteVal;
       base.techniqueIds = techniqueIds;
-    } else if (editingKind === "theory") {
-      base.mastery = mastery;
     }
+    // theory: mastery is derived from sessions, not stored directly
 
     const segmentsPayload =
       (editingKind === "repertoire" || editingKind === "manual") && segments.length

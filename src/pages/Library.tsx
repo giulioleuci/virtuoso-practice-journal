@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, deleteLibraryItem, type LibraryKind, type LibraryItem, type Segment } from "@/lib/db";
+import { db, deleteLibraryItem, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/db";
+import type { MasteryState } from "@/components/library/MasterySliders";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, Star, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers } from "lucide-react";
+import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers } from "lucide-react";
+import { MasterySliders } from "@/components/library/MasterySliders";
+import { MasterySparkline } from "@/components/library/MasterySparkline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -296,17 +299,8 @@ export default function Library() {
                 </div>
               )}
 
-              {it.kind === "theory" && it.mastery && (
-                <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {(["conceptual","analytical","aural","compositional"] as const).map((k) => (
-                    <div key={k}>
-                      <div>{k.slice(0,4)}</div>
-                      <div className="text-foreground font-serif text-base tabular-nums">
-                        {it.mastery![k]}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {it.kind === "theory" && it.id && (
+                <TheoryMasterySection itemId={it.id} />
               )}
             </li>
           );
@@ -448,6 +442,66 @@ export default function Library() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+/** Computes the latest score per theory dimension from sessions and renders radar + sparklines. */
+function TheoryMasterySection({ itemId }: { itemId: number }) {
+  const { t } = useI18n();
+
+  const sessions = useLiveQuery(async () => {
+    const tasks = await db.tasks.where("itemId").equals(itemId).toArray();
+    const ids = tasks.map((t) => t.id!).filter(Boolean);
+    if (!ids.length) return [];
+    return db.sessions.where("taskId").anyOf(ids).toArray();
+  }, [itemId]);
+
+  const latestScores = useMemo((): MasteryState => {
+    const result: MasteryState = { conceptual: 0, analytical: 0, aural: 0, compositional: 0 };
+    if (!sessions?.length) return result;
+    // For each layer, find the session with the latest date that has a score for it
+    for (const layer of THEORY_LAYERS) {
+      const scored = sessions
+        .filter((s) => s.layerScores?.[layer] != null)
+        .sort((a, b) => b.date.localeCompare(a.date));
+      if (scored.length) result[layer] = scored[0].layerScores![layer];
+    }
+    return result;
+  }, [sessions]);
+
+  const hasAnyScore = THEORY_LAYERS.some((l) => latestScores[l] > 0);
+
+  if (!hasAnyScore) {
+    return (
+      <div className="mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground italic">
+        {t("library.masteryFromSessions")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/60">
+      <div className="flex gap-3 items-start">
+        {/* Compact radar */}
+        <div className="w-20 h-20 shrink-0">
+          <MasterySliders value={latestScores} size={80} />
+        </div>
+        {/* Per-dimension sparklines */}
+        <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-1.5">
+          {THEORY_LAYERS.map((layer) => (
+            <div key={layer} className="flex items-center gap-1.5">
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground w-10 shrink-0 truncate">
+                {t(`library.mastery.${layer}`).slice(0, 4)}
+              </div>
+              <MasterySparkline itemId={itemId} layer={layer as TheoryLayer} weeks={8} />
+              <div className="text-[10px] font-serif tabular-nums text-primary ml-auto">
+                {latestScores[layer]}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
