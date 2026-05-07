@@ -7,6 +7,7 @@ import Diary from "./Diary";
 import Library from "./Library";
 import Collections from "./Collections";
 import Lessons from "./Lessons";
+import Assignments from "./Assignments";
 import History from "./History";
 import Tasks from "./Tasks";
 import Profile from "./Profile";
@@ -42,6 +43,7 @@ const Index = () => {
           <Route path="library" element={<Library />} />
           <Route path="library/collections" element={<Collections />} />
           <Route path="lessons" element={<Lessons />} />
+          <Route path="lessons/assignments" element={<Assignments />} />
           <Route path="history" element={<History />} />
           <Route path="tasks" element={<Tasks />} />
           <Route path="profile" element={<Profile />} />
