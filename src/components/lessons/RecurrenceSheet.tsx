@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type ColorKey, type LessonRecurrence } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const COLORS: ColorKey[] = ["terracotta", "sage", "gold", "blue", "plum"];
 
 export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
+  const { t } = useI18n();
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const isEdit = !!recurrence?.id;
 
@@ -58,11 +60,11 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
 
   const errors = useMemo(() => {
     const e: string[] = [];
-    if (!subjectId) e.push("Pick a subject");
-    if (!teacher.trim()) e.push("Teacher name required");
-    if (startTime >= endTime) e.push("End time must be after start time");
+    if (!subjectId) e.push(t("errors.pickSubject"));
+    if (!teacher.trim()) e.push(t("errors.teacherRequired"));
+    if (startTime >= endTime) e.push(t("errors.endTimeAfterStart"));
     return e;
-  }, [subjectId, teacher, startTime, endTime]);
+  }, [subjectId, teacher, startTime, endTime, t]);
 
   const save = async () => {
     if (errors.length) return;
@@ -82,7 +84,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
     } else {
       await db.recurrences.add(base);
     }
-    toast.success(isEdit ? "Updated" : "Added");
+    toast.success(isEdit ? t("toast.updated") : t("toast.added"));
     onOpenChange(false);
   };
 
@@ -91,15 +93,15 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
       <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl">
-            {isEdit ? "Edit teacher" : "New teacher"}
+            {isEdit ? t("teacher.edit") : t("teacher.new")}
           </SheetTitle>
         </SheetHeader>
 
         <div className="space-y-5 mt-5">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Subject</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
             <Select value={subjectId?.toString() ?? ""} onValueChange={(v) => setSubjectId(Number(v))}>
-              <SelectTrigger><SelectValue placeholder="Pick a subject" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
               <SelectContent>
                 {(subjects ?? []).map((s) => (
                   <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
@@ -109,24 +111,24 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Teacher</Label>
-            <Input value={teacher} onChange={(e) => setTeacher(e.target.value)} placeholder="Name" />
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.teacherName")}</Label>
+            <Input value={teacher} onChange={(e) => setTeacher(e.target.value)} placeholder={t("teacher.namePlaceholder")} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Frequency</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.frequency")}</Label>
               <Select value={frequency} onValueChange={(v) => setFrequency(v as typeof frequency)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="weekly">{t("teacher.freq.weekly")}</SelectItem>
+                  <SelectItem value="biweekly">{t("teacher.freq.biweekly")}</SelectItem>
+                  <SelectItem value="monthly">{t("teacher.freq.monthly")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Day</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.day")}</Label>
               <Select value={dayOfWeek.toString()} onValueChange={(v) => setDayOfWeek(Number(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -138,22 +140,22 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Start</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.start")}</Label>
               <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">End</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.end")}</Label>
               <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Start date</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.startDate")}</Label>
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Color</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.color")}</Label>
             <div className="flex gap-2">
               {COLORS.map((c) => (
                 <button
@@ -178,9 +180,9 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
           )}
 
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
             <Button className="flex-1" disabled={errors.length > 0} onClick={save}>
-              {isEdit ? "Save" : "Add"}
+              {isEdit ? t("common.save") : t("common.add")}
             </Button>
           </div>
         </div>

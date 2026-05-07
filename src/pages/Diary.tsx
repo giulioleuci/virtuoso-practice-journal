@@ -89,9 +89,11 @@ export default function Diary() {
     <div className="space-y-6">
       <section className="paper-card p-6">
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{t("diary.today")}</p>
-        <h2 className="font-serif text-3xl">Hello, {profile?.name ?? "Musician"}</h2>
+        <h2 className="font-serif text-3xl">{t("diary.hello", { name: profile?.name ?? "Musician" })}</h2>
         <p className="text-muted-foreground italic mt-1">{dateLabel}</p>
-        <p className="text-sm text-muted-foreground tabular-nums mt-3">{doneCount}/{tasks?.length ?? 0} done today</p>
+        <p className="text-sm text-muted-foreground tabular-nums mt-3">
+          {t("diary.doneSummary", { done: doneCount, total: tasks?.length ?? 0 })}
+        </p>
       </section>
 
       {pendingCount > 0 && (
@@ -102,7 +104,7 @@ export default function Diary() {
           <GraduationCap className="h-4 w-4 text-destructive shrink-0" />
           <span className="text-sm flex-1 min-w-0 break-words">
             <span className="tabular-nums font-semibold text-destructive">{pendingCount}</span>{" "}
-            {pendingCount === 1 ? "homework assignment" : "homework assignments"} to convert
+            {t("diary.homework", { count: pendingCount })}
           </span>
           <ArrowRight className="h-4 w-4 text-destructive shrink-0" />
         </Link>
@@ -113,10 +115,10 @@ export default function Diary() {
           <h3 className="font-serif text-2xl">{t("diary.today")}</h3>
           <div className="flex items-center gap-1">
             <Link to="/tasks" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2 py-1">
-              <ListChecks className="h-4 w-4" /> All
+              <ListChecks className="h-4 w-4" /> {t("common.all")}
             </Link>
             <Button size="sm" variant="ghost" onClick={() => setNewOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> New task
+              <Plus className="h-4 w-4 mr-1" /> {t("diary.newTask")}
             </Button>
           </div>
         </div>
@@ -142,7 +144,7 @@ export default function Diary() {
                     <button
                       onClick={() => task.done && setConfirmUncomplete(task)}
                       className="mt-0.5 shrink-0"
-                      aria-label={task.done ? "Mark as not done" : "Pending"}
+                      aria-label={task.done ? t("diary.markNotDone") : t("diary.pending")}
                       disabled={!task.done}
                     >
                       {task.done ? (
@@ -166,7 +168,7 @@ export default function Diary() {
                         <div className={cn("font-medium break-words", task.done && "line-through")}>{task.title}</div>
                         {task.targetBpm && (
                           <div className="text-xs text-muted-foreground tabular-nums">
-                            Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}
+                            {t("diary.targetBpm", { note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩", bpm: task.targetBpm })}
                           </div>
                         )}
                         {last && (
@@ -182,9 +184,9 @@ export default function Diary() {
                         <button
                           onClick={() => setPracticeTask(task)}
                           className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
-                          aria-label="Start practice"
+                          aria-label={t("diary.startPractice")}
                         >
-                          <Play className="h-3.5 w-3.5" /> Start
+                          <Play className="h-3.5 w-3.5" /> {t("diary.start")}
                         </button>
                       )}
                     </div>
@@ -199,9 +201,9 @@ export default function Diary() {
       {!!carryoverTasks?.length && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-serif text-2xl">Unfinished</h3>
+            <h3 className="font-serif text-2xl">{t("diary.unfinished")}</h3>
             <span className="text-xs text-muted-foreground tabular-nums">
-              from last {carryoverDays} day{carryoverDays === 1 ? "" : "s"}
+              {t("diary.fromLastDays", { count: carryoverDays })}
             </span>
           </div>
           {(() => {
@@ -220,7 +222,7 @@ export default function Diary() {
                           <div className="text-xs text-muted-foreground tabular-nums break-words">
                             {task.date}
                             {task.targetBpm && (
-                              <> · Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}</>
+                              <> · {t("diary.targetBpm", { note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩", bpm: task.targetBpm })}</>
                             )}
                           </div>
                         </div>
@@ -231,21 +233,21 @@ export default function Diary() {
                               const { id, date, done, skipped, ...rest } = task;
                               await db.tasks.add({ ...rest, date: today, done: false, createdAt: Date.now() });
                               await db.tasks.update(id, { skipped: true });
-                              toast.success("Moved to today");
+                              toast.success(t("toast.movedToToday"));
                             }}
                             className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
-                            aria-label="Move to today"
+                            aria-label={t("diary.moveToToday")}
                           >
-                            <ArrowRightCircle className="h-3.5 w-3.5" /> Today
+                            <ArrowRightCircle className="h-3.5 w-3.5" /> {t("common.today")}
                           </button>
                           <button
                             onClick={async () => {
                               if (!task.id) return;
                               await db.tasks.update(task.id, { skipped: true });
-                              toast("Ignored");
+                              toast(t("toast.ignored"));
                             }}
                             className="ml-auto p-2 rounded-xl text-muted-foreground hover:text-destructive"
-                            aria-label="Ignore"
+                            aria-label={t("common.ignore")}
                           >
                             <X className="h-4 w-4" />
                           </button>
@@ -282,7 +284,7 @@ export default function Diary() {
               <AccordionItem value="ignored" className="border-b-0">
                 <AccordionTrigger className="text-xs uppercase tracking-widest text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
-                    <EyeOff className="h-4 w-4" /> Ignored ({total})
+                    <EyeOff className="h-4 w-4" /> {t("diary.ignored", { count: total })}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -295,7 +297,7 @@ export default function Diary() {
                             <div className="text-xs text-muted-foreground tabular-nums break-words">
                               {task.date}
                               {task.targetBpm && (
-                                <> · Target {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}</>
+                                <> · {t("diary.targetBpm", { note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩", bpm: task.targetBpm })}</>
                               )}
                             </div>
                           </div>
@@ -304,12 +306,12 @@ export default function Diary() {
                               onClick={async () => {
                                 if (!task.id) return;
                                 await db.tasks.update(task.id, { skipped: false });
-                                toast.success("Restored");
+                                toast.success(t("toast.restored"));
                               }}
                               className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
-                              aria-label="Unignore"
+                              aria-label={t("diary.unignore")}
                             >
-                              <RotateCcw className="h-3.5 w-3.5" /> Unignore
+                              <RotateCcw className="h-3.5 w-3.5" /> {t("diary.unignore")}
                             </button>
                           </div>
                         </div>
@@ -350,7 +352,7 @@ export default function Diary() {
             setLogPrefill({
               bpm,
               noteVal,
-              notes: mins > 0 ? `Practiced ${mins} min` : undefined,
+              notes: mins > 0 ? t("diary.practicedMin", { count: mins }) : undefined,
             });
             setLogTask(practiceTask);
             setPracticeTask(null);
@@ -365,26 +367,26 @@ export default function Diary() {
       <AlertDialog open={confirmUncomplete !== null} onOpenChange={(o) => { if (!o) setConfirmUncomplete(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mark as not done?</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialog.markNotDone")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will reopen the task and delete all sessions logged for it today. This cannot be undone.
+              {t("dialog.markNotDoneDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
-                const t = confirmUncomplete;
-                if (!t?.id) return;
-                const sessions = await db.sessions.where("taskId").equals(t.id).and((s) => s.date === t.date).toArray();
+                const task = confirmUncomplete;
+                if (!task?.id) return;
+                const sessions = await db.sessions.where("taskId").equals(task.id).and((s) => s.date === task.date).toArray();
                 await db.sessions.bulkDelete(sessions.map((s) => s.id!).filter(Boolean) as number[]);
-                await db.tasks.update(t.id, { done: false });
-                toast.success("Task reopened");
+                await db.tasks.update(task.id, { done: false });
+                toast.success(t("toast.taskReopened"));
                 setConfirmUncomplete(null);
               }}
             >
-              Reopen
+              {t("dialog.reopen")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -394,6 +396,7 @@ export default function Diary() {
 }
 
 function EmptyDiary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
+  const { t } = useI18n();
   const quote = useMemo(() => pickQuote(), []);
   return (
     <button
@@ -401,14 +404,14 @@ function EmptyDiary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
       className="paper-card p-8 text-center w-full hover:-translate-y-0.5 transition-transform group"
     >
       <p className="font-serif text-xl italic text-foreground/85 leading-snug">
-        “{quote.text}”
+        "{quote.text}"
       </p>
       <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
         — {quote.author}
       </p>
       <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
       <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
-        <Plus className="h-4 w-4" /> Begin a task
+        <Plus className="h-4 w-4" /> {t("diary.beginTask")}
       </span>
     </button>
   );

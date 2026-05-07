@@ -36,16 +36,16 @@ export default function Profile() {
     a.download = `virtuoso-backup-${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Exported");
+    toast.success(t("toast.exported"));
   };
 
   const onImport = async (file: File) => {
     try {
       const text = await file.text();
       await importAll(text);
-      toast.success("Imported");
+      toast.success(t("toast.imported"));
     } catch {
-      toast.error("Invalid file");
+      toast.error(t("errors.invalidFile"));
     }
   };
 
@@ -53,16 +53,16 @@ export default function Profile() {
     <div className="space-y-6">
       <section className="paper-card p-6">
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">{t("nav.profile")}</p>
-        <div className="text-xs text-muted-foreground mb-1">Name</div>
+        <div className="text-xs text-muted-foreground mb-1">{t("profile.name")}</div>
         <div className="flex items-center justify-between gap-2">
           <div id="profile-name" className="font-serif text-2xl break-words min-w-0">
-            {profile.name || <span className="italic text-muted-foreground">Unnamed</span>}
+            {profile.name || <span className="italic text-muted-foreground">{t("profile.unnamed")}</span>}
           </div>
           <Button
             type="button"
             size="icon"
             variant="ghost"
-            aria-label="Edit name"
+            aria-label={t("profile.editName")}
             onClick={() => { setNameDraft(profile.name ?? ""); setEditingName(true); }}
           >
             <Pencil className="h-4 w-4" />
@@ -73,20 +73,20 @@ export default function Profile() {
       <Dialog open={editingName} onOpenChange={setEditingName}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit name</DialogTitle>
+            <DialogTitle>{t("profile.editName")}</DialogTitle>
           </DialogHeader>
           <Input
             autoFocus
             value={nameDraft}
-            placeholder="Your name"
+            placeholder={t("onb.name.ph")}
             onChange={(e) => setNameDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); update({ name: nameDraft.trim() }).then(() => { setEditingName(false); toast.success("Name saved"); }); }
+              if (e.key === "Enter") { e.preventDefault(); update({ name: nameDraft.trim() }).then(() => { setEditingName(false); toast.success(t("toast.nameSaved")); }); }
             }}
           />
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditingName(false)}>Cancel</Button>
-            <Button onClick={async () => { await update({ name: nameDraft.trim() }); setEditingName(false); toast.success("Name saved"); }}>Save</Button>
+            <Button variant="ghost" onClick={() => setEditingName(false)}>{t("common.cancel")}</Button>
+            <Button onClick={async () => { await update({ name: nameDraft.trim() }); setEditingName(false); toast.success(t("toast.nameSaved")); }}>{t("common.save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -104,7 +104,7 @@ export default function Profile() {
           </select>
         </Row>
 
-        <Row label="Reminder">
+        <Row label={t("profile.reminder")}>
           <input
             type="time"
             value={profile.reminderTime}
@@ -113,7 +113,7 @@ export default function Profile() {
           />
         </Row>
 
-        <Row label="Late recovery (days)">
+        <Row label={t("profile.lateRecovery")}>
           <input
             type="number" min={0} max={14}
             value={profile.lateRecoveryDays}
@@ -122,7 +122,7 @@ export default function Profile() {
           />
         </Row>
 
-        <Row label="Carry over uncompleted (days)">
+        <Row label={t("profile.carryover")}>
           <input
             type="number" min={0} max={14}
             value={profile.carryoverDays ?? 2}
@@ -131,18 +131,18 @@ export default function Profile() {
           />
         </Row>
 
-        <Row label="Grace day for streak">
+        <Row label={t("profile.graceDay")}>
           <Switch checked={profile.graceDay} onCheckedChange={(v) => update({ graceDay: v })} />
         </Row>
 
-        <Row label="Group by phase">
+        <Row label={t("profile.groupByPhase")}>
           <Switch checked={profile.groupByPhase} onCheckedChange={(v) => update({ groupByPhase: v })} />
         </Row>
       </section>
 
       <SubjectsEditor />
       <section className="paper-card p-5 space-y-3">
-        <h3 className="font-serif text-xl">Data</h3>
+        <h3 className="font-serif text-xl">{t("profile.data")}</h3>
         <div className="flex flex-col gap-2">
           <Button variant="outline" onClick={onExport}><Download className="h-4 w-4 mr-2" />{t("profile.export")}</Button>
           <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4 mr-2" />{t("profile.import")}</Button>
@@ -161,10 +161,15 @@ export default function Profile() {
           </Button>
         ) : (
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Type <code className="px-1 bg-muted rounded">DELETE</code> to confirm.</p>
+            <p className="text-sm text-muted-foreground">
+              {t("profile.typeDelete").replace("DELETE", <code className="px-1 bg-muted rounded">DELETE</code> as unknown as string)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Type <code className="px-1 bg-muted rounded">DELETE</code> to confirm.
+            </p>
             <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => { setConfirming(false); setConfirmText(""); }}>Cancel</Button>
+              <Button variant="ghost" onClick={() => { setConfirming(false); setConfirmText(""); }}>{t("common.cancel")}</Button>
               <Button
                 variant="destructive"
                 disabled={confirmText !== "DELETE"}
@@ -172,7 +177,7 @@ export default function Profile() {
                   await wipeAll();
                   location.reload();
                 }}
-              >Confirm</Button>
+              >{t("common.confirm")}</Button>
             </div>
           </div>
         )}
@@ -181,23 +186,22 @@ export default function Profile() {
       <Accordion type="single" collapsible>
         <AccordionItem value="dev" className="paper-card px-5 border-0">
           <AccordionTrigger className="font-serif text-lg hover:no-underline">
-            <span className="flex items-center gap-2"><FlaskConical className="h-4 w-4" /> Developer Options</span>
+            <span className="flex items-center gap-2"><FlaskConical className="h-4 w-4" /> {t("profile.dev")}</span>
           </AccordionTrigger>
           <AccordionContent className="space-y-3 pt-2">
             <p className="text-xs text-muted-foreground italic">
-              Wipes the database and seeds it with credible sample data for an advanced piano + harmony student.
-              Task dates are computed from today.
+              {t("profile.devDesc")}
             </p>
             <Button
               variant="outline"
               onClick={async () => {
-                if (!confirm("This will erase all data and replace it with sample data. Continue?")) return;
+                if (!confirm(t("profile.sampleDataWarning"))) return;
                 await seedSampleData();
-                toast.success("Sample data created");
+                toast.success(t("toast.sampleDataCreated"));
                 setTimeout(() => location.reload(), 400);
               }}
             >
-              <FlaskConical className="h-4 w-4 mr-2" /> Create sample data
+              <FlaskConical className="h-4 w-4 mr-2" /> {t("profile.createSampleData")}
             </Button>
           </AccordionContent>
         </AccordionItem>

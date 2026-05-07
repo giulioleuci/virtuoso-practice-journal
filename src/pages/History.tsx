@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session, type Collection } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +23,7 @@ const PAGE_SIZE = 15;
 const KINDS: ("all" | LibraryKind)[] = ["all", "repertoire", "manual", "technique", "theory"];
 
 export default function History() {
+  const { t } = useI18n();
   const sessions = useLiveQuery(() => db.sessions.toArray());
   const tasks = useLiveQuery(() => db.tasks.toArray());
   const items = useLiveQuery(() => db.library.toArray());
@@ -39,31 +41,29 @@ export default function History() {
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<Session | null>(null);
 
-  // Sync URL → state when navigated with date params (e.g. from heatmap)
   useEffect(() => {
     const f = searchParams.get("from") ?? "";
-    const t = searchParams.get("to") ?? "";
+    const toVal = searchParams.get("to") ?? "";
     setFrom(f);
-    setTo(t);
+    setTo(toVal);
     setPage(0);
   }, [searchParams]);
 
-  const taskById = useMemo(() => new Map((tasks ?? []).map((t) => [t.id!, t])), [tasks]);
+  const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id!, task])), [tasks]);
   const itemById = useMemo(() => new Map((items ?? []).map((i) => [i.id!, i])), [items]);
   const segById = useMemo(() => new Map((segments ?? []).map((s) => [s.id!, s])), [segments]);
   const collectionById = useMemo(() => new Map((collections ?? []).map((c) => [c.id!, c])), [collections]);
 
-  // Sort key: chronological session date (YYYY-MM-DD), then createdAt as tiebreaker
   const sessionSortKey = (s: Session) => `${s.date}|${String(s.createdAt).padStart(16, "0")}`;
 
   const filteredSessions = useMemo(() => {
     return (sessions ?? []).filter((s) => {
       if (from && s.date < from) return false;
       if (to && s.date > to) return false;
-      const t = taskById.get(s.taskId);
-      if (subjectFilter !== "all" && t?.subjectId !== Number(subjectFilter)) return false;
+      const task = taskById.get(s.taskId);
+      if (subjectFilter !== "all" && task?.subjectId !== Number(subjectFilter)) return false;
       if (kindFilter !== "all") {
-        const it = t?.itemId ? itemById.get(t.itemId) : undefined;
+        const it = task?.itemId ? itemById.get(task.itemId) : undefined;
         if (it?.kind !== kindFilter) return false;
       }
       return true;
@@ -90,7 +90,6 @@ export default function History() {
           label = s.date;
           break;
         case "item":
-          // Collection-linked tasks group under their collection bucket
           if (collection) { key = `c:${collection.id}`; label = collection.name; sub = "Collection"; }
           else { key = `i:${item?.id ?? "none"}`; label = item?.title ?? "No item"; }
           break;
@@ -117,26 +116,26 @@ export default function History() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-serif text-3xl">History</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">{filteredSessions.length} sessions</span>
+        <h2 className="font-serif text-3xl">{t("history.title")}</h2>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {t("history.sessions", { count: filteredSessions.length })}
+        </span>
       </div>
-
-      
 
       <Tabs value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setPage(0); }}>
         <TabsList className="w-full">
-          <TabsTrigger value="day" className="flex-1">Day</TabsTrigger>
-          <TabsTrigger value="task" className="flex-1">Task</TabsTrigger>
-          <TabsTrigger value="item" className="flex-1">Item</TabsTrigger>
-          <TabsTrigger value="segment" className="flex-1">Segment</TabsTrigger>
+          <TabsTrigger value="day" className="flex-1">{t("history.groupDay")}</TabsTrigger>
+          <TabsTrigger value="task" className="flex-1">{t("history.groupTask")}</TabsTrigger>
+          <TabsTrigger value="item" className="flex-1">{t("history.groupItem")}</TabsTrigger>
+          <TabsTrigger value="segment" className="flex-1">{t("history.groupSegment")}</TabsTrigger>
         </TabsList>
       </Tabs>
 
       <div className="grid grid-cols-2 gap-2">
         <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(0); }}>
-          <SelectTrigger><SelectValue placeholder="Subject" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={t("common.subject")} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All subjects</SelectItem>
+            <SelectItem value="all">{t("history.allSubjects")}</SelectItem>
             {(subjects ?? []).map((s) => (
               <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
             ))}
@@ -145,18 +144,32 @@ export default function History() {
         <Select value={kindFilter} onValueChange={(v) => { setKindFilter(v as typeof kindFilter); setPage(0); }}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {KINDS.map((k) => <SelectItem key={k} value={k} className="capitalize">{k === "all" ? "All kinds" : k}</SelectItem>)}
+            {KINDS.map((k) => (
+              <SelectItem key={k} value={k} className="capitalize">
+                {k === "all" ? t("history.allKinds") : t(`library.kind.${k}`)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("from", e.target.value) : p.delete("from"); return p; }); }} placeholder="From" />
-        <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("to", e.target.value) : p.delete("to"); return p; }); }} placeholder="To" />
+        <Input
+          type="date"
+          value={from}
+          onChange={(e) => { setFrom(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("from", e.target.value) : p.delete("from"); return p; }); }}
+          placeholder={t("common.from")}
+        />
+        <Input
+          type="date"
+          value={to}
+          onChange={(e) => { setTo(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("to", e.target.value) : p.delete("to"); return p; }); }}
+          placeholder={t("common.to")}
+        />
       </div>
       {(from || to) && (
         <button
           onClick={() => { setFrom(""); setTo(""); setSearchParams({}); }}
           className="text-xs text-primary hover:underline"
         >
-          Clear date filter ({from || "…"} → {to || "…"})
+          {t("history.clearFilter", { from: from || "…", to: to || "…" })}
         </button>
       )}
 
@@ -164,14 +177,14 @@ export default function History() {
 
       <div className="flex justify-end">
         <Button size="sm" variant="ghost" onClick={() => setSortDir((d) => d === "newest" ? "oldest" : "newest")}>
-          <ArrowDownUp className="h-4 w-4 mr-1" /> {sortDir === "newest" ? "Newest first" : "Oldest first"}
+          <ArrowDownUp className="h-4 w-4 mr-1" /> {sortDir === "newest" ? t("history.newestFirst") : t("history.oldestFirst")}
         </Button>
       </div>
 
       {sessions === undefined ? (
         <ListSkeleton />
       ) : pageGroups.length === 0 ? (
-        <p className="paper-card p-6 text-center text-muted-foreground italic">No sessions match.</p>
+        <p className="paper-card p-6 text-center text-muted-foreground italic">{t("history.noSessionsMatch")}</p>
       ) : (
         <Accordion type="multiple" className="space-y-3">
           {pageGroups.map((g, i) => (
@@ -183,7 +196,7 @@ export default function History() {
                     {g.sub && <div className="text-xs text-muted-foreground break-words">{g.sub}</div>}
                   </div>
                   <span className="text-xs text-muted-foreground tabular-nums shrink-0 mt-1">
-                    {g.sessions.length} session{g.sessions.length === 1 ? "" : "s"}
+                    {t("history.sessions", { count: g.sessions.length })}
                   </span>
                 </div>
               </AccordionTrigger>
@@ -210,7 +223,9 @@ export default function History() {
                     );
                   })}
                   {g.sessions.length > 6 && (
-                    <li className="text-xs text-muted-foreground italic px-2">+{g.sessions.length - 6} more…</li>
+                    <li className="text-xs text-muted-foreground italic px-2">
+                      {t("history.more", { count: g.sessions.length - 6 })}
+                    </li>
                   )}
                 </ul>
               </AccordionContent>

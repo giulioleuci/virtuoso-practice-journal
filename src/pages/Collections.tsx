@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate } from "react-router-dom";
 import { db, type Collection } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, ChevronLeft, FolderOpen, Music2 } from "lucide-react";
 import {
@@ -14,6 +15,7 @@ import { AssignPiecesSheet } from "@/components/collections/AssignPiecesSheet";
 import { toast } from "sonner";
 
 export default function Collections() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const collections = useLiveQuery(
     () => db.collections.filter((c) => !c.deletedAt).toArray(),
@@ -35,7 +37,7 @@ export default function Collections() {
   const confirmDelete = async () => {
     if (!deleting?.id) return;
     await collectionsService.remove(deleting.id);
-    toast.success("Collection removed; pieces detached");
+    toast.success(t("toast.collectionRemoved"));
     setDeleting(null);
   };
 
@@ -45,14 +47,14 @@ export default function Collections() {
     <div className="space-y-5">
       <div className="flex items-center gap-2">
         <Button size="sm" variant="ghost" onClick={() => navigate("/library")} className="-ml-2">
-          <ChevronLeft className="h-4 w-4 mr-1" /> Library
+          <ChevronLeft className="h-4 w-4 mr-1" /> {t("collections.back")}
         </Button>
-        <h2 className="font-serif text-3xl ml-auto">Collections</h2>
+        <h2 className="font-serif text-3xl ml-auto">{t("collections.title")}</h2>
       </div>
 
       <div className="flex justify-end">
         <Button size="sm" variant="ghost" onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-1" /> New collection
+          <Plus className="h-4 w-4 mr-1" /> {t("collections.new")}
         </Button>
       </div>
 
@@ -61,9 +63,9 @@ export default function Collections() {
       ) : !sorted.length ? (
         <button onClick={openCreate} className="paper-card p-8 text-center w-full hover:-translate-y-0.5 transition-transform">
           <FolderOpen className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-          <p className="text-muted-foreground italic mb-2">No collections yet.</p>
+          <p className="text-muted-foreground italic mb-2">{t("collections.empty")}</p>
           <span className="inline-flex items-center gap-1 text-primary font-medium text-sm">
-            <Plus className="h-4 w-4" /> Create your first
+            <Plus className="h-4 w-4" /> {t("collections.createFirst")}
           </span>
         </button>
       ) : (
@@ -85,24 +87,24 @@ export default function Collections() {
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground tabular-nums mt-1 inline-flex items-center gap-1">
-                      <Music2 className="h-3 w-3" /> {count} piece{count === 1 ? "" : "s"}
+                      <Music2 className="h-3 w-3" /> {t("collections.pieces", { count })}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 -ml-2">
                     <Button size="sm" variant="ghost" onClick={() => setAssigning(c)}>
-                      <Music2 className="h-4 w-4 mr-1" /> Manage pieces
+                      <Music2 className="h-4 w-4 mr-1" /> {t("collections.managePieces")}
                     </Button>
                     <button
                       onClick={() => openEdit(c)}
                       className="ml-auto p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                      aria-label="Edit"
+                      aria-label={t("common.edit")}
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => setDeleting(c)}
                       className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
-                      aria-label="Delete"
+                      aria-label={t("common.delete")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -128,15 +130,15 @@ export default function Collections() {
       <AlertDialog open={deleting !== null} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this collection?</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialog.deleteCollection")}</AlertDialogTitle>
             <AlertDialogDescription>
-              The {countFor(deleting?.id)} piece{countFor(deleting?.id) === 1 ? "" : "s"} inside will be detached but kept in your library.
+              {t("dialog.deleteCollectionDesc", { count: countFor(deleting?.id) })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Detach & delete
+              {t("dialog.detachDelete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

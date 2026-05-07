@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type HelpRequest } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,11 +19,12 @@ interface Props {
 type Tab = "open" | "answered";
 
 export function TeacherRecapSheet({ open, onOpenChange }: Props) {
+  const { t } = useI18n();
   const helpRequests = useLiveQuery(() => db.helpRequests.toArray());
   const items = useLiveQuery(() => db.library.toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
   const tasks = useLiveQuery(() => db.tasks.toArray());
-  const taskById = useMemo(() => new Map((tasks ?? []).map((t) => [t.id!, t])), [tasks]);
+  const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id!, task])), [tasks]);
 
   const [tab, setTab] = useState<Tab>("open");
   const [answeringId, setAnsweringId] = useState<number | null>(null);
@@ -66,27 +68,27 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
     });
     setAnsweringId(null);
     setAnswerDraft("");
-    toast.success("Answer saved");
+    toast.success(t("toast.answerSaved"));
   };
 
   const resolve = async (id: number) => {
     await db.helpRequests.update(id, { resolved: true });
-    toast.success("Marked resolved");
+    toast.success(t("toast.markedResolved"));
   };
 
   const resolveAll = async () => {
     await db.transaction("rw", db.helpRequests, async () => {
       for (const h of list) if (h.id) await db.helpRequests.update(h.id, { resolved: true });
     });
-    toast.success("All marked resolved");
+    toast.success(t("toast.allMarkedResolved"));
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[88vh] overflow-y-auto rounded-t-3xl">
         <SheetHeader>
-          <SheetTitle className="font-serif text-2xl">Ask the Teacher</SheetTitle>
-          <SheetDescription>Open questions and recorded answers, grouped by subject.</SheetDescription>
+          <SheetTitle className="font-serif text-2xl">{t("recap.title")}</SheetTitle>
+          <SheetDescription>{t("recap.subtitle")}</SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 flex gap-1 paper-card p-1 w-fit">
@@ -98,21 +100,21 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                 "text-xs px-3 py-1.5 rounded-md capitalize",
                 tab === tk ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               )}
-            >{tk}</button>
+            >{tk === "open" ? t("recap.openTab") : t("recap.answeredTab")}</button>
           ))}
         </div>
 
         <div className="mt-4 space-y-4">
           {list.length === 0 ? (
             <p className="paper-card p-6 text-center text-muted-foreground italic">
-              {tab === "open" ? "No open questions." : "No recorded answers yet."}
+              {tab === "open" ? t("recap.noOpenQuestions") : t("recap.noAnswers")}
             </p>
           ) : (
             <>
               {tab === "open" && (
                 <div className="flex justify-end">
                   <Button size="sm" variant="ghost" onClick={resolveAll}>
-                    <CheckCircle2 className="h-4 w-4 mr-1" /> Resolve all
+                    <CheckCircle2 className="h-4 w-4 mr-1" /> {t("recap.resolveAll")}
                   </Button>
                 </div>
               )}
@@ -140,7 +142,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                                 onClick={() => onOpenChange(false)}
                                 className="text-xs text-primary hover:underline inline-flex items-center gap-0.5"
                               >
-                                Open in library <ChevronRight className="h-3 w-3" />
+                                {t("recap.openInLibrary")} <ChevronRight className="h-3 w-3" />
                               </Link>
                             </div>
                           )}
@@ -182,11 +184,11 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                                         rows={3}
                                         value={answerDraft}
                                         onChange={(e) => setAnswerDraft(e.target.value)}
-                                        placeholder="Teacher said…"
+                                        placeholder={t("recap.answerPlaceholder")}
                                       />
                                       <div className="flex gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => setAnsweringId(null)}>Cancel</Button>
-                                        <Button size="sm" onClick={() => r.id && saveAnswer(r.id)}>Save answer</Button>
+                                        <Button size="sm" variant="outline" onClick={() => setAnsweringId(null)}>{t("common.cancel")}</Button>
+                                        <Button size="sm" onClick={() => r.id && saveAnswer(r.id)}>{t("recap.saveAnswer")}</Button>
                                       </div>
                                     </div>
                                   )}
@@ -197,22 +199,22 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                                         onClick={() => startAnswer(r)}
                                         className="text-xs text-primary hover:underline"
                                       >
-                                        {r.answer ? "Edit answer" : "Record answer"}
+                                        {r.answer ? t("recap.editAnswer") : t("recap.recordAnswer")}
                                       </button>
                                       {!r.resolved && (
                                         <button
                                           onClick={() => r.id && resolve(r.id)}
                                           className="text-xs text-muted-foreground hover:text-primary"
-                                        >Resolve</button>
+                                        >{t("recap.resolve")}</button>
                                       )}
                                       {task && (
                                         <Link
                                           to={`/history?from=${task.date}&to=${task.date}`}
                                           onClick={() => onOpenChange(false)}
-                                          title="View task history"
+                                          title={t("common.history")}
                                           className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
                                         >
-                                          <HistoryIcon className="h-3.5 w-3.5" /> History
+                                          <HistoryIcon className="h-3.5 w-3.5" /> {t("recap.viewHistory")}
                                         </Link>
                                       )}
                                     </div>
