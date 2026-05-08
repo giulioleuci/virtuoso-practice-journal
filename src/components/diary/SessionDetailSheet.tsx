@@ -199,21 +199,39 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   </div>
                 )}
                 {(session.layersUsed?.length || session.techniquesUsed?.length) ? (
-                  <div className="paper-card p-3 space-y-2 text-xs">
+                  <div className="paper-card p-3 space-y-3 text-xs">
                     {!!session.layersUsed?.length && (
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("session.layersLabel")}</div>
-                        <div className="flex flex-wrap gap-1.5">{session.layersUsed.map((l) => (
-                          <span key={l} className="px-2 py-0.5 rounded-full bg-accent/60">{l}</span>
-                        ))}</div>
+                      <div className="space-y-1.5">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.layersLabel")}</div>
+                        <div className="flex flex-wrap gap-1.5">{session.layersUsed.map((l) => {
+                          const score = session.layerScores?.[l];
+                          const label = isTheory ? t(`library.mastery.${l}`) : l;
+                          return (
+                            <span key={l} className="px-2 py-0.5 rounded-full bg-accent/60 inline-flex items-center gap-1">
+                              <span>{label}</span>
+                              {score != null && (
+                                <span className="tabular-nums text-primary font-medium">{score}<span className="text-muted-foreground">/100</span></span>
+                              )}
+                            </span>
+                          );
+                        })}</div>
                       </div>
                     )}
                     {!!session.techniquesUsed?.length && (
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("session.techniquesLabel")}</div>
+                      <div className="space-y-1.5">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.techniquesLabel")}</div>
                         <div className="flex flex-wrap gap-1.5">{session.techniquesUsed.map((id) => {
                           const n = (allTechniques ?? []).find((tech) => tech.id === id)?.name;
-                          return n ? <span key={id} className="px-2 py-0.5 rounded-full bg-accent/60">{n}</span> : null;
+                          if (!n) return null;
+                          const score = session.techniqueScores?.[id];
+                          return (
+                            <span key={id} className="px-2 py-0.5 rounded-full bg-accent/60 inline-flex items-center gap-1">
+                              <span>{n}</span>
+                              {score != null && (
+                                <span className="tabular-nums text-primary font-medium">{score}<span className="text-muted-foreground">/100</span></span>
+                              )}
+                            </span>
+                          );
                         })}</div>
                       </div>
                     )}
