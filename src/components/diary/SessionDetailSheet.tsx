@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type NoteVal, type Session, type SessionQuality } from "@/lib/db";
+import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,10 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     [task?.subjectId]
   );
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
-  const layerOptions = (subject?.layers ?? []).map((l) => ({ value: l, label: l }));
+  const isTheory = subject?.type === "theory";
+  const layerOptions = isTheory
+    ? THEORY_LAYERS.map((l) => ({ value: l, label: t(`library.mastery.${l}`) }))
+    : (subject?.layers ?? []).map((l) => ({ value: l, label: l }));
   const techniqueOptions = (allTechniques ?? [])
     .filter((t) => t.subjectId === task?.subjectId)
     .map((t) => ({ value: t.id!, label: t.name }));
@@ -164,7 +167,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   </div>
                   <div>
                     <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.qualityFieldLabel")}</dt>
-                    <dd className="capitalize">{session.quality ?? "—"}</dd>
+                    <dd>{session.quality ? t(`session.quality${session.quality.charAt(0).toUpperCase() + session.quality.slice(1)}`) : "—"}</dd>
                   </div>
                   <div>
                     <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.bpmLabel")}</dt>
@@ -231,6 +234,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                   onChange={(patch) => setV((cur) => ({ ...cur, ...patch }))}
                   layerOptions={layerOptions}
                   techniqueOptions={techniqueOptions}
+                  isTheory={isTheory}
                 />
 
                 {errors.length > 0 && (

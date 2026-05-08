@@ -458,7 +458,7 @@ function TheoryMasterySection({ itemId }: { itemId: number }) {
   }, [itemId]);
 
   const latestScores = useMemo((): MasteryState => {
-    const result: MasteryState = { conceptual: 0, analytical: 0, aural: 0, compositional: 0 };
+    const result: MasteryState = { conceptual: 0, analytical: 0, aural: 0, compositional: 0, reading: 0 };
     if (!sessions?.length) return result;
     // For each layer, find the session with the latest date that has a score for it
     for (const layer of THEORY_LAYERS) {

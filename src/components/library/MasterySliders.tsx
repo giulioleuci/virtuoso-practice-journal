@@ -6,6 +6,7 @@ export interface MasteryState {
   analytical: number;
   aural: number;
   compositional: number;
+  reading: number;
 }
 
 interface Props {
