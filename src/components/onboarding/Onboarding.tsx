@@ -170,7 +170,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               </div>
             )}
 
-            <div className="paper-card p-3 flex gap-2 items-center">
+            <div className="paper-card p-3 flex flex-col gap-2">
               <Input
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
@@ -178,17 +178,19 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                 placeholder={t("onb.subjects.custom")}
                 className="border-0 bg-transparent focus-visible:ring-0"
               />
-              <select
-                value={customType}
-                onChange={(e) => setCustomType(e.target.value as SubjectType)}
-                className="bg-background border border-border rounded-md px-2 py-1.5 text-sm"
-              >
-                <option value="instrument">{t("subjects.type.instrument")}</option>
-                <option value="theory">{t("subjects.type.theory")}</option>
-              </select>
-              <Button size="icon" variant="ghost" onClick={addCustom}>
-                <Plus className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2 items-center">
+                <select
+                  value={customType}
+                  onChange={(e) => setCustomType(e.target.value as SubjectType)}
+                  className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-sm"
+                >
+                  <option value="instrument">{t("subjects.type.instrument")}</option>
+                  <option value="theory">{t("subjects.type.theory")}</option>
+                </select>
+                <Button size="icon" variant="ghost" onClick={addCustom}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </section>
         )}
