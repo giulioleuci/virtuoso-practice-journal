@@ -27,6 +27,7 @@ const initial = (task?: Task | null, prefill?: Props["prefill"]): SessionFieldsV
   layersUsed: task?.layers ?? [],
   techniquesUsed: task?.techniqueIds ?? [],
   layerScores: {},
+  techniqueScores: {},
 });
 
 export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
@@ -81,9 +82,12 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     const now = Date.now();
 
     const layersUsed = v.layersUsed;
-    // Save only scores for layers that were actually practiced
     const layerScores = layersUsed.length > 0
       ? Object.fromEntries(layersUsed.map((l) => [l, v.layerScores[l] ?? 0]))
+      : undefined;
+    const techniquesUsed = v.techniquesUsed;
+    const techniqueScores = techniquesUsed.length > 0
+      ? Object.fromEntries(techniquesUsed.map((id) => [id, v.techniqueScores[id] ?? 0]))
       : undefined;
 
     const snapshot = await buildSessionSnapshot({
@@ -104,8 +108,9 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
         quality: v.quality,
         notes: v.notes.trim() || undefined,
         layersUsed,
-        techniquesUsed: v.techniquesUsed,
+        techniquesUsed,
         layerScores,
+        techniqueScores,
         snapshot,
         createdAt: now,
       });

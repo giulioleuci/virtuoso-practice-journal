@@ -520,6 +520,7 @@
   "library.mastery.reading.hint": "Lettura note, canto a prima vista",
   "session.theoryScores": "Punteggi per dimensione",
   "session.layerScores": "Punteggi per livello",
+  "session.techniqueScores": "Punteggi per tecnica",
   "subjects.theoryLayersFixed": "Le materie teoriche usano 5 dimensioni fisse (derivate dalle sessioni).",
   "library.masteryFromSessions": "La maestria viene registrata dalle sessioni."
 }
