@@ -2,7 +2,7 @@
 import { z } from "zod";
 
 export const noteValSchema = z.enum(["half", "quarter", "eighth", "sixteenth"]);
-export const sessionQualitySchema = z.enum(["hard", "well", "great"]);
+export const sessionQualitySchema = z.enum(["hard", "improve", "well", "great"]);
 export const bpmSchema = z.number().int().min(20).max(400);
 export const repsSchema = z.number().int().min(0).max(9999);
 export const confidenceSchema = z.number().int().min(1).max(5);

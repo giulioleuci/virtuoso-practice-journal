@@ -486,8 +486,9 @@
   "session.confidenceLabel": "Sicurezza",
   "session.qualityLabel": "Com'è andata?",
   "session.qualityHard": "Difficile",
+  "session.qualityImprove": "Da migliorare",
   "session.qualityWell": "Bene",
-  "session.qualityGreat": "Ottimo",
+  "session.qualityGreat": "Eccellente",
   "session.techniquesPracticed": "Tecniche praticate",
   "session.sessionTitle": "Sessione",
   "session.snapshotLabel": "Snapshot",
@@ -515,7 +516,10 @@
   "library.mastery.aural.hint": "Riconoscimento uditivo",
   "library.mastery.compositional": "Compositivo",
   "library.mastery.compositional.hint": "Scrivere con esso",
+  "library.mastery.reading": "Lettura",
+  "library.mastery.reading.hint": "Lettura note, canto a prima vista",
   "session.theoryScores": "Punteggi per dimensione",
-  "subjects.theoryLayersFixed": "Le materie teoriche usano 4 dimensioni fisse (derivate dalle sessioni).",
+  "session.layerScores": "Punteggi per livello",
+  "subjects.theoryLayersFixed": "Le materie teoriche usano 5 dimensioni fisse (derivate dalle sessioni).",
   "library.masteryFromSessions": "La maestria viene registrata dalle sessioni."
 }

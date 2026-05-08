@@ -3,12 +3,12 @@ import Dexie, { type Table } from "dexie";
 export type Lang = "en" | "it" | "es" | "de";
 export type SubjectType = "instrument" | "theory" | "composition" | "other";
 
-export const THEORY_LAYERS = ["conceptual", "analytical", "aural", "compositional"] as const;
+export const THEORY_LAYERS = ["conceptual", "analytical", "aural", "compositional", "reading"] as const;
 export type TheoryLayer = typeof THEORY_LAYERS[number];
 export type LibraryKind = "repertoire" | "manual" | "technique" | "theory";
 export type NoteVal = "half" | "quarter" | "eighth" | "sixteenth";
 export type PracticeStatus = "in_study" | "maintenance" | "pause";
-export type SessionQuality = "hard" | "well" | "great";
+export type SessionQuality = "hard" | "improve" | "well" | "great";
 export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum";
 export type ReminderFreq = "daily" | "weekdays" | "custom";
 
@@ -58,7 +58,7 @@ export interface LibraryItem {
   techniqueIds?: number[];
   totalExercises?: number;
   currentExercise?: number;
-  mastery?: { conceptual: number; analytical: number; aural: number; compositional: number };
+  mastery?: { conceptual: number; analytical: number; aural: number; compositional: number; reading?: number };
   tags?: string[];
   createdAt: number;
   deletedAt?: number;

@@ -486,6 +486,7 @@
   "session.confidenceLabel": "Confianza",
   "session.qualityLabel": "¿Cómo fue?",
   "session.qualityHard": "Difícil",
+  "session.qualityImprove": "A mejorar",
   "session.qualityWell": "Bien",
   "session.qualityGreat": "Excelente",
   "session.techniquesPracticed": "Técnicas practicadas",
@@ -515,7 +516,10 @@
   "library.mastery.aural.hint": "Escucharlo",
   "library.mastery.compositional": "Compositivo",
   "library.mastery.compositional.hint": "Escribir con ello",
+  "library.mastery.reading": "Lectura",
+  "library.mastery.reading.hint": "Lectura de notas, canto a primera vista",
   "session.theoryScores": "Puntuaciones por dimensión",
-  "subjects.theoryLayersFixed": "Las materias de teoría usan 4 dimensiones fijas (derivadas de las sesiones).",
+  "session.layerScores": "Puntuaciones por capa",
+  "subjects.theoryLayersFixed": "Las materias de teoría usan 5 dimensiones fijas (derivadas de las sesiones).",
   "library.masteryFromSessions": "El dominio se registra desde las sesiones."
 }

@@ -41,6 +41,7 @@ const emptyMastery: MasteryState = {
   analytical: 0,
   aural: 0,
   compositional: 0,
+  reading: 0,
 };
 
 const BPM_MIN = 20;

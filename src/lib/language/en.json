@@ -486,8 +486,9 @@
   "session.confidenceLabel": "Confidence",
   "session.qualityLabel": "How did it go?",
   "session.qualityHard": "Hard",
+  "session.qualityImprove": "To improve",
   "session.qualityWell": "Well",
-  "session.qualityGreat": "Great",
+  "session.qualityGreat": "Excellent",
   "session.techniquesPracticed": "Techniques practiced",
   "session.sessionTitle": "Session",
   "session.snapshotLabel": "Snapshot",
@@ -515,7 +516,10 @@
   "library.mastery.aural.hint": "Hearing it",
   "library.mastery.compositional": "Compositional",
   "library.mastery.compositional.hint": "Writing with it",
+  "library.mastery.reading": "Reading",
+  "library.mastery.reading.hint": "Reading notes, singing at sight",
   "session.theoryScores": "Scores per dimension",
-  "subjects.theoryLayersFixed": "Theory subjects use 4 fixed dimensions (set from sessions).",
+  "session.layerScores": "Layer scores",
+  "subjects.theoryLayersFixed": "Theory subjects use 5 fixed dimensions (set from sessions).",
   "library.masteryFromSessions": "Mastery is tracked from logged sessions."
 }

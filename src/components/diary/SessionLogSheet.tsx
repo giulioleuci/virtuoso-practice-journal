@@ -17,9 +17,6 @@ interface Props {
   prefill?: { bpm?: number; noteVal?: NoteVal; notes?: string };
 }
 
-const emptyLayerScores = () =>
-  Object.fromEntries(THEORY_LAYERS.map((l) => [l, 0])) as Record<string, number>;
-
 const initial = (task?: Task | null, prefill?: Props["prefill"]): SessionFieldsValue => ({
   bpm: prefill?.bpm ?? task?.targetBpm,
   noteVal: prefill?.noteVal ?? task?.noteVal,
@@ -29,7 +26,7 @@ const initial = (task?: Task | null, prefill?: Props["prefill"]): SessionFieldsV
   notes: prefill?.notes ?? "",
   layersUsed: task?.layers ?? [],
   techniquesUsed: task?.techniqueIds ?? [],
-  layerScores: emptyLayerScores(),
+  layerScores: {},
 });
 
 export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
@@ -47,9 +44,13 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const isTheory = subject?.type === "theory";
 
   const layerOptions = useMemo(() => {
+    if (isTheory) {
+      return THEORY_LAYERS.map((l) => ({ value: l, label: t(`library.mastery.${l}`) }));
+    }
     const base = task?.layers?.length ? task.layers : (subject?.layers ?? []);
     return base.map((l) => ({ value: l, label: l }));
-  }, [task, subject]);
+  }, [task, subject, isTheory, t]);
+
   const techniqueOptions = useMemo(() => {
     const ids = task?.techniqueIds && task.techniqueIds.length ? task.techniqueIds : null;
     const all = (allTechniques ?? []).filter((t) => t.subjectId === task?.subjectId);
@@ -79,10 +80,11 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     if (!task?.id || errors.length) return;
     const now = Date.now();
 
-    // For theory sessions, derive layersUsed from dimensions with non-zero scores
-    const layersUsed = isTheory
-      ? THEORY_LAYERS.filter((l) => (v.layerScores[l] ?? 0) > 0)
-      : v.layersUsed;
+    const layersUsed = v.layersUsed;
+    // Save only scores for layers that were actually practiced
+    const layerScores = layersUsed.length > 0
+      ? Object.fromEntries(layersUsed.map((l) => [l, v.layerScores[l] ?? 0]))
+      : undefined;
 
     const snapshot = await buildSessionSnapshot({
       ...task,
@@ -103,7 +105,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
         notes: v.notes.trim() || undefined,
         layersUsed,
         techniquesUsed: v.techniquesUsed,
-        layerScores: isTheory ? v.layerScores : undefined,
+        layerScores,
         snapshot,
         createdAt: now,
       });

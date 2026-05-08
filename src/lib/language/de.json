@@ -486,8 +486,9 @@
   "session.confidenceLabel": "Sicherheit",
   "session.qualityLabel": "Wie lief es?",
   "session.qualityHard": "Schwer",
+  "session.qualityImprove": "Zu verbessern",
   "session.qualityWell": "Gut",
-  "session.qualityGreat": "Großartig",
+  "session.qualityGreat": "Ausgezeichnet",
   "session.techniquesPracticed": "Geübte Techniken",
   "session.sessionTitle": "Sitzung",
   "session.snapshotLabel": "Snapshot",
@@ -515,7 +516,10 @@
   "library.mastery.aural.hint": "Es hören",
   "library.mastery.compositional": "Kompositorisch",
   "library.mastery.compositional.hint": "Damit schreiben",
+  "library.mastery.reading": "Lesen",
+  "library.mastery.reading.hint": "Noten lesen, Blattsingen",
   "session.theoryScores": "Bewertungen pro Dimension",
-  "subjects.theoryLayersFixed": "Theoriefächer verwenden 4 feste Dimensionen (aus Sitzungen abgeleitet).",
+  "session.layerScores": "Bewertungen pro Ebene",
+  "subjects.theoryLayersFixed": "Theoriefächer verwenden 5 feste Dimensionen (aus Sitzungen abgeleitet).",
   "library.masteryFromSessions": "Die Beherrschung wird aus den Sitzungen erfasst."
 }
