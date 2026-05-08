@@ -19,6 +19,7 @@ const PRESET_KEYS: PresetKey[] = [
   { key: "harmony",     type: "theory",     icon: FileText },
   { key: "composition", type: "theory",     icon: BookOpen },
   { key: "earTraining", type: "theory",     icon: Sparkles },
+  { key: "solfeggio",   type: "theory",     icon: Music },
   { key: "history",     type: "theory",     icon: BookOpen },
 ];
 
