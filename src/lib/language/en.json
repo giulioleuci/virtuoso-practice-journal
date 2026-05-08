@@ -520,6 +520,7 @@
   "library.mastery.reading.hint": "Reading notes, singing at sight",
   "session.theoryScores": "Scores per dimension",
   "session.layerScores": "Layer scores",
+  "session.techniqueScores": "Technique scores",
   "subjects.theoryLayersFixed": "Theory subjects use 5 fixed dimensions (set from sessions).",
   "library.masteryFromSessions": "Mastery is tracked from logged sessions."
 }

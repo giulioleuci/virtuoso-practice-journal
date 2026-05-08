@@ -146,6 +146,8 @@ export interface Session {
   techniquesUsed?: number[];
   /** Per-layer scores 0-100 for theory sessions. */
   layerScores?: Record<string, number>;
+  /** Per-technique scores 0-100. */
+  techniqueScores?: Record<number, number>;
   /** Denormalized snapshot — the source of truth for historical display. */
   snapshot?: SessionSnapshot;
   createdAt: number;

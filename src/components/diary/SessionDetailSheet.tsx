@@ -31,6 +31,7 @@ const initial = (s?: Session | null): SessionFieldsValue => ({
   layersUsed: s?.layersUsed ?? [],
   techniquesUsed: s?.techniquesUsed ?? [],
   layerScores: s?.layerScores ?? {},
+  techniqueScores: s?.techniqueScores ?? {},
 });
 
 export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
@@ -88,10 +89,14 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
 
   const save = async () => {
     if (!session?.id || errors.length) return;
+    const techniquesUsed = v.techniquesUsed;
+    const techniqueScores = techniquesUsed.length > 0
+      ? Object.fromEntries(techniquesUsed.map((id) => [id, v.techniqueScores[id] ?? 0]))
+      : undefined;
     await db.sessions.update(session.id, {
       date, bpmReached: v.bpm, noteVal: v.noteVal, quality: v.quality,
       notes: v.notes.trim() || undefined,
-      layersUsed: v.layersUsed, techniquesUsed: v.techniquesUsed,
+      layersUsed: v.layersUsed, techniquesUsed, techniqueScores,
       reps: v.reps, confidence: v.confidence,
     });
     toast.success(t("toast.sessionUpdated"));

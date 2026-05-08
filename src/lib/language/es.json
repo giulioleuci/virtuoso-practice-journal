@@ -520,6 +520,7 @@
   "library.mastery.reading.hint": "Lectura de notas, canto a primera vista",
   "session.theoryScores": "Puntuaciones por dimensión",
   "session.layerScores": "Puntuaciones por capa",
+  "session.techniqueScores": "Puntuaciones por técnica",
   "subjects.theoryLayersFixed": "Las materias de teoría usan 5 dimensiones fijas (derivadas de las sesiones).",
   "library.masteryFromSessions": "El dominio se registra desde las sesiones."
 }

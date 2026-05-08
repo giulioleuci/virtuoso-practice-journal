@@ -29,6 +29,7 @@ export interface SessionFieldsValue {
   layersUsed: string[];
   techniquesUsed: number[];
   layerScores: Record<string, number>;
+  techniqueScores: Record<number, number>;
 }
 
 interface Props {
@@ -140,6 +141,47 @@ export function SessionFields({
         onChange={(v) => onChange({ techniquesUsed: v })}
         emptyHint={techniqueEmptyHint}
       />
+
+      {/* Technique scores accordion — collapsed by default, shown when techniques are selected */}
+      {value.techniquesUsed.length > 0 && (
+        <Accordion type="single" collapsible className="paper-card overflow-hidden">
+          <AccordionItem value="technique-scores" className="border-none">
+            <AccordionTrigger className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground hover:no-underline hover:text-foreground">
+              {t("session.techniqueScores")}
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <div className="space-y-4 pt-1">
+                {value.techniquesUsed.map((id) => {
+                  const label = techniqueOptions.find((o) => o.value === id)?.label ?? String(id);
+                  const score = value.techniqueScores[id] ?? 0;
+                  return (
+                    <div key={id} className="space-y-2">
+                      <div className="flex items-baseline justify-between">
+                        <div className="font-medium text-sm">{label}</div>
+                        <div className="font-serif text-lg tabular-nums text-primary">
+                          {score}
+                          <span className="text-xs text-muted-foreground">/100</span>
+                        </div>
+                      </div>
+                      <Slider
+                        value={[score]}
+                        min={0}
+                        max={100}
+                        step={5}
+                        onValueChange={(v) =>
+                          onChange({
+                            techniqueScores: { ...value.techniqueScores, [id]: v[0] },
+                          })
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      )}
 
       {/* 4-level quality rating using musical notation symbols */}
       <div className="space-y-2">
