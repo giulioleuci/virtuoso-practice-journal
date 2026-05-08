@@ -30,6 +30,7 @@ const initial = (s?: Session | null): SessionFieldsValue => ({
   notes: s?.notes ?? "",
   layersUsed: s?.layersUsed ?? [],
   techniquesUsed: s?.techniquesUsed ?? [],
+  layerScores: s?.layerScores ?? {},
 });
 
 export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
