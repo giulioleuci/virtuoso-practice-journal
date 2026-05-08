@@ -128,7 +128,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setTechniqueIds(item.techniqueIds ?? []);
       setTotalExercises(item.totalExercises);
       setCurrentExercise(item.currentExercise ?? 1);
-      setMastery(item.mastery ?? emptyMastery);
+      setMastery({ ...emptyMastery, ...(item.mastery ?? {}) });
     }
     if (open && !isEdit) setCollectionIds([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
