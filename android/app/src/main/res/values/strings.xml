@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Virtuoso</string>
+    <string name="title_activity_main">Virtuoso</string>
+    <string name="package_name">com.virtuoso.practicejournal</string>
+    <string name="custom_url_scheme">com.virtuoso.practicejournal</string>
+</resources>
