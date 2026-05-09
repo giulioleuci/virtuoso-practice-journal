@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type TheoryLayer } from "@/lib/db";
+import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useI18n } from "@/lib/i18n";
 import { Activity } from "lucide-react";
@@ -31,7 +31,7 @@ export function ItemAnalysisSheet({ open, onOpenChange, item }: Props) {
   const techniques = useLiveQuery(() => db.techniques.toArray(), []);
 
   const tasksById = useMemo(() => {
-    const m = new Map<number, typeof tasks extends (infer U)[] | undefined ? U : never>();
+    const m = new Map<number, Task>();
     (tasks ?? []).forEach((tk) => tk.id && m.set(tk.id, tk));
     return m;
   }, [tasks]);
