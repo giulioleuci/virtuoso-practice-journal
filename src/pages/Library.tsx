@@ -6,7 +6,8 @@ import { db, deleteLibraryItem, THEORY_LAYERS, type LibraryKind, type LibraryIte
 import type { MasteryState } from "@/components/library/MasterySliders";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers } from "lucide-react";
+import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart } from "lucide-react";
+import { ItemAnalysisSheet } from "@/components/library/ItemAnalysisSheet";
 import { MasterySliders } from "@/components/library/MasterySliders";
 import { MasterySparkline } from "@/components/library/MasterySparkline";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ export default function Library() {
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
+  const [analysisItem, setAnalysisItem] = useState<LibraryItem | null>(null);
   const [search, setSearch] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
@@ -226,6 +228,9 @@ export default function Library() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => openEdit(it)}>
                         <Pencil className="h-4 w-4 mr-2" /> {t("common.edit")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setAnalysisItem(it)}>
+                        <LineChart className="h-4 w-4 mr-2" /> {t("library.analysis.menu")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => it.id && setDeletingId(it.id)}
@@ -423,6 +428,14 @@ export default function Library() {
           onOpenChange={(o) => !o && setHelpItem(null)}
           itemId={helpItem.id!}
           itemTitle={helpItem.title}
+        />
+      )}
+
+      {analysisItem && (
+        <ItemAnalysisSheet
+          open={analysisItem !== null}
+          onOpenChange={(o) => !o && setAnalysisItem(null)}
+          item={analysisItem}
         />
       )}
 
