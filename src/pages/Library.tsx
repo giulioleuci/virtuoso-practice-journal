@@ -229,6 +229,9 @@ export default function Library() {
                       <DropdownMenuItem onClick={() => openEdit(it)}>
                         <Pencil className="h-4 w-4 mr-2" /> {t("common.edit")}
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setAnalysisItem(it)}>
+                        <LineChart className="h-4 w-4 mr-2" /> {t("library.analysis.menu")}
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => it.id && setDeletingId(it.id)}
                         className="text-destructive focus:text-destructive"
