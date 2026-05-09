@@ -431,6 +431,14 @@ export default function Library() {
         />
       )}
 
+      {analysisItem && (
+        <ItemAnalysisSheet
+          open={analysisItem !== null}
+          onOpenChange={(o) => !o && setAnalysisItem(null)}
+          item={analysisItem}
+        />
+      )}
+
       <AlertDialog open={deletingId !== null} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
