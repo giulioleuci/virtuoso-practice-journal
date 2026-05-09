@@ -6,7 +6,8 @@ import { db, deleteLibraryItem, THEORY_LAYERS, type LibraryKind, type LibraryIte
 import type { MasteryState } from "@/components/library/MasterySliders";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers } from "lucide-react";
+import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart } from "lucide-react";
+import { ItemAnalysisSheet } from "@/components/library/ItemAnalysisSheet";
 import { MasterySliders } from "@/components/library/MasterySliders";
 import { MasterySparkline } from "@/components/library/MasterySparkline";
 import { Button } from "@/components/ui/button";
