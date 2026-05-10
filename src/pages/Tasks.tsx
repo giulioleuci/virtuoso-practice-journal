@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
 import { db, deleteTaskPreservingHistory, type Task } from "@/lib/db";
+import { useActiveTasks, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,8 +40,8 @@ function summarizeRecurrence(rec: NonNullable<Task["recurrence"]>): string {
 
 export default function Tasks() {
   const { t } = useI18n();
-  const tasks = useLiveQuery(() => db.tasks.filter((task) => !task.deletedAt).toArray());
-  const subjects = useLiveQuery(() => db.subjects.toArray());
+  const tasks = useActiveTasks();
+  const subjects = useSubjects();
 
   const [view, setView] = useState<"occurrences" | "series">("occurrences");
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
