@@ -202,6 +202,7 @@
   "profile.unnamed": "Senza nome",
   "profile.editName": "Modifica nome",
   "profile.reminder": "Promemoria",
+  "profile.reminderEnabled": "Promemoria attivi",
   "profile.lateRecovery": "Recupero tardivo (giorni)",
   "profile.carryover": "Riporta non completati (giorni)",
   "profile.graceDay": "Giorno di grazia per la serie",
