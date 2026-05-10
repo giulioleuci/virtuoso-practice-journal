@@ -69,18 +69,20 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+          .map(([theme, prefix]) => {
+            return `
+${prefix} [data-chart=${id.replace(/[^a-zA-Z0-9-_]/g, "")}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    return color
+      ? `  --color-${key.replace(/[^a-zA-Z0-9-_]/g, "")}: ${color.replace(/[;{}<>]/g, "")};`
+      : null;
   })
   .join("\n")}
 }
-`,
-          )
+`;
+          })
           .join("\n"),
       }}
     />
