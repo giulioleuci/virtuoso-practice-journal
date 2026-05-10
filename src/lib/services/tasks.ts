@@ -1,7 +1,7 @@
 /** Task service — repository wrapper around dexie operations.
  *  Centralizes write paths so UI components don't reach into `db` directly.
  */
-import { db, deleteTaskPreservingHistory, type Task, type TaskRecurrence } from "@/lib/db";
+import { db, deleteTaskPreservingHistory, deleteTasksPreservingHistory, type Task, type TaskRecurrence } from "@/lib/db";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 
 export type NewTaskInput = Omit<Task, "id" | "done" | "createdAt" | "date"> & {
@@ -63,13 +63,6 @@ export const tasksService = {
   },
 
   async bulkRemove(ids: number[]): Promise<{ soft: number; hard: number }> {
-    let soft = 0;
-    let hard = 0;
-    for (const id of ids) {
-      const mode = await deleteTaskPreservingHistory(id);
-      if (mode === "soft") soft++;
-      else hard++;
-    }
-    return { soft, hard };
+    return deleteTasksPreservingHistory(ids);
   },
 };

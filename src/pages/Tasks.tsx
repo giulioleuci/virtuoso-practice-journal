@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { db, deleteTaskPreservingHistory, type Task } from "@/lib/db";
+import { db, deleteTaskPreservingHistory, deleteTasksPreservingHistory, type Task } from "@/lib/db";
 import { useActiveTasks, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -88,7 +88,7 @@ export default function Tasks() {
   const toggleSel = (id: number) => {
     setSelected((s) => {
       const n = new Set(s);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) { n.delete(id); } else { n.add(id); }
       return n;
     });
   };
@@ -120,13 +120,9 @@ export default function Tasks() {
       } else {
         ids.push(delId);
       }
-      let softCount = 0;
-      for (const id of ids) {
-        const mode = await deleteTaskPreservingHistory(id);
-        if (mode === "soft") softCount++;
-      }
-      toast.success(softCount
-        ? t("toast.seriesRemoved", { count: softCount })
+      const { soft } = await deleteTasksPreservingHistory(ids);
+      toast.success(soft
+        ? t("toast.seriesRemoved", { count: soft })
         : t("toast.seriesDeleted"));
     } else {
       const mode = await deleteTaskPreservingHistory(delId);
@@ -148,11 +144,7 @@ export default function Tasks() {
   const bulkDelete = async () => {
     const ids = [...selected];
     if (!ids.length) return;
-    let soft = 0;
-    for (const id of ids) {
-      const m = await deleteTaskPreservingHistory(id);
-      if (m === "soft") soft++;
-    }
+    const { soft } = await deleteTasksPreservingHistory(ids);
     toast.success(soft
       ? t("toast.tasksBulkDeleted", { count: ids.length, soft })
       : t("toast.tasksBulkDeletedClean", { count: ids.length }));
