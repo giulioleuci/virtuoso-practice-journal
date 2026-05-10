@@ -55,20 +55,27 @@ export default function Diary() {
   const { t } = useI18n();
   const { profile } = useOutletContext<{ profile: Profile }>();
   const today = todayKey();
-  const tasks = useLiveQuery(
-    () =>
-      db.tasks
-        .where("date")
-        .equals(today)
-        .filter((t) => !t.deletedAt)
-        .toArray(),
-    [today],
-  );
-  const allSessions = useLiveQuery(() => db.sessions.toArray(), []);
-  const sessionsByTask = (allSessions ?? []).reduce<Record<number, typeof allSessions>>((acc, s) => {
-    (acc[s.taskId] ||= [] as never).push(s as never);
-    return acc;
-  }, {});
+  const { tasks, sessionsByTask } = useLiveQuery(async () => {
+    const fetchedTasks = await db.tasks
+      .where("date")
+      .equals(today)
+      .filter((t) => !t.deletedAt)
+      .toArray();
+
+    const taskIds = fetchedTasks.map((t) => t.id!).filter(Boolean);
+
+    // Only fetch sessions for today's tasks instead of the entire table
+    const relevantSessions = taskIds.length > 0
+      ? await db.sessions.where("taskId").anyOf(taskIds).toArray()
+      : [];
+
+    const groupedSessions = relevantSessions.reduce<Record<number, typeof relevantSessions>>((acc, s) => {
+      (acc[s.taskId] ||= [] as never).push(s as never);
+      return acc;
+    }, {});
+
+    return { tasks: fetchedTasks, sessionsByTask: groupedSessions };
+  }, [today]) ?? { tasks: undefined, sessionsByTask: {} };
 
   const pendingAssignments = useLiveQuery(
     () => db.assignments.filter((a) => !a.transformed && !a.ignored).toArray(),
