@@ -369,6 +369,35 @@ export async function deleteTaskPreservingHistory(taskId: number): Promise<"soft
   return "hard";
 }
 
+/** Bulk soft-delete tasks if they have logged sessions; otherwise hard-delete. */
+export async function deleteTasksPreservingHistory(taskIds: number[]): Promise<{ soft: number; hard: number }> {
+  if (!taskIds.length) return { soft: 0, hard: 0 };
+  const tasksWithSessions = new Set(await db.sessions.where("taskId").anyOf(taskIds).uniqueKeys() as number[]);
+
+  const softIds: number[] = [];
+  const hardIds: number[] = [];
+
+  for (const id of taskIds) {
+    if (tasksWithSessions.has(id)) {
+      softIds.push(id);
+    } else {
+      hardIds.push(id);
+    }
+  }
+
+  const now = Date.now();
+  await db.transaction("rw", db.tasks, async () => {
+    if (softIds.length > 0) {
+      await db.tasks.bulkUpdate(softIds.map((id) => ({ key: id, changes: { deletedAt: now } })));
+    }
+    if (hardIds.length > 0) {
+      await db.tasks.bulkDelete(hardIds);
+    }
+  });
+
+  return { soft: softIds.length, hard: hardIds.length };
+}
+
 export async function exportAll(): Promise<string> {
   const dump: Record<string, unknown> = {};
   for (const tbl of db.tables) dump[tbl.name] = await tbl.toArray();
