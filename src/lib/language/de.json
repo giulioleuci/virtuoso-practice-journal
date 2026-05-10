@@ -202,6 +202,7 @@
   "profile.unnamed": "Unbenannt",
   "profile.editName": "Name bearbeiten",
   "profile.reminder": "Erinnerung",
+  "profile.reminderEnabled": "Erinnerungen",
   "profile.lateRecovery": "Späte Aufholung (Tage)",
   "profile.carryover": "Unfertige übertragen (Tage)",
   "profile.graceDay": "Gnadentag für Serie",
