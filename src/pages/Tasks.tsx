@@ -138,9 +138,7 @@ export default function Tasks() {
   const bulkMarkDone = async (done: boolean) => {
     const ids = [...selected];
     if (!ids.length) return;
-    await db.transaction("rw", db.tasks, async () => {
-      for (const id of ids) await db.tasks.update(id, { done });
-    });
+    await db.tasks.bulkUpdate(ids.map(id => ({ key: id, changes: { done } })));
     toast.success(done
       ? t("toast.tasksBulkDone", { count: ids.length })
       : t("toast.tasksBulkReopened", { count: ids.length }));
