@@ -1,18 +1,29 @@
+import { lazy, Suspense } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { I18nProvider } from "@/lib/i18n";
 import Onboarding from "@/components/onboarding/Onboarding";
 import IntroSlides from "@/components/onboarding/IntroSlides";
 import AppShell from "@/components/AppShell";
-import Diary from "./Diary";
-import Library from "./Library";
-import Collections from "./Collections";
-import Lessons from "./Lessons";
-import Assignments from "./Assignments";
-import History from "./History";
-import Tasks from "./Tasks";
-import Profile from "./Profile";
 import { Routes, Route } from "react-router-dom";
+
+// Code splitting routes for better initial load performance
+const Diary = lazy(() => import("./Diary"));
+const Library = lazy(() => import("./Library"));
+const Collections = lazy(() => import("./Collections"));
+const Lessons = lazy(() => import("./Lessons"));
+const Assignments = lazy(() => import("./Assignments"));
+const History = lazy(() => import("./History"));
+const Tasks = lazy(() => import("./Tasks"));
+const Profile = lazy(() => import("./Profile"));
+
+const Fallback = () => (
+  <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4">
+    <div className="paper-skeleton h-24 w-full" />
+    <div className="paper-skeleton h-32 w-full" />
+    <div className="paper-skeleton h-20 w-full" />
+  </div>
+);
 
 const Index = () => {
   const profile = useLiveQuery(async () => (await db.profile.get("me")) ?? null);
@@ -48,14 +59,14 @@ const Index = () => {
     <I18nProvider initial={profile.lang}>
       <Routes>
         <Route element={<AppShell profile={profile} />}>
-          <Route index element={<Diary />} />
-          <Route path="library" element={<Library />} />
-          <Route path="library/collections" element={<Collections />} />
-          <Route path="lessons" element={<Lessons />} />
-          <Route path="lessons/assignments" element={<Assignments />} />
-          <Route path="history" element={<History />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="profile" element={<Profile />} />
+          <Route index element={<Suspense fallback={<Fallback />}><Diary /></Suspense>} />
+          <Route path="library" element={<Suspense fallback={<Fallback />}><Library /></Suspense>} />
+          <Route path="library/collections" element={<Suspense fallback={<Fallback />}><Collections /></Suspense>} />
+          <Route path="lessons" element={<Suspense fallback={<Fallback />}><Lessons /></Suspense>} />
+          <Route path="lessons/assignments" element={<Suspense fallback={<Fallback />}><Assignments /></Suspense>} />
+          <Route path="history" element={<Suspense fallback={<Fallback />}><History /></Suspense>} />
+          <Route path="tasks" element={<Suspense fallback={<Fallback />}><Tasks /></Suspense>} />
+          <Route path="profile" element={<Suspense fallback={<Fallback />}><Profile /></Suspense>} />
         </Route>
       </Routes>
     </I18nProvider>
