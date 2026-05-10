@@ -145,21 +145,38 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     for (const r of lessonRecurrences ?? []) {
       if (r.subjectId !== subjectId) continue;
       const start = new Date(rec.startDate);
-      for (let i = 1; i <= 365; i++) {
-        const d = new Date(start);
-        d.setDate(d.getDate() + i);
-        if (d.getDay() !== r.dayOfWeek) continue;
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        if (r.endDate && key > r.endDate) break;
-        if (r.frequency === "biweekly") {
-          const weeks = Math.floor((d.getTime() - new Date(r.startDate).getTime()) / (7 * 86400000));
-          if (weeks % 2 !== 0) continue;
-        } else if (r.frequency === "monthly") {
-          const days = Math.floor((d.getTime() - new Date(r.startDate).getTime()) / 86400000);
-          if (days % 28 !== 0) continue;
+      const d = new Date(start);
+      d.setDate(d.getDate() + 1);
+
+      const daysToAdd = (r.dayOfWeek - d.getDay() + 7) % 7;
+      d.setDate(d.getDate() + daysToAdd);
+
+      const rStart = new Date(r.startDate).getTime();
+
+      if (r.frequency === "biweekly") {
+        const weeks = Math.floor((d.getTime() - rStart) / (7 * 86400000));
+        if (weeks % 2 !== 0) {
+          d.setDate(d.getDate() + 7);
         }
+      } else if (r.frequency === "monthly") {
+        const days = Math.floor((d.getTime() - rStart) / 86400000);
+        if (days % 28 !== 0) {
+          let offset = 0;
+          for (let i = 1; i <= 3; i++) {
+            offset += 7;
+            if ((days + offset) % 28 === 0) {
+              d.setDate(d.getDate() + offset);
+              break;
+            }
+          }
+        }
+      }
+
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      if (r.endDate && key > r.endDate) continue;
+
+      if (Math.round((d.getTime() - start.getTime()) / 86400000) <= 365) {
         candidates.push(key);
-        break;
       }
     }
     candidates.sort();
