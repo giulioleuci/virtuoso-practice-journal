@@ -51,8 +51,9 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const toggleDay = (d: number) =>
     setReminderDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
 
-  const finish = async () => {
+  const finish = async (opts?: { remindersDisabled?: boolean }) => {
     const now = Date.now();
+    const remindersDisabled = !!opts?.remindersDisabled;
     await db.transaction("rw", db.subjects, db.profile, async () => {
       await db.subjects.bulkAdd(chosen.map((s) => ({ ...s, createdAt: now })));
       await db.profile.put({
@@ -62,6 +63,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         reminderTime,
         reminderFreq,
         reminderDays: reminderFreq === "custom" ? reminderDays : reminderFreq === "weekdays" ? [1,2,3,4,5] : [0,1,2,3,4,5,6],
+        reminderEnabled: !remindersDisabled,
         lateRecoveryDays: 3,
         graceDay: true,
         groupByPhase: false,
