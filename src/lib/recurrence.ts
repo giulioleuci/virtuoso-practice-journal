@@ -68,7 +68,7 @@ export function upcomingLessonDates(rec: LessonRecurrence, count: number, from =
       cur.setDate(cur.getDate() + 7);
     } else if (rec.frequency === "biweekly") {
       // align with start week parity
-      const weeksSinceStart = Math.floor((cur.getTime() - start.getTime()) / (7 * 86400000));
+      const weeksSinceStart = Math.round((cur.getTime() - start.getTime()) / (7 * 86400000));
       if (weeksSinceStart % 2 === 0) out.push(dayKey(cur));
       cur.setDate(cur.getDate() + 7);
     } else {
