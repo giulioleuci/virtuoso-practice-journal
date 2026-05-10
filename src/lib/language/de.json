@@ -64,6 +64,7 @@
   "onb.subjects.newTheory": "Neues Theoriefach…",
   "onb.reminder": "Tägliche Erinnerung",
   "onb.reminder.sub": "Wir erinnern dich zu dieser Zeit.",
+  "onb.reminder.none": "Keine Erinnerungen",
   "onb.freq.daily": "Täglich",
   "onb.freq.weekdays": "Wochentags",
   "onb.freq.custom": "Benutzerdefiniert",
