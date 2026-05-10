@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, buildLessonSnapshot, type Lesson, type LessonRecurrence } from "@/lib/db";
+import { today } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, less
 
   useEffect(() => {
     if (!open) return;
-    setDate(lesson?.date ?? prefilledDate ?? new Date().toISOString().slice(0, 10));
+    setDate(lesson?.date ?? prefilledDate ?? today());
     setNotes(lesson?.notes ?? "");
     setAssignments(existingAssignments?.map((a) => a.text) ?? []);
     setDraft("");

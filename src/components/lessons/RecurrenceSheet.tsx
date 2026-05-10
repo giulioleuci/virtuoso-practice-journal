@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type ColorKey, type LessonRecurrence } from "@/lib/db";
+import { today } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
   const [dayOfWeek, setDayOfWeek] = useState(1);
   const [startTime, setStartTime] = useState("17:00");
   const [endTime, setEndTime] = useState("18:00");
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(() => today());
   const [color, setColor] = useState<ColorKey>("terracotta");
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
       setDayOfWeek(1);
       setStartTime("17:00");
       setEndTime("18:00");
-      setStartDate(new Date().toISOString().slice(0, 10));
+      setStartDate(today());
       setColor("terracotta");
     }
   }, [open, recurrence]);

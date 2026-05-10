@@ -1,6 +1,5 @@
 import { db, wipeAll, buildSessionSnapshot, buildLessonSnapshot, THEORY_LAYERS, type Task, type SessionQuality } from "./db";
-
-const ymd = (d: Date) => d.toISOString().slice(0, 10);
+import { dayKey, today } from "./recurrence";
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 // Deterministic pseudo-random in [0,1) from a seed (so re-seeding is stable).
@@ -11,7 +10,7 @@ const rand = (seed: number) => {
 
 export async function seedSampleData() {
   await wipeAll();
-  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
   const now = Date.now();
   const D = 86400000;
 
@@ -268,24 +267,24 @@ export async function seedSampleData() {
   const lessonRecId = (await db.recurrences.add({
     subjectId: pianoId, teacher: "Prof. Aldo Ferri", frequency: "weekly",
     dayOfWeek: wedDow, startTime: "17:00", endTime: "18:00",
-    startDate: ymd(addDays(today, -90)), color: "terracotta",
+    startDate: dayKey(addDays(todayDate, -90)), color: "terracotta",
     createdAt: now - 100 * D,
   })) as number;
 
   const harmonyRecId = (await db.recurrences.add({
     subjectId: harmonyId, teacher: "Prof.ssa Lia Conti", frequency: "biweekly",
     dayOfWeek: 5, startTime: "10:00", endTime: "11:30",
-    startDate: ymd(addDays(today, -84)), color: "blue",
+    startDate: dayKey(addDays(todayDate, -84)), color: "blue",
     createdAt: now - 100 * D,
   })) as number;
 
   // ---------- Past lessons + assignments ----------
-  // Build the last 6 Wednesdays (from today)
+  // Build the last 6 Wednesdays (from todayDate)
   const lastSixWeds: Date[] = [];
   {
-    const todayDow = today.getDay();
+    const todayDow = todayDate.getDay();
     const offsetToLastWed = ((todayDow - wedDow + 7) % 7) || 7; // strictly past
-    let d = addDays(today, -offsetToLastWed);
+    let d = addDays(todayDate, -offsetToLastWed);
     for (let i = 0; i < 6; i++) {
       lastSixWeds.push(new Date(d));
       d = addDays(d, -7);
@@ -331,11 +330,11 @@ export async function seedSampleData() {
       pianoId,
       { subjectId: pianoId, teacher: "Prof. Aldo Ferri", frequency: "weekly",
         dayOfWeek: wedDow, startTime: "17:00", endTime: "18:00",
-        startDate: ymd(addDays(today, -90)), color: "terracotta", createdAt: now } as any,
+        startDate: dayKey(addDays(todayDate, -90)), color: "terracotta", createdAt: now } as any,
       pieceIds,
     );
     const lessonId = (await db.lessons.add({
-      recurrenceId: lessonRecId, subjectId: pianoId, date: ymd(d),
+      recurrenceId: lessonRecId, subjectId: pianoId, date: dayKey(d),
       notes: "Voicing of inner lines; pedaling for legato bass; tempo control.",
       piecesPlayed: pieceIds, piecesPlayedTitles, snapshot,
       createdAt: d.getTime(),
@@ -347,17 +346,17 @@ export async function seedSampleData() {
 
   // One past harmony lesson
   {
-    const d = addDays(today, -14);
+    const d = addDays(todayDate, -14);
     const pieceIds = [piston, secDom];
     const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(
       harmonyId,
       { subjectId: harmonyId, teacher: "Prof.ssa Lia Conti", frequency: "biweekly",
         dayOfWeek: 5, startTime: "10:00", endTime: "11:30",
-        startDate: ymd(addDays(today, -84)), color: "blue", createdAt: now } as any,
+        startDate: dayKey(addDays(todayDate, -84)), color: "blue", createdAt: now } as any,
       pieceIds,
     );
     const lessonId = (await db.lessons.add({
-      recurrenceId: harmonyRecId, subjectId: harmonyId, date: ymd(d),
+      recurrenceId: harmonyRecId, subjectId: harmonyId, date: dayKey(d),
       notes: "Reviewed secondary dominants; introduced Neapolitan sixth.",
       piecesPlayed: pieceIds, piecesPlayedTitles, snapshot,
       createdAt: d.getTime(),
@@ -379,8 +378,8 @@ export async function seedSampleData() {
   const pastTasks: TaskRow[] = [];
 
   for (let i = histDays; i >= 1; i--) {
-    const dateObj = addDays(today, -i);
-    const d = ymd(dateObj);
+    const dateObj = addDays(todayDate, -i);
+    const d = dayKey(dateObj);
     const dow = dateObj.getDay();
 
     // Daily Hanon
@@ -475,7 +474,7 @@ export async function seedSampleData() {
     const techniquesUsed = t.techniqueIds ?? [];
 
     // Trend: more recent → higher scores
-    const ageDays = Math.round((today.getTime() - new Date(t.date).getTime()) / D);
+    const ageDays = Math.round((todayDate.getTime() - new Date(t.date).getTime()) / D);
     const trend = clamp(70 + (histDays - ageDays) * 0.6, 40, 95);
 
     const layerScores: Record<string, number> = {};
@@ -513,15 +512,15 @@ export async function seedSampleData() {
 
   // Hanon — daily template
   const hanonTpl = (await db.tasks.add({
-    date: ymd(today), subjectId: pianoId, linkType: "item", itemId: hanon, segmentIds: [hanonEx18],
+    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: hanon, segmentIds: [hanonEx18],
     title: "Hanon — Exercise 18", targetBpm: 104, noteVal: "sixteenth",
     layers: ["RH","LH","Both"], techniqueIds: [tLegato],
     done: false, createdAt: now,
-    recurrence: { kind: "interval", everyXDays: 1, startDate: ymd(today), occurrences: 14 },
+    recurrence: { kind: "interval", everyXDays: 1, startDate: dayKey(todayDate), occurrences: 14 },
   })) as number;
   for (let i = 1; i < 14; i++) {
     upcoming.push({
-      date: ymd(addDays(today, i)), subjectId: pianoId, linkType: "item", itemId: hanon, segmentIds: [hanonEx18],
+      date: dayKey(addDays(todayDate, i)), subjectId: pianoId, linkType: "item", itemId: hanon, segmentIds: [hanonEx18],
       title: "Hanon — Exercise 18", targetBpm: 104, noteVal: "sixteenth",
       layers: ["RH","LH","Both"], techniqueIds: [tLegato],
       done: false, recurrenceTaskId: hanonTpl, createdAt: now,
@@ -530,15 +529,15 @@ export async function seedSampleData() {
 
   // Ballade — every other day
   const balladeTpl = (await db.tasks.add({
-    date: ymd(today), subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeA],
+    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeA],
     title: "Ballade — first theme (slow, voicing)", targetBpm: 70, noteVal: "quarter",
     layers: ["RH","LH","Slow"], techniqueIds: [tVoicing, tLegato],
     done: false, createdAt: now,
-    recurrence: { kind: "interval", everyXDays: 2, startDate: ymd(today), occurrences: 7 },
+    recurrence: { kind: "interval", everyXDays: 2, startDate: dayKey(todayDate), occurrences: 7 },
   })) as number;
   for (let i = 2; i <= 12; i += 2) {
     upcoming.push({
-      date: ymd(addDays(today, i)), subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeA],
+      date: dayKey(addDays(todayDate, i)), subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeA],
       title: "Ballade — first theme (slow, voicing)", targetBpm: 70, noteVal: "quarter",
       layers: ["RH","LH","Slow"], techniqueIds: [tVoicing, tLegato],
       done: false, recurrenceTaskId: balladeTpl, createdAt: now,
@@ -547,17 +546,17 @@ export async function seedSampleData() {
 
   // Bach fugue — Mon/Wed/Fri
   const bachTpl = (await db.tasks.add({
-    date: ymd(today), subjectId: pianoId, linkType: "item", itemId: bachWtcCsh, segmentIds: [wtcFugue],
+    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: bachWtcCsh, segmentIds: [wtcFugue],
     title: "Bach — Fugue exposition", targetBpm: 60, noteVal: "quarter",
     layers: ["RH","LH","Both"], techniqueIds: [tVoicing],
     done: false, createdAt: now,
-    recurrence: { kind: "weekdays", days: [1, 3, 5], startDate: ymd(today), occurrences: 9 },
+    recurrence: { kind: "weekdays", days: [1, 3, 5], startDate: dayKey(todayDate), occurrences: 9 },
   })) as number;
   for (let i = 1; i <= 21; i++) {
-    const d = addDays(today, i);
+    const d = addDays(todayDate, i);
     if ([1, 3, 5].includes(d.getDay())) {
       upcoming.push({
-        date: ymd(d), subjectId: pianoId, linkType: "item", itemId: bachWtcCsh, segmentIds: [wtcFugue],
+        date: dayKey(d), subjectId: pianoId, linkType: "item", itemId: bachWtcCsh, segmentIds: [wtcFugue],
         title: "Bach — Fugue exposition", targetBpm: 60, noteVal: "quarter",
         layers: ["RH","LH","Both"], techniqueIds: [tVoicing],
         done: false, recurrenceTaskId: bachTpl, createdAt: now,
@@ -567,17 +566,17 @@ export async function seedSampleData() {
 
   // Harmony — Piston Tue/Fri
   const pistonTpl = (await db.tasks.add({
-    date: ymd(today), subjectId: harmonyId, linkType: "item", itemId: piston,
+    date: dayKey(todayDate), subjectId: harmonyId, linkType: "item", itemId: piston,
     title: "Piston — chapter exercises",
     layers: [...THEORY_LAYERS], techniqueIds: [tFigured, tChorale],
     done: false, createdAt: now,
-    recurrence: { kind: "weekdays", days: [2, 5], startDate: ymd(today), occurrences: 8 },
+    recurrence: { kind: "weekdays", days: [2, 5], startDate: dayKey(todayDate), occurrences: 8 },
   })) as number;
   for (let i = 1; i <= 28; i++) {
-    const d = addDays(today, i);
+    const d = addDays(todayDate, i);
     if ([2, 5].includes(d.getDay())) {
       upcoming.push({
-        date: ymd(d), subjectId: harmonyId, linkType: "item", itemId: piston,
+        date: dayKey(d), subjectId: harmonyId, linkType: "item", itemId: piston,
         title: "Piston — chapter exercises",
         layers: [...THEORY_LAYERS], techniqueIds: [tFigured, tChorale],
         done: false, recurrenceTaskId: pistonTpl, createdAt: now,
@@ -587,14 +586,14 @@ export async function seedSampleData() {
 
   // One-off tasks for today — coda, multi-segment, theory, collection
   upcoming.push({
-    date: ymd(today), subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeCoda],
+    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeCoda],
     title: "Ballade — Coda octaves (slow)", targetBpm: 90, noteVal: "quarter",
     layers: ["RH","Slow"], techniqueIds: [tOctaves],
     done: false, createdAt: now,
   });
 
   upcoming.push({
-    date: ymd(today), subjectId: pianoId, linkType: "item", itemId: chopinBallade,
+    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: chopinBallade,
     segmentIds: [balladeIntro, balladeA],
     title: "Ballade — Intro + First theme (slow run-through)",
     targetBpm: 70, noteVal: "quarter",
@@ -603,14 +602,14 @@ export async function seedSampleData() {
   });
 
   upcoming.push({
-    date: ymd(today), subjectId: harmonyId, linkType: "item", itemId: secDom,
+    date: dayKey(todayDate), subjectId: harmonyId, linkType: "item", itemId: secDom,
     title: "Aural drill — secondary dominants",
     layers: ["aural", "compositional"], techniqueIds: [tChorale, tModulation],
     done: false, createdAt: now,
   });
 
   upcoming.push({
-    date: ymd(addDays(today, 1)), subjectId: pianoId,
+    date: dayKey(addDays(todayDate, 1)), subjectId: pianoId,
     linkType: "collection", collectionId: colNocturnesOp9,
     title: "Nocturnes Op. 9 — review session",
     layers: ["Both", "Memorized"], techniqueIds: [tVoicing, tPedal],
@@ -618,7 +617,7 @@ export async function seedSampleData() {
   });
 
   upcoming.push({
-    date: ymd(addDays(today, 2)), subjectId: pianoId,
+    date: dayKey(addDays(todayDate, 2)), subjectId: pianoId,
     linkType: "collection", collectionId: colCzerny,
     title: "Czerny — daily set",
     layers: ["RH","LH","Both"], techniqueIds: [tLegato, tStaccato],
