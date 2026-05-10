@@ -98,6 +98,10 @@ export const LIBRARY_QUOTES: QuotePool = {
 };
 
 export function pickQuote(pool: QuotePool = PRACTICE_QUOTES, lang: Lang = "en"): Quote {
-  const quotes = pool[lang] ?? pool["en"];
-  return quotes[Math.floor(Math.random() * quotes.length)];
+  const list = pool[lang] || pool.en;
+  if (!list || list.length === 0) {
+    return { text: "Practice makes perfect.", author: "Anonymous" };
+  }
+  const idx = Math.floor(Math.random() * list.length);
+  return list[idx];
 }
