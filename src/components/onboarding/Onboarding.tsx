@@ -239,3 +239,83 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     </div>
   );
 }
+
+interface SubjectGroupProps {
+  icon: React.ReactNode;
+  title: string;
+  presets: DraftSubject[];
+  chosen: DraftSubject[];
+  onToggle: (p: DraftSubject) => void;
+  customValue: string;
+  setCustomValue: (v: string) => void;
+  customPlaceholder: string;
+  addLabel: string;
+  onAdd: () => void;
+  extraChips: DraftSubject[];
+  onRemoveChip: (name: string) => void;
+}
+
+function SubjectGroup({
+  icon, title, presets, chosen, onToggle,
+  customValue, setCustomValue, customPlaceholder, addLabel, onAdd,
+  extraChips, onRemoveChip,
+}: SubjectGroupProps) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        {icon}
+        <h3 className="font-serif text-xl">{title}</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        {presets.map((p) => {
+          const active = !!chosen.find((s) => s.name === p.name);
+          return (
+            <button
+              key={p.name}
+              onClick={() => onToggle(p)}
+              className={cn(
+                "paper-card px-3 py-2.5 flex items-center gap-2 text-left transition-all min-w-0",
+                active ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
+              )}
+            >
+              <span className="font-medium truncate">{p.name}</span>
+              {active && <Check className="h-4 w-4 ml-auto shrink-0 text-primary" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {extraChips.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {extraChips.map((s) => (
+            <span key={s.name} className="inline-flex items-center gap-1 bg-accent px-3 py-1.5 rounded-full text-sm">
+              {s.name}
+              <button onClick={() => onRemoveChip(s.name)}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="paper-card p-2 flex flex-col sm:flex-row gap-2 sm:items-center">
+        <Input
+          value={customValue}
+          onChange={(e) => setCustomValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAdd(); } }}
+          placeholder={customPlaceholder}
+          className="border-0 bg-transparent focus-visible:ring-0 min-w-0"
+        />
+        <Button
+          variant="secondary"
+          onClick={onAdd}
+          disabled={!customValue.trim()}
+          className="shrink-0 w-full sm:w-auto"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          {addLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
