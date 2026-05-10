@@ -64,6 +64,7 @@
   "onb.subjects.newTheory": "Nueva materia teórica…",
   "onb.reminder": "Recordatorio diario",
   "onb.reminder.sub": "Te avisaremos a esta hora.",
+  "onb.reminder.none": "Sin recordatorios",
   "onb.freq.daily": "Cada día",
   "onb.freq.weekdays": "Días laborables",
   "onb.freq.custom": "Personalizado",
