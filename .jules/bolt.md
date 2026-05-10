@@ -1,3 +1,3 @@
-## 2024-05-18 - Avoid full table scans in dexie's useLiveQuery
-**Learning:** In a local-first application using Dexie, reading an entire table (like `sessions.toArray()`) inside `useLiveQuery` on a frequently loaded view causes a major performance bottleneck as the user's dataset grows over time.
-**Action:** Instead of querying the full table to establish a relationship to another set of fetched items, extract the specific foreign keys (like `taskId`s) and query only the subset using `where("foreignKey").anyOf(keys)`. This limits memory consumption and CPU usage. Combine them into a single `useLiveQuery` block.
+## 2024-05-10 - Route-Level Code Splitting
+**Learning:** In a single-page application structure like this (using `react-router-dom`), wrapping the `<Suspense>` boundary around individual routes instead of the entire `<Routes>` element is crucial. If `<Suspense>` wraps `<Routes>`, any suspended component will cause the fallback UI to replace the entire routing tree (including the persistent `AppShell` layout).
+**Action:** Always place `<Suspense>` boundaries as tight as possible around lazy-loaded components (e.g., inside the layout outlet or around individual route elements) to prevent UI layout thrashing during asynchronous chunk loading.
