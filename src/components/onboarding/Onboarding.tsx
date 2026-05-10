@@ -40,12 +40,12 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     );
   };
 
-  const addCustom = () => {
-    const trimmed = customName.trim();
+  const addCustom = (rawName: string, type: SubjectType, reset: () => void) => {
+    const trimmed = rawName.trim();
     if (!trimmed) return;
     if (chosen.find((s) => s.name.toLowerCase() === trimmed.toLowerCase())) return;
-    setChosen([...chosen, { name: trimmed, type: customType }]);
-    setCustomName("");
+    setChosen([...chosen, { name: trimmed, type }]);
+    reset();
   };
 
   const toggleDay = (d: number) =>
