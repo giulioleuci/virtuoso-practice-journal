@@ -11,11 +11,6 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     return { error };
   }
 
-  componentDidCatch(error: Error, info: unknown) {
-    // eslint-disable-next-line no-console
-    console.error("[ErrorBoundary]", error, info);
-  }
-
   reset = () => this.setState({ error: null });
 
   render() {
