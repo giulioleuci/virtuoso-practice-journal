@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Music, Piano, BookOpen, FileText, Sparkles, Check, X, Plus, Bell } from "lucide-react";
+import { Piano, BookOpen, Check, X, Plus, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { db, type Lang, type SubjectType } from "@/lib/db";
@@ -8,38 +8,31 @@ import { cn } from "@/lib/utils";
 
 interface DraftSubject { name: string; type: SubjectType }
 
-type PresetKey = { key: string; type: SubjectType; icon: typeof Piano };
-
-const PRESET_KEYS: PresetKey[] = [
-  { key: "piano",       type: "instrument", icon: Piano },
-  { key: "guitar",      type: "instrument", icon: Music },
-  { key: "flute",       type: "instrument", icon: Music },
-  { key: "violin",      type: "instrument", icon: Music },
-  { key: "singing",     type: "instrument", icon: Music },
-  { key: "harmony",     type: "theory",     icon: FileText },
-  { key: "composition", type: "theory",     icon: BookOpen },
-  { key: "earTraining", type: "theory",     icon: Sparkles },
-  { key: "solfeggio",   type: "theory",     icon: Music },
-  { key: "history",     type: "theory",     icon: BookOpen },
-];
+const INSTRUMENT_KEYS = ["piano", "guitar", "flute", "ensemble", "violin", "singing"] as const;
+const THEORY_KEYS = ["harmony", "earTraining", "solfeggio", "history"] as const;
 
 export default function Onboarding({ onDone }: { onDone: () => void }) {
   const { t, setLang, lang } = useI18n();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [chosen, setChosen] = useState<DraftSubject[]>([]);
-  const [customName, setCustomName] = useState("");
-  const [customType, setCustomType] = useState<SubjectType>("instrument");
+  const [customInstrument, setCustomInstrument] = useState("");
+  const [customTheory, setCustomTheory] = useState("");
   const [reminderTime, setReminderTime] = useState("18:00");
   const [reminderFreq, setReminderFreq] = useState<"daily" | "weekdays" | "custom">("daily");
   const [reminderDays, setReminderDays] = useState<number[]>([1, 2, 3, 4, 5]);
 
   const DAYS = useMemo(() => [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`)), [lang]);
 
-  const PRESET_SUBJECTS = useMemo(
-    () => PRESET_KEYS.map((p) => ({ name: t(`preset.${p.key}`), type: p.type, icon: p.icon })),
+  const PRESET_INSTRUMENTS = useMemo(
+    () => INSTRUMENT_KEYS.map((k) => ({ name: t(`preset.${k}`), type: "instrument" as SubjectType })),
     [lang]
   );
+  const PRESET_THEORY = useMemo(
+    () => THEORY_KEYS.map((k) => ({ name: t(`preset.${k}`), type: "theory" as SubjectType })),
+    [lang]
+  );
+  const ALL_PRESETS = [...PRESET_INSTRUMENTS, ...PRESET_THEORY];
 
   const togglePreset = (p: DraftSubject) => {
     setChosen((prev) =>
