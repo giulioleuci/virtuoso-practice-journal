@@ -130,62 +130,38 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
           <section>
             <h2 className="font-serif text-4xl mb-1">{t("onb.subjects")}</h2>
             <p className="text-muted-foreground mb-6">{t("onb.subjects.sub")}</p>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {PRESET_SUBJECTS.map((p) => {
-                const active = !!chosen.find((s) => s.name === p.name);
-                const Icon = p.icon;
-                return (
-                  <button
-                    key={p.name}
-                    onClick={() => togglePreset({ name: p.name, type: p.type })}
-                    className={cn(
-                      "paper-card px-4 py-3 flex items-center gap-3 text-left transition-all",
-                      active ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
-                    )}
-                  >
-                    <Icon className="h-5 w-5 text-primary shrink-0" />
-                    <span className="font-medium">{p.name}</span>
-                    {active && <Check className="h-4 w-4 ml-auto text-primary" />}
-                  </button>
-                );
-              })}
-            </div>
 
-            {chosen.filter((s) => !PRESET_SUBJECTS.find((p) => p.name === s.name)).length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {chosen.filter((s) => !PRESET_SUBJECTS.find((p) => p.name === s.name)).map((s) => (
-                  <span key={s.name} className="inline-flex items-center gap-1 bg-accent px-3 py-1.5 rounded-full text-sm">
-                    {s.name}
-                    <button onClick={() => setChosen(chosen.filter((x) => x.name !== s.name))}>
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+            <SubjectGroup
+              icon={<Piano className="h-5 w-5 text-primary" />}
+              title={t("onb.subjects.instruments")}
+              presets={PRESET_INSTRUMENTS}
+              chosen={chosen}
+              onToggle={togglePreset}
+              customValue={customInstrument}
+              setCustomValue={setCustomInstrument}
+              customPlaceholder={t("onb.subjects.newInstrument")}
+              addLabel={t("onb.subjects.addInstrument")}
+              onAdd={() => addCustom(customInstrument, "instrument", () => setCustomInstrument(""))}
+              extraChips={chosen.filter((s) => s.type === "instrument" && !ALL_PRESETS.find((p) => p.name === s.name))}
+              onRemoveChip={(n) => setChosen(chosen.filter((x) => x.name !== n))}
+            />
 
-            <div className="paper-card p-3 flex flex-col gap-2">
-              <Input
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addCustom()}
-                placeholder={t("onb.subjects.custom")}
-                className="border-0 bg-transparent focus-visible:ring-0"
-              />
-              <div className="flex gap-2 items-center">
-                <select
-                  value={customType}
-                  onChange={(e) => setCustomType(e.target.value as SubjectType)}
-                  className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-sm"
-                >
-                  <option value="instrument">{t("subjects.type.instrument")}</option>
-                  <option value="theory">{t("subjects.type.theory")}</option>
-                </select>
-                <Button size="icon" variant="ghost" onClick={addCustom}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <div className="h-6" />
+
+            <SubjectGroup
+              icon={<BookOpen className="h-5 w-5 text-primary" />}
+              title={t("onb.subjects.theory")}
+              presets={PRESET_THEORY}
+              chosen={chosen}
+              onToggle={togglePreset}
+              customValue={customTheory}
+              setCustomValue={setCustomTheory}
+              customPlaceholder={t("onb.subjects.newTheory")}
+              addLabel={t("onb.subjects.addTheory")}
+              onAdd={() => addCustom(customTheory, "theory", () => setCustomTheory(""))}
+              extraChips={chosen.filter((s) => s.type === "theory" && !ALL_PRESETS.find((p) => p.name === s.name))}
+              onRemoveChip={(n) => setChosen(chosen.filter((x) => x.name !== n))}
+            />
           </section>
         )}
 
