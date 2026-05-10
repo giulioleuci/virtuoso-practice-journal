@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Music, Piano, BookOpen, FileText, Sparkles, Check, X, Plus, Bell } from "lucide-react";
+import { Piano, BookOpen, Check, X, Plus, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { db, type Lang, type SubjectType } from "@/lib/db";
@@ -8,38 +8,31 @@ import { cn } from "@/lib/utils";
 
 interface DraftSubject { name: string; type: SubjectType }
 
-type PresetKey = { key: string; type: SubjectType; icon: typeof Piano };
-
-const PRESET_KEYS: PresetKey[] = [
-  { key: "piano",       type: "instrument", icon: Piano },
-  { key: "guitar",      type: "instrument", icon: Music },
-  { key: "flute",       type: "instrument", icon: Music },
-  { key: "violin",      type: "instrument", icon: Music },
-  { key: "singing",     type: "instrument", icon: Music },
-  { key: "harmony",     type: "theory",     icon: FileText },
-  { key: "composition", type: "theory",     icon: BookOpen },
-  { key: "earTraining", type: "theory",     icon: Sparkles },
-  { key: "solfeggio",   type: "theory",     icon: Music },
-  { key: "history",     type: "theory",     icon: BookOpen },
-];
+const INSTRUMENT_KEYS = ["piano", "guitar", "flute", "ensemble", "violin", "singing"] as const;
+const THEORY_KEYS = ["harmony", "earTraining", "solfeggio", "history"] as const;
 
 export default function Onboarding({ onDone }: { onDone: () => void }) {
   const { t, setLang, lang } = useI18n();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [chosen, setChosen] = useState<DraftSubject[]>([]);
-  const [customName, setCustomName] = useState("");
-  const [customType, setCustomType] = useState<SubjectType>("instrument");
+  const [customInstrument, setCustomInstrument] = useState("");
+  const [customTheory, setCustomTheory] = useState("");
   const [reminderTime, setReminderTime] = useState("18:00");
   const [reminderFreq, setReminderFreq] = useState<"daily" | "weekdays" | "custom">("daily");
   const [reminderDays, setReminderDays] = useState<number[]>([1, 2, 3, 4, 5]);
 
   const DAYS = useMemo(() => [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`)), [lang]);
 
-  const PRESET_SUBJECTS = useMemo(
-    () => PRESET_KEYS.map((p) => ({ name: t(`preset.${p.key}`), type: p.type, icon: p.icon })),
+  const PRESET_INSTRUMENTS = useMemo(
+    () => INSTRUMENT_KEYS.map((k) => ({ name: t(`preset.${k}`), type: "instrument" as SubjectType })),
     [lang]
   );
+  const PRESET_THEORY = useMemo(
+    () => THEORY_KEYS.map((k) => ({ name: t(`preset.${k}`), type: "theory" as SubjectType })),
+    [lang]
+  );
+  const ALL_PRESETS = [...PRESET_INSTRUMENTS, ...PRESET_THEORY];
 
   const togglePreset = (p: DraftSubject) => {
     setChosen((prev) =>
@@ -47,12 +40,12 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     );
   };
 
-  const addCustom = () => {
-    const trimmed = customName.trim();
+  const addCustom = (rawName: string, type: SubjectType, reset: () => void) => {
+    const trimmed = rawName.trim();
     if (!trimmed) return;
     if (chosen.find((s) => s.name.toLowerCase() === trimmed.toLowerCase())) return;
-    setChosen([...chosen, { name: trimmed, type: customType }]);
-    setCustomName("");
+    setChosen([...chosen, { name: trimmed, type }]);
+    reset();
   };
 
   const toggleDay = (d: number) =>
@@ -137,62 +130,38 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
           <section>
             <h2 className="font-serif text-4xl mb-1">{t("onb.subjects")}</h2>
             <p className="text-muted-foreground mb-6">{t("onb.subjects.sub")}</p>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {PRESET_SUBJECTS.map((p) => {
-                const active = !!chosen.find((s) => s.name === p.name);
-                const Icon = p.icon;
-                return (
-                  <button
-                    key={p.name}
-                    onClick={() => togglePreset({ name: p.name, type: p.type })}
-                    className={cn(
-                      "paper-card px-4 py-3 flex items-center gap-3 text-left transition-all",
-                      active ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
-                    )}
-                  >
-                    <Icon className="h-5 w-5 text-primary shrink-0" />
-                    <span className="font-medium">{p.name}</span>
-                    {active && <Check className="h-4 w-4 ml-auto text-primary" />}
-                  </button>
-                );
-              })}
-            </div>
 
-            {chosen.filter((s) => !PRESET_SUBJECTS.find((p) => p.name === s.name)).length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {chosen.filter((s) => !PRESET_SUBJECTS.find((p) => p.name === s.name)).map((s) => (
-                  <span key={s.name} className="inline-flex items-center gap-1 bg-accent px-3 py-1.5 rounded-full text-sm">
-                    {s.name}
-                    <button onClick={() => setChosen(chosen.filter((x) => x.name !== s.name))}>
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+            <SubjectGroup
+              icon={<Piano className="h-5 w-5 text-primary" />}
+              title={t("onb.subjects.instruments")}
+              presets={PRESET_INSTRUMENTS}
+              chosen={chosen}
+              onToggle={togglePreset}
+              customValue={customInstrument}
+              setCustomValue={setCustomInstrument}
+              customPlaceholder={t("onb.subjects.newInstrument")}
+              addLabel={t("onb.subjects.addInstrument")}
+              onAdd={() => addCustom(customInstrument, "instrument", () => setCustomInstrument(""))}
+              extraChips={chosen.filter((s) => s.type === "instrument" && !ALL_PRESETS.find((p) => p.name === s.name))}
+              onRemoveChip={(n) => setChosen(chosen.filter((x) => x.name !== n))}
+            />
 
-            <div className="paper-card p-3 flex flex-col gap-2">
-              <Input
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addCustom()}
-                placeholder={t("onb.subjects.custom")}
-                className="border-0 bg-transparent focus-visible:ring-0"
-              />
-              <div className="flex gap-2 items-center">
-                <select
-                  value={customType}
-                  onChange={(e) => setCustomType(e.target.value as SubjectType)}
-                  className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-sm"
-                >
-                  <option value="instrument">{t("subjects.type.instrument")}</option>
-                  <option value="theory">{t("subjects.type.theory")}</option>
-                </select>
-                <Button size="icon" variant="ghost" onClick={addCustom}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <div className="h-6" />
+
+            <SubjectGroup
+              icon={<BookOpen className="h-5 w-5 text-primary" />}
+              title={t("onb.subjects.theory")}
+              presets={PRESET_THEORY}
+              chosen={chosen}
+              onToggle={togglePreset}
+              customValue={customTheory}
+              setCustomValue={setCustomTheory}
+              customPlaceholder={t("onb.subjects.newTheory")}
+              addLabel={t("onb.subjects.addTheory")}
+              onAdd={() => addCustom(customTheory, "theory", () => setCustomTheory(""))}
+              extraChips={chosen.filter((s) => s.type === "theory" && !ALL_PRESETS.find((p) => p.name === s.name))}
+              onRemoveChip={(n) => setChosen(chosen.filter((x) => x.name !== n))}
+            />
           </section>
         )}
 
@@ -267,6 +236,86 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
           )}
         </div>
       </footer>
+    </div>
+  );
+}
+
+interface SubjectGroupProps {
+  icon: React.ReactNode;
+  title: string;
+  presets: DraftSubject[];
+  chosen: DraftSubject[];
+  onToggle: (p: DraftSubject) => void;
+  customValue: string;
+  setCustomValue: (v: string) => void;
+  customPlaceholder: string;
+  addLabel: string;
+  onAdd: () => void;
+  extraChips: DraftSubject[];
+  onRemoveChip: (name: string) => void;
+}
+
+function SubjectGroup({
+  icon, title, presets, chosen, onToggle,
+  customValue, setCustomValue, customPlaceholder, addLabel, onAdd,
+  extraChips, onRemoveChip,
+}: SubjectGroupProps) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        {icon}
+        <h3 className="font-serif text-xl">{title}</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        {presets.map((p) => {
+          const active = !!chosen.find((s) => s.name === p.name);
+          return (
+            <button
+              key={p.name}
+              onClick={() => onToggle(p)}
+              className={cn(
+                "paper-card px-3 py-2.5 flex items-center gap-2 text-left transition-all min-w-0",
+                active ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
+              )}
+            >
+              <span className="font-medium truncate">{p.name}</span>
+              {active && <Check className="h-4 w-4 ml-auto shrink-0 text-primary" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {extraChips.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {extraChips.map((s) => (
+            <span key={s.name} className="inline-flex items-center gap-1 bg-accent px-3 py-1.5 rounded-full text-sm">
+              {s.name}
+              <button onClick={() => onRemoveChip(s.name)}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="paper-card p-2 flex flex-col sm:flex-row gap-2 sm:items-center">
+        <Input
+          value={customValue}
+          onChange={(e) => setCustomValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAdd(); } }}
+          placeholder={customPlaceholder}
+          className="border-0 bg-transparent focus-visible:ring-0 min-w-0"
+        />
+        <Button
+          variant="secondary"
+          onClick={onAdd}
+          disabled={!customValue.trim()}
+          className="shrink-0 w-full sm:w-auto"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          {addLabel}
+        </Button>
+      </div>
     </div>
   );
 }
