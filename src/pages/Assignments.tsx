@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
+import { today } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Wand2, X, ArrowLeft } from "lucide-react";
@@ -9,10 +10,6 @@ import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 5;
-
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export default function Assignments() {
   const { t } = useI18n();
@@ -117,7 +114,7 @@ export default function Assignments() {
       <NewTaskSheet
         open={taskPrefill !== null}
         onOpenChange={(o) => !o && setTaskPrefill(null)}
-        date={todayKey()}
+        date={today()}
         prefill={taskPrefill ?? undefined}
       />
     </div>

@@ -14,17 +14,13 @@ import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet } from "@/components/lessons/LessonLogSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
-import { upcomingLessonDates, dayKey } from "@/lib/recurrence";
+import { upcomingLessonDates, dayKey, today } from "@/lib/recurrence";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
 const PAGE_SIZE = 5;
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export default function Lessons() {
   const { t } = useI18n();
@@ -315,7 +311,7 @@ export default function Lessons() {
       <NewTaskSheet
         open={taskPrefill !== null}
         onOpenChange={(o) => !o && setTaskPrefill(null)}
-        date={todayKey()}
+        date={today()}
         prefill={taskPrefill ?? undefined}
       />
 
