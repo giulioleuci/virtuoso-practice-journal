@@ -1,3 +1,4 @@
+import { z } from "zod";
 import Dexie, { type Table } from "dexie";
 
 export type Lang = "en" | "it" | "es" | "de";
@@ -404,8 +405,16 @@ export async function exportAll(): Promise<string> {
   return JSON.stringify({ version: 1, exportedAt: Date.now(), data: dump }, null, 2);
 }
 
+const importDataSchema = z.object({
+  version: z.number().optional(),
+  exportedAt: z.number().optional(),
+  data: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))).optional(),
+});
+
 export async function importAll(json: string) {
-  const parsed = JSON.parse(json);
+  const raw = JSON.parse(json);
+  const parsed = importDataSchema.parse(raw);
+
   await db.transaction("rw", db.tables, async () => {
     for (const tbl of db.tables) {
       await tbl.clear();
