@@ -73,4 +73,63 @@ describe("upcomingLessonDates", () => {
     const dates = upcomingLessonDates(rec, 3, new Date(2025, 0, 6));
     expect(dates).toEqual(["2025-01-06", "2025-01-13", "2025-01-20"]);
   });
+
+  it("handles leap year boundaries correctly", () => {
+    const rec: LessonRecurrence = {
+      subjectId: 1,
+      teacher: "T",
+      frequency: "weekly",
+      dayOfWeek: 4, // Thursday
+      startTime: "10:00",
+      endTime: "11:00",
+      startDate: "2024-02-22", // Thursday before leap day
+      color: "blue",
+      createdAt: 0,
+    };
+    const dates = upcomingLessonDates(rec, 3, new Date(2024, 1, 22)); // Feb 22, 2024
+    // 2024 is a leap year, so Feb 29 exists
+    expect(dates).toEqual(["2024-02-22", "2024-02-29", "2024-03-07"]);
+  });
+
+  it("handles Daylight Saving Time (DST) boundaries correctly", () => {
+    const rec: LessonRecurrence = {
+      subjectId: 1,
+      teacher: "T",
+      frequency: "weekly",
+      dayOfWeek: 1, // Monday
+      startTime: "10:00",
+      endTime: "11:00",
+      startDate: "2024-03-04", // Monday before DST change (US Mar 10, EU Mar 31)
+      color: "blue",
+      createdAt: 0,
+    };
+    const dates = upcomingLessonDates(rec, 5, new Date(2024, 2, 4)); // Mar 4, 2024
+    expect(dates).toEqual(["2024-03-04", "2024-03-11", "2024-03-18", "2024-03-25", "2024-04-01"]);
+  });
+
+  it("maintains biweekly parity across DST boundaries", () => {
+    const rec: LessonRecurrence = {
+      subjectId: 1,
+      teacher: "T",
+      frequency: "biweekly",
+      dayOfWeek: 1, // Monday
+      startTime: "10:00",
+      endTime: "11:00",
+      startDate: "2024-01-01", // Start beginning of year
+      color: "blue",
+      createdAt: 0,
+    };
+
+    // Check biweekly dates right from the start
+    const startDates = upcomingLessonDates(rec, 5, new Date(2024, 0, 1));
+    expect(startDates).toEqual([
+      "2024-01-01", "2024-01-15", "2024-01-29", "2024-02-12", "2024-02-26"
+    ]);
+
+    // Check biweekly dates long after a DST transition (e.g. May 2024)
+    // 2024-01-01 + 18 weeks = 2024-05-06
+    // If parity is calculated wrongly via Math.floor, it might skip 2024-05-06 and yield 2024-05-13
+    const lateDates = upcomingLessonDates(rec, 3, new Date(2024, 4, 6)); // May 6, 2024
+    expect(lateDates).toEqual(["2024-05-06", "2024-05-20", "2024-06-03"]);
+  });
 });
