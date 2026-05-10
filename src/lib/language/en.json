@@ -202,6 +202,7 @@
   "profile.unnamed": "Unnamed",
   "profile.editName": "Edit name",
   "profile.reminder": "Reminder",
+  "profile.reminderEnabled": "Reminders",
   "profile.lateRecovery": "Late recovery (days)",
   "profile.carryover": "Carry over uncompleted (days)",
   "profile.graceDay": "Grace day for streak",
