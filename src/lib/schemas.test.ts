@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { z } from "zod";
 import { sessionInputSchema, taskInputSchema, flattenErrors, bpmSchema } from "./schemas";
 
 describe("bpmSchema", () => {
@@ -48,8 +49,36 @@ describe("flattenErrors", () => {
   it("returns [] when valid", () => {
     expect(flattenErrors(bpmSchema.safeParse(100))).toEqual([]);
   });
-  it("returns string messages on failure", () => {
-    const errs = flattenErrors(bpmSchema.safeParse(0));
-    expect(errs.length).toBeGreaterThan(0);
+
+  it("returns 'value: message' for top-level primitive errors", () => {
+    const errs = flattenErrors(bpmSchema.safeParse(10));
+    expect(errs).toContain("value: Number must be greater than or equal to 20");
+  });
+
+  it("returns 'field: message' for object property errors", () => {
+    const schema = z.object({ title: z.string().min(5) });
+    const errs = flattenErrors(schema.safeParse({ title: "abc" }));
+    expect(errs).toContain("title: String must contain at least 5 character(s)");
+  });
+
+  it("returns 'a.b: message' for nested object errors", () => {
+    const schema = z.object({
+      nested: z.object({
+        count: z.number().min(1),
+      }),
+    });
+    const errs = flattenErrors(schema.safeParse({ nested: { count: 0 } }));
+    expect(errs).toContain("nested.count: Number must be greater than or equal to 1");
+  });
+
+  it("returns multiple error messages when multiple validations fail", () => {
+    const schema = z.object({
+      a: z.number(),
+      b: z.number(),
+    });
+    const errs = flattenErrors(schema.safeParse({ a: "not-a-number", b: "also-not" }));
+    expect(errs).toHaveLength(2);
+    expect(errs[0]).toMatch(/^a: /);
+    expect(errs[1]).toMatch(/^b: /);
   });
 });
