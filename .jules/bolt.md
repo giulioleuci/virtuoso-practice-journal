@@ -1,0 +1,3 @@
+## 2024-05-18 - Avoid full table scans in dexie's useLiveQuery
+**Learning:** In a local-first application using Dexie, reading an entire table (like `sessions.toArray()`) inside `useLiveQuery` on a frequently loaded view causes a major performance bottleneck as the user's dataset grows over time.
+**Action:** Instead of querying the full table to establish a relationship to another set of fetched items, extract the specific foreign keys (like `taskId`s) and query only the subset using `where("foreignKey").anyOf(keys)`. This limits memory consumption and CPU usage. Combine them into a single `useLiveQuery` block.
