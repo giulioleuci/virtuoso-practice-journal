@@ -241,7 +241,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               {t("onb.continue")}
             </Button>
           ) : (
-            <Button onClick={finish} className="flex-1">
+            <Button onClick={() => finish()} className="flex-1">
               {t("onb.finish")}
             </Button>
           )}
