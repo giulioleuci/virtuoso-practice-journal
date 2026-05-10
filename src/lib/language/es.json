@@ -202,6 +202,7 @@
   "profile.unnamed": "Sin nombre",
   "profile.editName": "Editar nombre",
   "profile.reminder": "Recordatorio",
+  "profile.reminderEnabled": "Recordatorios",
   "profile.lateRecovery": "Recuperación tardía (días)",
   "profile.carryover": "Arrastrar incompletos (días)",
   "profile.graceDay": "Día de gracia para la racha",
