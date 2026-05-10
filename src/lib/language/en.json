@@ -64,6 +64,7 @@
   "onb.subjects.newTheory": "New theory subject…",
   "onb.reminder": "Daily reminder",
   "onb.reminder.sub": "We'll gently nudge you at this time.",
+  "onb.reminder.none": "No reminders",
   "onb.freq.daily": "Every day",
   "onb.freq.weekdays": "Weekdays",
   "onb.freq.custom": "Custom",
