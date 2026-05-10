@@ -104,14 +104,23 @@ export default function Profile() {
           </select>
         </Row>
 
-        <Row label={t("profile.reminder")}>
-          <input
-            type="time"
-            value={profile.reminderTime}
-            onChange={(e) => update({ reminderTime: e.target.value })}
-            className="bg-background border border-border rounded-md px-2 py-1.5 text-sm tabular-nums"
+        <Row label={t("profile.reminderEnabled")}>
+          <Switch
+            checked={profile.reminderEnabled !== false}
+            onCheckedChange={(v) => update({ reminderEnabled: v })}
           />
         </Row>
+
+        {profile.reminderEnabled !== false && (
+          <Row label={t("profile.reminder")}>
+            <input
+              type="time"
+              value={profile.reminderTime}
+              onChange={(e) => update({ reminderTime: e.target.value })}
+              className="bg-background border border-border rounded-md px-2 py-1.5 text-sm tabular-nums"
+            />
+          </Row>
+        )}
 
         <Row label={t("profile.lateRecovery")}>
           <input
