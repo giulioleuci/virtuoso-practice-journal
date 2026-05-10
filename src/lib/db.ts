@@ -19,6 +19,7 @@ export interface Profile {
   reminderTime: string;          // "HH:MM"
   reminderFreq: ReminderFreq;
   reminderDays: number[];        // 0-6 if custom
+  reminderEnabled?: boolean;     // undefined = enabled (back-compat)
   lateRecoveryDays: number;
   carryoverDays?: number;        // how many past days to surface uncompleted tasks from
   graceDay: boolean;
