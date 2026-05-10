@@ -216,6 +216,15 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                 ))}
               </div>
             )}
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => finish({ remindersDisabled: true })}
+                className="text-xs text-muted-foreground/60 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+              >
+                {t("onb.reminder.none")}
+              </button>
+            </div>
           </section>
         )}
       </main>
