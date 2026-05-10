@@ -39,10 +39,13 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
   }, [helpRequests, tab]);
 
   const grouped = useMemo(() => {
+    const itemsMap = new Map((items ?? []).map((i) => [i.id, i]));
+    const subjectsMap = new Map((subjects ?? []).map((s) => [s.id, s]));
+
     const map = new Map<string, { subjectName: string; items: Map<number | "none", { itemId?: number; itemTitle: string; reqs: HelpRequest[] }> }>();
     for (const h of list) {
-      const item = items?.find((i) => i.id === h.itemId);
-      const subject = subjects?.find((s) => s.id === item?.subjectId);
+      const item = h.itemId !== undefined ? itemsMap.get(h.itemId) : undefined;
+      const subject = item?.subjectId !== undefined ? subjectsMap.get(item.subjectId) : undefined;
       const subjectKey = subject?.name ?? "Other";
       if (!map.has(subjectKey)) map.set(subjectKey, { subjectName: subjectKey, items: new Map() });
       const bucket = map.get(subjectKey)!;
