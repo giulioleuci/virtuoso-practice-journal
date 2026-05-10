@@ -77,9 +77,10 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
   };
 
   const resolveAll = async () => {
-    await db.transaction("rw", db.helpRequests, async () => {
-      for (const h of list) if (h.id) await db.helpRequests.update(h.id, { resolved: true });
-    });
+    const ids = list.map((h) => h.id).filter((id): id is number => id !== undefined);
+    if (ids.length > 0) {
+      await db.helpRequests.where("id").anyOf(ids).modify({ resolved: true });
+    }
     toast.success(t("toast.allMarkedResolved"));
   };
 
