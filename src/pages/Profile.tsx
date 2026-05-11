@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Download, Upload, Trash2, FlaskConical, Pencil, PlayCircle } from "lucide-react";
+import {
+  Download, Upload, Trash2, FlaskConical, Pencil, PlayCircle,
+  Bell, Languages, Settings2, Database, AlertTriangle, BookMarked, User,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -33,7 +36,7 @@ export default function Profile() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `virtuoso-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `virtuoso-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success(t("toast.exported"));
@@ -49,24 +52,36 @@ export default function Profile() {
     }
   };
 
+  const remindersOn = profile.reminderEnabled !== false;
+
   return (
-    <div className="space-y-6">
-      <section className="paper-card p-6">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">{t("nav.profile")}</p>
-        <div className="text-xs text-muted-foreground mb-1">{t("profile.name")}</div>
-        <div className="flex items-center justify-between gap-2">
-          <div id="profile-name" className="font-serif text-2xl break-words min-w-0">
-            {profile.name || <span className="italic text-muted-foreground">{t("profile.unnamed")}</span>}
+    <div className="space-y-5 pb-8">
+      {/* Identity hero */}
+      <section className="paper-card p-5">
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 rounded-full bg-accent/70 flex items-center justify-center shrink-0">
+            <User className="h-6 w-6 text-muted-foreground" />
           </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label={t("profile.editName")}
-            onClick={() => { setNameDraft(profile.name ?? ""); setEditingName(true); }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              {t("nav.profile")}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <h1 className="font-serif text-2xl truncate">
+                {profile.name || <span className="italic text-muted-foreground">{t("profile.unnamed")}</span>}
+              </h1>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 shrink-0"
+                aria-label={t("profile.editName")}
+                onClick={() => { setNameDraft(profile.name ?? ""); setEditingName(true); }}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -81,138 +96,156 @@ export default function Profile() {
             placeholder={t("onb.name.ph")}
             onChange={(e) => setNameDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); update({ name: nameDraft.trim() }).then(() => { setEditingName(false); toast.success(t("toast.nameSaved")); }); }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                update({ name: nameDraft.trim() }).then(() => {
+                  setEditingName(false);
+                  toast.success(t("toast.nameSaved"));
+                });
+              }
             }}
           />
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditingName(false)}>{t("common.cancel")}</Button>
-            <Button onClick={async () => { await update({ name: nameDraft.trim() }); setEditingName(false); toast.success(t("toast.nameSaved")); }}>{t("common.save")}</Button>
+            <Button
+              onClick={async () => {
+                await update({ name: nameDraft.trim() });
+                setEditingName(false);
+                toast.success(t("toast.nameSaved"));
+              }}
+            >
+              {t("common.save")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <section className="paper-card p-5 space-y-4">
-        <h3 className="font-serif text-xl">{t("profile.settings")}</h3>
-
-        <Row label={t("onb.lang")}>
+      {/* Quick preferences: language + reminders, always visible */}
+      <section className="paper-card p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm truncate">{t("onb.lang")}</span>
+          </div>
           <select
             value={lang}
-            onChange={async (e) => { const v = e.target.value as typeof lang; setLang(v); await update({ lang: v }); }}
-            className="bg-background border border-border rounded-md px-2 py-1.5 text-sm"
+            onChange={async (e) => {
+              const v = e.target.value as typeof lang;
+              setLang(v);
+              await update({ lang: v });
+            }}
+            className="bg-background border border-border rounded-md px-2 py-1.5 text-sm shrink-0"
           >
-            {SUPPORTED_LANGS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+            {SUPPORTED_LANGS.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
           </select>
-        </Row>
+        </div>
 
-        <Row label={t("profile.reminderEnabled")}>
+        <div className="h-px bg-border/60" />
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Bell className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm truncate">{t("profile.reminderEnabled")}</span>
+          </div>
           <Switch
-            checked={profile.reminderEnabled !== false}
+            checked={remindersOn}
             onCheckedChange={(v) => update({ reminderEnabled: v })}
           />
-        </Row>
+        </div>
 
-        {profile.reminderEnabled !== false && (
-          <Row label={t("profile.reminder")}>
+        {remindersOn && (
+          <div className="flex items-center justify-between gap-3 pl-6">
+            <span className="text-sm text-muted-foreground">{t("profile.reminder")}</span>
             <input
               type="time"
               value={profile.reminderTime}
               onChange={(e) => update({ reminderTime: e.target.value })}
               className="bg-background border border-border rounded-md px-2 py-1.5 text-sm tabular-nums"
             />
-          </Row>
-        )}
-
-        <Row label={t("profile.lateRecovery")}>
-          <input
-            type="number" min={0} max={14}
-            value={profile.lateRecoveryDays}
-            onChange={(e) => update({ lateRecoveryDays: Number(e.target.value) })}
-            className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-20 tabular-nums"
-          />
-        </Row>
-
-        <Row label={t("profile.carryover")}>
-          <input
-            type="number" min={0} max={14}
-            value={profile.carryoverDays ?? 2}
-            onChange={(e) => update({ carryoverDays: Number(e.target.value) })}
-            className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-20 tabular-nums"
-          />
-        </Row>
-
-        <Row label={t("profile.graceDay")}>
-          <Switch checked={profile.graceDay} onCheckedChange={(v) => update({ graceDay: v })} />
-        </Row>
-
-        <Row label={t("profile.groupByPhase")}>
-          <Switch checked={profile.groupByPhase} onCheckedChange={(v) => update({ groupByPhase: v })} />
-        </Row>
-
-        <div className="pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => update({ introSeen: false })}
-          >
-            <PlayCircle className="h-4 w-4 mr-2" />{t("profile.introTour")}
-          </Button>
-        </div>
-      </section>
-
-      <SubjectsEditor />
-      <section className="paper-card p-5 space-y-3">
-        <h3 className="font-serif text-xl">{t("profile.data")}</h3>
-        <div className="flex flex-col gap-2">
-          <Button variant="outline" onClick={onExport}><Download className="h-4 w-4 mr-2" />{t("profile.export")}</Button>
-          <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4 mr-2" />{t("profile.import")}</Button>
-          <input
-            ref={fileRef} type="file" accept="application/json" className="hidden"
-            onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])}
-          />
-        </div>
-      </section>
-
-      <section className="paper-card p-5 space-y-3 border-destructive/30">
-        <h3 className="font-serif text-xl text-destructive">{t("profile.wipe")}</h3>
-        {!confirming ? (
-          <Button variant="destructive" onClick={() => setConfirming(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />{t("profile.wipe")}
-          </Button>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              {(() => {
-                const [pre, post] = t("profile.typeDelete").split("DELETE");
-                return <>{pre}<code className="px-1 bg-muted rounded">DELETE</code>{post}</>;
-              })()}
-            </p>
-            <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => { setConfirming(false); setConfirmText(""); }}>{t("common.cancel")}</Button>
-              <Button
-                variant="destructive"
-                disabled={confirmText !== "DELETE"}
-                onClick={async () => {
-                  await wipeAll();
-                  location.reload();
-                }}
-              >{t("common.confirm")}</Button>
-            </div>
           </div>
         )}
       </section>
 
-      <Accordion type="single" collapsible>
-        <AccordionItem value="dev" className="paper-card px-5 border-0">
-          <AccordionTrigger className="font-serif text-lg hover:no-underline">
-            <span className="flex items-center gap-2"><FlaskConical className="h-4 w-4" /> {t("profile.dev")}</span>
+      {/* Subjects, layers & techniques */}
+      <SubjectsEditor />
+
+      {/* Grouped collapsibles */}
+      <Accordion type="multiple" className="space-y-3">
+        <AccordionItem value="practice" className="paper-card border-0 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
+            <span className="flex items-center gap-2 font-serif text-base">
+              <Settings2 className="h-4 w-4 text-muted-foreground" />
+              {t("profile.settings")}
+            </span>
           </AccordionTrigger>
-          <AccordionContent className="space-y-3 pt-2">
-            <p className="text-xs text-muted-foreground italic">
-              {t("profile.devDesc")}
-            </p>
+          <AccordionContent className="space-y-3 pb-4">
+            <Row label={t("profile.lateRecovery")}>
+              <input
+                type="number" min={0} max={14}
+                value={profile.lateRecoveryDays}
+                onChange={(e) => update({ lateRecoveryDays: Number(e.target.value) })}
+                className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-20 tabular-nums"
+              />
+            </Row>
+            <Row label={t("profile.carryover")}>
+              <input
+                type="number" min={0} max={14}
+                value={profile.carryoverDays ?? 2}
+                onChange={(e) => update({ carryoverDays: Number(e.target.value) })}
+                className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-20 tabular-nums"
+              />
+            </Row>
+            <Row label={t("profile.graceDay")}>
+              <Switch checked={profile.graceDay} onCheckedChange={(v) => update({ graceDay: v })} />
+            </Row>
+            <Row label={t("profile.groupByPhase")}>
+              <Switch checked={profile.groupByPhase} onCheckedChange={(v) => update({ groupByPhase: v })} />
+            </Row>
+            <div className="pt-1">
+              <Button variant="outline" size="sm" className="w-full" onClick={() => update({ introSeen: false })}>
+                <PlayCircle className="h-4 w-4 mr-2" />{t("profile.introTour")}
+              </Button>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="data" className="paper-card border-0 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
+            <span className="flex items-center gap-2 font-serif text-base">
+              <Database className="h-4 w-4 text-muted-foreground" />
+              {t("profile.data")}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="pb-4">
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={onExport} className="w-full">
+                <Download className="h-4 w-4 mr-2" />{t("profile.export")}
+              </Button>
+              <Button variant="outline" onClick={() => fileRef.current?.click()} className="w-full">
+                <Upload className="h-4 w-4 mr-2" />{t("profile.import")}
+              </Button>
+            </div>
+            <input
+              ref={fileRef} type="file" accept="application/json" className="hidden"
+              onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])}
+            />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="dev" className="paper-card border-0 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
+            <span className="flex items-center gap-2 font-serif text-base">
+              <FlaskConical className="h-4 w-4 text-muted-foreground" />
+              {t("profile.dev")}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-3 pb-4">
+            <p className="text-xs text-muted-foreground italic">{t("profile.devDesc")}</p>
             <Button
               variant="outline"
+              className="w-full"
               onClick={async () => {
                 if (!confirm(t("profile.sampleDataWarning"))) return;
                 await seedSampleData();
@@ -220,8 +253,54 @@ export default function Profile() {
                 setTimeout(() => location.reload(), 400);
               }}
             >
-              <FlaskConical className="h-4 w-4 mr-2" /> {t("profile.createSampleData")}
+              <BookMarked className="h-4 w-4 mr-2" /> {t("profile.createSampleData")}
             </Button>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="danger" className="paper-card border-0 border-destructive/30 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
+            <span className="flex items-center gap-2 font-serif text-base text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              {t("profile.wipe")}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-3 pb-4">
+            {!confirming ? (
+              <Button variant="destructive" className="w-full" onClick={() => setConfirming(true)}>
+                <Trash2 className="h-4 w-4 mr-2" />{t("profile.wipe")}
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {(() => {
+                    const [pre, post] = t("profile.typeDelete").split("DELETE");
+                    return <>{pre}<code className="px-1 bg-muted rounded">DELETE</code>{post}</>;
+                  })()}
+                </p>
+                <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => { setConfirming(false); setConfirmText(""); }}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    disabled={confirmText !== "DELETE"}
+                    onClick={async () => {
+                      await wipeAll();
+                      location.reload();
+                    }}
+                  >
+                    {t("common.confirm")}
+                  </Button>
+                </div>
+              </div>
+            )}
           </AccordionContent>
         </AccordionItem>
       </Accordion>
@@ -231,9 +310,9 @@ export default function Profile() {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-sm">{label}</span>
-      {children}
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm flex-1 min-w-0">{label}</span>
+      <div className="shrink-0">{children}</div>
     </div>
   );
 }
