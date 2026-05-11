@@ -156,14 +156,70 @@ export default function Profile() {
         </div>
 
         {remindersOn && (
-          <div className="flex items-center justify-between gap-3 pl-6">
-            <span className="text-sm text-muted-foreground">{t("profile.reminder")}</span>
-            <input
-              type="time"
-              value={profile.reminderTime}
-              onChange={(e) => update({ reminderTime: e.target.value })}
-              className="bg-background border border-border rounded-md px-2 py-1.5 text-sm tabular-nums"
-            />
+          <div className="space-y-3 pl-6">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">{t("profile.reminder")}</span>
+              <input
+                type="time"
+                value={profile.reminderTime}
+                onChange={(e) => update({ reminderTime: e.target.value })}
+                className="bg-background border border-border rounded-md px-2 py-1.5 text-sm tabular-nums"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5">
+              {(["daily", "weekdays", "custom"] as const).map((f) => {
+                const active = (profile.reminderFreq ?? "daily") === f;
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => {
+                      const days = f === "custom"
+                        ? (profile.reminderDays?.length ? profile.reminderDays : [1, 2, 3, 4, 5])
+                        : f === "weekdays" ? [1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6];
+                      update({ reminderFreq: f, reminderDays: days });
+                    }}
+                    className={
+                      "rounded-md border px-2 py-1.5 text-xs font-medium transition-colors " +
+                      (active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border hover:bg-accent")
+                    }
+                  >
+                    {t(`onb.freq.${f}`)}
+                  </button>
+                );
+              })}
+            </div>
+
+            {(profile.reminderFreq ?? "daily") === "custom" && (
+              <div className="flex justify-between gap-1">
+                {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+                  const sel = profile.reminderDays?.includes(i) ?? false;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        const cur = profile.reminderDays ?? [];
+                        const next = sel ? cur.filter((d) => d !== i) : [...cur, i].sort();
+                        update({ reminderDays: next });
+                      }}
+                      className={
+                        "h-9 w-9 rounded-full text-xs font-medium transition-colors " +
+                        (sel
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background border border-border text-muted-foreground")
+                      }
+                      aria-pressed={sel}
+                    >
+                      {t(`weekday.${i}`).slice(0, 1)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </section>
