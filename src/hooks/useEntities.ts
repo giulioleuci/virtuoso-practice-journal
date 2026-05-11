@@ -13,6 +13,18 @@ export const useTechniques = () =>
 export const useLibrary = () =>
   useLiveQuery(() => db.library.filter((i) => !i.deletedAt).toArray(), []);
 
+export const useRepertoire = () =>
+  useLiveQuery(
+    () => db.library.where("kind").equals("repertoire").filter((i) => !i.deletedAt).toArray(),
+    []
+  );
+
+export const useCollectionItems = (collectionId?: number) =>
+  useLiveQuery(
+    () => collectionId ? db.collectionItems.where("collectionId").equals(collectionId).toArray() : Promise.resolve([]),
+    [collectionId]
+  );
+
 export const useSegments = () =>
   useLiveQuery(() => db.segments.filter((s) => !s.deletedAt).toArray(), []);
 

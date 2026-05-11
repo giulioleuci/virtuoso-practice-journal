@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Collection, type LibraryItem } from "@/lib/db";
+import { type Collection, type LibraryItem } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
+import { useRepertoire, useCollectionItems } from "@/hooks/useEntities";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
@@ -20,14 +20,8 @@ interface Props {
 
 export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
   const { t } = useI18n();
-  const repertoire = useLiveQuery(
-    () => db.library.where("kind").equals("repertoire").filter((i) => !i.deletedAt).toArray(),
-    []
-  ) as LibraryItem[] | undefined;
-  const links = useLiveQuery(
-    () => collection?.id ? db.collectionItems.where("collectionId").equals(collection.id).toArray() : Promise.resolve([]),
-    [collection?.id]
-  );
+  const repertoire = useRepertoire() as LibraryItem[] | undefined;
+  const links = useCollectionItems(collection?.id);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
