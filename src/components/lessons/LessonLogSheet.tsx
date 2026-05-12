@@ -12,16 +12,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, X, Check } from "lucide-react";
 import { toast } from "sonner";
 
-interface Props {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
+export interface LessonLogContext {
   recurrence?: LessonRecurrence | null;
   subjectId?: number;
   lesson?: Lesson | null;
   prefilledDate?: string;
 }
 
-export function LessonLogSheet({ open, onOpenChange, recurrence, subjectId, lesson, prefilledDate }: Props) {
+interface Props {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  context?: LessonLogContext;
+}
+
+export function LessonLogSheet({ open, onOpenChange, context }: Props) {
+  const { recurrence, subjectId, lesson, prefilledDate } = context || {};
   const { t } = useI18n();
   const isEdit = !!lesson?.id;
   const subjId = lesson?.subjectId ?? recurrence?.subjectId ?? subjectId;
