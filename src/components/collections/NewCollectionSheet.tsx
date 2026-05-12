@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Collection, type ColorKey } from "@/lib/db";
+import { db, type Collection, type ColorKey, type LibraryKind } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
@@ -21,12 +21,16 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   collection?: Collection | null;
+  /** Kind to assign on create. Ignored when editing (uses collection.kind). */
+  kind?: LibraryKind;
   onSaved?: (id: number) => void;
 }
 
-export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: Props) {
+export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSaved }: Props) {
   const { t } = useI18n();
   const isEdit = !!collection?.id;
+  const effectiveKind: LibraryKind = collection?.kind ?? kind ?? "repertoire";
+  const showComposerLike = effectiveKind === "repertoire" || effectiveKind === "manual";
   const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
 
   const [name, setName] = useState("");
@@ -47,9 +51,10 @@ export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: 
   }, [open, collection?.id]);
 
   const input = {
+    kind: effectiveKind,
     name: name.trim(),
-    composer: composer.trim() || undefined,
-    catalog: catalog.trim() || undefined,
+    composer: showComposerLike ? (composer.trim() || undefined) : undefined,
+    catalog: showComposerLike ? (catalog.trim() || undefined) : undefined,
     notes: notes.trim() || undefined,
     color,
     defaultSubjectId,
