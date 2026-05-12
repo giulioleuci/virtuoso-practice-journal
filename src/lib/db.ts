@@ -214,6 +214,8 @@ export interface Assignment {
 
 export interface Collection {
   id?: number;
+  /** Library kind this collection groups. Each collection is kind-specific. */
+  kind: LibraryKind;
   name: string;
   composer?: string;
   catalog?: string;
@@ -287,6 +289,14 @@ class VirtuosoDB extends Dexie {
         if (legacy && !t.segmentIds?.length) t.segmentIds = [legacy];
         delete (t as Task & { segmentId?: number }).segmentId;
         if (!t.linkType) t.linkType = t.itemId ? "item" : "free";
+      });
+    });
+    // v6: collections become kind-specific (extended beyond repertoire)
+    this.version(6).stores({
+      collections: "++id, name, kind, composer, defaultSubjectId, deletedAt",
+    }).upgrade(async (tx) => {
+      await tx.table("collections").toCollection().modify((c: Collection) => {
+        if (!c.kind) c.kind = "repertoire";
       });
     });
   }

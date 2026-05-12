@@ -16,7 +16,7 @@ async function seedItem(title: string, kind: "repertoire" | "manual" = "repertoi
 
 describe("collectionsService", () => {
   it("creates, lists, updates, and removes (detaching links)", async () => {
-    const id = await collectionsService.create({ name: "Op. 9", composer: "Chopin" });
+    const id = await collectionsService.create({ kind: "repertoire", name: "Op. 9", composer: "Chopin" });
     const item = await seedItem("Nocturne in B♭ minor");
     await collectionsService.addItems(id, [item]);
 
@@ -34,9 +34,9 @@ describe("collectionsService", () => {
   });
 
   it("setItemCollections diffs add and remove", async () => {
-    const a = await collectionsService.create({ name: "A" });
-    const b = await collectionsService.create({ name: "B" });
-    const c = await collectionsService.create({ name: "C" });
+    const a = await collectionsService.create({ kind: "repertoire", name: "A" });
+    const b = await collectionsService.create({ kind: "repertoire", name: "B" });
+    const c = await collectionsService.create({ kind: "repertoire", name: "C" });
     const item = await seedItem("Piece");
 
     await collectionsService.setItemCollections(item, [a, b]);
@@ -49,7 +49,7 @@ describe("collectionsService", () => {
   });
 
   it("addItems is idempotent", async () => {
-    const id = await collectionsService.create({ name: "X" });
+    const id = await collectionsService.create({ kind: "repertoire", name: "X" });
     const item = await seedItem("Piece");
     await collectionsService.addItems(id, [item]);
     await collectionsService.addItems(id, [item]);
@@ -57,8 +57,8 @@ describe("collectionsService", () => {
   });
 
   it("groupRepertoireByCollection includes uncollected bucket and multi-membership", async () => {
-    const a = await collectionsService.create({ name: "Aaa" });
-    const b = await collectionsService.create({ name: "Bbb" });
+    const a = await collectionsService.create({ kind: "repertoire", name: "Aaa" });
+    const b = await collectionsService.create({ kind: "repertoire", name: "Bbb" });
     const i1 = await seedItem("In both");
     const i2 = await seedItem("Only A");
     const i3 = await seedItem("Uncollected");
@@ -77,7 +77,7 @@ describe("collectionsService", () => {
   });
 
   it("uncollected bucket exists even when empty", async () => {
-    const a = await collectionsService.create({ name: "A" });
+    const a = await collectionsService.create({ kind: "repertoire", name: "A" });
     const item = await seedItem("Piece");
     await collectionsService.setItemCollections(item, [a]);
     const groups = await collectionsService.groupRepertoireByCollection();
@@ -86,7 +86,7 @@ describe("collectionsService", () => {
   });
 
   it("ignores non-repertoire items in grouping", async () => {
-    const a = await collectionsService.create({ name: "A" });
+    const a = await collectionsService.create({ kind: "repertoire", name: "A" });
     const m = await seedItem("Manual", "manual");
     await collectionsService.addItems(a, [m]);
     const groups = await collectionsService.groupRepertoireByCollection();

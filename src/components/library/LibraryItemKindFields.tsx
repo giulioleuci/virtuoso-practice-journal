@@ -33,11 +33,40 @@ const STATUSES: PracticeStatus[] = ["in_study", "maintenance", "pause"];
 export function LibraryItemKindFields(p: Props) {
   const { t } = useI18n();
 
+  const collectionsBlock = p.setCollectionIds && (
+    <div className="space-y-2">
+      <MultiChipPicker
+        label={t("library.collections")}
+        options={p.collectionOptions ?? []}
+        value={p.collectionIds ?? []}
+        onChange={p.setCollectionIds}
+        emptyHint={t("collections.empty")}
+        placeholder={t("link.assignToCollections")}
+      />
+      {p.onCreateCollection && (
+        <button
+          type="button"
+          onClick={p.onCreateCollection}
+          className="text-xs text-primary hover:underline"
+        >{t("library.newCollectionBtn")}</button>
+      )}
+    </div>
+  );
+
   if (p.kind === "theory") {
     return (
-      <p className="text-xs text-muted-foreground italic">
-        {t("library.masteryFromSessions")}
-      </p>
+      <>
+        <p className="text-xs text-muted-foreground italic">
+          {t("library.masteryFromSessions")}
+        </p>
+        {collectionsBlock}
+        <SegmentsEditor
+          segments={p.segments}
+          onChange={p.setSegments}
+          subjectLayers={p.subjectLayers}
+          techniqueOptions={p.techniqueOptions}
+        />
+      </>
     );
   }
 
@@ -103,34 +132,14 @@ export function LibraryItemKindFields(p: Props) {
         emptyHint={t("library.addTechniquesHint2")}
       />
 
-      {p.kind === "repertoire" && p.setCollectionIds && (
-        <div className="space-y-2">
-          <MultiChipPicker
-            label={t("library.collections")}
-            options={p.collectionOptions ?? []}
-            value={p.collectionIds ?? []}
-            onChange={p.setCollectionIds}
-            emptyHint={t("collections.empty")}
-            placeholder={t("link.assignToCollections")}
-          />
-          {p.onCreateCollection && (
-            <button
-              type="button"
-              onClick={p.onCreateCollection}
-              className="text-xs text-primary hover:underline"
-            >{t("library.newCollectionBtn")}</button>
-          )}
-        </div>
-      )}
+      {collectionsBlock}
 
-      {(p.kind === "repertoire" || p.kind === "manual") && (
-        <SegmentsEditor
-          segments={p.segments}
-          onChange={p.setSegments}
-          subjectLayers={p.subjectLayers}
-          techniqueOptions={p.techniqueOptions}
-        />
-      )}
+      <SegmentsEditor
+        segments={p.segments}
+        onChange={p.setSegments}
+        subjectLayers={p.subjectLayers}
+        techniqueOptions={p.techniqueOptions}
+      />
     </>
   );
 }

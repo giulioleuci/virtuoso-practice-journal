@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Collection, type ColorKey } from "@/lib/db";
+import { db, type Collection, type ColorKey, type LibraryKind } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
@@ -21,12 +21,16 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   collection?: Collection | null;
+  /** Kind to assign on create. Ignored when editing (uses collection.kind). */
+  kind?: LibraryKind;
   onSaved?: (id: number) => void;
 }
 
-export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: Props) {
+export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSaved }: Props) {
   const { t } = useI18n();
   const isEdit = !!collection?.id;
+  const effectiveKind: LibraryKind = collection?.kind ?? kind ?? "repertoire";
+  const showComposerLike = effectiveKind === "repertoire" || effectiveKind === "manual";
   const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
 
   const [name, setName] = useState("");
@@ -47,9 +51,10 @@ export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: 
   }, [open, collection?.id]);
 
   const input = {
+    kind: effectiveKind,
     name: name.trim(),
-    composer: composer.trim() || undefined,
-    catalog: catalog.trim() || undefined,
+    composer: showComposerLike ? (composer.trim() || undefined) : undefined,
+    catalog: showComposerLike ? (catalog.trim() || undefined) : undefined,
     notes: notes.trim() || undefined,
     color,
     defaultSubjectId,
@@ -80,10 +85,10 @@ export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: 
       <SheetContent side="bottom" className="h-[88vh] rounded-t-3xl bg-background p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-2 text-left">
           <SheetTitle className="font-serif text-3xl">
-            {isEdit ? t("collections.editCollection") : t("collections.new")}
+            {isEdit ? t("collections.editCollection") : t(`collections.newByKind.${effectiveKind}`)}
           </SheetTitle>
           <SheetDescription className="italic">
-            {t("collections.groupHint")}
+            {t(`collections.groupHintByKind.${effectiveKind}`)}
           </SheetDescription>
         </SheetHeader>
 
@@ -93,22 +98,26 @@ export function NewCollectionSheet({ open, onOpenChange, collection, onSaved }: 
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Nocturnes, Op. 9"
+              placeholder={t(`collections.namePlaceholder.${effectiveKind}`)}
               className="bg-card text-lg h-12"
               autoFocus
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("library.labelComposer")}</Label>
-              <Input value={composer} onChange={(e) => setComposer(e.target.value)} placeholder="Chopin" className="bg-card" />
+          {showComposerLike && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {effectiveKind === "manual" ? t("library.labelAuthor") : t("library.labelComposer")}
+                </Label>
+                <Input value={composer} onChange={(e) => setComposer(e.target.value)} placeholder={effectiveKind === "manual" ? "Hanon" : "Chopin"} className="bg-card" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelCatalog")}</Label>
+                <Input value={catalog} onChange={(e) => setCatalog(e.target.value)} placeholder="Op. 9" className="bg-card" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelCatalog")}</Label>
-              <Input value={catalog} onChange={(e) => setCatalog(e.target.value)} placeholder="Op. 9" className="bg-card" />
-            </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelColor")}</Label>

@@ -3,8 +3,8 @@ import { db, type Collection, type LibraryItem } from "@/lib/db";
 import { collectionInputSchema, type CollectionInput } from "@/lib/schemas";
 
 export const collectionsService = {
-  async list(): Promise<Collection[]> {
-    const rows = await db.collections.filter((c) => !c.deletedAt).toArray();
+  async list(kind?: import("@/lib/db").LibraryKind): Promise<Collection[]> {
+    const rows = await db.collections.filter((c) => !c.deletedAt && (!kind || c.kind === kind)).toArray();
     return rows.sort((a, b) => a.name.localeCompare(b.name));
   },
 
@@ -16,6 +16,7 @@ export const collectionsService = {
     const data = collectionInputSchema.parse(input);
     const now = Date.now();
     const row: Collection = {
+      kind: data.kind,
       name: data.name,
       composer: data.composer,
       catalog: data.catalog,
@@ -31,6 +32,7 @@ export const collectionsService = {
   async update(id: number, patch: Partial<CollectionInput>): Promise<void> {
     const merged = { ...(await db.collections.get(id)), ...patch } as Collection;
     collectionInputSchema.parse({
+      kind: merged.kind,
       name: merged.name,
       composer: merged.composer,
       catalog: merged.catalog,
@@ -113,14 +115,16 @@ export const collectionsService = {
   },
 
   /**
-   * Grouped repertoire view. An item appears in EVERY collection it belongs to.
-   * Items with zero memberships go into a synthetic "Uncollected" bucket
-   * (collection === null), which is always present (even when empty).
+   * Grouped library view by collection, scoped to one kind. An item appears in EVERY
+   * collection of that kind it belongs to. Items with zero memberships go into a
+   * synthetic "Uncollected" bucket (collection === null).
    */
-  async groupRepertoireByCollection(): Promise<{ collection: Collection | null; items: LibraryItem[] }[]> {
+  async groupLibraryByCollection(
+    kind: import("@/lib/db").LibraryKind = "repertoire"
+  ): Promise<{ collection: Collection | null; items: LibraryItem[] }[]> {
     const [collections, items, links] = await Promise.all([
-      collectionsService.list(),
-      db.library.where("kind").equals("repertoire").filter((i) => !i.deletedAt).toArray(),
+      collectionsService.list(kind),
+      db.library.where("kind").equals(kind).filter((i) => !i.deletedAt).toArray(),
       db.collectionItems.toArray(),
     ]);
     const itemsById = new Map(items.map((i) => [i.id!, i]));
@@ -144,5 +148,10 @@ export const collectionsService = {
       .filter((i) => !itemsWithMembership.has(i.id!))
       .sort((a, b) => a.title.localeCompare(b.title));
     return [...groups, { collection: null, items: uncollected }];
+  },
+
+  /** @deprecated use groupLibraryByCollection("repertoire") */
+  async groupRepertoireByCollection() {
+    return collectionsService.groupLibraryByCollection("repertoire");
   },
 };

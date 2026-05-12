@@ -206,6 +206,7 @@ export async function seedSampleData() {
 
   // ---------- Collections (4) ----------
   const colNocturnesOp9 = (await db.collections.add({
+    kind: "repertoire",
     name: "Nocturnes, Op. 9", composer: "Chopin", catalog: "Op. 9",
     notes: "Three nocturnes dedicated to Madame Camille Pleyel.",
     color: "plum", defaultSubjectId: pianoId,
@@ -213,18 +214,21 @@ export async function seedSampleData() {
   })) as number;
 
   const colWtcI = (await db.collections.add({
+    kind: "repertoire",
     name: "Well-Tempered Clavier, Book I", composer: "Bach", catalog: "BWV 846–869",
     color: "blue", defaultSubjectId: pianoId,
     createdAt: now - 60 * D, updatedAt: now,
   })) as number;
 
   const colBeethovenLate = (await db.collections.add({
+    kind: "repertoire",
     name: "Late Beethoven Sonatas", composer: "Beethoven", catalog: "Op. 101–111",
     color: "terracotta", defaultSubjectId: pianoId,
     createdAt: now - 60 * D, updatedAt: now,
   })) as number;
 
   const colCzerny = (await db.collections.add({
+    kind: "manual",
     name: "Czerny Studies", composer: "Czerny", catalog: "Op. 740",
     notes: "Daily finger-dexterity studies.",
     color: "gold", defaultSubjectId: pianoId,

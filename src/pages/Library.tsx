@@ -169,25 +169,21 @@ export default function Library() {
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1"
         />
-        {active === "repertoire" && (
-          <Button asChild size="sm" variant="ghost" className="shrink-0">
-            <Link to="/library/collections"><FolderOpen className="h-4 w-4 mr-1" /> {t("library.collections")}</Link>
-          </Button>
-        )}
+        <Button asChild size="sm" variant="ghost" className="shrink-0">
+          <Link to={`/library/collections?kind=${active}`}><FolderOpen className="h-4 w-4 mr-1" /> {t("library.collections")}</Link>
+        </Button>
       </div>
 
-      {active === "repertoire" && (
-        <div className="flex justify-end">
-          <Button
-            size="sm"
-            variant={groupByCollection ? "secondary" : "ghost"}
-            onClick={() => setGroupByCollection((v) => !v)}
-          >
-            <Layers className="h-4 w-4 mr-1" />
-            {groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          variant={groupByCollection ? "secondary" : "ghost"}
+          onClick={() => setGroupByCollection((v) => !v)}
+        >
+          <Layers className="h-4 w-4 mr-1" />
+          {groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}
+        </Button>
+      </div>
 
       {(() => {
         const renderCard = (it: LibraryItem) => {
@@ -331,8 +327,8 @@ export default function Library() {
 
         const paginate = <T,>(arr: T[], p: number) => arr.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE);
 
-        if (active === "repertoire" && groupByCollection) {
-          const cols = (allCollections ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
+        if (groupByCollection) {
+          const cols = (allCollections ?? []).filter((c) => c.kind === active).slice().sort((a, b) => a.name.localeCompare(b.name));
           const links = allCollectionLinks ?? [];
           const filteredIds = new Set(filteredItems.map((i) => i.id!));
           const itemsById = new Map(filteredItems.map((i) => [i.id!, i]));
