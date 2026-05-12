@@ -131,7 +131,7 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
           <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
             <div className="flex gap-3 w-full items-center">
               <span className="text-xs text-muted-foreground tabular-nums mr-auto">
-                {t("collections.pieces", { count: included.length })}
+                {t(`collections.itemsCount.${kind}`, { count: included.length })}
               </span>
               <Button onClick={() => onOpenChange(false)}>{t("common.done")}</Button>
             </div>
@@ -143,21 +143,21 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
       <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
         <SheetContent side="bottom" className="h-[88vh] rounded-t-3xl bg-background p-0 flex flex-col">
           <SheetHeader className="px-6 pt-6 pb-2 text-left">
-            <SheetTitle className="font-serif text-2xl">{t("collections.addPiece")}</SheetTitle>
-            <SheetDescription className="italic">{t("collections.pickFromRepertoire")}</SheetDescription>
+            <SheetTitle className="font-serif text-2xl">{t(`collections.addItem.${kind}`)}</SheetTitle>
+            <SheetDescription className="italic">{t(`collections.pickFromLibrary.${kind}`)}</SheetDescription>
           </SheetHeader>
 
           <div className="px-6 pt-2 pb-3 space-y-2">
             <div className="relative">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder={t("library.searchTitleComposer")}
+                placeholder={showComposer ? t("library.searchTitleComposer") : t("common.search")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="bg-card pl-9"
               />
             </div>
-            {composers.length > 0 && (
+            {showComposer && composers.length > 0 && (
               <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
                 <button
                   type="button"
