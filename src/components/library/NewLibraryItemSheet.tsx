@@ -91,10 +91,11 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   );
   const collectionOptions = useMemo(
     () => (allCollections ?? [])
+      .filter((c) => c.kind === editingKind)
       .slice()
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((c) => ({ value: c.id!, label: c.name })),
-    [allCollections]
+    [allCollections, editingKind]
   );
 
   const subjectTechniqueOptions = useMemo(
