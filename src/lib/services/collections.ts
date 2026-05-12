@@ -3,8 +3,8 @@ import { db, type Collection, type LibraryItem } from "@/lib/db";
 import { collectionInputSchema, type CollectionInput } from "@/lib/schemas";
 
 export const collectionsService = {
-  async list(): Promise<Collection[]> {
-    const rows = await db.collections.filter((c) => !c.deletedAt).toArray();
+  async list(kind?: import("@/lib/db").LibraryKind): Promise<Collection[]> {
+    const rows = await db.collections.filter((c) => !c.deletedAt && (!kind || c.kind === kind)).toArray();
     return rows.sort((a, b) => a.name.localeCompare(b.name));
   },
 
@@ -16,6 +16,7 @@ export const collectionsService = {
     const data = collectionInputSchema.parse(input);
     const now = Date.now();
     const row: Collection = {
+      kind: data.kind,
       name: data.name,
       composer: data.composer,
       catalog: data.catalog,
@@ -31,6 +32,7 @@ export const collectionsService = {
   async update(id: number, patch: Partial<CollectionInput>): Promise<void> {
     const merged = { ...(await db.collections.get(id)), ...patch } as Collection;
     collectionInputSchema.parse({
+      kind: merged.kind,
       name: merged.name,
       composer: merged.composer,
       catalog: merged.catalog,
