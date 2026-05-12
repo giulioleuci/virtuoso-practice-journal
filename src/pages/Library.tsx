@@ -169,25 +169,21 @@ export default function Library() {
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1"
         />
-        {active === "repertoire" && (
-          <Button asChild size="sm" variant="ghost" className="shrink-0">
-            <Link to="/library/collections"><FolderOpen className="h-4 w-4 mr-1" /> {t("library.collections")}</Link>
-          </Button>
-        )}
+        <Button asChild size="sm" variant="ghost" className="shrink-0">
+          <Link to={`/library/collections?kind=${active}`}><FolderOpen className="h-4 w-4 mr-1" /> {t("library.collections")}</Link>
+        </Button>
       </div>
 
-      {active === "repertoire" && (
-        <div className="flex justify-end">
-          <Button
-            size="sm"
-            variant={groupByCollection ? "secondary" : "ghost"}
-            onClick={() => setGroupByCollection((v) => !v)}
-          >
-            <Layers className="h-4 w-4 mr-1" />
-            {groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          variant={groupByCollection ? "secondary" : "ghost"}
+          onClick={() => setGroupByCollection((v) => !v)}
+        >
+          <Layers className="h-4 w-4 mr-1" />
+          {groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}
+        </Button>
+      </div>
 
       {(() => {
         const renderCard = (it: LibraryItem) => {
