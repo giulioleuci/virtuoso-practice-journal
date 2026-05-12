@@ -211,7 +211,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       }
     }
 
-    if ((editingKind === "repertoire" || editingKind === "manual") && segments.length) {
+    if (segments.length) {
       if (segments.some((s) => !s.label.trim())) e.push(t("errors.titleRequired"));
       if (segments.some((s) => !isValidBpm(s.targetBpm))) e.push(t("errors.bpmRange"));
     }
