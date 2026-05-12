@@ -254,21 +254,18 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     }
     // theory: mastery is derived from sessions, not stored directly
 
-    const segmentsPayload =
-      (editingKind === "repertoire" || editingKind === "manual") && segments.length
-        ? segments.map((s) => ({
-            label: s.label.trim(),
-            targetBpm: s.targetBpm,
-            noteVal: s.noteVal,
-            layers: s.layers ?? [],
-            techniqueIds: s.techniqueIds ?? [],
-          }))
-        : [];
+    const segmentsPayload = segments.length
+      ? segments.map((s) => ({
+          label: s.label.trim(),
+          targetBpm: s.targetBpm,
+          noteVal: s.noteVal,
+          layers: s.layers ?? [],
+          techniqueIds: s.techniqueIds ?? [],
+        }))
+      : [];
 
     const savedId = await libraryService.upsert(base, segmentsPayload);
-    if (editingKind === "repertoire") {
-      await collectionsService.setItemCollections(savedId, collectionIds);
-    }
+    await collectionsService.setItemCollections(savedId, collectionIds);
     toast.success(isEdit ? t("toast.updated") : t("toast.added"));
     onOpenChange(false);
   };
