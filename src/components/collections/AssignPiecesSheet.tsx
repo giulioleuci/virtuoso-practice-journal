@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { type Collection, type LibraryItem } from "@/lib/db";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db, type Collection, type LibraryItem } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { useRepertoire, useCollectionItems } from "@/hooks/useEntities";
+import { useCollectionItems } from "@/hooks/useEntities";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
@@ -20,7 +21,12 @@ interface Props {
 
 export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
   const { t } = useI18n();
-  const repertoire = useRepertoire() as LibraryItem[] | undefined;
+  const kind = collection?.kind ?? "repertoire";
+  const showComposer = kind === "repertoire" || kind === "manual";
+  const library = useLiveQuery(
+    () => db.library.where("kind").equals(kind).filter((i) => !i.deletedAt).toArray(),
+    [kind]
+  ) as LibraryItem[] | undefined;
   const links = useCollectionItems(collection?.id);
 
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -34,13 +40,13 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
 
   const includedIds = useMemo(() => new Set((links ?? []).map((l) => l.itemId)), [links]);
   const included = useMemo(
-    () => (repertoire ?? [])
+    () => (library ?? [])
       .filter((i) => i.id !== undefined && includedIds.has(i.id))
       .sort((a, b) => a.title.localeCompare(b.title)),
-    [repertoire, includedIds]
+    [library, includedIds]
   );
 
-  const candidates = useMemo(() => (repertoire ?? []).filter((i) => i.id !== undefined && !includedIds.has(i.id)), [repertoire, includedIds]);
+  const candidates = useMemo(() => (library ?? []).filter((i) => i.id !== undefined && !includedIds.has(i.id)), [library, includedIds]);
   const composers = useMemo(() => {
     const set = new Set<string>();
     candidates.forEach((c) => c.composer && set.add(c.composer));
@@ -49,11 +55,11 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
 
   const filteredCandidates = useMemo(() => {
     let arr = candidates;
-    if (composerFilter !== "all") arr = arr.filter((i) => (i.composer ?? "") === composerFilter);
+    if (showComposer && composerFilter !== "all") arr = arr.filter((i) => (i.composer ?? "") === composerFilter);
     const q = search.trim().toLowerCase();
     if (q) arr = arr.filter((i) => i.title.toLowerCase().includes(q) || (i.composer ?? "").toLowerCase().includes(q));
     return [...arr].sort((a, b) => a.title.localeCompare(b.title));
-  }, [candidates, composerFilter, search]);
+  }, [candidates, composerFilter, search, showComposer]);
 
   const addPiece = async (id: number) => {
     if (!collection?.id) return;
