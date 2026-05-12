@@ -327,8 +327,8 @@ export default function Library() {
 
         const paginate = <T,>(arr: T[], p: number) => arr.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE);
 
-        if (active === "repertoire" && groupByCollection) {
-          const cols = (allCollections ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
+        if (groupByCollection) {
+          const cols = (allCollections ?? []).filter((c) => c.kind === active).slice().sort((a, b) => a.name.localeCompare(b.name));
           const links = allCollectionLinks ?? [];
           const filteredIds = new Set(filteredItems.map((i) => i.id!));
           const itemsById = new Map(filteredItems.map((i) => [i.id!, i]));
