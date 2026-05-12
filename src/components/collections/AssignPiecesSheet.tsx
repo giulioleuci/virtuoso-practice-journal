@@ -78,13 +78,13 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="bottom" className="h-[88vh] rounded-t-3xl bg-background p-0 flex flex-col">
           <SheetHeader className="px-6 pt-6 pb-2 text-left">
-            <SheetTitle className="font-serif text-2xl">{t("collections.piecesInCollection")}</SheetTitle>
+            <SheetTitle className="font-serif text-2xl">{t(`collections.itemsInCollection.${kind}`)}</SheetTitle>
             <SheetDescription className="italic">{collection?.name}</SheetDescription>
           </SheetHeader>
 
           <div className="px-6 pt-3 pb-2">
             <Button onClick={() => setPickerOpen(true)} className="w-full" variant="outline">
-              <Plus className="h-4 w-4 mr-1" /> {t("collections.addPiece")}
+              <Plus className="h-4 w-4 mr-1" /> {t(`collections.addItem.${kind}`)}
             </Button>
           </div>
 
