@@ -220,11 +220,11 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
         </SheetContent>
       </Sheet>
 
-      {/* Edit existing piece */}
+      {/* Edit existing item */}
       <NewLibraryItemSheet
         open={editing !== null}
         onOpenChange={(o) => !o && setEditing(null)}
-        kind="repertoire"
+        kind={kind}
         item={editing}
       />
     </>
