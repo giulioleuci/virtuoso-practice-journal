@@ -11,7 +11,7 @@ import {
 import { Plus, Pencil, Trash2, NotebookPen, Wand2, CheckCircle2, HelpCircle, CalendarClock, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
-import { LessonLogSheet } from "@/components/lessons/LessonLogSheet";
+import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { upcomingLessonDates, dayKey, today } from "@/lib/recurrence";
@@ -38,12 +38,10 @@ export default function Lessons() {
   const [delRecId, setDelRecId] = useState<number | null>(null);
 
   const [logOpen, setLogOpen] = useState(false);
-  const [logRec, setLogRec] = useState<LessonRecurrence | null>(null);
-  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const [logContext, setLogContext] = useState<LessonLogContext | null>(null);
   const [delLessonId, setDelLessonId] = useState<number | null>(null);
 
   const [taskPrefill, setTaskPrefill] = useState<{ subjectId?: number; title?: string; assignmentId?: number } | null>(null);
-  const [logDate, setLogDate] = useState<string | undefined>();
 
   const [pageAssign, setPageAssign] = useState(0);
   const [pageUpcoming, setPageUpcoming] = useState(0);
@@ -55,14 +53,11 @@ export default function Lessons() {
   const subjectName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
 
   const openLog = (r: LessonRecurrence, date?: string) => {
-    setLogRec(r);
-    setEditingLesson(null);
-    setLogDate(date);
+    setLogContext({ recurrence: r, prefilledDate: date });
     setLogOpen(true);
   };
   const openEditLesson = (l: Lesson) => {
-    setEditingLesson(l);
-    setLogRec(recurrences?.find((r) => r.id === l.recurrenceId) ?? null);
+    setLogContext({ lesson: l, recurrence: recurrences?.find((r) => r.id === l.recurrenceId) ?? null });
     setLogOpen(true);
   };
 
@@ -300,10 +295,8 @@ export default function Lessons() {
 
       <LessonLogSheet
         open={logOpen}
-        onOpenChange={(o) => { setLogOpen(o); if (!o) { setEditingLesson(null); setLogRec(null); setLogDate(undefined); } }}
-        recurrence={logRec}
-        lesson={editingLesson}
-        prefilledDate={logDate}
+        onOpenChange={(o) => { setLogOpen(o); if (!o) setLogContext(null); }}
+        context={logContext || undefined}
       />
 
       <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />
