@@ -8,12 +8,14 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   Download, Upload, Trash2, FlaskConical, Pencil, PlayCircle,
-  Bell, Languages, Settings2, Database, AlertTriangle, BookMarked, User,
+  Bell, Languages, Settings2, Database, AlertTriangle, BookMarked, User, Info,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { seedSampleData } from "@/lib/sampleData";
+
+const APP_VERSION = "0.3alpha";
 
 export default function Profile() {
   const { t, lang, setLang } = useI18n();
@@ -23,6 +25,7 @@ export default function Profile() {
   const [confirming, setConfirming] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   if (!profile) return null;
 
@@ -360,6 +363,37 @@ export default function Profile() {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+
+      <div className="pt-2 text-center">
+        <button
+          type="button"
+          onClick={() => setAboutOpen(true)}
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Info className="h-3.5 w-3.5" />
+          {t("profile.about")}
+        </button>
+      </div>
+
+      <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-xl">{t("app.name")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-center">
+            <p className="text-sm text-muted-foreground italic">{t("app.tagline")}</p>
+            <p className="text-sm">{t("profile.aboutDescription")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("profile.version")} {APP_VERSION}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" className="w-full" onClick={() => setAboutOpen(false)}>
+              {t("common.close")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
