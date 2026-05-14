@@ -20,6 +20,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
@@ -52,7 +53,7 @@ const NOTE_GLYPH: Record<string, string> = {
 };
 
 export default function Diary() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { profile } = useOutletContext<{ profile: Profile }>();
   const today = todayKey();
   const { tasks, sessionsByTask } = useLiveQuery(async () => {
@@ -131,6 +132,8 @@ export default function Diary() {
 
   const doneCount = tasks?.filter((x) => x.done).length ?? 0;
 
+  const emptyQuote = useMemo(() => pickQuote(undefined, lang), [lang]);
+
   return (
     <div className="space-y-6">
       <section className="paper-card p-6">
@@ -178,7 +181,11 @@ export default function Diary() {
             <div className="paper-skeleton h-20" />
           </div>
         ) : !tasks?.length ? (
-          <EmptyDiary onAdd={() => setNewOpen(true)} hint={t("diary.empty")} />
+          <EmptyState
+            hint={t("diary.empty")}
+            quote={emptyQuote}
+            cta={{ label: t("diary.beginTask"), onClick: () => setNewOpen(true) }}
+          />
         ) : (
           <ul className="space-y-2">
             {tasks.map((task) => {
@@ -499,20 +506,3 @@ export default function Diary() {
   );
 }
 
-function EmptyDiary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
-  const { t, lang } = useI18n();
-  const quote = useMemo(() => pickQuote(undefined, lang), [lang]);
-  return (
-    <button
-      onClick={onAdd}
-      className="paper-card p-8 text-center w-full hover:-translate-y-0.5 transition-transform group"
-    >
-      <p className="font-serif text-xl italic text-foreground/85 leading-snug">"{quote.text}"</p>
-      <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">— {quote.author}</p>
-      <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
-      <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
-        <Plus className="h-4 w-4" /> {t("diary.beginTask")}
-      </span>
-    </button>
-  );
-}
