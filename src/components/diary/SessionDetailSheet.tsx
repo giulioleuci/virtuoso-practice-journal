@@ -137,8 +137,8 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
               )}
               {(() => {
                 const labels =
-                  session.snapshot?.segmentLabels?.length
-                    ? session.snapshot.segmentLabels
+                  session.snapshot?.segments?.length
+                    ? session.snapshot.segments.map((s) => s.label)
                     : segments?.map((s) => s.label) ?? [];
                 if (!labels.length && !session.snapshot?.collectionName) return null;
                 return (
@@ -198,6 +198,36 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                     <p className="text-sm whitespace-pre-wrap">{session.notes}</p>
                   </div>
                 )}
+                {session.segmentMetrics && session.snapshot?.segments?.length ? (
+                  <div className="paper-card p-3 space-y-3">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {t("session.segmentBreakdown")}
+                    </div>
+                    {session.snapshot.segments.map(({ id, label }) => {
+                      const m = session.segmentMetrics![id];
+                      if (!m) return null;
+                      return (
+                        <div key={id} className="space-y-0.5">
+                          <div className="font-medium text-sm">{label}</div>
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            {m.confidence != null && (
+                              <span>★ {m.confidence}/5</span>
+                            )}
+                            {m.quality && (
+                              <span>{t(`session.quality${m.quality.charAt(0).toUpperCase() + m.quality.slice(1)}`)}</span>
+                            )}
+                            {m.bpmReached != null && (
+                              <span>{m.bpmReached} BPM</span>
+                            )}
+                            {m.reps != null && (
+                              <span>{m.reps} reps</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
                 {(session.layersUsed?.length || session.techniquesUsed?.length) ? (
                   <div className="paper-card p-3 space-y-3 text-xs">
                     {!!session.layersUsed?.length && (

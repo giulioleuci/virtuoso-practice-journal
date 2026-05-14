@@ -10,6 +10,13 @@ export type LibraryKind = "repertoire" | "manual" | "technique" | "theory";
 export type NoteVal = "half" | "quarter" | "eighth" | "sixteenth";
 export type PracticeStatus = "in_study" | "maintenance" | "pause";
 export type SessionQuality = "hard" | "improve" | "well" | "great";
+
+export interface SegmentMetric {
+  confidence?: number;
+  quality?: SessionQuality;
+  bpmReached?: number;
+  reps?: number;
+}
 export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum";
 export type ReminderFreq = "daily" | "weekdays" | "custom";
 
@@ -114,6 +121,7 @@ export interface Task {
   skipped?: boolean;
   recurrenceTaskId?: number;
   recurrence?: TaskRecurrence;
+  studyRoutineId?: number;
   createdAt: number;
   deletedAt?: number;
 }
@@ -124,8 +132,8 @@ export interface SessionSnapshot {
   subjectName: string;
   itemTitle?: string;
   itemComposer?: string;
-  /** Labels of all segments included in the task scope. */
-  segmentLabels?: string[];
+  /** Segments included in the task scope (id + label for historical rendering). */
+  segments?: { id: string; label: string }[];
   /** Name of the collection if the task was collection-linked. */
   collectionName?: string;
   targetBpm?: number;
@@ -150,6 +158,8 @@ export interface Session {
   layerScores?: Record<string, number>;
   /** Per-technique scores 0-100. */
   techniqueScores?: Record<number, number>;
+  /** Per-segment metrics when session was logged in granular mode. */
+  segmentMetrics?: Record<string, SegmentMetric>;
   /** Denormalized snapshot — the source of truth for historical display. */
   snapshot?: SessionSnapshot;
   createdAt: number;
@@ -235,6 +245,32 @@ export interface CollectionItem {
   createdAt: number;
 }
 
+export type StudyPoolEntry =
+  | { type: "item"; id: number }
+  | { type: "segment"; id: number }
+  | { type: "collection"; id: number };
+
+export interface StudyGroup {
+  id: string;
+  name: string;
+  pool: StudyPoolEntry[];
+}
+
+export interface StudyRoutine {
+  id?: number;
+  parentTaskId?: number;
+  subjectId: number;
+  groups: StudyGroup[];
+  /** dayOfWeek (0=Sun…6=Sat) → { groupId → itemCount } */
+  matrix: Record<string, Record<string, number>>;
+  weeksAhead: number;
+  repetitionCap: number;
+  useSpacedRepetition: boolean;
+  startDate: string;
+  createdAt: number;
+  deletedAt?: number;
+}
+
 class VirtuosoDB extends Dexie {
   profile!: Table<Profile, string>;
   subjects!: Table<Subject, number>;
@@ -249,6 +285,7 @@ class VirtuosoDB extends Dexie {
   assignments!: Table<Assignment, number>;
   collections!: Table<Collection, number>;
   collectionItems!: Table<CollectionItem, number>;
+  studyRoutines!: Table<StudyRoutine, number>;
 
   constructor() {
     super("virtuoso");
@@ -299,6 +336,11 @@ class VirtuosoDB extends Dexie {
         if (!c.kind) c.kind = "repertoire";
       });
     });
+    // v7: study routines + studyRoutineId index on tasks
+    this.version(7).stores({
+      studyRoutines: "++id, subjectId, deletedAt",
+      tasks: "++id, date, subjectId, itemId, collectionId, done, deletedAt, studyRoutineId",
+    });
   }
 }
 
@@ -322,7 +364,7 @@ export async function buildSessionSnapshot(task: Task): Promise<SessionSnapshot>
     subjectName: subject?.name ?? "—",
     itemTitle: item?.title,
     itemComposer: item?.composer,
-    segmentLabels: segs.map((s) => s.label),
+    segments: segs.length ? segs.map((s) => ({ id: String(s.id!), label: s.label })) : undefined,
     collectionName: collection?.name,
     targetBpm: task.targetBpm,
     noteVal: task.noteVal,

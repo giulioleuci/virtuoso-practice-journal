@@ -13,8 +13,10 @@ import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { LinkTargetFields } from "./LinkTargetFields";
 import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "./RecurrenceFields";
+import { StudyRoutineWizard } from "./StudyRoutineWizard";
 import { tasksService } from "@/lib/services";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -33,6 +35,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
+  const [activeTab, setActiveTab] = useState<"standard" | "routine">("standard");
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [linkType, setLinkType] = useState<TaskLinkType>("free");
   const [itemId, setItemId] = useState<number | undefined>();
@@ -72,6 +75,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
 
   useEffect(() => {
     if (open) {
+      setActiveTab("standard");
       setSubjectId(prefill?.subjectId);
       setLinkType("free");
       setItemId(undefined);
@@ -241,6 +245,26 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
         </SheetHeader>
 
         <div className="space-y-5 mt-5">
+          {/* Tab switcher */}
+          <div className="flex gap-1.5">
+            {(["standard", "routine"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                  activeTab === tab
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t(`studyRoutine.tab.${tab}`)}
+              </button>
+            ))}
+          </div>
+
+          {/* Subject picker — shared between tabs */}
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
             <Select
@@ -258,6 +282,16 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
               </SelectContent>
             </Select>
           </div>
+
+          {activeTab === "routine" ? (
+            <StudyRoutineWizard
+              subjectId={subjectId}
+              date={date}
+              onCreated={() => { onCreated?.(0); onOpenChange(false); }}
+              onCancel={() => onOpenChange(false)}
+            />
+          ) : (
+            <>
 
           <LinkTargetFields
             subjectId={subjectId}
@@ -314,6 +348,8 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
               {t("tasks.addTask")}
             </Button>
           </div>
+          </>
+          )}
         </div>
       </SheetContent>
     </Sheet>

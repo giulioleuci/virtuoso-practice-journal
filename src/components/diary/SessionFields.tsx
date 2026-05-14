@@ -41,15 +41,18 @@ interface Props {
   techniqueEmptyHint?: string;
   /** When true, hide BPM/reps fields and use translated theory layer labels in sliders. */
   isTheory?: boolean;
+  /** When true, hide per-session metric inputs (bpm, reps, confidence, quality).
+   *  Used in granular segment mode where metrics are captured per segment. */
+  hideMetrics?: boolean;
 }
 
 export function SessionFields({
-  value, onChange, layerOptions, techniqueOptions, layerEmptyHint, techniqueEmptyHint, isTheory,
+  value, onChange, layerOptions, techniqueOptions, layerEmptyHint, techniqueEmptyHint, isTheory, hideMetrics,
 }: Props) {
   const { t } = useI18n();
   return (
     <>
-      {!isTheory && (
+      {!hideMetrics && !isTheory && (
         <BpmCoupler
           bpm={value.bpm}
           noteVal={value.noteVal}
@@ -58,7 +61,7 @@ export function SessionFields({
         />
       )}
 
-      {!isTheory && (
+      {!hideMetrics && !isTheory && (
         <div className="space-y-2">
           <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("session.repetitions")}</Label>
           <Input
@@ -70,11 +73,13 @@ export function SessionFields({
         </div>
       )}
 
-      <StarRating
-        label={t("session.confidenceLabel")}
-        value={value.confidence}
-        onChange={(c) => onChange({ confidence: c })}
-      />
+      {!hideMetrics && (
+        <StarRating
+          label={t("session.confidenceLabel")}
+          value={value.confidence}
+          onChange={(c) => onChange({ confidence: c })}
+        />
+      )}
 
       {/* Layer chip picker — both theory and instrument */}
       <MultiChipPicker
@@ -183,26 +188,27 @@ export function SessionFields({
         </Accordion>
       )}
 
-      {/* 4-level quality rating using musical notation symbols */}
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("session.qualityLabel")}</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {QUALITY_VALS.map((q) => (
-            <button
-              key={q.val}
-              type="button"
-              onClick={() => onChange({ quality: q.val })}
-              className={cn(
-                "paper-card flex flex-col items-center py-3 transition-all",
-                value.quality === q.val ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
-              )}
-            >
-              <span className="text-2xl font-serif leading-none">{q.symbol}</span>
-              <span className="text-xs mt-1">{t(q.labelKey)}</span>
-            </button>
-          ))}
+      {!hideMetrics && (
+        <div className="space-y-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("session.qualityLabel")}</Label>
+          <div className="grid grid-cols-4 gap-2">
+            {QUALITY_VALS.map((q) => (
+              <button
+                key={q.val}
+                type="button"
+                onClick={() => onChange({ quality: q.val })}
+                className={cn(
+                  "paper-card flex flex-col items-center py-3 transition-all",
+                  value.quality === q.val ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
+                )}
+              >
+                <span className="text-2xl font-serif leading-none">{q.symbol}</span>
+                <span className="text-xs mt-1">{t(q.labelKey)}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-2">
         <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("session.notes")}</Label>

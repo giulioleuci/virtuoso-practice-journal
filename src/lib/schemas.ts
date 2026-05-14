@@ -58,6 +58,28 @@ export const collectionInputSchema = z.object({
 });
 export type CollectionInput = z.infer<typeof collectionInputSchema>;
 
+export const studyGroupSchema = z.object({
+  id: z.string(),
+  name: z.string().trim().min(1).max(80),
+  pool: z.array(z.discriminatedUnion("type", [
+    z.object({ type: z.literal("item"), id: z.number().int().positive() }),
+    z.object({ type: z.literal("segment"), id: z.number().int().positive() }),
+    z.object({ type: z.literal("collection"), id: z.number().int().positive() }),
+  ])),
+});
+export type StudyGroupInput = z.infer<typeof studyGroupSchema>;
+
+export const studyRoutineConfigSchema = z.object({
+  subjectId: z.number().int().positive(),
+  groups: z.array(studyGroupSchema).min(1),
+  matrix: z.record(z.string(), z.record(z.string(), z.number().int().min(0))),
+  weeksAhead: z.number().int().min(1).max(53),
+  repetitionCap: z.number().int().min(1),
+  useSpacedRepetition: z.boolean(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+export type StudyRoutineConfig = z.infer<typeof studyRoutineConfigSchema>;
+
 /** Tiny helper: returns string[] of error messages (empty = valid). */
 export function flattenErrors<T>(res: z.SafeParseReturnType<unknown, T>): string[] {
   if (res.success) return [];
