@@ -611,5 +611,16 @@
   "studyRoutine.errorNoGroups": "Create at least one group",
   "studyRoutine.errorNoGroupItems": "Each group needs at least one item assigned",
   "studyRoutine.errorNoDays": "Select at least one day in the schedule",
-  "toast.routineCreated": "Study routine created"
+  "studyRoutine.editTitle": "Edit study routine",
+  "studyRoutine.save": "Save changes",
+  "studyRoutine.groupsLabel_one": "group",
+  "studyRoutine.groupsLabel_other": "groups",
+  "studyRoutine.itemsPerWeek_one": "{{count}} item / week",
+  "studyRoutine.itemsPerWeek_other": "{{count}} items / week",
+  "tasks.studyRoutines": "Study routines",
+  "dialog.deleteRoutine": "Delete study routine?",
+  "dialog.deleteRoutineDesc": "Future scheduled tasks from this routine will be removed. Past and completed tasks are preserved.",
+  "toast.routineCreated": "Study routine created",
+  "toast.routineUpdated": "Study routine updated",
+  "toast.routineDeleted": "Study routine deleted"
 }
