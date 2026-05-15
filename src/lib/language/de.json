@@ -611,5 +611,16 @@
   "studyRoutine.errorNoGroups": "Erstelle mindestens eine Gruppe",
   "studyRoutine.errorNoGroupItems": "Jede Gruppe braucht mindestens ein zugewiesenes Element",
   "studyRoutine.errorNoDays": "Wähle mindestens einen Tag im Zeitplan",
-  "toast.routineCreated": "Studienplan erstellt"
+  "studyRoutine.editTitle": "Studienplan bearbeiten",
+  "studyRoutine.save": "Änderungen speichern",
+  "studyRoutine.groupsLabel_one": "Gruppe",
+  "studyRoutine.groupsLabel_other": "Gruppen",
+  "studyRoutine.itemsPerWeek_one": "{{count}} Element / Woche",
+  "studyRoutine.itemsPerWeek_other": "{{count}} Elemente / Woche",
+  "tasks.studyRoutines": "Studienpläne",
+  "dialog.deleteRoutine": "Studienplan löschen?",
+  "dialog.deleteRoutineDesc": "Zukünftige Aufgaben aus diesem Plan werden entfernt. Vergangene und erledigte Aufgaben bleiben erhalten.",
+  "toast.routineCreated": "Studienplan erstellt",
+  "toast.routineUpdated": "Studienplan aktualisiert",
+  "toast.routineDeleted": "Studienplan gelöscht"
 }
