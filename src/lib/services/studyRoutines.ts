@@ -9,6 +9,8 @@ interface ResolvedPoolItem {
   key: string;
   type: "item" | "segment" | "collection";
   title: string;
+  /** For segment entries: the parent library item's title. */
+  parentTitle?: string;
   itemId?: number;
   segmentIds?: number[];
   collectionId?: number;
@@ -107,6 +109,7 @@ async function resolvePoolEntries(entries: StudyPoolEntry[]): Promise<Map<string
         result.set(key, {
           key, type: "segment",
           title: `${parentTitle} — ${seg.label}`,
+          parentTitle,
           itemId: seg.itemId,
           segmentIds: [seg.id!],
           linkType: "item",
@@ -292,6 +295,9 @@ async function generate(
     if (groupCounts) {
       const dateStr = formatDate(d);
 
+      // Collect all sampled items across groups for this day
+      const daySelected: ResolvedPoolItem[] = [];
+
       for (const [groupId, count] of Object.entries(groupCounts)) {
         if (count <= 0) continue;
         const items = groupItems.get(groupId) ?? [];
@@ -308,10 +314,40 @@ async function generate(
             ? weightedSampleWithoutReplacement(available, toSelect, weights)
             : uniformSampleWithoutReplacement(available, toSelect);
 
-        for (const item of selected) {
-          weekCounts.set(item.key, (weekCounts.get(item.key) ?? 0) + 1);
+        daySelected.push(...selected);
+      }
+
+      // Update repetition counts per original sampled entry (segment-level tracking)
+      for (const item of daySelected) {
+        weekCounts.set(item.key, (weekCounts.get(item.key) ?? 0) + 1);
+      }
+
+      // Group segment entries sharing the same parent item into a single task
+      const segsByItem = new Map<number, { segs: ResolvedPoolItem[]; title: string }>();
+      for (const item of daySelected) {
+        if (item.type === "segment" && item.itemId !== undefined) {
+          const entry = segsByItem.get(item.itemId) ?? { segs: [], title: item.parentTitle ?? item.title };
+          entry.segs.push(item);
+          segsByItem.set(item.itemId, entry);
+        } else {
           tasks.push(buildTask(item, dateStr, routine.subjectId, routine.id!, now));
         }
+      }
+      for (const [itemId, { segs, title }] of segsByItem) {
+        tasks.push(buildTask(
+          {
+            key: `item:${itemId}`,
+            type: "item",
+            title,
+            itemId,
+            segmentIds: segs.flatMap((s) => s.segmentIds ?? []),
+            linkType: "item",
+          },
+          dateStr,
+          routine.subjectId,
+          routine.id!,
+          now,
+        ));
       }
     }
 
@@ -369,14 +405,19 @@ export const studyRoutinesService = {
 
     const seedCounters = new Map<string, number>();
     for (const task of completedThisWeek) {
-      const key = task.collectionId
-        ? `collection:${task.collectionId}`
-        : task.segmentIds?.length === 1
-        ? `segment:${task.segmentIds[0]}`
-        : task.itemId
-        ? `item:${task.itemId}`
-        : null;
-      if (key) seedCounters.set(key, (seedCounters.get(key) ?? 0) + 1);
+      if (task.collectionId) {
+        const key = `collection:${task.collectionId}`;
+        seedCounters.set(key, (seedCounters.get(key) ?? 0) + 1);
+      } else if (task.segmentIds?.length) {
+        // Each segment in a merged task counts as one occurrence for that segment
+        for (const segId of task.segmentIds) {
+          const key = `segment:${segId}`;
+          seedCounters.set(key, (seedCounters.get(key) ?? 0) + 1);
+        }
+      } else if (task.itemId) {
+        const key = `item:${task.itemId}`;
+        seedCounters.set(key, (seedCounters.get(key) ?? 0) + 1);
+      }
     }
 
     await generate(routine, fromDateStr, seedCounters);
