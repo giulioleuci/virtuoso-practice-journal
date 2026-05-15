@@ -15,11 +15,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ChevronLeft, ChevronRight, Pencil, Trash2, CheckCircle2, Circle, Repeat, CalendarClock, RefreshCw, CalendarRange } from "lucide-react";
-import { EditTaskSheet } from "@/components/diary/EditTaskSheet";
 import { EditStudyRoutineSheet } from "@/components/diary/EditStudyRoutineSheet";
 import { TaskCalendarView } from "@/components/diary/TaskCalendarView";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ListSkeleton } from "@/components/shared/Loading";
 
@@ -44,6 +43,7 @@ function summarizeRecurrence(rec: NonNullable<Task["recurrence"]>): string {
 
 export default function Tasks() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const tasks = useActiveTasks();
   const subjects = useSubjects();
   const routines = useLiveQuery(
@@ -56,7 +56,6 @@ export default function Tasks() {
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
-  const [editing, setEditing] = useState<Task | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<StudyRoutine | null>(null);
   const [delRoutineId, setDelRoutineId] = useState<number | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
@@ -329,7 +328,7 @@ export default function Tasks() {
                     {task.targetBpm && <> · {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}</>}
                   </div>
                 </div>
-                <button onClick={() => setEditing(task)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
+                <button onClick={() => navigate(`/tasks/edit/${task.id}`)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button onClick={() => askDelete(task)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
@@ -364,8 +363,6 @@ export default function Tasks() {
           <TaskCalendarView tasks={tasks} subjects={subjects ?? []} />
         </section>
       )}
-
-      <EditTaskSheet open={editing !== null} onOpenChange={(o) => !o && setEditing(null)} task={editing} />
 
       <EditStudyRoutineSheet
         open={editingRoutine !== null}

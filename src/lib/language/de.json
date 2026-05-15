@@ -156,6 +156,7 @@
   "tasks.fromDate": "ab {{date}}",
   "tasks.newTask": "Neue Aufgabe",
   "tasks.editTask": "Aufgabe bearbeiten",
+  "tasks.notFound": "Aufgabe nicht gefunden.",
   "tasks.addTask": "Aufgabe hinzufügen",
   "tasks.pickSubject": "Fach auswählen",
   "tasks.taskTitle": "Aufgabentitel",

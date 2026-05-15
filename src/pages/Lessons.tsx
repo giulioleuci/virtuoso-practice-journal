@@ -13,10 +13,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
-import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { upcomingLessonDates, dayKey, today } from "@/lib/recurrence";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 5;
 
@@ -24,6 +23,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function Lessons() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const recurrences = useLiveQuery(() => db.recurrences.toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
   const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().toArray());
@@ -40,8 +40,6 @@ export default function Lessons() {
   const [logOpen, setLogOpen] = useState(false);
   const [logContext, setLogContext] = useState<LessonLogContext | null>(null);
   const [delLessonId, setDelLessonId] = useState<number | null>(null);
-
-  const [taskPrefill, setTaskPrefill] = useState<{ subjectId?: number; title?: string; assignmentId?: number } | null>(null);
 
   const [pageAssign, setPageAssign] = useState(0);
   const [pageUpcoming, setPageUpcoming] = useState(0);
@@ -258,7 +256,7 @@ export default function Lessons() {
                                     ) : (
                                       <>
                                         <button
-                                          onClick={() => setTaskPrefill({ subjectId: l.subjectId, title: a.text, assignmentId: a.id })}
+                                          onClick={() => navigate("/tasks/new", { state: { date: today(), prefill: { subjectId: l.subjectId, title: a.text, assignmentId: a.id } } })}
                                           className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
                                         >{t("lessons.makeTask")}</button>
                                         <button
@@ -300,13 +298,6 @@ export default function Lessons() {
       />
 
       <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />
-
-      <NewTaskSheet
-        open={taskPrefill !== null}
-        onOpenChange={(o) => !o && setTaskPrefill(null)}
-        date={today()}
-        prefill={taskPrefill ?? undefined}
-      />
 
       <AlertDialog open={delRecId !== null} onOpenChange={(o) => !o && setDelRecId(null)}>
         <AlertDialogContent>
