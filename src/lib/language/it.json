@@ -611,5 +611,16 @@
   "studyRoutine.errorNoGroups": "Crea almeno un gruppo",
   "studyRoutine.errorNoGroupItems": "Ogni gruppo deve avere almeno un elemento assegnato",
   "studyRoutine.errorNoDays": "Seleziona almeno un giorno nel programma",
-  "toast.routineCreated": "Piano di studio creato"
+  "studyRoutine.editTitle": "Modifica piano di studio",
+  "studyRoutine.save": "Salva modifiche",
+  "studyRoutine.groupsLabel_one": "gruppo",
+  "studyRoutine.groupsLabel_other": "gruppi",
+  "studyRoutine.itemsPerWeek_one": "{{count}} elemento / settimana",
+  "studyRoutine.itemsPerWeek_other": "{{count}} elementi / settimana",
+  "tasks.studyRoutines": "Piani di studio",
+  "dialog.deleteRoutine": "Eliminare il piano di studio?",
+  "dialog.deleteRoutineDesc": "Le attività future generate da questo piano verranno rimosse. Le attività passate e completate vengono conservate.",
+  "toast.routineCreated": "Piano di studio creato",
+  "toast.routineUpdated": "Piano di studio aggiornato",
+  "toast.routineDeleted": "Piano di studio eliminato"
 }
