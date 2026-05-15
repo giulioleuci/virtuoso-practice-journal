@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { db, deleteTaskPreservingHistory, deleteTasksPreservingHistory, type Task } from "@/lib/db";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db, deleteTaskPreservingHistory, deleteTasksPreservingHistory, type Task, type StudyRoutine } from "@/lib/db";
 import { useActiveTasks, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
+import { studyRoutinesService } from "@/lib/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,8 +14,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, Pencil, Trash2, CheckCircle2, Circle, Repeat } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Trash2, CheckCircle2, Circle, Repeat, CalendarClock } from "lucide-react";
 import { EditTaskSheet } from "@/components/diary/EditTaskSheet";
+import { EditStudyRoutineSheet } from "@/components/diary/EditStudyRoutineSheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -42,6 +45,10 @@ export default function Tasks() {
   const { t } = useI18n();
   const tasks = useActiveTasks();
   const subjects = useSubjects();
+  const routines = useLiveQuery(
+    () => db.studyRoutines.filter((r) => !r.deletedAt).toArray(),
+    []
+  );
 
   const [view, setView] = useState<"occurrences" | "series">("occurrences");
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
@@ -49,6 +56,8 @@ export default function Tasks() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [editingRoutine, setEditingRoutine] = useState<StudyRoutine | null>(null);
+  const [delRoutineId, setDelRoutineId] = useState<number | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
   const [delMode, setDelMode] = useState<"one" | "series">("one");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -152,6 +161,28 @@ export default function Tasks() {
     setBulkDel(false);
   };
 
+  // ── Study routine helpers ──────────────────────────────────────
+  const DAY_SHORT = [t("weekday.0"), t("weekday.1"), t("weekday.2"), t("weekday.3"), t("weekday.4"), t("weekday.5"), t("weekday.6")];
+  const summarizeRoutineDays = (matrix: StudyRoutine["matrix"]) => {
+    const days = Object.keys(matrix)
+      .map(Number)
+      .filter((d) => Object.values(matrix[String(d)] ?? {}).some((c) => c > 0))
+      .sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+    return days.map((d) => DAY_SHORT[d]).join(", ") || "—";
+  };
+  const totalPerWeek = (matrix: StudyRoutine["matrix"]) =>
+    Object.values(matrix).reduce(
+      (sum, day) => sum + Object.values(day).reduce((a, b) => a + b, 0),
+      0,
+    );
+
+  const confirmDeleteRoutine = async () => {
+    if (delRoutineId == null) return;
+    await studyRoutinesService.remove(delRoutineId);
+    toast.success(t("toast.routineDeleted"));
+    setDelRoutineId(null);
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
@@ -159,6 +190,46 @@ export default function Tasks() {
         <h2 className="font-serif text-3xl flex-1">{t("tasks.allTasks")}</h2>
         <span className="text-xs text-muted-foreground tabular-nums">{filtered.length}</span>
       </div>
+
+      {(routines ?? []).length > 0 && (
+        <section className="space-y-2">
+          <div className="flex items-center gap-2 px-1">
+            <CalendarClock className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground flex-1">
+              {t("tasks.studyRoutines")}
+            </h3>
+            <span className="text-xs text-muted-foreground tabular-nums">{routines!.length}</span>
+          </div>
+          <ul className="space-y-2">
+            {routines!.map((r) => (
+              <li key={r.id} className="paper-card p-3 flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">
+                    {subjectName(r.subjectId)} · {r.groups.length} {t("studyRoutine.groupsLabel", { count: r.groups.length })}
+                  </div>
+                  <div className="text-xs text-muted-foreground tabular-nums mt-0.5">
+                    {summarizeRoutineDays(r.matrix)} · {t("studyRoutine.itemsPerWeek", { count: totalPerWeek(r.matrix) })}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setEditingRoutine(r)}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                  aria-label={t("common.edit")}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => r.id && setDelRoutineId(r.id)}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
+                  aria-label={t("common.delete")}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); setSelected(new Set()); }}>
         <TabsList className="w-full grid grid-cols-2">
@@ -262,6 +333,25 @@ export default function Tasks() {
       )}
 
       <EditTaskSheet open={editing !== null} onOpenChange={(o) => !o && setEditing(null)} task={editing} />
+
+      <EditStudyRoutineSheet
+        open={editingRoutine !== null}
+        onOpenChange={(o) => !o && setEditingRoutine(null)}
+        routine={editingRoutine}
+      />
+
+      <AlertDialog open={delRoutineId !== null} onOpenChange={(o) => !o && setDelRoutineId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("dialog.deleteRoutine")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("dialog.deleteRoutineDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteRoutine} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={delId !== null} onOpenChange={(o) => !o && setDelId(null)}>
         <AlertDialogContent>

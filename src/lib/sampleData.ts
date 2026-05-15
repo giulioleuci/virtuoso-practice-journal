@@ -157,11 +157,34 @@ export async function seedSampleData() {
   // Technique items (extra, not counted toward minimums)
   const scales = (await db.library.add({
     subjectId: pianoId, kind: "technique",
-    title: "Major & minor scales — 4 octaves, hands together",
+    title: "24 scales — major & minor (4 octaves, hands together)",
     startBpm: 80, targetBpm: 132, noteVal: "sixteenth",
     techniqueIds: [tLegato, tStaccato],
     createdAt: now - 120 * D,
   })) as number;
+
+  // 24 segments — one per major and minor key (12 + 12)
+  const MAJORS = ["C","G","D","A","E","B","F#","C#","F","Bb","Eb","Ab"];
+  const MINORS = ["a","e","b","f#","c#","g#","d#","a#","d","g","c","f"];
+  const majorSegmentIds: number[] = [];
+  const minorSegmentIds: number[] = [];
+  for (const key of MAJORS) {
+    const id = (await db.segments.add({
+      itemId: scales, label: `${key} major`, targetBpm: 132, noteVal: "sixteenth",
+      layers: ["RH","LH","Both"], techniqueIds: [tLegato],
+      createdAt: now - 120 * D,
+    })) as number;
+    majorSegmentIds.push(id);
+  }
+  for (const key of MINORS) {
+    const id = (await db.segments.add({
+      itemId: scales, label: `${key} minor`, targetBpm: 132, noteVal: "sixteenth",
+      layers: ["RH","LH","Both"], techniqueIds: [tLegato],
+      createdAt: now - 120 * D,
+    })) as number;
+    minorSegmentIds.push(id);
+  }
+
 
   const arpeggios = (await db.library.add({
     subjectId: pianoId, kind: "technique",
@@ -629,6 +652,36 @@ export async function seedSampleData() {
   });
 
   await db.tasks.bulkAdd(upcoming);
+
+  // ---------- Study routine: 24 piano scales ----------
+  // Mon/Tue/Thu/Fri (1, 2, 4, 5) — 3 majors + 3 minors per day.
+  // Cap=1 per week so each scale is studied exactly once per week.
+  {
+    const majorsGroup = {
+      id: "majors_" + now.toString(36),
+      name: "Major scales",
+      pool: majorSegmentIds.map((id) => ({ type: "segment" as const, id })),
+    };
+    const minorsGroup = {
+      id: "minors_" + now.toString(36),
+      name: "Minor scales",
+      pool: minorSegmentIds.map((id) => ({ type: "segment" as const, id })),
+    };
+    const matrix: Record<string, Record<string, number>> = {};
+    for (const dow of [1, 2, 4, 5]) {
+      matrix[String(dow)] = { [majorsGroup.id]: 3, [minorsGroup.id]: 3 };
+    }
+    const { studyRoutinesService } = await import("./services");
+    await studyRoutinesService.create({
+      subjectId: pianoId,
+      groups: [majorsGroup, minorsGroup],
+      matrix,
+      weeksAhead: 4,
+      repetitionCap: 1,
+      useSpacedRepetition: false,
+      startDate: dayKey(todayDate),
+    });
+  }
 
   // ---------- Help requests ----------
   await db.helpRequests.bulkAdd([

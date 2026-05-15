@@ -388,4 +388,18 @@ export const studyRoutinesService = {
     if (!routine) return;
     await studyRoutinesService.regenerateFromDate(routine, todayStr());
   },
+
+  /** Delete a routine and all its future undone tasks. Past + done tasks are preserved. */
+  async remove(routineId: number): Promise<void> {
+    const today = todayStr();
+    const futureUndone = await db.tasks
+      .where("studyRoutineId")
+      .equals(routineId)
+      .filter((t) => !t.done && t.date >= today)
+      .toArray();
+    if (futureUndone.length) {
+      await db.tasks.bulkDelete(futureUndone.map((t) => t.id!));
+    }
+    await db.studyRoutines.update(routineId, { deletedAt: Date.now() });
+  },
 };
