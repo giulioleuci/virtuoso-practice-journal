@@ -649,7 +649,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
             disabled={step3Errors.length > 0 || saving}
             onClick={submit}
           >
-            {t("studyRoutine.create")}
+            {isEdit ? t("studyRoutine.save") : t("studyRoutine.create")}
           </Button>
         )}
       </div>
