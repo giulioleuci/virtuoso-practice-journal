@@ -653,6 +653,36 @@ export async function seedSampleData() {
 
   await db.tasks.bulkAdd(upcoming);
 
+  // ---------- Study routine: 24 piano scales ----------
+  // Mon/Tue/Thu/Fri (1, 2, 4, 5) — 3 majors + 3 minors per day.
+  // Cap=1 per week so each scale is studied exactly once per week.
+  {
+    const majorsGroup = {
+      id: "majors_" + now.toString(36),
+      name: "Major scales",
+      pool: majorSegmentIds.map((id) => ({ type: "segment" as const, id })),
+    };
+    const minorsGroup = {
+      id: "minors_" + now.toString(36),
+      name: "Minor scales",
+      pool: minorSegmentIds.map((id) => ({ type: "segment" as const, id })),
+    };
+    const matrix: Record<string, Record<string, number>> = {};
+    for (const dow of [1, 2, 4, 5]) {
+      matrix[String(dow)] = { [majorsGroup.id]: 3, [minorsGroup.id]: 3 };
+    }
+    const { studyRoutinesService } = await import("./services");
+    await studyRoutinesService.create({
+      subjectId: pianoId,
+      groups: [majorsGroup, minorsGroup],
+      matrix,
+      weeksAhead: 4,
+      repetitionCap: 1,
+      useSpacedRepetition: false,
+      startDate: dayKey(todayDate),
+    });
+  }
+
   // ---------- Help requests ----------
   await db.helpRequests.bulkAdd([
     {
