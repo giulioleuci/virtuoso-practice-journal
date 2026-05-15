@@ -334,6 +334,25 @@ export default function Tasks() {
 
       <EditTaskSheet open={editing !== null} onOpenChange={(o) => !o && setEditing(null)} task={editing} />
 
+      <EditStudyRoutineSheet
+        open={editingRoutine !== null}
+        onOpenChange={(o) => !o && setEditingRoutine(null)}
+        routine={editingRoutine}
+      />
+
+      <AlertDialog open={delRoutineId !== null} onOpenChange={(o) => !o && setDelRoutineId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("dialog.deleteRoutine")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("dialog.deleteRoutineDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteRoutine} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={delId !== null} onOpenChange={(o) => !o && setDelId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
