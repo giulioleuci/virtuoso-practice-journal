@@ -16,6 +16,8 @@ const Assignments = lazy(() => import("./Assignments"));
 const History = lazy(() => import("./History"));
 const Tasks = lazy(() => import("./Tasks"));
 const Profile = lazy(() => import("./Profile"));
+const NewTaskPage = lazy(() => import("./NewTaskPage"));
+const EditTaskPage = lazy(() => import("./EditTaskPage"));
 
 const Fallback = () => (
   <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4">
@@ -66,6 +68,8 @@ const Index = () => {
           <Route path="lessons/assignments" element={<Suspense fallback={<Fallback />}><Assignments /></Suspense>} />
           <Route path="history" element={<Suspense fallback={<Fallback />}><History /></Suspense>} />
           <Route path="tasks" element={<Suspense fallback={<Fallback />}><Tasks /></Suspense>} />
+          <Route path="tasks/new" element={<Suspense fallback={<Fallback />}><NewTaskPage /></Suspense>} />
+          <Route path="tasks/edit/:id" element={<Suspense fallback={<Fallback />}><EditTaskPage /></Suspense>} />
           <Route path="profile" element={<Suspense fallback={<Fallback />}><Profile /></Suspense>} />
         </Route>
       </Routes>

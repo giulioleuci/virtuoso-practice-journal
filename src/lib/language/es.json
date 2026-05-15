@@ -156,6 +156,7 @@
   "tasks.fromDate": "desde {{date}}",
   "tasks.newTask": "Nueva tarea",
   "tasks.editTask": "Editar tarea",
+  "tasks.notFound": "Tarea no encontrada.",
   "tasks.addTask": "Añadir tarea",
   "tasks.pickSubject": "Elige una materia",
   "tasks.taskTitle": "Título de la tarea",

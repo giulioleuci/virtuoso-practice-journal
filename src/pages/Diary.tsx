@@ -18,10 +18,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { PracticeMode } from "@/components/diary/PracticeMode";
@@ -54,6 +53,7 @@ const NOTE_GLYPH: Record<string, string> = {
 
 export default function Diary() {
   const { t, lang } = useI18n();
+  const navigate = useNavigate();
   const { profile } = useOutletContext<{ profile: Profile }>();
   const today = todayKey();
   const { tasks, sessionsByTask } = useLiveQuery(async () => {
@@ -101,7 +101,6 @@ export default function Diary() {
     [carryoverFrom, today],
   );
 
-  const [newOpen, setNewOpen] = useState(false);
   const [logTask, setLogTask] = useState<Task | null>(null);
   const [logPrefill, setLogPrefill] = useState<
     { bpm?: number; noteVal?: import("@/lib/db").NoteVal; notes?: string } | undefined
@@ -169,7 +168,7 @@ export default function Diary() {
             >
               <ListChecks className="h-4 w-4" /> {t("common.all")}
             </Link>
-            <Button size="sm" variant="ghost" onClick={() => setNewOpen(true)}>
+            <Button size="sm" variant="ghost" onClick={() => navigate("/tasks/new", { state: { date: today } })}>
               <Plus className="h-4 w-4 mr-1" /> {t("diary.newTask")}
             </Button>
           </div>
@@ -184,7 +183,7 @@ export default function Diary() {
           <EmptyState
             hint={t("diary.empty")}
             quote={emptyQuote}
-            cta={{ label: t("diary.beginTask"), onClick: () => setNewOpen(true) }}
+            cta={{ label: t("diary.beginTask"), onClick: () => navigate("/tasks/new", { state: { date: today } }) }}
           />
         ) : (
           <ul className="space-y-2">
@@ -433,7 +432,6 @@ export default function Diary() {
           );
         })()}
 
-      <NewTaskSheet open={newOpen} onOpenChange={setNewOpen} date={today} />
       <SessionLogSheet
         open={logTask !== null}
         onOpenChange={(o) => {

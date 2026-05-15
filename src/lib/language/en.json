@@ -156,6 +156,7 @@
   "tasks.fromDate": "from {{date}}",
   "tasks.newTask": "New task",
   "tasks.editTask": "Edit task",
+  "tasks.notFound": "Task not found.",
   "tasks.addTask": "Add task",
   "tasks.pickSubject": "Pick a subject",
   "tasks.taskTitle": "Task title",

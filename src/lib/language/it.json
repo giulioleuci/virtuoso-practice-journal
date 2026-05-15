@@ -156,6 +156,7 @@
   "tasks.fromDate": "da {{date}}",
   "tasks.newTask": "Nuovo esercizio",
   "tasks.editTask": "Modifica esercizio",
+  "tasks.notFound": "Esercizio non trovato.",
   "tasks.addTask": "Aggiungi esercizio",
   "tasks.pickSubject": "Scegli una materia",
   "tasks.taskTitle": "Titolo esercizio",

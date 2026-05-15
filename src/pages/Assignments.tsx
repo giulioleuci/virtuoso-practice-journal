@@ -6,7 +6,6 @@ import { today } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Wand2, X, ArrowLeft } from "lucide-react";
-import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 5;
@@ -19,7 +18,6 @@ export default function Assignments() {
   const subjects = useLiveQuery(() => db.subjects.toArray());
 
   const [page, setPage] = useState(0);
-  const [taskPrefill, setTaskPrefill] = useState<{ subjectId?: number; title?: string; assignmentId?: number } | null>(null);
 
   const pending = (assignments ?? []).filter((a) => !a.transformed && !a.ignored);
   const totalPages = Math.max(1, Math.ceil(pending.length / PAGE_SIZE));
@@ -71,10 +69,11 @@ export default function Assignments() {
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          setTaskPrefill({
-                            subjectId: lesson?.subjectId,
-                            title: a.text,
-                            assignmentId: a.id,
+                          navigate("/tasks/new", {
+                            state: {
+                              date: today(),
+                              prefill: { subjectId: lesson?.subjectId, title: a.text, assignmentId: a.id },
+                            },
                           })
                         }
                       >
@@ -111,12 +110,6 @@ export default function Assignments() {
         </section>
       )}
 
-      <NewTaskSheet
-        open={taskPrefill !== null}
-        onOpenChange={(o) => !o && setTaskPrefill(null)}
-        date={today()}
-        prefill={taskPrefill ?? undefined}
-      />
     </div>
   );
 }
