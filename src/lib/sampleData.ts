@@ -157,11 +157,34 @@ export async function seedSampleData() {
   // Technique items (extra, not counted toward minimums)
   const scales = (await db.library.add({
     subjectId: pianoId, kind: "technique",
-    title: "Major & minor scales — 4 octaves, hands together",
+    title: "24 scales — major & minor (4 octaves, hands together)",
     startBpm: 80, targetBpm: 132, noteVal: "sixteenth",
     techniqueIds: [tLegato, tStaccato],
     createdAt: now - 120 * D,
   })) as number;
+
+  // 24 segments — one per major and minor key (12 + 12)
+  const MAJORS = ["C","G","D","A","E","B","F#","C#","F","Bb","Eb","Ab"];
+  const MINORS = ["a","e","b","f#","c#","g#","d#","a#","d","g","c","f"];
+  const majorSegmentIds: number[] = [];
+  const minorSegmentIds: number[] = [];
+  for (const key of MAJORS) {
+    const id = (await db.segments.add({
+      itemId: scales, label: `${key} major`, targetBpm: 132, noteVal: "sixteenth",
+      layers: ["RH","LH","Both"], techniqueIds: [tLegato],
+      createdAt: now - 120 * D,
+    })) as number;
+    majorSegmentIds.push(id);
+  }
+  for (const key of MINORS) {
+    const id = (await db.segments.add({
+      itemId: scales, label: `${key} minor`, targetBpm: 132, noteVal: "sixteenth",
+      layers: ["RH","LH","Both"], techniqueIds: [tLegato],
+      createdAt: now - 120 * D,
+    })) as number;
+    minorSegmentIds.push(id);
+  }
+
 
   const arpeggios = (await db.library.add({
     subjectId: pianoId, kind: "technique",
