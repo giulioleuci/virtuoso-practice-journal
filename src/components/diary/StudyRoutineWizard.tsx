@@ -234,17 +234,29 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
     if (step3Errors.length || !subjectId) return;
     setSaving(true);
     try {
-      const config: StudyRoutineConfig = {
-        subjectId,
-        groups,
-        matrix,
-        weeksAhead,
-        repetitionCap,
-        useSpacedRepetition,
-        startDate,
-      };
-      await studyRoutinesService.create(config);
-      toast.success(t("toast.routineCreated"));
+      if (isEdit && initial?.id) {
+        await studyRoutinesService.update(initial.id, {
+          groups,
+          matrix,
+          weeksAhead,
+          repetitionCap,
+          useSpacedRepetition,
+          startDate,
+        });
+        toast.success(t("toast.routineUpdated"));
+      } else {
+        const config: StudyRoutineConfig = {
+          subjectId,
+          groups,
+          matrix,
+          weeksAhead,
+          repetitionCap,
+          useSpacedRepetition,
+          startDate,
+        };
+        await studyRoutinesService.create(config);
+        toast.success(t("toast.routineCreated"));
+      }
       onCreated();
     } catch (e) {
       toast.error((e as Error).message);
