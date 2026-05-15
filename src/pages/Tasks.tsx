@@ -14,9 +14,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, Pencil, Trash2, CheckCircle2, Circle, Repeat, CalendarClock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Trash2, CheckCircle2, Circle, Repeat, CalendarClock, RefreshCw, CalendarRange } from "lucide-react";
 import { EditTaskSheet } from "@/components/diary/EditTaskSheet";
 import { EditStudyRoutineSheet } from "@/components/diary/EditStudyRoutineSheet";
+import { TaskCalendarView } from "@/components/diary/TaskCalendarView";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -58,6 +59,7 @@ export default function Tasks() {
   const [editing, setEditing] = useState<Task | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<StudyRoutine | null>(null);
   const [delRoutineId, setDelRoutineId] = useState<number | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
   const [delMode, setDelMode] = useState<"one" | "series">("one");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -183,6 +185,17 @@ export default function Tasks() {
     setDelRoutineId(null);
   };
 
+  const handleRegenerate = async (routine: StudyRoutine) => {
+    if (!routine.id || regeneratingId != null) return;
+    setRegeneratingId(routine.id);
+    try {
+      await studyRoutinesService.regenerateFromDate(routine, new Date().toISOString().slice(0, 10));
+      toast.success(t("toast.routineRegenerated"));
+    } finally {
+      setRegeneratingId(null);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
@@ -211,6 +224,14 @@ export default function Tasks() {
                     {summarizeRoutineDays(r.matrix)} · {t("studyRoutine.itemsPerWeek", { count: totalPerWeek(r.matrix) })}
                   </div>
                 </div>
+                <button
+                  onClick={() => handleRegenerate(r)}
+                  disabled={regeneratingId === r.id}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50"
+                  aria-label={t("studyRoutine.regenerate")}
+                >
+                  <RefreshCw className={`h-4 w-4 ${regeneratingId === r.id ? "animate-spin" : ""}`} />
+                </button>
                 <button
                   onClick={() => setEditingRoutine(r)}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -330,6 +351,18 @@ export default function Tasks() {
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+      )}
+
+      {tasks !== undefined && (
+        <section className="space-y-2 pt-2">
+          <div className="flex items-center gap-2 px-1">
+            <CalendarRange className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground flex-1">
+              {t("tasks.upcomingSchedule")}
+            </h3>
+          </div>
+          <TaskCalendarView tasks={tasks} subjects={subjects ?? []} />
+        </section>
       )}
 
       <EditTaskSheet open={editing !== null} onOpenChange={(o) => !o && setEditing(null)} task={editing} />

@@ -622,5 +622,9 @@
   "dialog.deleteRoutineDesc": "Future scheduled tasks from this routine will be removed. Past and completed tasks are preserved.",
   "toast.routineCreated": "Study routine created",
   "toast.routineUpdated": "Study routine updated",
-  "toast.routineDeleted": "Study routine deleted"
+  "toast.routineDeleted": "Study routine deleted",
+  "toast.routineRegenerated": "Tasks regenerated",
+  "studyRoutine.regenerate": "Regenerate tasks",
+  "tasks.upcomingSchedule": "Upcoming schedule",
+  "tasks.noTasksOnDay": "No tasks scheduled for this day"
 }

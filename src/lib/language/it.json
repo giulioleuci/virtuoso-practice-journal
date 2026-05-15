@@ -622,5 +622,9 @@
   "dialog.deleteRoutineDesc": "Le attività future generate da questo piano verranno rimosse. Le attività passate e completate vengono conservate.",
   "toast.routineCreated": "Piano di studio creato",
   "toast.routineUpdated": "Piano di studio aggiornato",
-  "toast.routineDeleted": "Piano di studio eliminato"
+  "toast.routineDeleted": "Piano di studio eliminato",
+  "toast.routineRegenerated": "Attività rigenerate",
+  "studyRoutine.regenerate": "Rigenera attività",
+  "tasks.upcomingSchedule": "Prossimi impegni",
+  "tasks.noTasksOnDay": "Nessuna attività prevista per questo giorno"
 }
