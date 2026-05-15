@@ -45,6 +45,10 @@ export default function Tasks() {
   const { t } = useI18n();
   const tasks = useActiveTasks();
   const subjects = useSubjects();
+  const routines = useLiveQuery(
+    () => db.studyRoutines.filter((r) => !r.deletedAt).toArray(),
+    []
+  );
 
   const [view, setView] = useState<"occurrences" | "series">("occurrences");
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
@@ -52,6 +56,8 @@ export default function Tasks() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [editingRoutine, setEditingRoutine] = useState<StudyRoutine | null>(null);
+  const [delRoutineId, setDelRoutineId] = useState<number | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
   const [delMode, setDelMode] = useState<"one" | "series">("one");
   const [selected, setSelected] = useState<Set<number>>(new Set());
