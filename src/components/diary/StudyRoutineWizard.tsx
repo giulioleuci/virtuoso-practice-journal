@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type StudyPoolEntry, type StudyGroup } from "@/lib/db";
+import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { studyRoutinesService } from "@/lib/services";
 import type { StudyRoutineConfig } from "@/lib/schemas";
@@ -37,27 +37,46 @@ interface Props {
   date: string;
   onCreated: () => void;
   onCancel: () => void;
+  /** When provided, the wizard prefills from an existing routine and runs in edit mode. */
+  initial?: StudyRoutine;
 }
 
-export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel }: Props) {
+export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initial }: Props) {
   const { t } = useI18n();
+  const isEdit = !!initial;
   const [step, setStep] = useState(1);
 
+  // Build initial master pool from existing groups (union of all entries, deduped).
+  const initialMasterPool = useMemo<StudyPoolEntry[]>(() => {
+    if (!initial) return [];
+    const seen = new Set<string>();
+    const out: StudyPoolEntry[] = [];
+    for (const g of initial.groups) {
+      for (const e of g.pool) {
+        const k = poolKey(e);
+        if (!seen.has(k)) { seen.add(k); out.push(e); }
+      }
+    }
+    return out;
+  }, [initial]);
+
   // Step 1: master pool
-  const [masterPool, setMasterPool] = useState<StudyPoolEntry[]>([]);
+  const [masterPool, setMasterPool] = useState<StudyPoolEntry[]>(initialMasterPool);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
 
   // Step 2: groups
-  const [groups, setGroups] = useState<StudyGroup[]>([]);
+  const [groups, setGroups] = useState<StudyGroup[]>(initial?.groups ?? []);
   const [newGroupName, setNewGroupName] = useState("");
 
   // Step 3: matrix + settings
-  const [enabledDays, setEnabledDays] = useState<number[]>([]);
-  const [matrix, setMatrix] = useState<Record<string, Record<string, number>>>({});
-  const [weeksAhead, setWeeksAhead] = useState(4);
-  const [repetitionCap, setRepetitionCap] = useState(3);
-  const [useSpacedRepetition, setUseSpacedRepetition] = useState(false);
-  const [startDate, setStartDate] = useState(date);
+  const [enabledDays, setEnabledDays] = useState<number[]>(
+    initial ? Object.keys(initial.matrix).map(Number) : []
+  );
+  const [matrix, setMatrix] = useState<Record<string, Record<string, number>>>(initial?.matrix ?? {});
+  const [weeksAhead, setWeeksAhead] = useState(initial?.weeksAhead ?? 4);
+  const [repetitionCap, setRepetitionCap] = useState(initial?.repetitionCap ?? 3);
+  const [useSpacedRepetition, setUseSpacedRepetition] = useState(initial?.useSpacedRepetition ?? false);
+  const [startDate, setStartDate] = useState(initial?.startDate ?? date);
 
   const [saving, setSaving] = useState(false);
 
