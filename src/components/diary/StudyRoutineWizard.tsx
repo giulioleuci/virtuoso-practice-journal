@@ -275,7 +275,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
       }
       onCreated();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }

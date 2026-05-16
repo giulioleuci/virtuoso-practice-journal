@@ -278,7 +278,7 @@ export default function NewTaskPage() {
         <StudyRoutineWizard
           subjectId={subjectId}
           date={date}
-          onCreated={handleCancel}
+          onCreated={() => navigate("/")}
           onCancel={handleCancel}
         />
       ) : (
