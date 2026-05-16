@@ -341,6 +341,10 @@ class VirtuosoDB extends Dexie {
       studyRoutines: "++id, subjectId, deletedAt",
       tasks: "++id, date, subjectId, itemId, collectionId, done, deletedAt, studyRoutineId",
     });
+    // v8: index recurrenceTaskId to support querying recurring task series
+    this.version(8).stores({
+      tasks: "++id, date, subjectId, itemId, collectionId, done, deletedAt, studyRoutineId, recurrenceTaskId",
+    });
   }
 }
 
