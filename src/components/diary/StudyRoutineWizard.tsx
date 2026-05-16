@@ -10,9 +10,21 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Plus, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus } from "lucide-react";
 
 function genId(): string {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
@@ -63,6 +75,8 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   // Step 1: master pool
   const [masterPool, setMasterPool] = useState<StudyPoolEntry[]>(initialMasterPool);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [poolTab, setPoolTab] = useState<"items" | "collections">("items");
+  const [search, setSearch] = useState("");
 
   // Step 2: groups
   const [groups, setGroups] = useState<StudyGroup[]>(initial?.groups ?? []);
@@ -98,7 +112,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   );
 
   const segmentsByItem = useMemo(() => {
-    const map = new Map<number, typeof allSegments>();
+    const map = new Map<number, NonNullable<typeof allSegments>>();
     for (const seg of allSegments ?? []) {
       const list = map.get(seg.itemId) ?? [];
       list.push(seg);
@@ -117,7 +131,6 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   const removeFromPool = (entry: StudyPoolEntry) => {
     const k = poolKey(entry);
     setMasterPool((prev) => prev.filter((e) => poolKey(e) !== k));
-    // Remove from all groups
     setGroups((prev) =>
       prev.map((g) => ({ ...g, pool: g.pool.filter((e) => poolKey(e) !== k) }))
     );
@@ -192,6 +205,9 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   const getCount = (day: number, groupId: string): number =>
     matrix[String(day)]?.[groupId] ?? 0;
 
+  const dayTotal = (day: number): number =>
+    groups.reduce((sum, g) => sum + getCount(day, g.id), 0);
+
   // --- Validation ---
 
   const step1Errors = useMemo(() => {
@@ -265,170 +281,246 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
     }
   };
 
+  // --- Filtered lists ---
+
+  const q = search.trim().toLowerCase();
+  const filteredLibrary = useMemo(() => {
+    const list = library ?? [];
+    if (!q) return list;
+    return list.filter((i) => {
+      if (i.title.toLowerCase().includes(q)) return true;
+      const segs = segmentsByItem.get(i.id!) ?? [];
+      return segs.some((s) => s.label.toLowerCase().includes(q));
+    });
+  }, [library, q, segmentsByItem]);
+
+  const filteredCollections = useMemo(() => {
+    const list = allCollections ?? [];
+    if (!q) return list;
+    return list.filter((c) => c.name.toLowerCase().includes(q));
+  }, [allCollections, q]);
+
+  // --- Render ---
+
   return (
     <div className="space-y-5">
-      {/* Step indicator */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {[1, 2, 3].map((s) => (
-          <div key={s} className="flex items-center gap-2">
+      {/* Compact step indicator (dots + active label) */}
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-muted-foreground">
+          {t(`studyRoutine.step${step}`)}{" "}
+          <span className="text-muted-foreground/60">· {step}/3</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {[1, 2, 3].map((s) => (
             <span
+              key={s}
               className={cn(
-                "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold",
-                step === s
-                  ? "bg-primary text-primary-foreground"
-                  : step > s
-                  ? "bg-primary/30 text-primary"
-                  : "bg-muted text-muted-foreground"
+                "h-1.5 rounded-full transition-all",
+                step === s ? "w-6 bg-primary" : "w-1.5 bg-muted",
               )}
-            >
-              {s}
-            </span>
-            <span className={step === s ? "text-foreground font-medium" : ""}>
-              {t(`studyRoutine.step${s}`)}
-            </span>
-            {s < 3 && <span className="text-muted-foreground/40">›</span>}
-          </div>
-        ))}
+            />
+          ))}
+        </div>
       </div>
 
       {/* ── Step 1: Pool Selection ────────────────────────────────────── */}
       {step === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {!subjectId ? (
             <p className="text-sm text-muted-foreground">{t("errors.pickSubject")}</p>
           ) : (
             <>
-              {/* Library items */}
-              {(library ?? []).length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              <Tabs value={poolTab} onValueChange={(v) => setPoolTab(v as "items" | "collections")}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="items">
                     {t("studyRoutine.items")}
-                  </Label>
-                  <div className="paper-card divide-y divide-border">
-                    {(library ?? []).map((item) => {
-                      const segs = segmentsByItem.get(item.id!) ?? [];
-                      const inPool = poolKeySet.has(`item:${item.id}`);
-                      const expanded = expandedItems.has(item.id!);
-                      return (
-                        <div key={item.id}>
-                          <div className="flex items-center gap-2 p-2">
-                            {segs.length > 0 && (
+                    {masterPool.filter((e) => e.type !== "collection").length > 0 && (
+                      <span className="ml-1.5 text-[10px] px-1.5 rounded-full bg-primary/15 text-primary">
+                        {masterPool.filter((e) => e.type !== "collection").length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="collections">
+                    {t("studyRoutine.collections")}
+                    {masterPool.filter((e) => e.type === "collection").length > 0 && (
+                      <span className="ml-1.5 text-[10px] px-1.5 rounded-full bg-primary/15 text-primary">
+                        {masterPool.filter((e) => e.type === "collection").length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Search */}
+                <div className="relative mt-3">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t("studyRoutine.searchPlaceholder")}
+                    className="pl-8 h-9"
+                  />
+                </div>
+
+                <TabsContent value="items" className="mt-3">
+                  {filteredLibrary.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">
+                      {t("studyRoutine.noResults")}
+                    </p>
+                  ) : (
+                    <div className="paper-card divide-y divide-border">
+                      {filteredLibrary.map((item) => {
+                        const segs = segmentsByItem.get(item.id!) ?? [];
+                        const inPool = poolKeySet.has(`item:${item.id}`);
+                        const expanded = expandedItems.has(item.id!);
+                        const segsInPool = segs.filter((s) => poolKeySet.has(`segment:${s.id}`)).length;
+                        return (
+                          <div key={item.id}>
+                            <div className="flex items-center gap-2 p-2">
+                              {segs.length > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandItem(item.id!)}
+                                  className="p-1 -m-1 text-muted-foreground"
+                                  aria-label="Toggle segments"
+                                >
+                                  {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                </button>
+                              ) : (
+                                <span className="w-3.5" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm truncate">{item.title}</div>
+                                {segs.length > 0 && (
+                                  <div className="text-[10px] text-muted-foreground">
+                                    {segsInPool > 0
+                                      ? `${segsInPool}/${segs.length} ${t("studyRoutine.segments").toLowerCase()}`
+                                      : `${segs.length} ${t("studyRoutine.segments").toLowerCase()}`}
+                                  </div>
+                                )}
+                              </div>
                               <button
                                 type="button"
-                                onClick={() => toggleExpandItem(item.id!)}
-                                className="p-0.5 text-muted-foreground"
+                                onClick={() =>
+                                  inPool
+                                    ? removeFromPool({ type: "item", id: item.id! })
+                                    : addToPool({ type: "item", id: item.id! })
+                                }
+                                className={cn(
+                                  "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
+                                  inPool
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "border-border text-muted-foreground hover:text-foreground"
+                                )}
+                                aria-label={inPool ? "Remove" : "Add"}
                               >
-                                {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                               </button>
+                            </div>
+                            {expanded && segs.length > 0 && (
+                              <div className="pl-7 pb-1 divide-y divide-border/50 bg-muted/20">
+                                {segs.map((seg) => {
+                                  const segInPool = poolKeySet.has(`segment:${seg.id}`);
+                                  return (
+                                    <div key={seg.id} className="flex items-center gap-2 py-1.5 pr-2">
+                                      <span className="flex-1 text-xs text-muted-foreground truncate">{seg.label}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          segInPool
+                                            ? removeFromPool({ type: "segment", id: seg.id! })
+                                            : addToPool({ type: "segment", id: seg.id! })
+                                        }
+                                        className={cn(
+                                          "shrink-0 h-6 w-6 rounded-full border flex items-center justify-center transition-colors",
+                                          segInPool
+                                            ? "bg-primary text-primary-foreground border-primary"
+                                            : "border-border text-muted-foreground hover:text-foreground"
+                                        )}
+                                        aria-label={segInPool ? "Remove" : "Add"}
+                                      >
+                                        {segInPool ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             )}
-                            <span className="flex-1 text-sm">{item.title}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="collections" className="mt-3">
+                  {filteredCollections.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">
+                      {t("studyRoutine.noResults")}
+                    </p>
+                  ) : (
+                    <div className="paper-card divide-y divide-border">
+                      {filteredCollections.map((col) => {
+                        const inPool = poolKeySet.has(`collection:${col.id}`);
+                        return (
+                          <div key={col.id} className="flex items-center gap-2 p-2">
+                            <span className="flex-1 text-sm truncate">{col.name}</span>
                             <button
                               type="button"
                               onClick={() =>
                                 inPool
-                                  ? removeFromPool({ type: "item", id: item.id! })
-                                  : addToPool({ type: "item", id: item.id! })
+                                  ? removeFromPool({ type: "collection", id: col.id! })
+                                  : addToPool({ type: "collection", id: col.id! })
                               }
                               className={cn(
-                                "text-xs px-2 py-0.5 rounded-full border transition-colors",
+                                "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
                                 inPool
-                                  ? "bg-primary/10 border-primary text-primary"
+                                  ? "bg-primary text-primary-foreground border-primary"
                                   : "border-border text-muted-foreground hover:text-foreground"
                               )}
+                              aria-label={inPool ? "Remove" : "Add"}
                             >
-                              {inPool ? "✓" : <Plus className="h-3 w-3" />}
+                              {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                             </button>
                           </div>
-                          {expanded && segs.length > 0 && (
-                            <div className="pl-6 pb-1 divide-y divide-border/50">
-                              {segs.map((seg) => {
-                                const segInPool = poolKeySet.has(`segment:${seg.id}`);
-                                return (
-                                  <div key={seg.id} className="flex items-center gap-2 py-1.5 pr-2">
-                                    <span className="flex-1 text-xs text-muted-foreground">{seg.label}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        segInPool
-                                          ? removeFromPool({ type: "segment", id: seg.id! })
-                                          : addToPool({ type: "segment", id: seg.id! })
-                                      }
-                                      className={cn(
-                                        "text-xs px-2 py-0.5 rounded-full border transition-colors",
-                                        segInPool
-                                          ? "bg-primary/10 border-primary text-primary"
-                                          : "border-border text-muted-foreground hover:text-foreground"
-                                      )}
-                                    >
-                                      {segInPool ? "✓" : <Plus className="h-3 w-3" />}
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
 
-              {/* Collections */}
-              {(allCollections ?? []).length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                    {t("studyRoutine.collections")}
-                  </Label>
-                  <div className="paper-card divide-y divide-border">
-                    {(allCollections ?? []).map((col) => {
-                      const inPool = poolKeySet.has(`collection:${col.id}`);
-                      return (
-                        <div key={col.id} className="flex items-center gap-2 p-2">
-                          <span className="flex-1 text-sm">{col.name}</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              inPool
-                                ? removeFromPool({ type: "collection", id: col.id! })
-                                : addToPool({ type: "collection", id: col.id! })
-                            }
-                            className={cn(
-                              "text-xs px-2 py-0.5 rounded-full border transition-colors",
-                              inPool
-                                ? "bg-primary/10 border-primary text-primary"
-                                : "border-border text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            {inPool ? "✓" : <Plus className="h-3 w-3" />}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Current pool */}
+              {/* Selected summary (collapsible) */}
               {masterPool.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                    {t("studyRoutine.masterPool")} ({masterPool.length})
-                  </Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {masterPool.map((entry) => (
-                      <span
-                        key={poolKey(entry)}
-                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-accent/60"
-                      >
-                        {poolEntryLabel(entry)}
-                        <button type="button" onClick={() => removeFromPool(entry)} className="ml-0.5 opacity-60 hover:opacity-100">
-                          <X className="h-3 w-3" />
-                        </button>
+                <Accordion type="single" collapsible className="paper-card px-3">
+                  <AccordionItem value="selected" className="border-0">
+                    <AccordionTrigger className="py-2.5 hover:no-underline">
+                      <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {t("studyRoutine.masterPool")}{" "}
+                        <span className="text-primary">({masterPool.length})</span>
                       </span>
-                    ))}
-                  </div>
-                </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {masterPool.map((entry) => (
+                          <span
+                            key={poolKey(entry)}
+                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-accent/60 max-w-full"
+                          >
+                            <span className="truncate max-w-[180px]">{poolEntryLabel(entry)}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeFromPool(entry)}
+                              className="ml-0.5 opacity-60 hover:opacity-100 shrink-0"
+                              aria-label="Remove"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               )}
             </>
           )}
@@ -443,64 +535,120 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
 
       {/* ── Step 2: Groups ────────────────────────────────────────────── */}
       {step === 2 && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex gap-2">
             <Input
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
               placeholder={t("studyRoutine.groupNamePlaceholder")}
-              onKeyDown={(e) => e.key === "Enter" && addGroup()}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addGroup())}
+              className="h-9"
             />
-            <Button type="button" variant="outline" onClick={addGroup} disabled={!newGroupName.trim()}>
+            <Button type="button" variant="outline" onClick={addGroup} disabled={!newGroupName.trim()} className="h-9 shrink-0">
               <Plus className="h-4 w-4" />
             </Button>
           </div>
 
-          {groups.length === 0 && (
-            <p className="text-sm text-muted-foreground">{t("studyRoutine.noGroups")}</p>
-          )}
-
-          {groups.map((group) => (
-            <div key={group.id} className="paper-card p-3 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-sm flex-1">{group.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeGroup(group.id)}
-                  className="text-muted-foreground hover:text-destructive"
+          {groups.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              {t("studyRoutine.noGroups")}
+            </p>
+          ) : (
+            <Accordion type="multiple" defaultValue={groups.map((g) => g.id)} className="space-y-2">
+              {groups.map((group) => (
+                <AccordionItem
+                  key={group.id}
+                  value={group.id}
+                  className="paper-card border-0 px-3"
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                  {t("studyRoutine.assignItems")}
-                </Label>
-                {masterPool.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">{t("studyRoutine.poolEmpty")}</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {masterPool.map((entry) => {
-                      const checked = groupHasEntry(group.id, entry);
-                      return (
-                        <label
-                          key={poolKey(entry)}
-                          className="flex items-center gap-2 text-sm cursor-pointer"
-                        >
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={() => toggleGroupEntry(group.id, entry)}
-                          />
-                          <span>{poolEntryLabel(entry)}</span>
-                        </label>
-                      );
-                    })}
+                  <div className="flex items-center gap-2">
+                    <AccordionTrigger className="flex-1 py-2.5 hover:no-underline">
+                      <div className="flex items-center gap-2 text-left">
+                        <span className="font-medium text-sm">{group.name}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                          {group.pool.length}
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <button
+                      type="button"
+                      onClick={() => removeGroup(group.id)}
+                      className="p-1.5 text-muted-foreground hover:text-destructive"
+                      aria-label="Remove group"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
+                  <AccordionContent className="pb-3 space-y-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start h-8"
+                          disabled={masterPool.length === 0}
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1.5" />
+                          {t("studyRoutine.addItems")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[280px] p-0 max-h-[280px] overflow-y-auto" align="start">
+                        {masterPool.length === 0 ? (
+                          <p className="text-xs text-muted-foreground p-3">
+                            {t("studyRoutine.poolEmpty")}
+                          </p>
+                        ) : (
+                          <div className="p-1">
+                            {masterPool.map((entry) => {
+                              const checked = groupHasEntry(group.id, entry);
+                              return (
+                                <label
+                                  key={poolKey(entry)}
+                                  className="flex items-center gap-2 text-sm cursor-pointer rounded px-2 py-1.5 hover:bg-accent"
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={() => toggleGroupEntry(group.id, entry)}
+                                  />
+                                  <span className="truncate">{poolEntryLabel(entry)}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+
+                    {group.pool.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">
+                        {t("studyRoutine.noItemsAssigned")}
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {group.pool.map((entry) => (
+                          <span
+                            key={poolKey(entry)}
+                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-accent/60 max-w-full"
+                          >
+                            <span className="truncate max-w-[160px]">{poolEntryLabel(entry)}</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleGroupEntry(group.id, entry)}
+                              className="ml-0.5 opacity-60 hover:opacity-100 shrink-0"
+                              aria-label="Remove"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
 
           {step2Errors.length > 0 && (
             <ul className="text-xs text-destructive">
@@ -512,8 +660,8 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
 
       {/* ── Step 3: Matrix + Settings ─────────────────────────────────── */}
       {step === 3 && (
-        <div className="space-y-5">
-          <div className="space-y-3">
+        <div className="space-y-4">
+          <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">
               {t("studyRoutine.weeklyMatrix")}
             </Label>
@@ -526,7 +674,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                     type="button"
                     onClick={() => toggleDay(index)}
                     className={cn(
-                      "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                      "text-xs px-3 py-1.5 rounded-full border transition-colors min-w-[44px]",
                       on
                         ? "bg-primary text-primary-foreground border-primary"
                         : "border-border text-muted-foreground hover:text-foreground"
@@ -537,85 +685,118 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                 );
               })}
             </div>
+          </div>
 
-            {enabledDays.length > 0 && (
-              <div className="space-y-3">
-                {DAYS.filter(({ index }) => enabledDays.includes(index)).map(({ index, tKey }) => (
-                  <div key={index} className="paper-card p-3 space-y-2">
-                    <div className="font-medium text-sm">{t(tKey)}</div>
-                    {groups.map((group) => (
-                      <div key={group.id} className="flex items-center gap-2">
-                        <span className="flex-1 text-xs text-muted-foreground">{group.name}</span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => setCount(index, group.id, getCount(index, group.id) - 1)}
-                            className="w-6 h-6 rounded border text-sm font-bold flex items-center justify-center hover:bg-muted"
-                          >
-                            −
-                          </button>
-                          <span className="tabular-nums text-sm w-6 text-center">
-                            {getCount(index, group.id)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setCount(index, group.id, getCount(index, group.id) + 1)}
-                            className="w-6 h-6 rounded border text-sm font-bold flex items-center justify-center hover:bg-muted"
-                          >
-                            +
-                          </button>
-                        </div>
+          {enabledDays.length > 0 && (
+            <Accordion type="multiple" defaultValue={enabledDays.map(String)} className="space-y-2">
+              {DAYS.filter(({ index }) => enabledDays.includes(index)).map(({ index, tKey }) => {
+                const total = dayTotal(index);
+                return (
+                  <AccordionItem
+                    key={index}
+                    value={String(index)}
+                    className="paper-card border-0 px-3"
+                  >
+                    <AccordionTrigger className="py-2.5 hover:no-underline">
+                      <div className="flex items-center justify-between w-full pr-2">
+                        <span className="font-medium text-sm">{t(tKey)}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                          {total} {t("studyRoutine.itemsShort")}
+                        </span>
                       </div>
-                    ))}
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-3 space-y-2">
+                      {groups.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">
+                          {t("studyRoutine.noGroups")}
+                        </p>
+                      ) : (
+                        groups.map((group) => {
+                          const c = getCount(index, group.id);
+                          return (
+                            <div key={group.id} className="flex items-center gap-2">
+                              <span className="flex-1 text-xs text-muted-foreground truncate">{group.name}</span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setCount(index, group.id, c - 1)}
+                                  className="w-7 h-7 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40"
+                                  disabled={c === 0}
+                                  aria-label="Decrease"
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </button>
+                                <span className="tabular-nums text-sm w-6 text-center">{c}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setCount(index, group.id, c + 1)}
+                                  className="w-7 h-7 rounded-full border flex items-center justify-center hover:bg-muted"
+                                  aria-label="Increase"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          )}
+
+          {/* Advanced settings (collapsed by default) */}
+          <Accordion type="single" collapsible className="paper-card px-3">
+            <AccordionItem value="advanced" className="border-0">
+              <AccordionTrigger className="py-2.5 hover:no-underline">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {t("studyRoutine.advanced")}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-3 space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">{t("studyRoutine.startDate")}</Label>
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    {t("studyRoutine.weeksAhead")}: <span className="text-foreground font-medium">{weeksAhead}</span>
+                  </Label>
+                  <Slider
+                    value={[weeksAhead]}
+                    min={1}
+                    max={48}
+                    step={1}
+                    onValueChange={([v]) => setWeeksAhead(v)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">{t("studyRoutine.repetitionCap")}</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={20}
+                    value={repetitionCap}
+                    onChange={(e) => setRepetitionCap(Math.max(1, Number(e.target.value) || 1))}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm">{t("studyRoutine.spacedRepetition")}</div>
+                    <div className="text-xs text-muted-foreground">{t("studyRoutine.spacedRepetitionDesc")}</div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-              {t("studyRoutine.startDate")}
-            </Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                {t("studyRoutine.weeksAhead")}: {weeksAhead}
-              </Label>
-            </div>
-            <Slider
-              value={[weeksAhead]}
-              min={1}
-              max={48}
-              step={1}
-              onValueChange={([v]) => setWeeksAhead(v)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-              {t("studyRoutine.repetitionCap")}
-            </Label>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={20}
-              value={repetitionCap}
-              onChange={(e) => setRepetitionCap(Math.max(1, Number(e.target.value) || 1))}
-            />
-          </div>
-
-          <div className="paper-card p-4 flex items-center justify-between">
-            <div>
-              <div className="font-medium text-sm">{t("studyRoutine.spacedRepetition")}</div>
-              <div className="text-xs text-muted-foreground">{t("studyRoutine.spacedRepetitionDesc")}</div>
-            </div>
-            <Switch checked={useSpacedRepetition} onCheckedChange={setUseSpacedRepetition} />
-          </div>
+                  <Switch checked={useSpacedRepetition} onCheckedChange={setUseSpacedRepetition} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           {step3Errors.length > 0 && (
             <ul className="text-xs text-destructive">
@@ -626,7 +807,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
       )}
 
       {/* Navigation */}
-      <div className="flex gap-2 pt-2">
+      <div className="flex gap-2 pt-2 sticky bottom-0 bg-background/95 backdrop-blur-sm">
         <Button
           variant="outline"
           className="flex-1"
