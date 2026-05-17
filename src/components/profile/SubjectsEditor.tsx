@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type Subject, type SubjectType } from "@/lib/db";
+import { db, THEORY_LAYERS, type Subject, type SubjectType } from "@/lib/db"; // db used for useLiveQuery reads only
+import { subjectsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,7 +76,7 @@ function SubjectGroup({
     if (all.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
       toast.error(t("errors.subjectExists")); return;
     }
-    const id = await db.subjects.add({ name, type, layers: [], createdAt: Date.now() });
+    const id = await subjectsService.create(name, type);
     setDraft(""); setAdding(false);
     setOpenId(typeof id === "number" ? id : null);
   };
@@ -152,10 +153,7 @@ function SubjectCard({
 
   const doDelete = async () => {
     if (!subject.id) return;
-    await db.transaction("rw", db.subjects, db.techniques, async () => {
-      await db.techniques.where("subjectId").equals(subject.id!).delete();
-      await db.subjects.delete(subject.id!);
-    });
+    await subjectsService.remove(subject.id);
     toast.success(t("toast.subjectDeleted"));
     setConfirmDelete(false);
   };
@@ -163,22 +161,20 @@ function SubjectCard({
   const addLayer = async () => {
     const v = layerDraft.trim();
     if (!v || !subject.id) return;
-    const cur = subject.layers ?? [];
-    if (cur.includes(v)) return;
-    await db.subjects.update(subject.id, { layers: [...cur, v] });
+    await subjectsService.addLayer(subject.id, v);
     setLayerDraft("");
   };
 
   const removeLayer = async (l: string) => {
     if (!subject.id) return;
-    await db.subjects.update(subject.id, { layers: (subject.layers ?? []).filter((x) => x !== l) });
+    await subjectsService.removeLayer(subject.id, l);
   };
 
   const addTechnique = async () => {
     const v = techDraft.trim();
     if (!v || !subject.id) return;
     if (techniques.some((tech) => tech.name.toLowerCase() === v.toLowerCase())) return;
-    await db.techniques.add({ subjectId: subject.id, name: v, createdAt: Date.now() });
+    await subjectsService.addTechnique(subject.id, v);
     setTechDraft("");
   };
 
@@ -263,7 +259,7 @@ function SubjectCard({
                 <span key={tech.id} className="inline-flex items-center gap-1 bg-accent/70 px-2.5 py-1 rounded-full text-xs">
                   {tech.name}
                   <button
-                    onClick={() => tech.id && db.techniques.delete(tech.id)}
+                    onClick={() => tech.id && subjectsService.removeTechnique(tech.id)}
                     aria-label={t("subjects.removeTechnique", { name: tech.name })}
                     className="hover:text-destructive"
                   >

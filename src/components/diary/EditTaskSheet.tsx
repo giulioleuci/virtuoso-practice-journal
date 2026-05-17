@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type LibraryKind, type NoteVal, type Task, type TaskRecurrence, type TaskLinkType } from "@/lib/db";
+import { db, THEORY_LAYERS, type LibraryKind, type NoteVal, type Task, type TaskRecurrence, type TaskLinkType } from "@/lib/db"; // db used for useLiveQuery reads only
 import { useI18n } from "@/lib/i18n";
-import { collectionsService } from "@/lib/services";
+import { collectionsService, tasksService } from "@/lib/services";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,7 +83,7 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
 
   const save = async () => {
     if (!task?.id || errors.length) return;
-    await db.tasks.update(task.id, {
+    await tasksService.update(task.id, {
       subjectId: subjectId!,
       linkType,
       itemId: linkType === "item" ? itemId : undefined,

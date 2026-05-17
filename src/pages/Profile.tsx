@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, exportAll, importAll, wipeAll } from "@/lib/db";
+import { exportAll, importAll, wipeAll } from "@/lib/db";
+import { profileService } from "@/lib/services";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ const APP_VERSION = "0.3alpha";
 
 export default function Profile() {
   const { t, lang, setLang } = useI18n();
-  const profile = useLiveQuery(() => db.profile.get("me"));
+  const profile = useLiveQuery(() => profileService.get());
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmText, setConfirmText] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -30,7 +31,7 @@ export default function Profile() {
   if (!profile) return null;
 
   const update = async (patch: Partial<typeof profile>) => {
-    await db.profile.update("me", patch);
+    await profileService.update(patch);
   };
 
   const onExport = async () => {

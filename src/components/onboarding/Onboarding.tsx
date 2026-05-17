@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { Piano, BookOpen, Check, X, Plus, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { db, type Lang, type SubjectType } from "@/lib/db";
+import { type Lang, type SubjectType } from "@/lib/db";
+import { profileService } from "@/lib/services";
 import { SUPPORTED_LANGS, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -52,24 +53,19 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     setReminderDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
 
   const finish = async (opts?: { remindersDisabled?: boolean }) => {
-    const now = Date.now();
     const remindersDisabled = !!opts?.remindersDisabled;
-    await db.transaction("rw", db.subjects, db.profile, async () => {
-      await db.subjects.bulkAdd(chosen.map((s) => ({ ...s, createdAt: now })));
-      await db.profile.put({
-        id: "me",
-        name: name.trim() || "Musician",
-        lang,
-        reminderTime,
-        reminderFreq,
-        reminderDays: reminderFreq === "custom" ? reminderDays : reminderFreq === "weekdays" ? [1,2,3,4,5] : [0,1,2,3,4,5,6],
-        reminderEnabled: !remindersDisabled,
-        lateRecoveryDays: 3,
-        graceDay: true,
-        groupByPhase: false,
-        onboarded: true,
-        createdAt: now,
-      });
+    await profileService.initialize({
+      subjects: chosen,
+      name: name.trim() || "Musician",
+      lang,
+      reminderTime,
+      reminderFreq,
+      reminderDays: reminderFreq === "custom" ? reminderDays : reminderFreq === "weekdays" ? [1,2,3,4,5] : [0,1,2,3,4,5,6],
+      reminderEnabled: !remindersDisabled,
+      lateRecoveryDays: 3,
+      graceDay: true,
+      groupByPhase: false,
+      onboarded: true,
     });
     onDone();
   };

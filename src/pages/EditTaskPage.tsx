@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
+import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db"; // db used for useLiveQuery reads only
+import { tasksService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,7 +96,7 @@ export default function EditTaskPage() {
 
   const save = async () => {
     if (!taskId || errors.length) return;
-    await db.tasks.update(taskId, {
+    await tasksService.update(taskId, {
       subjectId: subjectId!,
       linkType,
       itemId: linkType === "item" ? itemId : undefined,

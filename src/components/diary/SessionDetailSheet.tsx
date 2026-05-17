@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/db";
+import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/db"; // db used for useLiveQuery reads only
+import { sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -93,7 +94,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     const techniqueScores = techniquesUsed.length > 0
       ? Object.fromEntries(techniquesUsed.map((id) => [id, v.techniqueScores[id] ?? 0]))
       : undefined;
-    await db.sessions.update(session.id, {
+    await sessionsService.update(session.id, {
       date, bpmReached: v.bpm, noteVal: v.noteVal, quality: v.quality,
       notes: v.notes.trim() || undefined,
       layersUsed: v.layersUsed, techniquesUsed, techniqueScores,
@@ -103,15 +104,9 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     setEditing(false);
   };
 
-
   const del = async () => {
     if (!session?.id) return;
-    const taskId = session.taskId;
-    await db.sessions.delete(session.id);
-    if (taskId) {
-      const remaining = await db.sessions.where("taskId").equals(taskId).count();
-      if (remaining === 0) await db.tasks.update(taskId, { done: false });
-    }
+    await sessionsService.deleteWithTaskReset(session.id, session.taskId);
     toast.success(t("toast.sessionDeleted"));
     setConfirmDel(false);
     onOpenChange(false);

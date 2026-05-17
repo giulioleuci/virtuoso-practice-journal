@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Task, type Session, type Profile } from "@/lib/db";
+import { db, type Task, type Session, type Profile } from "@/lib/db"; // db used for useLiveQuery reads only
+import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import {
   Plus,
@@ -317,9 +318,7 @@ export default function Diary() {
                           <button
                             onClick={async () => {
                               if (!task.id) return;
-                              const { id, date, done, skipped, ...rest } = task;
-                              await db.tasks.add({ ...rest, date: today, done: false, createdAt: Date.now() });
-                              await db.tasks.update(id, { skipped: true });
+                              await tasksService.carryOver(task, today);
                               toast.success(t("toast.movedToToday"));
                             }}
                             className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
@@ -330,7 +329,7 @@ export default function Diary() {
                           <button
                             onClick={async () => {
                               if (!task.id) return;
-                              await db.tasks.update(task.id, { skipped: true });
+                              await tasksService.skip(task.id);
                               toast(t("toast.ignored"));
                             }}
                             className="ml-auto p-2 rounded-xl text-muted-foreground hover:text-destructive"
@@ -407,7 +406,7 @@ export default function Diary() {
                               <button
                                 onClick={async () => {
                                   if (!task.id) return;
-                                  await db.tasks.update(task.id, { skipped: false });
+                                  await tasksService.unskip(task.id);
                                   toast.success(t("toast.restored"));
                                 }}
                                 className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
@@ -502,13 +501,7 @@ export default function Diary() {
               onClick={async () => {
                 const task = confirmUncomplete;
                 if (!task?.id) return;
-                const sessions = await db.sessions
-                  .where("taskId")
-                  .equals(task.id)
-                  .and((s) => s.date === task.date)
-                  .toArray();
-                await db.sessions.bulkDelete(sessions.map((s) => s.id!).filter(Boolean) as number[]);
-                await db.tasks.update(task.id, { done: false });
+                await sessionsService.deleteByTaskAndDate(task.id, task.date);
                 toast.success(t("toast.taskReopened"));
                 setConfirmUncomplete(null);
               }}

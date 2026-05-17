@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db"; // db used for useLiveQuery reads only
+import { lessonsService } from "@/lib/services";
 import { today } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -82,7 +83,7 @@ export default function Assignments() {
                       <button
                         onClick={async () => {
                           if (!a.id) return;
-                          await db.assignments.update(a.id, { ignored: true });
+                          await lessonsService.ignoreAssignment(a.id);
                           toast(t("toast.ignored"));
                         }}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent ml-auto"

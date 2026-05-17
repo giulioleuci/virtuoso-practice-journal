@@ -14,7 +14,7 @@ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { LinkTargetFields } from "./LinkTargetFields";
 import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "./RecurrenceFields";
 import { StudyRoutineWizard } from "./StudyRoutineWizard";
-import { tasksService } from "@/lib/services";
+import { tasksService, lessonsService } from "@/lib/services";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -227,7 +227,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
         recurrence,
       });
       if (prefill?.assignmentId) {
-        await db.assignments.update(prefill.assignmentId, { transformed: true, taskId: firstId });
+        await lessonsService.transformAssignment(prefill.assignmentId, firstId);
       }
       toast.success(recurrence ? t("toast.recurringTaskCreated") : t("toast.taskAdded"));
       onCreated?.(firstId);

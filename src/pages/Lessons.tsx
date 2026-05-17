@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Lesson, type LessonRecurrence } from "@/lib/db";
+import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
+import { lessonsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,16 +61,13 @@ export default function Lessons() {
 
   const deleteRec = async () => {
     if (delRecId == null) return;
-    await db.recurrences.delete(delRecId);
+    await lessonsService.deleteRecurrence(delRecId);
     toast.success(t("toast.removed"));
     setDelRecId(null);
   };
   const deleteLesson = async () => {
     if (delLessonId == null) return;
-    await db.transaction("rw", db.lessons, db.assignments, async () => {
-      await db.assignments.where("lessonId").equals(delLessonId).delete();
-      await db.lessons.delete(delLessonId);
-    });
+    await lessonsService.deleteLesson(delLessonId);
     toast.success(t("toast.lessonDeleted"));
     setDelLessonId(null);
   };
@@ -249,7 +247,7 @@ export default function Lessons() {
                                       </span>
                                     ) : a.ignored ? (
                                       <button
-                                        onClick={async () => { if (a.id) { await db.assignments.update(a.id, { ignored: false }); toast(t("toast.restored")); } }}
+                                        onClick={async () => { if (a.id) { await lessonsService.restoreAssignment(a.id); toast(t("toast.restored")); } }}
                                         className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary italic"
                                       >{t("lessons.ignoredRestore")}</button>
                                     ) : (
@@ -259,7 +257,7 @@ export default function Lessons() {
                                           className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
                                         >{t("lessons.makeTask")}</button>
                                         <button
-                                          onClick={async () => { if (a.id) { await db.assignments.update(a.id, { ignored: true }); toast(t("toast.ignored")); } }}
+                                          onClick={async () => { if (a.id) { await lessonsService.ignoreAssignment(a.id); toast(t("toast.ignored")); } }}
                                           className="text-muted-foreground hover:text-destructive"
                                           aria-label={t("common.ignore")}
                                         >

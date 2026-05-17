@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, buildLessonSnapshot, type Lesson, type LessonRecurrence } from "@/lib/db";
+import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
+import { lessonsService } from "@/lib/services";
 import { today } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -67,49 +68,11 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
 
   const save = async () => {
     if (errors.length) return;
-    const piecePlayedIds = lesson?.piecesPlayed ?? [];
-    const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(
-      subjId!,
-      recurrence ?? null,
-      piecePlayedIds,
-    );
-    await db.transaction("rw", db.lessons, db.assignments, db.helpRequests, async () => {
-      let lessonId: number;
-      if (isEdit && lesson?.id) {
-        await db.lessons.put({
-          ...lesson,
-          date,
-          notes: notes.trim() || undefined,
-          piecesPlayed: lesson.piecesPlayed,
-          // Only set snapshot if it wasn't already captured (preserve original history)
-          snapshot: lesson.snapshot ?? snapshot,
-          piecesPlayedTitles: lesson.piecesPlayedTitles ?? piecesPlayedTitles,
-        });
-        lessonId = lesson.id;
-        await db.assignments.where("lessonId").equals(lessonId).delete();
-      } else {
-        lessonId = (await db.lessons.add({
-          recurrenceId: recurrence?.id,
-          subjectId: subjId!,
-          date,
-          notes: notes.trim() || undefined,
-          piecesPlayed: [],
-          snapshot,
-          piecesPlayedTitles,
-          createdAt: Date.now(),
-        })) as number;
-      }
-      if (assignments.length) {
-        await db.assignments.bulkAdd(
-          assignments.map((text) => ({
-            lessonId,
-            text,
-            transformed: false,
-            createdAt: Date.now(),
-          }))
-        );
-      }
-    });
+    if (isEdit && lesson?.id) {
+      await lessonsService.updateLesson(lesson, date, notes, assignments);
+    } else {
+      await lessonsService.log(subjId!, recurrence, date, notes, assignments);
+    }
     toast.success(isEdit ? t("toast.lessonUpdated") : t("toast.lessonLogged"));
     onOpenChange(false);
   };
