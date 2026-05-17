@@ -637,5 +637,14 @@
   "toast.routineRegenerated": "Attività rigenerate",
   "studyRoutine.regenerate": "Rigenera attività",
   "tasks.upcomingSchedule": "Prossimi impegni",
-  "tasks.noTasksOnDay": "Nessuna attività prevista per questo giorno"
+  "tasks.noTasksOnDay": "Nessuna attività prevista per questo giorno",
+  "history.untitled": "Senza titolo",
+  "history.collection": "Raccolta",
+  "history.noItem": "Nessun elemento",
+  "history.noSegment": "Nessun segmento",
+  "recurrence.summaryEvery": "ogni {{count}}g",
+  "recurrence.summaryUntil": "fino al {{date}}",
+  "recurrence.summaryOccurrences": "×{{count}}",
+  "dialog.deleteSubject": "Eliminare \"{{name}}\"?",
+  "dialog.deleteSubjectDesc": "Verranno eliminate anche tutte le tecniche. Questa azione è irreversibile."
 }

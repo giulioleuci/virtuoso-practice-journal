@@ -637,5 +637,14 @@
   "toast.routineRegenerated": "Aufgaben neu erstellt",
   "studyRoutine.regenerate": "Aufgaben neu erstellen",
   "tasks.upcomingSchedule": "Kommende Aufgaben",
-  "tasks.noTasksOnDay": "Keine Aufgaben für diesen Tag geplant"
+  "tasks.noTasksOnDay": "Keine Aufgaben für diesen Tag geplant",
+  "history.untitled": "Ohne Titel",
+  "history.collection": "Sammlung",
+  "history.noItem": "Kein Element",
+  "history.noSegment": "Kein Abschnitt",
+  "recurrence.summaryEvery": "alle {{count}}T",
+  "recurrence.summaryUntil": "bis {{date}}",
+  "recurrence.summaryOccurrences": "×{{count}}",
+  "dialog.deleteSubject": "\"{{name}}\" löschen?",
+  "dialog.deleteSubjectDesc": "Alle Techniken werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
 }

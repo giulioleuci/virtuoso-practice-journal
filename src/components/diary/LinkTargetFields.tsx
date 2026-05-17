@@ -64,7 +64,7 @@ export function LinkTargetFields({
                 if (val !== "collection") setCollectionId(undefined);
               }}
               className={cn(
-                "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                "text-xs px-3 py-1.5 rounded-paper border transition-colors",
                 linkType === val
                   ? "bg-primary text-primary-foreground border-primary"
                   : "border-border text-muted-foreground hover:text-foreground"
@@ -175,7 +175,7 @@ function ItemPicker({
                 if (val !== "repertoire" && val !== "all") setCollectionFilter("all");
               }}
               className={cn(
-                "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                "text-xs px-3 py-1.5 rounded-paper border transition-colors",
                 kindFilter === val
                   ? "bg-primary text-primary-foreground border-primary"
                   : "border-border text-muted-foreground hover:text-foreground"
@@ -204,7 +204,7 @@ function ItemPicker({
               type="button"
               onClick={() => setSortBy(val)}
               className={cn(
-                "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                "text-xs px-3 py-1.5 rounded-paper border transition-colors",
                 sortBy === val
                   ? "bg-primary text-primary-foreground border-primary"
                   : "border-border text-muted-foreground hover:text-foreground"
