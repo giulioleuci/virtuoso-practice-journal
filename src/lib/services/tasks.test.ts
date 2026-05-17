@@ -391,3 +391,115 @@ describe("tasksService.bulkRemove", () => {
     expect(softTask!.deletedAt).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// skip / unskip
+// ---------------------------------------------------------------------------
+
+describe("tasksService.skip / unskip", () => {
+  it("sets skipped=true then false", async () => {
+    const subjectId = await seedSubject();
+    const id = await tasksService.create({ title: "Scales", date: "2025-01-01", subjectId });
+
+    await tasksService.skip(id);
+    expect((await db.tasks.get(id))!.skipped).toBe(true);
+
+    await tasksService.unskip(id);
+    expect((await db.tasks.get(id))!.skipped).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// carryOver
+// ---------------------------------------------------------------------------
+
+describe("tasksService.carryOver", () => {
+  it("creates a copy on the target date and marks the original skipped", async () => {
+    const subjectId = await seedSubject();
+    const id = await tasksService.create({
+      title: "Etude",
+      date: "2025-01-01",
+      subjectId,
+      targetBpm: 80,
+    });
+    const original = (await db.tasks.get(id))!;
+
+    const newId = await tasksService.carryOver(original, "2025-01-02");
+
+    expect(newId).not.toBe(id);
+    expect(await db.tasks.count()).toBe(2);
+
+    const copy = (await db.tasks.get(newId))!;
+    expect(copy.date).toBe("2025-01-02");
+    expect(copy.title).toBe("Etude");
+    expect(copy.targetBpm).toBe(80);
+    expect(copy.done).toBe(false);
+    expect(copy.skipped).toBeFalsy();
+
+    const skippedOriginal = (await db.tasks.get(id))!;
+    expect(skippedOriginal.skipped).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bulkSetDone
+// ---------------------------------------------------------------------------
+
+describe("tasksService.bulkSetDone", () => {
+  it("marks multiple tasks done", async () => {
+    const subjectId = await seedSubject();
+    const id1 = await tasksService.create({ title: "A", date: "2025-01-01", subjectId });
+    const id2 = await tasksService.create({ title: "B", date: "2025-01-01", subjectId });
+
+    await tasksService.bulkSetDone([id1, id2], true);
+
+    expect((await db.tasks.get(id1))!.done).toBe(true);
+    expect((await db.tasks.get(id2))!.done).toBe(true);
+  });
+
+  it("marks multiple tasks not done", async () => {
+    const subjectId = await seedSubject();
+    const id1 = await tasksService.create({ title: "A", date: "2025-01-01", subjectId });
+    const id2 = await tasksService.create({ title: "B", date: "2025-01-01", subjectId });
+    await tasksService.bulkSetDone([id1, id2], true);
+
+    await tasksService.bulkSetDone([id1, id2], false);
+
+    expect((await db.tasks.get(id1))!.done).toBe(false);
+    expect((await db.tasks.get(id2))!.done).toBe(false);
+  });
+
+  it("is a no-op for an empty list", async () => {
+    await tasksService.bulkSetDone([], true);
+    expect(await db.tasks.count()).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// removeSeries
+// ---------------------------------------------------------------------------
+
+describe("tasksService.removeSeries", () => {
+  it("deletes the root task and all its recurrence children", async () => {
+    const subjectId = await seedSubject();
+    const rootId = await tasksService.create({
+      title: "Exercise",
+      date: "2025-01-06",
+      subjectId,
+      recurrence: {
+        kind: "weekdays",
+        days: [1],
+        startDate: "2025-01-06",
+        occurrences: 3,
+      },
+    });
+
+    expect(await db.tasks.count()).toBe(3);
+
+    const { soft, hard } = await tasksService.removeSeries(rootId);
+
+    expect(soft).toBe(0);
+    expect(hard).toBe(3);
+    expect(await db.tasks.count()).toBe(0);
+  });
+});

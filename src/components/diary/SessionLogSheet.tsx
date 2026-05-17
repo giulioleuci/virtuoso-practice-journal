@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { db, buildSessionSnapshot, THEORY_LAYERS, type NoteVal, type SessionQuality, type Task, type SegmentMetric } from "@/lib/db";
+import { db, THEORY_LAYERS, type NoteVal, type SessionQuality, type Task, type SegmentMetric } from "@/lib/db"; // db used for useLiveQuery reads only
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
 import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
-import { studyRoutinesService } from "@/lib/services";
+import { studyRoutinesService, sessionsService } from "@/lib/services";
 import { SessionFields, type SessionFieldsValue } from "./SessionFields";
 import { StarRating } from "@/components/shared/StarRating";
 import { cn } from "@/lib/utils";
@@ -129,7 +129,6 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
 
   const save = async () => {
     if (!task?.id || errors.length) return;
-    const now = Date.now();
 
     const layersUsed = v.layersUsed;
     const layerScores = layersUsed.length > 0
@@ -140,43 +139,20 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       ? Object.fromEntries(techniquesUsed.map((id) => [id, v.techniqueScores[id] ?? 0]))
       : undefined;
 
-    const snapshot = await buildSessionSnapshot({
-      ...task,
-      layers: layersUsed,
-      techniqueIds: v.techniquesUsed,
-      targetBpm: v.bpm ?? task.targetBpm,
-      noteVal: v.noteVal ?? task.noteVal,
-    });
-
-    await db.transaction("rw", db.tasks, db.sessions, db.helpRequests, async () => {
-      const sessionId = await db.sessions.add({
-        taskId: task.id!,
-        date: task.date,
-        bpmReached: granular ? undefined : (isTheory ? undefined : v.bpm),
-        noteVal: granular ? undefined : (isTheory ? undefined : v.noteVal),
-        reps: granular ? undefined : (isTheory ? undefined : v.reps),
-        confidence: granular ? undefined : v.confidence,
-        quality: granular ? undefined : v.quality,
-        notes: v.notes.trim() || undefined,
-        layersUsed,
-        techniquesUsed,
-        layerScores,
-        techniqueScores,
-        segmentMetrics: granular ? buildSegmentMetrics() : undefined,
-        snapshot,
-        createdAt: now,
-      });
-      await db.tasks.update(task.id!, { done: true });
-      if (needHelp) {
-        await db.helpRequests.add({
-          sessionId: sessionId as number,
-          taskId: task.id!,
-          itemId: task.itemId,
-          question: helpText.trim(),
-          resolved: false,
-          createdAt: now,
-        });
-      }
+    await sessionsService.logWithCompletion(task, {
+      date: task.date,
+      bpmReached: granular ? undefined : (isTheory ? undefined : v.bpm),
+      noteVal: granular ? undefined : (isTheory ? undefined : v.noteVal),
+      reps: granular ? undefined : (isTheory ? undefined : v.reps),
+      confidence: granular ? undefined : v.confidence,
+      quality: granular ? undefined : v.quality,
+      notes: v.notes,
+      layersUsed,
+      techniquesUsed,
+      layerScores,
+      techniqueScores,
+      segmentMetrics: granular ? buildSegmentMetrics() : undefined,
+      helpText: needHelp ? helpText.trim() : undefined,
     });
 
     if (task.studyRoutineId) {

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db"; // db used for useLiveQuery reads only
+import { profileService } from "@/lib/services";
 import { I18nProvider } from "@/lib/i18n";
 import Onboarding from "@/components/onboarding/Onboarding";
 import IntroSlides from "@/components/onboarding/IntroSlides";
@@ -52,7 +53,7 @@ const Index = () => {
   if (!profile.introSeen) {
     return (
       <I18nProvider initial={profile.lang}>
-        <IntroSlides onDone={() => db.profile.update("me", { introSeen: true })} />
+        <IntroSlides onDone={() => profileService.update({ introSeen: true })} />
       </I18nProvider>
     );
   }

@@ -14,7 +14,7 @@ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { LinkTargetFields } from "@/components/diary/LinkTargetFields";
 import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "@/components/diary/RecurrenceFields";
 import { StudyRoutineWizard } from "@/components/diary/StudyRoutineWizard";
-import { tasksService } from "@/lib/services";
+import { tasksService, lessonsService } from "@/lib/services";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
@@ -213,7 +213,7 @@ export default function NewTaskPage() {
         recurrence,
       });
       if (prefill?.assignmentId) {
-        await db.assignments.update(prefill.assignmentId, { transformed: true, taskId: firstId });
+        await lessonsService.transformAssignment(prefill.assignmentId, firstId);
       }
       toast.success(recurrence ? t("toast.recurringTaskCreated") : t("toast.taskAdded"));
       handleCancel();

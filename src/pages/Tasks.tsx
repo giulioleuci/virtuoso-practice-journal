@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, deleteTaskPreservingHistory, deleteTasksPreservingHistory, type Task, type StudyRoutine } from "@/lib/db";
+import { db, type Task, type StudyRoutine } from "@/lib/db"; // db used for useLiveQuery reads only
 import { useActiveTasks, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
-import { studyRoutinesService } from "@/lib/services";
+import { studyRoutinesService, tasksService } from "@/lib/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -93,7 +93,7 @@ export default function Tasks() {
 
   const toggleDone = async (task: Task) => {
     if (!task.id) return;
-    await db.tasks.update(task.id, { done: !task.done });
+    await tasksService.toggleDone(task.id, !task.done);
   };
 
   const toggleSel = (id: number) => {
@@ -124,19 +124,14 @@ export default function Tasks() {
     if (!target) return;
     if (delMode === "series") {
       const seriesId = target.recurrence ? target.id : target.recurrenceTaskId;
-      const ids: number[] = [];
-      if (seriesId) {
-        const children = (await db.tasks.where("recurrenceTaskId").equals(seriesId).primaryKeys()) as number[];
-        ids.push(seriesId, ...children);
-      } else {
-        ids.push(delId);
-      }
-      const { soft } = await deleteTasksPreservingHistory(ids);
+      const { soft } = seriesId
+        ? await tasksService.removeSeries(seriesId)
+        : await tasksService.bulkRemove([delId]);
       toast.success(soft
         ? t("toast.seriesRemoved", { count: soft })
         : t("toast.seriesDeleted"));
     } else {
-      const mode = await deleteTaskPreservingHistory(delId);
+      const mode = await tasksService.remove(delId);
       toast.success(mode === "soft" ? t("toast.taskArchived") : t("toast.taskDeleted"));
     }
     setDelId(null);
@@ -145,7 +140,7 @@ export default function Tasks() {
   const bulkMarkDone = async (done: boolean) => {
     const ids = [...selected];
     if (!ids.length) return;
-    await db.tasks.bulkUpdate(ids.map(id => ({ key: id, changes: { done } })));
+    await tasksService.bulkSetDone(ids, done);
     toast.success(done
       ? t("toast.tasksBulkDone", { count: ids.length })
       : t("toast.tasksBulkReopened", { count: ids.length }));
@@ -155,7 +150,7 @@ export default function Tasks() {
   const bulkDelete = async () => {
     const ids = [...selected];
     if (!ids.length) return;
-    const { soft } = await deleteTasksPreservingHistory(ids);
+    const { soft } = await tasksService.bulkRemove(ids);
     toast.success(soft
       ? t("toast.tasksBulkDeleted", { count: ids.length, soft })
       : t("toast.tasksBulkDeletedClean", { count: ids.length }));

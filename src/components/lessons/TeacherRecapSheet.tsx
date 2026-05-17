@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type HelpRequest } from "@/lib/db";
+import { db, type HelpRequest } from "@/lib/db"; // db used for useLiveQuery reads only
+import { helpRequestsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -64,26 +65,20 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
   };
 
   const saveAnswer = async (id: number) => {
-    await db.helpRequests.update(id, {
-      answer: answerDraft.trim() || undefined,
-      answeredAt: answerDraft.trim() ? Date.now() : undefined,
-      resolved: !!answerDraft.trim(),
-    });
+    await helpRequestsService.saveAnswer(id, answerDraft);
     setAnsweringId(null);
     setAnswerDraft("");
     toast.success(t("toast.answerSaved"));
   };
 
   const resolve = async (id: number) => {
-    await db.helpRequests.update(id, { resolved: true });
+    await helpRequestsService.resolve(id);
     toast.success(t("toast.markedResolved"));
   };
 
   const resolveAll = async () => {
     const ids = list.map((h) => h.id).filter((id): id is number => id !== undefined);
-    if (ids.length > 0) {
-      await db.helpRequests.where("id").anyOf(ids).modify({ resolved: true });
-    }
+    await helpRequestsService.resolveAll(ids);
     toast.success(t("toast.allMarkedResolved"));
   };
 

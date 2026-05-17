@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type ColorKey, type LessonRecurrence } from "@/lib/db";
+import { db, type ColorKey, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
+import { lessonsService } from "@/lib/services";
 import { today } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -80,11 +81,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
       color,
       createdAt: recurrence?.createdAt ?? Date.now(),
     };
-    if (isEdit && recurrence?.id) {
-      await db.recurrences.put({ ...base, id: recurrence.id });
-    } else {
-      await db.recurrences.add(base);
-    }
+    await lessonsService.upsertRecurrence(base, isEdit ? recurrence?.id : undefined);
     toast.success(isEdit ? t("toast.updated") : t("toast.added"));
     onOpenChange(false);
   };

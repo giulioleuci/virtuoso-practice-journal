@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db"; // db used for useLiveQuery reads only
+import { helpRequestsService } from "@/lib/services";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,12 +30,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
 
   const addQuestion = async () => {
     if (!draft.trim()) return;
-    await db.helpRequests.add({
-      itemId,
-      question: draft.trim(),
-      resolved: false,
-      createdAt: Date.now(),
-    });
+    await helpRequestsService.add(itemId, draft.trim());
     setDraft("");
     toast.success("Question saved");
   };
@@ -42,13 +38,13 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
   const saveAnswer = async (id: number) => {
     const text = (answers[id] ?? "").trim();
     if (!text) return;
-    await db.helpRequests.update(id, { answer: text, answeredAt: Date.now(), resolved: true });
+    await helpRequestsService.answer(id, text);
     setAnswers((a) => { const c = { ...a }; delete c[id]; return c; });
     toast.success("Answer saved");
   };
 
   const remove = async (id: number) => {
-    await db.helpRequests.delete(id);
+    await helpRequestsService.remove(id);
   };
 
   const sorted = (reqs ?? []).sort((a, b) => Number(a.resolved) - Number(b.resolved) || b.createdAt - a.createdAt);

@@ -58,6 +58,30 @@ export const tasksService = {
     await db.tasks.update(id, { done });
   },
 
+  async removeSeries(rootId: number): Promise<{ soft: number; hard: number }> {
+    const children = (await db.tasks.where("recurrenceTaskId").equals(rootId).primaryKeys()) as number[];
+    return deleteTasksPreservingHistory([rootId, ...children]);
+  },
+
+  async skip(id: number): Promise<void> {
+    await db.tasks.update(id, { skipped: true });
+  },
+
+  async unskip(id: number): Promise<void> {
+    await db.tasks.update(id, { skipped: false });
+  },
+
+  async carryOver(task: Task, toDate: string): Promise<number> {
+    const { id, date, done, skipped, ...rest } = task;
+    const newId = (await db.tasks.add({ ...rest, date: toDate, done: false, createdAt: Date.now() })) as number;
+    await db.tasks.update(id!, { skipped: true });
+    return newId;
+  },
+
+  async bulkSetDone(ids: number[], done: boolean): Promise<void> {
+    await db.tasks.bulkUpdate(ids.map((id) => ({ key: id, changes: { done } })));
+  },
+
   async remove(id: number): Promise<"soft" | "hard"> {
     return deleteTaskPreservingHistory(id);
   },
