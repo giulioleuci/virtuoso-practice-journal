@@ -538,32 +538,40 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                       {t("studyRoutine.noResults")}
                     </p>
                   ) : (
-                    <div className="paper-card divide-y divide-border">
-                      {filteredCollections.map((col) => {
-                        const inPool = poolKeySet.has(`collection:${col.id}`);
-                        return (
-                          <div key={col.id} className="flex items-center gap-2 p-2">
-                            <span className="flex-1 text-sm truncate">{col.name}</span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                inPool
-                                  ? removeFromPool({ type: "collection", id: col.id! })
-                                  : addToPool({ type: "collection", id: col.id! })
-                              }
-                              className={cn(
-                                "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
-                                inPool
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "border-border text-muted-foreground hover:text-foreground"
-                              )}
-                              aria-label={inPool ? "Remove" : "Add"}
-                            >
-                              {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-                            </button>
-                          </div>
-                        );
-                      })}
+                    <div className="paper-card">
+                      <div className="divide-y divide-border">
+                        {pagedCollections.map((col) => {
+                          const inPool = poolKeySet.has(`collection:${col.id}`);
+                          return (
+                            <div key={col.id} className="flex items-center gap-2 p-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm truncate">{col.name}</div>
+                                {col.composer && (
+                                  <div className="text-[10px] text-muted-foreground truncate">{col.composer}</div>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  inPool
+                                    ? removeFromPool({ type: "collection", id: col.id! })
+                                    : addToPool({ type: "collection", id: col.id! })
+                                }
+                                className={cn(
+                                  "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
+                                  inPool
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "border-border text-muted-foreground hover:text-foreground"
+                                )}
+                                aria-label={inPool ? "Remove" : "Add"}
+                              >
+                                {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <Pager page={collectionsPage} pageCount={collectionsPageCount} onChange={setCollectionsPage} />
                     </div>
                   )}
                 </TabsContent>
