@@ -432,87 +432,102 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                       {t("studyRoutine.noResults")}
                     </p>
                   ) : (
-                    <div className="paper-card divide-y divide-border">
-                      {filteredLibrary.map((item) => {
-                        const segs = segmentsByItem.get(item.id!) ?? [];
-                        const inPool = poolKeySet.has(`item:${item.id}`);
-                        const expanded = expandedItems.has(item.id!);
-                        const segsInPool = segs.filter((s) => poolKeySet.has(`segment:${s.id}`)).length;
-                        return (
-                          <div key={item.id}>
-                            <div className="flex items-center gap-2 p-2">
-                              {segs.length > 0 ? (
+                    <div className="paper-card">
+                      <div className="divide-y divide-border">
+                        {pagedLibrary.map((item) => {
+                          const segs = segmentsByItem.get(item.id!) ?? [];
+                          const inPool = poolKeySet.has(`item:${item.id}`);
+                          const expanded = expandedItems.has(item.id!);
+                          const segsInPool = segs.filter((s) => poolKeySet.has(`segment:${s.id}`)).length;
+                          const segPage = getSegPage(item.id!);
+                          const segPageCount = Math.max(1, Math.ceil(segs.length / PAGE_SIZE));
+                          const pagedSegs = segs.slice((segPage - 1) * PAGE_SIZE, segPage * PAGE_SIZE);
+                          return (
+                            <div key={item.id}>
+                              <div className="flex items-center gap-2 p-2">
+                                {segs.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpandItem(item.id!)}
+                                    className="p-1 -m-1 text-muted-foreground"
+                                    aria-label="Toggle segments"
+                                  >
+                                    {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                  </button>
+                                ) : (
+                                  <span className="w-3.5" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm truncate">{item.title}</div>
+                                  <div className="text-[10px] text-muted-foreground truncate">
+                                    {item.composer && <span>{item.composer}</span>}
+                                    {item.composer && segs.length > 0 && <span> · </span>}
+                                    {segs.length > 0 && (
+                                      <span>
+                                        {segsInPool > 0
+                                          ? `${segsInPool}/${segs.length} ${t("studyRoutine.segments").toLowerCase()}`
+                                          : `${segs.length} ${t("studyRoutine.segments").toLowerCase()}`}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                                 <button
                                   type="button"
-                                  onClick={() => toggleExpandItem(item.id!)}
-                                  className="p-1 -m-1 text-muted-foreground"
-                                  aria-label="Toggle segments"
+                                  onClick={() =>
+                                    inPool
+                                      ? removeFromPool({ type: "item", id: item.id! })
+                                      : addToPool({ type: "item", id: item.id! })
+                                  }
+                                  className={cn(
+                                    "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
+                                    inPool
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "border-border text-muted-foreground hover:text-foreground"
+                                  )}
+                                  aria-label={inPool ? "Remove" : "Add"}
                                 >
-                                  {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                  {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                                 </button>
-                              ) : (
-                                <span className="w-3.5" />
+                              </div>
+                              {expanded && segs.length > 0 && (
+                                <div className="pl-7 pb-1 divide-y divide-border/50 bg-muted/20">
+                                  {pagedSegs.map((seg) => {
+                                    const segInPool = poolKeySet.has(`segment:${seg.id}`);
+                                    return (
+                                      <div key={seg.id} className="flex items-center gap-2 py-1.5 pr-2">
+                                        <span className="flex-1 text-xs text-muted-foreground truncate">{seg.label}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            segInPool
+                                              ? removeFromPool({ type: "segment", id: seg.id! })
+                                              : addToPool({ type: "segment", id: seg.id! })
+                                          }
+                                          className={cn(
+                                            "shrink-0 h-6 w-6 rounded-full border flex items-center justify-center transition-colors",
+                                            segInPool
+                                              ? "bg-primary text-primary-foreground border-primary"
+                                              : "border-border text-muted-foreground hover:text-foreground"
+                                          )}
+                                          aria-label={segInPool ? "Remove" : "Add"}
+                                        >
+                                          {segInPool ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                  <Pager
+                                    page={segPage}
+                                    pageCount={segPageCount}
+                                    onChange={(p) => setSegPage(item.id!, p)}
+                                  />
+                                </div>
                               )}
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm truncate">{item.title}</div>
-                                {segs.length > 0 && (
-                                  <div className="text-[10px] text-muted-foreground">
-                                    {segsInPool > 0
-                                      ? `${segsInPool}/${segs.length} ${t("studyRoutine.segments").toLowerCase()}`
-                                      : `${segs.length} ${t("studyRoutine.segments").toLowerCase()}`}
-                                  </div>
-                                )}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  inPool
-                                    ? removeFromPool({ type: "item", id: item.id! })
-                                    : addToPool({ type: "item", id: item.id! })
-                                }
-                                className={cn(
-                                  "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
-                                  inPool
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "border-border text-muted-foreground hover:text-foreground"
-                                )}
-                                aria-label={inPool ? "Remove" : "Add"}
-                              >
-                                {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-                              </button>
                             </div>
-                            {expanded && segs.length > 0 && (
-                              <div className="pl-7 pb-1 divide-y divide-border/50 bg-muted/20">
-                                {segs.map((seg) => {
-                                  const segInPool = poolKeySet.has(`segment:${seg.id}`);
-                                  return (
-                                    <div key={seg.id} className="flex items-center gap-2 py-1.5 pr-2">
-                                      <span className="flex-1 text-xs text-muted-foreground truncate">{seg.label}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          segInPool
-                                            ? removeFromPool({ type: "segment", id: seg.id! })
-                                            : addToPool({ type: "segment", id: seg.id! })
-                                        }
-                                        className={cn(
-                                          "shrink-0 h-6 w-6 rounded-full border flex items-center justify-center transition-colors",
-                                          segInPool
-                                            ? "bg-primary text-primary-foreground border-primary"
-                                            : "border-border text-muted-foreground hover:text-foreground"
-                                        )}
-                                        aria-label={segInPool ? "Remove" : "Add"}
-                                      >
-                                        {segInPool ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+                      <Pager page={libraryPage} pageCount={libraryPageCount} onChange={setLibraryPage} />
                     </div>
                   )}
                 </TabsContent>
