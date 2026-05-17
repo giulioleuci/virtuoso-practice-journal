@@ -3,8 +3,9 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { db, type Collection, type LibraryKind } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
+import { LIBRARY_KINDS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, ChevronLeft, FolderOpen, Music2, BookOpen, Activity, Brain } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, FolderOpen, Music2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -15,20 +16,13 @@ import { AssignPiecesSheet } from "@/components/collections/AssignPiecesSheet";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const KINDS: { key: LibraryKind; icon: typeof BookOpen; tKey: string; tint: string }[] = [
-  { key: "repertoire", icon: Music2, tKey: "library.kind.repertoire", tint: "hsl(var(--key-terracotta))" },
-  { key: "manual",     icon: BookOpen, tKey: "library.kind.manual",   tint: "hsl(var(--key-gold))" },
-  { key: "technique",  icon: Activity, tKey: "library.kind.technique", tint: "hsl(var(--key-sage))" },
-  { key: "theory",     icon: Brain, tKey: "library.kind.theory",      tint: "hsl(var(--key-blue))" },
-];
-
 export default function Collections() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialKind = (searchParams.get("kind") as LibraryKind) || "repertoire";
   const [active, setActive] = useState<LibraryKind>(
-    KINDS.some((k) => k.key === initialKind) ? initialKind : "repertoire"
+    LIBRARY_KINDS.some((k) => k.key === initialKind) ? initialKind : "repertoire"
   );
 
   useEffect(() => {
@@ -78,7 +72,7 @@ export default function Collections() {
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        {KINDS.map(({ key, icon: Icon, tKey, tint }) => (
+        {LIBRARY_KINDS.map(({ key, icon: Icon, tKey, tint }) => (
           <button
             key={key}
             onClick={() => setActive(key)}

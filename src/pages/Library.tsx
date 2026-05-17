@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, deleteLibraryItem, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/db";
+import { db, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/db";
 import type { MasteryState } from "@/components/library/MasterySliders";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { BookOpen, Music2, Activity, Brain, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart } from "lucide-react";
+import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
+import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart } from "lucide-react";
 import { ItemAnalysisSheet } from "@/components/library/ItemAnalysisSheet";
 import { MasterySliders } from "@/components/library/MasterySliders";
 import { MasterySparkline } from "@/components/library/MasterySparkline";
@@ -20,6 +21,7 @@ import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { BpmSparkline } from "@/components/library/BpmSparkline";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { useSubjects } from "@/hooks/useEntities";
+import { libraryService } from "@/lib/services";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,17 +33,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-
-const KINDS: { key: LibraryKind; icon: typeof BookOpen; tKey: string; tint: string }[] = [
-  { key: "repertoire", icon: Music2, tKey: "library.kind.repertoire", tint: "hsl(var(--key-terracotta))" },
-  { key: "manual",     icon: BookOpen, tKey: "library.kind.manual",   tint: "hsl(var(--key-gold))" },
-  { key: "technique",  icon: Activity, tKey: "library.kind.technique", tint: "hsl(var(--key-sage))" },
-  { key: "theory",     icon: Brain, tKey: "library.kind.theory",      tint: "hsl(var(--key-blue))" },
-];
-
-const NOTE_GLYPH: Record<string, string> = {
-  half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
-};
 
 export default function Library() {
   const { t } = useI18n();
@@ -106,7 +97,7 @@ export default function Library() {
 
   const confirmDelete = async () => {
     if (deletingId == null) return;
-    const mode = await deleteLibraryItem(deletingId);
+    const mode = await libraryService.remove(deletingId);
     toast.success(mode === "soft" ? t("toast.archivedKeptInHistory") : t("toast.deleted"));
     setDeletingId(null);
   };
@@ -123,7 +114,7 @@ export default function Library() {
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        {KINDS.map(({ key, icon: Icon, tKey, tint }) => (
+        {LIBRARY_KINDS.map(({ key, icon: Icon, tKey, tint }) => (
           <button
             key={key}
             onClick={() => setActive(key)}

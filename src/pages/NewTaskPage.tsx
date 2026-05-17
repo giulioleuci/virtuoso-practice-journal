@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
+import { today } from "@/lib/recurrence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,11 +20,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
 
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 interface LocationState {
   date?: string;
   prefill?: {
@@ -38,7 +34,7 @@ export default function NewTaskPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = (location.state as LocationState) ?? {};
-  const date = state.date ?? todayKey();
+  const date = state.date ?? today();
   const prefill = state.prefill;
 
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);

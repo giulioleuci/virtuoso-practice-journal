@@ -3,6 +3,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session, type Profile } from "@/lib/db"; // db used for useLiveQuery reads only
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
+import { today, dayKey } from "@/lib/recurrence";
+import { NOTE_GLYPH } from "@/lib/constants";
 import {
   Plus,
   Check,
@@ -39,27 +41,15 @@ import { pickQuote } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-const NOTE_GLYPH: Record<string, string> = {
-  half: "𝅗𝅥",
-  quarter: "♩",
-  eighth: "♪",
-  sixteenth: "𝅘𝅥𝅯",
-};
-
 export default function Diary() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const { profile } = useOutletContext<{ profile: Profile }>();
-  const today = todayKey();
+  const todayKey = today();
   const { tasks, sessionsByTask } = useLiveQuery(async () => {
     const fetchedTasks = await db.tasks
       .where("date")
-      .equals(today)
+      .equals(todayKey)
       .filter((t) => !t.deletedAt)
       .toArray();
 
@@ -76,7 +66,7 @@ export default function Diary() {
     }, {});
 
     return { tasks: fetchedTasks, sessionsByTask: groupedSessions };
-  }, [today]) ?? { tasks: undefined, sessionsByTask: {} };
+  }, [todayKey]) ?? { tasks: undefined, sessionsByTask: {} };
 
   const pendingAssignments = useLiveQuery(
     () => db.assignments.filter((a) => !a.transformed && !a.ignored).toArray(),
@@ -100,17 +90,17 @@ export default function Diary() {
   const carryoverFrom = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - carryoverDays);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return dayKey(d);
   }, [carryoverDays]);
 
   const carryoverTasks = useLiveQuery(
     () =>
       db.tasks
         .where("date")
-        .between(carryoverFrom, today, true, false)
+        .between(carryoverFrom, todayKey, true, false)
         .filter((t) => !t.done && !t.skipped)
         .toArray(),
-    [carryoverFrom, today],
+    [carryoverFrom, todayKey],
   );
 
   const [logTask, setLogTask] = useState<Task | null>(null);
@@ -129,10 +119,10 @@ export default function Diary() {
     () =>
       db.tasks
         .where("date")
-        .between(carryoverFrom, today, true, false)
+        .between(carryoverFrom, todayKey, true, false)
         .filter((t) => !!t.skipped && !t.done && !t.deletedAt)
         .toArray(),
-    [carryoverFrom, today],
+    [carryoverFrom, todayKey],
   );
 
   const dateLabel = new Date().toLocaleDateString(undefined, {
@@ -180,7 +170,7 @@ export default function Diary() {
             >
               <ListChecks className="h-4 w-4" /> {t("common.all")}
             </Link>
-            <Button size="sm" variant="ghost" onClick={() => navigate("/tasks/new", { state: { date: today } })}>
+            <Button size="sm" variant="ghost" onClick={() => navigate("/tasks/new", { state: { date: todayKey } })}>
               <Plus className="h-4 w-4 mr-1" /> {t("diary.newTask")}
             </Button>
           </div>
@@ -195,7 +185,7 @@ export default function Diary() {
           <EmptyState
             hint={t("diary.empty")}
             quote={emptyQuote}
-            cta={{ label: t("diary.beginTask"), onClick: () => navigate("/tasks/new", { state: { date: today } }) }}
+            cta={{ label: t("diary.beginTask"), onClick: () => navigate("/tasks/new", { state: { date: todayKey } }) }}
           />
         ) : (
           <ul className="space-y-2">
@@ -318,7 +308,7 @@ export default function Diary() {
                           <button
                             onClick={async () => {
                               if (!task.id) return;
-                              await tasksService.carryOver(task, today);
+                              await tasksService.carryOver(task, todayKey);
                               toast.success(t("toast.movedToToday"));
                             }}
                             className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
