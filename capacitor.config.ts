@@ -9,8 +9,8 @@ const config: CapacitorConfig = {
     androidScheme: "https",
   },
   android: {
-    // Target API 34 (Android 14) — matches default from `cap add android`
     minWebViewVersion: 60,
+    edgeToEdge: true,
   },
 };
 

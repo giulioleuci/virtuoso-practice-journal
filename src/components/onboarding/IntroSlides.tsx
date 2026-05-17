@@ -46,7 +46,7 @@ export default function IntroSlides({ onDone }: { onDone: () => void }) {
   const isLast = current === SLIDES.length - 1;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       {/* Skip button — top right, discreet */}
       <header className="flex justify-end px-6 pt-8">
         <button
@@ -91,7 +91,7 @@ export default function IntroSlides({ onDone }: { onDone: () => void }) {
       </main>
 
       {/* Navigation footer */}
-      <footer className="px-6 pb-10 pt-2">
+      <footer className="px-6 pt-2" style={{ paddingBottom: "calc(2.5rem + env(safe-area-inset-bottom))" }}>
         <div className="flex items-center gap-3 max-w-sm mx-auto">
           {current > 0 ? (
             <Button

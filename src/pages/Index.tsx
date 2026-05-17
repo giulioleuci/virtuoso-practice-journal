@@ -21,7 +21,7 @@ const NewTaskPage = lazy(() => import("./NewTaskPage"));
 const EditTaskPage = lazy(() => import("./EditTaskPage"));
 
 const Fallback = () => (
-  <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4">
+  <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4" style={{ paddingTop: "calc(2.5rem + env(safe-area-inset-top))" }}>
     <div className="paper-skeleton h-24 w-full" />
     <div className="paper-skeleton h-32 w-full" />
     <div className="paper-skeleton h-20 w-full" />
@@ -33,7 +33,7 @@ const Index = () => {
   // undefined = loading; null = no profile yet
   if (profile === undefined) {
     return (
-      <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4">
+      <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4" style={{ paddingTop: "calc(2.5rem + env(safe-area-inset-top))" }}>
         <div className="paper-skeleton h-24 w-full" />
         <div className="paper-skeleton h-32 w-full" />
         <div className="paper-skeleton h-20 w-full" />

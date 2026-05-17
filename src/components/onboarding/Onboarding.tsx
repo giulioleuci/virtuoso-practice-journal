@@ -78,7 +78,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-6 pt-10 pb-4 max-w-xl w-full mx-auto">
         <div className="flex items-center gap-2 mb-1">
           {[0,1,2,3].map((i) => (
@@ -225,7 +225,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         )}
       </main>
 
-      <footer className="fixed bottom-0 inset-x-0 px-6 py-4 bg-background/80 backdrop-blur border-t border-border">
+      <footer className="fixed bottom-0 inset-x-0 px-6 pt-4 bg-background/80 backdrop-blur border-t border-border" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
         <div className="max-w-xl mx-auto flex gap-3">
           {step > 0 && (
             <Button variant="ghost" onClick={() => setStep(step - 1)} className="flex-1">
