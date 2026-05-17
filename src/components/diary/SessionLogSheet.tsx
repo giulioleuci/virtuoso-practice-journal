@@ -56,6 +56,10 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
     [task?.subjectId]
   );
+  const libraryItem = useLiveQuery(
+    () => (task?.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
+    [task?.itemId]
+  );
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
   const taskSegments = useLiveQuery(
     () =>
