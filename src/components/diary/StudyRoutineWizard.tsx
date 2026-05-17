@@ -289,6 +289,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
     if (!q) return list;
     return list.filter((i) => {
       if (i.title.toLowerCase().includes(q)) return true;
+      if (i.composer?.toLowerCase().includes(q)) return true;
       const segs = segmentsByItem.get(i.id!) ?? [];
       return segs.some((s) => s.label.toLowerCase().includes(q));
     });
@@ -297,8 +298,38 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   const filteredCollections = useMemo(() => {
     const list = allCollections ?? [];
     if (!q) return list;
-    return list.filter((c) => c.name.toLowerCase().includes(q));
+    return list.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.composer?.toLowerCase().includes(q),
+    );
   }, [allCollections, q]);
+
+  // --- Pagination ---
+  const PAGE_SIZE = 5;
+  const [libraryPage, setLibraryPage] = useState(1);
+  const [collectionsPage, setCollectionsPage] = useState(1);
+  const [segmentPages, setSegmentPages] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    setLibraryPage(1);
+    setCollectionsPage(1);
+  }, [q]);
+
+  const libraryPageCount = Math.max(1, Math.ceil(filteredLibrary.length / PAGE_SIZE));
+  const collectionsPageCount = Math.max(1, Math.ceil(filteredCollections.length / PAGE_SIZE));
+  const pagedLibrary = filteredLibrary.slice(
+    (libraryPage - 1) * PAGE_SIZE,
+    libraryPage * PAGE_SIZE,
+  );
+  const pagedCollections = filteredCollections.slice(
+    (collectionsPage - 1) * PAGE_SIZE,
+    collectionsPage * PAGE_SIZE,
+  );
+
+  const getSegPage = (itemId: number) => segmentPages[itemId] ?? 1;
+  const setSegPage = (itemId: number, page: number) =>
+    setSegmentPages((prev) => ({ ...prev, [itemId]: page }));
 
   // --- Render ---
 
