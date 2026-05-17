@@ -24,7 +24,41 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, ChevronLeft } from "lucide-react";
+
+interface PagerProps {
+  page: number;
+  pageCount: number;
+  onChange: (p: number) => void;
+}
+function Pager({ page, pageCount, onChange }: PagerProps) {
+  if (pageCount <= 1) return null;
+  return (
+    <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-border">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page <= 1}
+        className="p-1 text-muted-foreground disabled:opacity-30"
+        aria-label="Previous page"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+      </button>
+      <span className="text-[10px] text-muted-foreground tabular-nums">
+        {page} / {pageCount}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(pageCount, page + 1))}
+        disabled={page >= pageCount}
+        className="p-1 text-muted-foreground disabled:opacity-30"
+        aria-label="Next page"
+      >
+        <ChevronRight className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
 
 function genId(): string {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
