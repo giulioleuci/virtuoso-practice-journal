@@ -56,6 +56,10 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
     [task?.subjectId]
   );
+  const libraryItem = useLiveQuery(
+    () => (task?.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
+    [task?.itemId]
+  );
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
   const taskSegments = useLiveQuery(
     () =>
@@ -191,7 +195,23 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl">{t("session.log")}</SheetTitle>
-          {task && <p className="text-sm text-muted-foreground italic">{task.title}</p>}
+          {task && (
+            <div className="space-y-1.5 pt-2 text-left">
+              <p className="font-serif text-2xl leading-tight">{task.title}</p>
+              {libraryItem?.composer && (
+                <p className="font-serif text-lg italic text-muted-foreground leading-tight">
+                  {libraryItem.composer}
+                </p>
+              )}
+              {taskSegments && taskSegments.length > 0 && (
+                <ul className="text-sm text-muted-foreground space-y-0.5 pt-1">
+                  {taskSegments.map((s) => (
+                    <li key={s.id}>{s.label}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </SheetHeader>
 
         <div className="space-y-5 mt-5">
