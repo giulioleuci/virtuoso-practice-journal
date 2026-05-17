@@ -637,5 +637,14 @@
   "toast.routineRegenerated": "Tasks regenerated",
   "studyRoutine.regenerate": "Regenerate tasks",
   "tasks.upcomingSchedule": "Upcoming schedule",
-  "tasks.noTasksOnDay": "No tasks scheduled for this day"
+  "tasks.noTasksOnDay": "No tasks scheduled for this day",
+  "history.untitled": "Untitled",
+  "history.collection": "Collection",
+  "history.noItem": "No item",
+  "history.noSegment": "No segment",
+  "recurrence.summaryEvery": "every {{count}}d",
+  "recurrence.summaryUntil": "until {{date}}",
+  "recurrence.summaryOccurrences": "×{{count}}",
+  "dialog.deleteSubject": "Delete \"{{name}}\"?",
+  "dialog.deleteSubjectDesc": "This will also remove all its techniques. This cannot be undone."
 }

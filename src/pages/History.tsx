@@ -82,7 +82,7 @@ export default function History() {
       switch (groupBy) {
         case "task":
           key = `t:${s.taskId}`;
-          label = task?.title ?? "Untitled";
+          label = task?.title ?? t("history.untitled");
           sub = item?.title ?? collection?.name;
           break;
         case "day":
@@ -90,12 +90,12 @@ export default function History() {
           label = s.date;
           break;
         case "item":
-          if (collection) { key = `c:${collection.id}`; label = collection.name; sub = "Collection"; }
-          else { key = `i:${item?.id ?? "none"}`; label = item?.title ?? "No item"; }
+          if (collection) { key = `c:${collection.id}`; label = collection.name; sub = t("history.collection"); }
+          else { key = `i:${item?.id ?? "none"}`; label = item?.title ?? t("history.noItem"); }
           break;
         case "segment":
           key = `s:${seg?.id ?? "none"}`;
-          label = seg?.label ?? "No segment";
+          label = seg?.label ?? t("history.noSegment");
           sub = item?.title ?? collection?.name;
           break;
       }

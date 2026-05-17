@@ -26,18 +26,19 @@ const PAGE_SIZE = 5;
 const NOTE_GLYPH: Record<string, string> = {
   half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
 };
-const DAY_LBL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function summarizeRecurrence(rec: NonNullable<Task["recurrence"]>): string {
+function summarizeRecurrence(
+  rec: NonNullable<Task["recurrence"]>,
+  t: (key: string, vars?: Record<string, string | number>) => string
+): string {
   const parts: string[] = [];
   if (rec.kind === "weekdays") {
-    const days = (rec.days ?? []).map((d) => DAY_LBL[d]).join(", ");
+    const days = (rec.days ?? []).map((d) => t(`weekday.${d}`)).join(", ");
     parts.push(days || "—");
   } else {
-    parts.push(`every ${rec.everyXDays ?? 1}d`);
+    parts.push(t("recurrence.summaryEvery", { count: rec.everyXDays ?? 1 }));
   }
-  if (rec.endDate) parts.push(`until ${rec.endDate}`);
-  else if (rec.occurrences) parts.push(`×${rec.occurrences}`);
+  if (rec.endDate) parts.push(t("recurrence.summaryUntil", { date: rec.endDate }));
+  else if (rec.occurrences) parts.push(t("recurrence.summaryOccurrences", { count: rec.occurrences }));
   return parts.join(" · ");
 }
 
@@ -323,7 +324,7 @@ export default function Tasks() {
                   </div>
                   <div className="text-xs text-muted-foreground tabular-nums">
                     {view === "series" && task.recurrence
-                      ? <>{t("tasks.fromDate", { date: task.date })} · {summarizeRecurrence(task.recurrence)} · {subjectName(task.subjectId)}</>
+                      ? <>{t("tasks.fromDate", { date: task.date })} · {summarizeRecurrence(task.recurrence, t)} · {subjectName(task.subjectId)}</>
                       : <>{task.date} · {subjectName(task.subjectId)}</>}
                     {task.targetBpm && <> · {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}</>}
                   </div>

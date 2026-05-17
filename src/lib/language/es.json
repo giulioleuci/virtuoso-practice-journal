@@ -637,5 +637,14 @@
   "toast.routineRegenerated": "Tareas regeneradas",
   "studyRoutine.regenerate": "Regenerar tareas",
   "tasks.upcomingSchedule": "Próximo programa",
-  "tasks.noTasksOnDay": "Sin tareas programadas para este día"
+  "tasks.noTasksOnDay": "Sin tareas programadas para este día",
+  "history.untitled": "Sin título",
+  "history.collection": "Colección",
+  "history.noItem": "Sin elemento",
+  "history.noSegment": "Sin segmento",
+  "recurrence.summaryEvery": "cada {{count}}d",
+  "recurrence.summaryUntil": "hasta {{date}}",
+  "recurrence.summaryOccurrences": "×{{count}}",
+  "dialog.deleteSubject": "¿Eliminar \"{{name}}\"?",
+  "dialog.deleteSubjectDesc": "También se eliminarán todas sus técnicas. Esta acción no se puede deshacer."
 }

@@ -4,6 +4,10 @@ import { db, THEORY_LAYERS, type Subject, type SubjectType } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, X, Trash2, Piano, BookOpen, ChevronDown, Layers, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -142,17 +146,18 @@ function SubjectCard({
   const { t } = useI18n();
   const [layerDraft, setLayerDraft] = useState("");
   const [techDraft, setTechDraft] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const layerCount = subject.type === "theory" ? THEORY_LAYERS.length : (subject.layers ?? []).length;
 
-  const remove = async () => {
+  const doDelete = async () => {
     if (!subject.id) return;
-    if (!confirm(t("subjects.confirmDelete", { name: subject.name }))) return;
     await db.transaction("rw", db.subjects, db.techniques, async () => {
       await db.techniques.where("subjectId").equals(subject.id!).delete();
       await db.subjects.delete(subject.id!);
     });
     toast.success(t("toast.subjectDeleted"));
+    setConfirmDelete(false);
   };
 
   const addLayer = async () => {
@@ -288,7 +293,7 @@ function SubjectCard({
             <Button
               size="sm"
               variant="ghost"
-              onClick={remove}
+              onClick={() => setConfirmDelete(true)}
               className="text-muted-foreground hover:text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-1.5" />{t("subjects.deleteSubject")}
@@ -296,6 +301,21 @@ function SubjectCard({
           </div>
         </div>
       )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("dialog.deleteSubject", { name: subject.name })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("dialog.deleteSubjectDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={doDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

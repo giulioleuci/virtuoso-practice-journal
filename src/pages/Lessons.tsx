@@ -19,7 +19,6 @@ import { Link, useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 5;
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function Lessons() {
   const { t } = useI18n();
@@ -124,7 +123,7 @@ export default function Lessons() {
                   <div className="min-w-0">
                     <div className="font-serif text-xl break-words">{r.teacher}</div>
                     <div className="text-xs text-muted-foreground break-words">
-                      {subjectName(r.subjectId)} · {r.frequency} · {DAYS[r.dayOfWeek]} {r.startTime}–{r.endTime}
+                      {subjectName(r.subjectId)} · {r.frequency} · {t(`weekday.${r.dayOfWeek}`)} {r.startTime}–{r.endTime}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 -ml-2">

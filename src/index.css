@@ -25,7 +25,7 @@
     --secondary-foreground: 25 25% 18%;
 
     --muted: 38 30% 86%;
-    --muted-foreground: 28 15% 40%;
+    --muted-foreground: 28 18% 33%;
 
     --accent: 36 45% 80%;
     --accent-foreground: 25 30% 20%;
@@ -129,8 +129,7 @@
 
 @layer components {
   .paper-card {
-    @apply bg-card text-card-foreground border border-border/60;
-    border-radius: 18px 22px 16px 24px / 22px 16px 22px 18px;
+    @apply bg-card text-card-foreground border border-border/60 rounded-paper;
     box-shadow: var(--shadow-card);
   }
   .paper-raised {
@@ -143,7 +142,6 @@
     height: 1px;
   }
   .paper-skeleton {
-    @apply bg-muted/60 animate-pulse;
-    border-radius: 18px 22px 16px 24px / 22px 16px 22px 18px;
+    @apply bg-muted/60 animate-pulse rounded-paper;
   }
 }
