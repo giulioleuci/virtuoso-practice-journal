@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
