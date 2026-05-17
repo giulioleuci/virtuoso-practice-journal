@@ -4,6 +4,7 @@ import { db, type Task, type StudyRoutine } from "@/lib/db"; // db used for useL
 import { useActiveTasks, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { studyRoutinesService, tasksService } from "@/lib/services";
+import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,9 +24,7 @@ import { toast } from "sonner";
 import { ListSkeleton } from "@/components/shared/Loading";
 
 const PAGE_SIZE = 5;
-const NOTE_GLYPH: Record<string, string> = {
-  half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
-};
+
 function summarizeRecurrence(
   rec: NonNullable<Task["recurrence"]>,
   t: (key: string, vars?: Record<string, string | number>) => string

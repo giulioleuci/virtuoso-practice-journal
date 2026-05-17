@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type NoteVal, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
+import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { X, Play, Pause, RotateCcw, Volume2, VolumeX, Minus, Plus } from "lucide-react";
@@ -14,10 +15,6 @@ interface Props {
   onClose: () => void;
   onFinish: (payload: { elapsedMs: number; bpm: number; noteVal?: NoteVal }) => void;
 }
-
-const NOTE_GLYPH: Record<string, string> = {
-  half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
-};
 
 function formatTime(ms: number) {
   const total = Math.floor(ms / 1000);

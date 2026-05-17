@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session, type Collection } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
+import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,10 +13,6 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
 import { ListSkeleton } from "@/components/shared/Loading";
-
-const NOTE_GLYPH: Record<string, string> = {
-  half: "𝅗𝅥", quarter: "♩", eighth: "♪", sixteenth: "𝅘𝅥𝅯",
-};
 
 type GroupKey = "task" | "day" | "item" | "segment";
 type SortDir = "newest" | "oldest";
