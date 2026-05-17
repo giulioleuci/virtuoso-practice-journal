@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -24,7 +24,41 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, ChevronLeft } from "lucide-react";
+
+interface PagerProps {
+  page: number;
+  pageCount: number;
+  onChange: (p: number) => void;
+}
+function Pager({ page, pageCount, onChange }: PagerProps) {
+  if (pageCount <= 1) return null;
+  return (
+    <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-border">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page <= 1}
+        className="p-1 text-muted-foreground disabled:opacity-30"
+        aria-label="Previous page"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+      </button>
+      <span className="text-[10px] text-muted-foreground tabular-nums">
+        {page} / {pageCount}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(pageCount, page + 1))}
+        disabled={page >= pageCount}
+        className="p-1 text-muted-foreground disabled:opacity-30"
+        aria-label="Next page"
+      >
+        <ChevronRight className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
 
 function genId(): string {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
@@ -289,6 +323,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
     if (!q) return list;
     return list.filter((i) => {
       if (i.title.toLowerCase().includes(q)) return true;
+      if (i.composer?.toLowerCase().includes(q)) return true;
       const segs = segmentsByItem.get(i.id!) ?? [];
       return segs.some((s) => s.label.toLowerCase().includes(q));
     });
@@ -297,8 +332,38 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   const filteredCollections = useMemo(() => {
     const list = allCollections ?? [];
     if (!q) return list;
-    return list.filter((c) => c.name.toLowerCase().includes(q));
+    return list.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.composer?.toLowerCase().includes(q),
+    );
   }, [allCollections, q]);
+
+  // --- Pagination ---
+  const PAGE_SIZE = 5;
+  const [libraryPage, setLibraryPage] = useState(1);
+  const [collectionsPage, setCollectionsPage] = useState(1);
+  const [segmentPages, setSegmentPages] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    setLibraryPage(1);
+    setCollectionsPage(1);
+  }, [q]);
+
+  const libraryPageCount = Math.max(1, Math.ceil(filteredLibrary.length / PAGE_SIZE));
+  const collectionsPageCount = Math.max(1, Math.ceil(filteredCollections.length / PAGE_SIZE));
+  const pagedLibrary = filteredLibrary.slice(
+    (libraryPage - 1) * PAGE_SIZE,
+    libraryPage * PAGE_SIZE,
+  );
+  const pagedCollections = filteredCollections.slice(
+    (collectionsPage - 1) * PAGE_SIZE,
+    collectionsPage * PAGE_SIZE,
+  );
+
+  const getSegPage = (itemId: number) => segmentPages[itemId] ?? 1;
+  const setSegPage = (itemId: number, page: number) =>
+    setSegmentPages((prev) => ({ ...prev, [itemId]: page }));
 
   // --- Render ---
 
@@ -367,43 +432,130 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                       {t("studyRoutine.noResults")}
                     </p>
                   ) : (
-                    <div className="paper-card divide-y divide-border">
-                      {filteredLibrary.map((item) => {
-                        const segs = segmentsByItem.get(item.id!) ?? [];
-                        const inPool = poolKeySet.has(`item:${item.id}`);
-                        const expanded = expandedItems.has(item.id!);
-                        const segsInPool = segs.filter((s) => poolKeySet.has(`segment:${s.id}`)).length;
-                        return (
-                          <div key={item.id}>
-                            <div className="flex items-center gap-2 p-2">
-                              {segs.length > 0 ? (
+                    <div className="paper-card">
+                      <div className="divide-y divide-border">
+                        {pagedLibrary.map((item) => {
+                          const segs = segmentsByItem.get(item.id!) ?? [];
+                          const inPool = poolKeySet.has(`item:${item.id}`);
+                          const expanded = expandedItems.has(item.id!);
+                          const segsInPool = segs.filter((s) => poolKeySet.has(`segment:${s.id}`)).length;
+                          const segPage = getSegPage(item.id!);
+                          const segPageCount = Math.max(1, Math.ceil(segs.length / PAGE_SIZE));
+                          const pagedSegs = segs.slice((segPage - 1) * PAGE_SIZE, segPage * PAGE_SIZE);
+                          return (
+                            <div key={item.id}>
+                              <div className="flex items-center gap-2 p-2">
+                                {segs.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpandItem(item.id!)}
+                                    className="p-1 -m-1 text-muted-foreground"
+                                    aria-label="Toggle segments"
+                                  >
+                                    {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                  </button>
+                                ) : (
+                                  <span className="w-3.5" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm truncate">{item.title}</div>
+                                  <div className="text-[10px] text-muted-foreground truncate">
+                                    {item.composer && <span>{item.composer}</span>}
+                                    {item.composer && segs.length > 0 && <span> · </span>}
+                                    {segs.length > 0 && (
+                                      <span>
+                                        {segsInPool > 0
+                                          ? `${segsInPool}/${segs.length} ${t("studyRoutine.segments").toLowerCase()}`
+                                          : `${segs.length} ${t("studyRoutine.segments").toLowerCase()}`}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                                 <button
                                   type="button"
-                                  onClick={() => toggleExpandItem(item.id!)}
-                                  className="p-1 -m-1 text-muted-foreground"
-                                  aria-label="Toggle segments"
+                                  onClick={() =>
+                                    inPool
+                                      ? removeFromPool({ type: "item", id: item.id! })
+                                      : addToPool({ type: "item", id: item.id! })
+                                  }
+                                  className={cn(
+                                    "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
+                                    inPool
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "border-border text-muted-foreground hover:text-foreground"
+                                  )}
+                                  aria-label={inPool ? "Remove" : "Add"}
                                 >
-                                  {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                  {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                                 </button>
-                              ) : (
-                                <span className="w-3.5" />
+                              </div>
+                              {expanded && segs.length > 0 && (
+                                <div className="pl-7 pb-1 divide-y divide-border/50 bg-muted/20">
+                                  {pagedSegs.map((seg) => {
+                                    const segInPool = poolKeySet.has(`segment:${seg.id}`);
+                                    return (
+                                      <div key={seg.id} className="flex items-center gap-2 py-1.5 pr-2">
+                                        <span className="flex-1 text-xs text-muted-foreground truncate">{seg.label}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            segInPool
+                                              ? removeFromPool({ type: "segment", id: seg.id! })
+                                              : addToPool({ type: "segment", id: seg.id! })
+                                          }
+                                          className={cn(
+                                            "shrink-0 h-6 w-6 rounded-full border flex items-center justify-center transition-colors",
+                                            segInPool
+                                              ? "bg-primary text-primary-foreground border-primary"
+                                              : "border-border text-muted-foreground hover:text-foreground"
+                                          )}
+                                          aria-label={segInPool ? "Remove" : "Add"}
+                                        >
+                                          {segInPool ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                  <Pager
+                                    page={segPage}
+                                    pageCount={segPageCount}
+                                    onChange={(p) => setSegPage(item.id!, p)}
+                                  />
+                                </div>
                               )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <Pager page={libraryPage} pageCount={libraryPageCount} onChange={setLibraryPage} />
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="collections" className="mt-3">
+                  {filteredCollections.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">
+                      {t("studyRoutine.noResults")}
+                    </p>
+                  ) : (
+                    <div className="paper-card">
+                      <div className="divide-y divide-border">
+                        {pagedCollections.map((col) => {
+                          const inPool = poolKeySet.has(`collection:${col.id}`);
+                          return (
+                            <div key={col.id} className="flex items-center gap-2 p-2">
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm truncate">{item.title}</div>
-                                {segs.length > 0 && (
-                                  <div className="text-[10px] text-muted-foreground">
-                                    {segsInPool > 0
-                                      ? `${segsInPool}/${segs.length} ${t("studyRoutine.segments").toLowerCase()}`
-                                      : `${segs.length} ${t("studyRoutine.segments").toLowerCase()}`}
-                                  </div>
+                                <div className="text-sm truncate">{col.name}</div>
+                                {col.composer && (
+                                  <div className="text-[10px] text-muted-foreground truncate">{col.composer}</div>
                                 )}
                               </div>
                               <button
                                 type="button"
                                 onClick={() =>
                                   inPool
-                                    ? removeFromPool({ type: "item", id: item.id! })
-                                    : addToPool({ type: "item", id: item.id! })
+                                    ? removeFromPool({ type: "collection", id: col.id! })
+                                    : addToPool({ type: "collection", id: col.id! })
                                 }
                                 className={cn(
                                   "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
@@ -416,74 +568,10 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                 {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                               </button>
                             </div>
-                            {expanded && segs.length > 0 && (
-                              <div className="pl-7 pb-1 divide-y divide-border/50 bg-muted/20">
-                                {segs.map((seg) => {
-                                  const segInPool = poolKeySet.has(`segment:${seg.id}`);
-                                  return (
-                                    <div key={seg.id} className="flex items-center gap-2 py-1.5 pr-2">
-                                      <span className="flex-1 text-xs text-muted-foreground truncate">{seg.label}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          segInPool
-                                            ? removeFromPool({ type: "segment", id: seg.id! })
-                                            : addToPool({ type: "segment", id: seg.id! })
-                                        }
-                                        className={cn(
-                                          "shrink-0 h-6 w-6 rounded-full border flex items-center justify-center transition-colors",
-                                          segInPool
-                                            ? "bg-primary text-primary-foreground border-primary"
-                                            : "border-border text-muted-foreground hover:text-foreground"
-                                        )}
-                                        aria-label={segInPool ? "Remove" : "Add"}
-                                      >
-                                        {segInPool ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="collections" className="mt-3">
-                  {filteredCollections.length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-4 text-center">
-                      {t("studyRoutine.noResults")}
-                    </p>
-                  ) : (
-                    <div className="paper-card divide-y divide-border">
-                      {filteredCollections.map((col) => {
-                        const inPool = poolKeySet.has(`collection:${col.id}`);
-                        return (
-                          <div key={col.id} className="flex items-center gap-2 p-2">
-                            <span className="flex-1 text-sm truncate">{col.name}</span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                inPool
-                                  ? removeFromPool({ type: "collection", id: col.id! })
-                                  : addToPool({ type: "collection", id: col.id! })
-                              }
-                              className={cn(
-                                "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
-                                inPool
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "border-border text-muted-foreground hover:text-foreground"
-                              )}
-                              aria-label={inPool ? "Remove" : "Add"}
-                            >
-                              {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-                            </button>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+                      <Pager page={collectionsPage} pageCount={collectionsPageCount} onChange={setCollectionsPage} />
                     </div>
                   )}
                 </TabsContent>
