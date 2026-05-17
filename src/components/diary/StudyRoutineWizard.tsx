@@ -106,6 +106,9 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
     return out;
   }, [initial]);
 
+  // Routine name
+  const [name, setName] = useState(initial?.name ?? "");
+
   // Step 1: master pool
   const [masterPool, setMasterPool] = useState<StudyPoolEntry[]>(initialMasterPool);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
@@ -246,9 +249,10 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
 
   const step1Errors = useMemo(() => {
     if (!subjectId) return [t("errors.pickSubject")];
+    if (!name.trim()) return [t("studyRoutine.errorNoName")];
     if (masterPool.length === 0) return [t("studyRoutine.errorNoPool")];
     return [];
-  }, [subjectId, masterPool, t]);
+  }, [subjectId, name, masterPool, t]);
 
   const step2Errors = useMemo(() => {
     if (groups.length === 0) return [t("studyRoutine.errorNoGroups")];
@@ -286,6 +290,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
     try {
       if (isEdit && initial?.id) {
         await studyRoutinesService.update(initial.id, {
+          name: name.trim(),
           groups,
           matrix,
           weeksAhead,
@@ -296,6 +301,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
         toast.success(t("toast.routineUpdated"));
       } else {
         const config: StudyRoutineConfig = {
+          name: name.trim(),
           subjectId,
           groups,
           matrix,
@@ -391,6 +397,18 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
       {/* ── Step 1: Pool Selection ────────────────────────────────────── */}
       {step === 1 && (
         <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              {t("studyRoutine.name")}
+            </Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("studyRoutine.namePlaceholder")}
+              maxLength={100}
+              className="h-9"
+            />
+          </div>
           {!subjectId ? (
             <p className="text-sm text-muted-foreground">{t("errors.pickSubject")}</p>
           ) : (

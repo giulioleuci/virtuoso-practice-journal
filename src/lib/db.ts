@@ -258,6 +258,7 @@ export interface StudyGroup {
 
 export interface StudyRoutine {
   id?: number;
+  name?: string;
   parentTaskId?: number;
   subjectId: number;
   groups: StudyGroup[];

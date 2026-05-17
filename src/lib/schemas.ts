@@ -70,6 +70,7 @@ export const studyGroupSchema = z.object({
 export type StudyGroupInput = z.infer<typeof studyGroupSchema>;
 
 export const studyRoutineConfigSchema = z.object({
+  name: z.string().trim().min(1).max(100),
   subjectId: z.number().int().positive(),
   groups: z.array(studyGroupSchema).min(1),
   matrix: z.record(z.string(), z.record(z.string(), z.number().int().min(0))),

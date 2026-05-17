@@ -217,10 +217,10 @@ export default function Tasks() {
               <li key={r.id} className="paper-card p-3 flex items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">
-                    {subjectName(r.subjectId)} · {r.groups.length} {t("studyRoutine.groupsLabel", { count: r.groups.length })}
+                    {r.name ?? subjectName(r.subjectId)}
                   </div>
                   <div className="text-xs text-muted-foreground tabular-nums mt-0.5">
-                    {summarizeRoutineDays(r.matrix)} · {t("studyRoutine.itemsPerWeek", { count: totalPerWeek(r.matrix) })}
+                    {subjectName(r.subjectId)} · {r.groups.length} {t("studyRoutine.groupsLabel", { count: r.groups.length })} · {summarizeRoutineDays(r.matrix)}
                   </div>
                 </div>
                 <button

@@ -4,8 +4,7 @@ import { db, type Task, type Session, type Profile } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import {
   Plus,
-  CheckCircle2,
-  Circle,
+  Check,
   ListChecks,
   Play,
   ArrowRightCircle,
@@ -83,6 +82,18 @@ export default function Diary() {
     [],
   );
   const pendingCount = pendingAssignments?.length ?? 0;
+
+  const studyRoutines = useLiveQuery(
+    () => db.studyRoutines.filter((r) => !r.deletedAt).toArray(),
+    [],
+  );
+  const routineNames = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const r of studyRoutines ?? []) {
+      if (r.id !== undefined && r.name) map.set(r.id, r.name);
+    }
+    return map;
+  }, [studyRoutines]);
 
   const carryoverDays = profile?.carryoverDays ?? 2;
   const carryoverFrom = useMemo(() => {
@@ -205,9 +216,11 @@ export default function Diary() {
                       disabled={!task.done}
                     >
                       {task.done ? (
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                        <span className="h-5 w-5 rounded-[4px] bg-primary flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />
+                        </span>
                       ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground" />
+                        <span className="h-5 w-5 rounded-[4px] border-2 border-muted-foreground block" />
                       )}
                     </button>
                     <div className="flex-1 min-w-0 space-y-2">
@@ -229,6 +242,11 @@ export default function Diary() {
                               note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩",
                               bpm: task.targetBpm,
                             })}
+                          </div>
+                        )}
+                        {task.studyRoutineId && routineNames.get(task.studyRoutineId) && (
+                          <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                            {t("diary.routine")}: {routineNames.get(task.studyRoutineId)}
                           </div>
                         )}
                         {last && (

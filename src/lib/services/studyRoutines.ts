@@ -367,6 +367,7 @@ export const studyRoutinesService = {
   async create(config: StudyRoutineConfig): Promise<number> {
     const now = Date.now();
     const routineId = (await db.studyRoutines.add({
+      name: config.name,
       subjectId: config.subjectId,
       groups: config.groups,
       matrix: config.matrix,
