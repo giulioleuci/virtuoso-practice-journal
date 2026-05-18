@@ -80,6 +80,14 @@ export default function Diary() {
     () => db.studyRoutines.filter((r) => !r.deletedAt).toArray(),
     [],
   );
+  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
+  const subjectTypeById = useMemo(() => {
+    const map = new Map<number, "instrument" | "theory" | string>();
+    for (const s of subjects ?? []) {
+      if (s.id !== undefined) map.set(s.id, s.type);
+    }
+    return map;
+  }, [subjects]);
   const routineNames = useMemo(() => {
     const map = new Map<number, string>();
     for (const r of studyRoutines ?? []) {
