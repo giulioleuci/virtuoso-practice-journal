@@ -185,3 +185,38 @@ describe("lessonsService.ignoreAssignment / restoreAssignment", () => {
     expect((await db.assignments.get(id))!.ignored).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// transformAssignment
+// ---------------------------------------------------------------------------
+
+describe("lessonsService.transformAssignment", () => {
+  it("marks the assignment as transformed and links it to a task", async () => {
+    const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, ["Scales"]);
+    const [assignment] = await db.assignments.where("lessonId").equals(lessonId).toArray();
+    const id = assignment.id!;
+    const taskId = (await db.tasks.add({
+      subjectId: 1, title: "Scales", date: "2025-03-02", done: false, createdAt: Date.now(),
+    })) as number;
+
+    await lessonsService.transformAssignment(id, taskId);
+
+    const updated = (await db.assignments.get(id))!;
+    expect(updated.transformed).toBe(true);
+    expect(updated.taskId).toBe(taskId);
+  });
+
+  it("does not mutate other assignments on the same lesson", async () => {
+    const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, ["A", "B"]);
+    const assignments = await db.assignments.where("lessonId").equals(lessonId).toArray();
+    const taskId = (await db.tasks.add({
+      subjectId: 1, title: "A", date: "2025-03-02", done: false, createdAt: Date.now(),
+    })) as number;
+
+    await lessonsService.transformAssignment(assignments[0].id!, taskId);
+
+    const other = await db.assignments.get(assignments[1].id!);
+    expect(other!.transformed).toBe(false);
+    expect(other!.taskId).toBeUndefined();
+  });
+});

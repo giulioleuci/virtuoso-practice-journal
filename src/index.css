@@ -63,6 +63,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 25 20% 10%;
     --foreground: 40 30% 90%;
     --card: 25 20% 14%;
@@ -88,10 +89,20 @@
 @layer base {
   * { @apply border-border; }
 
-  html { font-family: 'Inter', system-ui, sans-serif; }
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    /* Tell the browser our colors so native form controls (date/time pickers, scrollbars) render legibly. */
+    color-scheme: light;
+    /* Prevent overscroll bounce-through on iOS/Android WebView. */
+    overscroll-behavior-y: none;
+    /* Block the auto-zoom on input focus on iOS Safari. */
+    -webkit-text-size-adjust: 100%;
+  }
 
   body {
     @apply bg-background text-foreground antialiased;
+    /* Stop the browser highlight flash on Android tap. */
+    -webkit-tap-highlight-color: transparent;
     background-image:
       radial-gradient(hsl(25 25% 18% / 0.025) 1px, transparent 1px),
       radial-gradient(hsl(25 25% 18% / 0.018) 1px, transparent 1px);

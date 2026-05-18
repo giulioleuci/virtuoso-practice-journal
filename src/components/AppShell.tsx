@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/lib/db";
 
@@ -17,6 +18,8 @@ export default function AppShell({ profile }: { profile: Profile }) {
 
   const [hidden, setHidden] = useState(false);
   const lastY = useRef(0);
+  const keyboardInset = useKeyboardInset();
+  const navHidden = hidden || keyboardInset > 0;
 
   useEffect(() => {
     const onScroll = () => {
@@ -46,12 +49,13 @@ export default function AppShell({ profile }: { profile: Profile }) {
       <nav
         className={cn(
           "fixed left-1/2 z-50 transition-all duration-300 ease-out",
-          hidden ? "opacity-0 pointer-events-none" : "opacity-100"
+          navHidden ? "opacity-0 pointer-events-none" : "opacity-100"
         )}
         style={{
           bottom: "calc(1rem + env(safe-area-inset-bottom))",
-          transform: hidden ? "translate(-50%, 140%)" : "translate(-50%, 0)",
+          transform: navHidden ? "translate(-50%, 140%)" : "translate(-50%, 0)",
         }}
+        aria-hidden={navHidden}
       >
         <div className="paper-raised flex items-center gap-1 px-2 py-2">
           {items.map(({ to, label, icon: Icon, end }) => (

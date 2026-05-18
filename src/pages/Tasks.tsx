@@ -114,7 +114,7 @@ export default function Tasks() {
 
   const askDelete = (task: Task) => {
     setDelId(task.id ?? null);
-    setDelMode(task.recurrence || task.recurrenceTaskId ? "one" : "one");
+    setDelMode("one");
   };
 
   const confirmDelete = async () => {

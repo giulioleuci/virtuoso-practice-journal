@@ -205,6 +205,8 @@
   "profile.editName": "Editar nombre",
   "profile.reminder": "Recordatorio",
   "profile.reminderEnabled": "Recordatorios",
+  "profile.reminderBody": "Es hora de practicar.",
+  "profile.reminderPermissionDenied": "Permiso de notificaciones denegado. Habilítalo en los ajustes del sistema para recibir recordatorios.",
   "profile.lateRecovery": "Recuperación tardía (días)",
   "profile.carryover": "Arrastrar incompletos (días)",
   "profile.graceDay": "Día de gracia para la racha",

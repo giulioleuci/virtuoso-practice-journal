@@ -205,6 +205,8 @@
   "profile.editName": "Modifica nome",
   "profile.reminder": "Promemoria",
   "profile.reminderEnabled": "Promemoria attivi",
+  "profile.reminderBody": "È l'ora di esercitarti.",
+  "profile.reminderPermissionDenied": "Notifiche negate. Abilitale nelle impostazioni di sistema per ricevere i promemoria.",
   "profile.lateRecovery": "Recupero tardivo (giorni)",
   "profile.carryover": "Riporta non completati (giorni)",
   "profile.graceDay": "Giorno di grazia per la serie",

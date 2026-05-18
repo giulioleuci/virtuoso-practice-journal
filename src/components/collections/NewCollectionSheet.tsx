@@ -76,7 +76,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
       }
       onOpenChange(false);
     } catch (e) {
-      toast.error(t("toast.saved"));
+      toast.error(e instanceof Error ? e.message : t("errors.couldNotSave"));
     }
   };
 
