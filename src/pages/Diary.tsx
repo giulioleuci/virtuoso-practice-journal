@@ -18,6 +18,8 @@ import {
   EyeOff,
   GraduationCap,
   ArrowRight,
+  Piano,
+  BookOpen,
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
