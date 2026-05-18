@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { db, type Session } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { Flame } from "lucide-react";
 
@@ -27,12 +27,16 @@ interface Props {
   /** YYYY-MM-DD inclusive upper bound */
   to?: string;
   /** Optional pre-filtered sessions; when provided, stats reflect these instead of the full DB. */
-  sessions?: { date: string; createdAt?: number }[] & any[];
+  sessions?: Session[];
 }
 
 export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {}) {
   const { t } = useI18n();
-  const liveSessions = useLiveQuery(() => db.sessions.toArray());
+  // Only hit the DB when no pre-filtered sessions are provided.
+  const liveSessions = useLiveQuery(
+    () => (sessionsProp ? Promise.resolve(undefined) : db.sessions.toArray()),
+    [sessionsProp],
+  );
   const sessions = sessionsProp ?? liveSessions;
 
   const hasRange = !!(from || to);
