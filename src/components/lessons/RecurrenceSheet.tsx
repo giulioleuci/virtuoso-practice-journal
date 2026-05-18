@@ -88,14 +88,17 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-2xl">
-        <SheetHeader>
+      <SheetContent
+        side="bottom"
+        className="h-[90vh] max-h-[90dvh] rounded-t-2xl bg-background p-0 flex flex-col pt-[env(safe-area-inset-top)]"
+      >
+        <SheetHeader className="px-6 pt-6">
           <SheetTitle className="font-serif text-2xl">
             {isEdit ? t("teacher.edit") : t("teacher.new")}
           </SheetTitle>
         </SheetHeader>
 
-        <div className="space-y-5 mt-5">
+        <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-5 mt-5">
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
             <Select value={subjectId?.toString() ?? ""} onValueChange={(v) => setSubjectId(Number(v))}>
@@ -176,13 +179,13 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
               {errors.map((e) => <li key={e}>• {e}</li>)}
             </ul>
           )}
+        </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
-            <Button className="flex-1" disabled={errors.length > 0} onClick={save}>
-              {isEdit ? t("common.save") : t("common.add")}
-            </Button>
-          </div>
+        <div className="px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background/80 backdrop-blur flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
+          <Button className="flex-1" disabled={errors.length > 0} onClick={save}>
+            {isEdit ? t("common.save") : t("common.add")}
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
