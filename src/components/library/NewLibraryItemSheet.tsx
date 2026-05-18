@@ -274,7 +274,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[92vh] max-h-[92dvh] rounded-t-3xl bg-background p-0 flex flex-col pt-[env(safe-area-inset-top)]"
+        className="h-[92vh] max-h-[92dvh] rounded-t-3xl bg-background p-0 flex flex-col"
       >
         <SheetHeader className="px-6 pt-6 pb-2 text-left">
           <SheetTitle className="font-serif text-3xl">{titleLabel}</SheetTitle>

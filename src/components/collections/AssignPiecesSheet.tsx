@@ -128,7 +128,7 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
             )}
           </div>
 
-          <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
+          <SheetFooter className="px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background/80 backdrop-blur">
             <div className="flex gap-3 w-full items-center">
               <span className="text-xs text-muted-foreground tabular-nums mr-auto">
                 {t(`collections.itemsCount.${kind}`, { count: included.length })}
@@ -214,7 +214,7 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
             )}
           </div>
 
-          <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
+          <SheetFooter className="px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background/80 backdrop-blur">
             <Button onClick={() => setPickerOpen(false)} className="w-full">{t("common.done")}</Button>
           </SheetFooter>
         </SheetContent>

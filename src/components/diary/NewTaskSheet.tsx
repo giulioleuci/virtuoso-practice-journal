@@ -239,7 +239,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[92vh] overflow-y-auto rounded-t-2xl">
+      <SheetContent side="bottom" className="h-[92vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl">{t("tasks.newTask")}</SheetTitle>
         </SheetHeader>

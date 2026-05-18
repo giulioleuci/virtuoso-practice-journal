@@ -90,7 +90,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[90vh] max-h-[90dvh] rounded-t-2xl bg-background p-0 flex flex-col pt-[env(safe-area-inset-top)]"
+        className="h-[90vh] max-h-[90dvh] rounded-t-2xl bg-background p-0 flex flex-col"
       >
         <SheetHeader className="px-6 pt-6">
           <SheetTitle className="font-serif text-2xl">

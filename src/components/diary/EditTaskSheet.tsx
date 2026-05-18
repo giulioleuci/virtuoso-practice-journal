@@ -99,7 +99,7 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-2xl">
+      <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl">{t("tasks.editTask")}</SheetTitle>
         </SheetHeader>

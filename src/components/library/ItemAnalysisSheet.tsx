@@ -45,7 +45,7 @@ export function ItemAnalysisSheet({ open, onOpenChange, item }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-3xl">
+      <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]">
         <SheetHeader className="text-left">
           <SheetTitle className="font-serif text-2xl flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
