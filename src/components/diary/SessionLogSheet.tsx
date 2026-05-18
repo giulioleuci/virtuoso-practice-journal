@@ -114,7 +114,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const errors = useMemo(() => {
     if (granular) {
       const e: string[] = [];
-      if (v.notes.trim().length > 2000) e.push("notes: max 2000 characters");
+      if (v.notes.trim().length > 2000) e.push(t("errors.notesMaxLength"));
       if (needHelp && !helpText.trim()) e.push(t("session.helpDescribe"));
       return e;
     }

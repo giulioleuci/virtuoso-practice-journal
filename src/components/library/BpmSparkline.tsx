@@ -1,6 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { useMemo } from "react";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   itemId: number;
@@ -12,6 +13,7 @@ interface Props {
  * tasks belonging to a given library item.
  */
 export function BpmSparkline({ itemId, weeks = 8 }: Props) {
+  const { t } = useI18n();
   const tasks = useLiveQuery(() => db.tasks.where("itemId").equals(itemId).toArray(), [itemId]);
   const sessions = useLiveQuery(async () => {
     const ts = await db.tasks.where("itemId").equals(itemId).toArray();
@@ -62,7 +64,7 @@ export function BpmSparkline({ itemId, weeks = 8 }: Props) {
     .join(" ");
 
   return (
-    <div className="flex items-center gap-1.5" title={`Best BPM ${min}–${max} over ${weeks} weeks`}>
+    <div className="flex items-center gap-1.5" title={t("library.bpmSparklineTitle", { min, max, count: weeks })}>
       <svg viewBox={`0 0 ${w} ${h}`} className="h-5 w-20" preserveAspectRatio="none">
         <path d={path} fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>

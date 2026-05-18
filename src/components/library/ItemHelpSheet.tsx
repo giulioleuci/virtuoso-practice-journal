@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { HelpCircle, MessageSquareQuote, Plus, X, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   open: boolean;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
+  const { t } = useI18n();
   const reqs = useLiveQuery(
     () => db.helpRequests.where("itemId").equals(itemId).toArray(),
     [itemId]
@@ -32,7 +34,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
     if (!draft.trim()) return;
     await helpRequestsService.add(itemId, draft.trim());
     setDraft("");
-    toast.success("Question saved");
+    toast.success(t("help.questionSaved"));
   };
 
   const saveAnswer = async (id: number) => {
@@ -40,7 +42,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
     if (!text) return;
     await helpRequestsService.answer(id, text);
     setAnswers((a) => { const c = { ...a }; delete c[id]; return c; });
-    toast.success("Answer saved");
+    toast.success(t("help.answerSaved"));
   };
 
   const remove = async (id: number) => {
@@ -56,18 +58,18 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
         className="h-[85vh] max-h-[85dvh] rounded-t-3xl bg-background p-0 flex flex-col"
       >
         <SheetHeader className="px-6 pt-6">
-          <SheetTitle className="font-serif text-2xl">Ask the Teacher</SheetTitle>
+          <SheetTitle className="font-serif text-2xl">{t("recap.title")}</SheetTitle>
           <SheetDescription>{itemTitle}</SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] mt-4 space-y-4">
           <div className="paper-card p-3 space-y-2">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">New question</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">{t("help.newQuestion")}</div>
             <div className="flex gap-2">
               <Input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="What do you want to ask?"
+                placeholder={t("help.questionPlaceholder")}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addQuestion(); } }}
               />
               <Button size="icon" variant="outline" onClick={addQuestion}><Plus className="h-4 w-4" /></Button>
@@ -75,7 +77,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
           </div>
 
           {sorted.length === 0 ? (
-            <p className="paper-card p-6 text-center text-muted-foreground italic">No questions yet.</p>
+            <p className="paper-card p-6 text-center text-muted-foreground italic">{t("help.noQuestions")}</p>
           ) : (
             <Accordion type="single" collapsible className="space-y-1.5">
               {sorted.map((r) => (
@@ -115,16 +117,16 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
                           rows={2}
                           value={answers[r.id!] ?? ""}
                           onChange={(e) => setAnswers((a) => ({ ...a, [r.id!]: e.target.value }))}
-                          placeholder="Record the teacher's answer…"
+                          placeholder={t("help.answerPlaceholder")}
                         />
-                        <Button size="sm" variant="outline" onClick={() => r.id && saveAnswer(r.id)}>Save answer</Button>
+                        <Button size="sm" variant="outline" onClick={() => r.id && saveAnswer(r.id)}>{t("recap.saveAnswer")}</Button>
                       </div>
                     )}
                     <button
                       onClick={() => r.id && remove(r.id)}
                       className="text-xs text-muted-foreground hover:text-destructive inline-flex items-center gap-1"
                     >
-                      <X className="h-3 w-3" /> Delete
+                      <X className="h-3 w-3" /> {t("common.delete")}
                     </button>
                   </AccordionContent>
                 </AccordionItem>
