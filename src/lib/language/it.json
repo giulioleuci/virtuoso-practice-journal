@@ -92,7 +92,7 @@
   "diary.homework": "{{count}} compito da convertire",
   "diary.homework_plural": "{{count}} compiti da convertire",
   "diary.targetBpm": "Obiettivo {{note}} = {{bpm}}",
-  "diary.routine": "routine",
+  "diary.routine": "Routine",
   "library.empty": "La libreria è vuota.",
   "library.add": "Aggiungi",
   "library.addToLibrary": "Aggiungi alla libreria",
