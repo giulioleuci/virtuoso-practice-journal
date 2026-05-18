@@ -100,6 +100,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   }, [open, prefill?.subjectId, prefill?.title, date]);
 
   // Auto-fill title/BPM/layers from item or segments selection
+  const segmentIdsKey = segmentIds.join(",");
   useEffect(() => {
     if (linkType !== "item" || !selectedItem) return;
     const segLabel = selectedSegments?.length === 1
@@ -113,7 +114,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     setNoteVal(firstSeg?.noteVal ?? selectedItem.noteVal);
     setTechniqueIds(firstSeg?.techniqueIds ?? selectedItem.techniqueIds ?? []);
     setLayers(firstSeg?.layers ?? []);
-  }, [linkType, itemId, segmentIds.join(","), selectedItem, selectedSegments]);
+  }, [linkType, itemId, segmentIdsKey, selectedItem, selectedSegments]);
 
   // Auto-fill title from collection
   useEffect(() => {

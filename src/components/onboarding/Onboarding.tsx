@@ -23,15 +23,15 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const [reminderFreq, setReminderFreq] = useState<"daily" | "weekdays" | "custom">("daily");
   const [reminderDays, setReminderDays] = useState<number[]>([1, 2, 3, 4, 5]);
 
-  const DAYS = useMemo(() => [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`)), [lang]);
+  const DAYS = useMemo(() => [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`)), [t]);
 
   const PRESET_INSTRUMENTS = useMemo(
     () => INSTRUMENT_KEYS.map((k) => ({ name: t(`preset.${k}`), type: "instrument" as SubjectType })),
-    [lang]
+    [t]
   );
   const PRESET_THEORY = useMemo(
     () => THEORY_KEYS.map((k) => ({ name: t(`preset.${k}`), type: "theory" as SubjectType })),
-    [lang]
+    [t]
   );
   const ALL_PRESETS = [...PRESET_INSTRUMENTS, ...PRESET_THEORY];
 

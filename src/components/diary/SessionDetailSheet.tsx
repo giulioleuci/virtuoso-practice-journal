@@ -86,7 +86,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
       quality: v.quality, notes: v.notes, layersUsed: v.layersUsed, techniquesUsed: v.techniquesUsed,
     });
     return [...e, ...flattenErrors(res)];
-  }, [date, v]);
+  }, [date, v, t]);
 
   const save = async () => {
     if (!session?.id || errors.length) return;

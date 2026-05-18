@@ -355,7 +355,7 @@ export default function Tasks() {
               {t("tasks.upcomingSchedule")}
             </h3>
           </div>
-          <TaskCalendarView tasks={tasks} subjects={subjects ?? []} />
+          <TaskCalendarView subjects={subjects ?? []} />
         </section>
       )}
 
