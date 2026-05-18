@@ -53,7 +53,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[85vh] max-h-[85dvh] rounded-t-3xl bg-background p-0 flex flex-col pt-[env(safe-area-inset-top)]"
+        className="h-[85vh] max-h-[85dvh] rounded-t-3xl bg-background p-0 flex flex-col"
       >
         <SheetHeader className="px-6 pt-6">
           <SheetTitle className="font-serif text-2xl">Ask the Teacher</SheetTitle>

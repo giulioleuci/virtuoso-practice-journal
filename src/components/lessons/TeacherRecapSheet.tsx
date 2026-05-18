@@ -84,7 +84,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[88vh] overflow-y-auto rounded-t-3xl">
+      <SheetContent side="bottom" className="h-[88vh] overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl">{t("recap.title")}</SheetTitle>
           <SheetDescription>{t("recap.subtitle")}</SheetDescription>

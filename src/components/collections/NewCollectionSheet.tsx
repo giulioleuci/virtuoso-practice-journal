@@ -165,7 +165,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
           </div>
         </div>
 
-        <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
+        <SheetFooter className="px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background/80 backdrop-blur">
           <div className="flex gap-3 w-full">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1">{t("common.cancel")}</Button>
             <Button onClick={save} disabled={!canSave} className="flex-1">
