@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { exportAll, importAll, wipeAll } from "@/lib/db";
 import { profileService } from "@/lib/services";
+import { saveTextFile, pickTextFile, scheduleReminders, ensureNotificationPermission, isNative } from "@/lib/platform";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,6 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { seedSampleData } from "@/lib/sampleData";
 
 const APP_VERSION = "0.3alpha";
 
@@ -28,6 +28,29 @@ export default function Profile() {
   const [nameDraft, setNameDraft] = useState("");
   const [aboutOpen, setAboutOpen] = useState(false);
 
+  // Reflect reminder preferences in scheduled OS-level notifications when running natively.
+  const reminderDaysKey = profile?.reminderDays?.join(",") ?? "";
+  useEffect(() => {
+    if (!profile) return;
+    const enabled = profile.reminderEnabled !== false;
+    if (!enabled) {
+      scheduleReminders(null).catch(() => undefined);
+      return;
+    }
+    const days = profile.reminderFreq === "weekdays"
+      ? [1, 2, 3, 4, 5]
+      : profile.reminderFreq === "custom"
+        ? (profile.reminderDays ?? [1, 2, 3, 4, 5])
+        : [0, 1, 2, 3, 4, 5, 6];
+    scheduleReminders({
+      time: profile.reminderTime,
+      days,
+      title: t("app.name"),
+      body: t("profile.reminderBody"),
+    }).catch(() => undefined);
+    // reminderDaysKey is a stable derivation of profile.reminderDays
+  }, [profile, reminderDaysKey, t]);
+
   if (!profile) return null;
 
   const update = async (patch: Partial<typeof profile>) => {
@@ -35,20 +58,29 @@ export default function Profile() {
   };
 
   const onExport = async () => {
-    const json = await exportAll();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `virtuoso-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(t("toast.exported"));
+    try {
+      const json = await exportAll();
+      await saveTextFile(`virtuoso-backup-${new Date().toISOString().slice(0, 10)}.json`, json);
+      toast.success(t("toast.exported"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("errors.couldNotSave"));
+    }
   };
 
   const onImport = async (file: File) => {
     try {
       const text = await file.text();
+      await importAll(text);
+      toast.success(t("toast.imported"));
+    } catch {
+      toast.error(t("errors.invalidFile"));
+    }
+  };
+
+  const onImportNative = async () => {
+    const text = await pickTextFile();
+    if (!text) return;
+    try {
       await importAll(text);
       toast.success(t("toast.imported"));
     } catch {
@@ -155,7 +187,16 @@ export default function Profile() {
           </div>
           <Switch
             checked={remindersOn}
-            onCheckedChange={(v) => update({ reminderEnabled: v })}
+            onCheckedChange={async (v) => {
+              if (v) {
+                const ok = await ensureNotificationPermission();
+                if (!ok) {
+                  toast.error(t("profile.reminderPermissionDenied"));
+                  return;
+                }
+              }
+              await update({ reminderEnabled: v });
+            }}
           />
         </div>
 
@@ -283,7 +324,7 @@ export default function Profile() {
               <Button variant="outline" onClick={onExport} className="w-full">
                 <Download className="h-4 w-4 mr-2" />{t("profile.export")}
               </Button>
-              <Button variant="outline" onClick={() => fileRef.current?.click()} className="w-full">
+              <Button variant="outline" onClick={() => (isNative() ? onImportNative() : fileRef.current?.click())} className="w-full">
                 <Upload className="h-4 w-4 mr-2" />{t("profile.import")}
               </Button>
             </div>
@@ -308,6 +349,7 @@ export default function Profile() {
               className="w-full"
               onClick={async () => {
                 if (!confirm(t("profile.sampleDataWarning"))) return;
+                const { seedSampleData } = await import("@/lib/sampleData");
                 await seedSampleData();
                 toast.success(t("toast.sampleDataCreated"));
                 setTimeout(() => location.reload(), 400);

@@ -205,6 +205,8 @@
   "profile.editName": "Name bearbeiten",
   "profile.reminder": "Erinnerung",
   "profile.reminderEnabled": "Erinnerungen",
+  "profile.reminderBody": "Zeit zum Üben.",
+  "profile.reminderPermissionDenied": "Benachrichtigungen nicht erlaubt. Aktiviere sie in den Systemeinstellungen, um Erinnerungen zu erhalten.",
   "profile.lateRecovery": "Späte Aufholung (Tage)",
   "profile.carryover": "Unfertige übertragen (Tage)",
   "profile.graceDay": "Gnadentag für Serie",

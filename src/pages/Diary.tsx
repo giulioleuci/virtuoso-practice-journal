@@ -162,8 +162,7 @@ export default function Diary() {
           className="paper-card p-3 flex items-center gap-3 hover:-translate-y-0.5 transition-transform border-2 border-destructive/60 bg-destructive/5"
         >
           <GraduationCap className="h-4 w-4 text-destructive shrink-0" />
-          <span className="text-sm flex-1 min-w-0 break-words">
-            <span className="tabular-nums font-semibold text-destructive"></span>
+          <span className="text-sm flex-1 min-w-0 break-words font-medium text-destructive tabular-nums">
             {t("diary.homework", { count: pendingCount })}
           </span>
           <ArrowRight className="h-4 w-4 text-destructive shrink-0" />

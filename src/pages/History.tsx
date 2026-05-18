@@ -21,13 +21,6 @@ const KINDS: ("all" | LibraryKind)[] = ["all", "repertoire", "manual", "techniqu
 
 export default function History() {
   const { t } = useI18n();
-  const sessions = useLiveQuery(() => db.sessions.toArray());
-  const tasks = useLiveQuery(() => db.tasks.toArray());
-  const items = useLiveQuery(() => db.library.toArray());
-  const segments = useLiveQuery(() => db.segments.toArray());
-  const subjects = useLiveQuery(() => db.subjects.toArray());
-  const collections = useLiveQuery(() => db.collections.toArray());
-
   const [groupBy, setGroupBy] = useState<GroupKey>("day");
   const [sortDir, setSortDir] = useState<SortDir>("newest");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
@@ -37,6 +30,19 @@ export default function History() {
   const [to, setTo] = useState(searchParams.get("to") ?? "");
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<Session | null>(null);
+
+  // Scope session reads by date range when set — avoids loading the entire table
+  const sessions = useLiveQuery(() => {
+    if (from && to) return db.sessions.where("date").between(from, to, true, true).toArray();
+    if (from) return db.sessions.where("date").aboveOrEqual(from).toArray();
+    if (to) return db.sessions.where("date").belowOrEqual(to).toArray();
+    return db.sessions.toArray();
+  }, [from, to]);
+  const tasks = useLiveQuery(() => db.tasks.toArray());
+  const items = useLiveQuery(() => db.library.toArray());
+  const segments = useLiveQuery(() => db.segments.toArray());
+  const subjects = useLiveQuery(() => db.subjects.toArray());
+  const collections = useLiveQuery(() => db.collections.toArray());
 
   useEffect(() => {
     const f = searchParams.get("from") ?? "";
