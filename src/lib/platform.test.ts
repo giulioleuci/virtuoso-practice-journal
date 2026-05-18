@@ -7,6 +7,7 @@ import {
   ensureNotificationPermission,
   scheduleReminders,
   saveTextFile,
+  pickTextFile,
 } from "./platform";
 
 describe("platform.isNative", () => {
@@ -100,5 +101,71 @@ describe("platform.saveTextFile (web fallback)", () => {
     expect(clickedAnchor).not.toBeNull();
     expect(clickedAnchor!.download).toBe("backup.json");
     expect(clickedAnchor!.href).toContain("blob:test");
+  });
+});
+
+describe("platform.pickTextFile", () => {
+  const originalCreateElement = document.createElement.bind(document);
+  let createdInput: HTMLInputElement | null = null;
+
+  beforeEach(() => {
+    createdInput = null;
+    vi.spyOn(document, "createElement").mockImplementation((tag: string, opts?: ElementCreationOptions) => {
+      const el = originalCreateElement(tag, opts);
+      if (tag === "input") {
+        // Suppress the actual file picker UI in tests
+        el.click = vi.fn();
+        createdInput = el as HTMLInputElement;
+      }
+      return el;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns the picked file's contents on selection", async () => {
+    const promise = pickTextFile();
+    // jsdom lacks File.prototype.text, so build a stand-in
+    const file = { text: () => Promise.resolve('{"a":1}') } as unknown as File;
+    Object.defineProperty(createdInput!, "files", { value: [file], configurable: true });
+    await createdInput!.onchange?.(new Event("change"));
+    await expect(promise).resolves.toBe('{"a":1}');
+  });
+
+  it("resolves null when the user cancels (oncancel)", async () => {
+    const promise = pickTextFile();
+    createdInput!.oncancel?.(new Event("cancel"));
+    await expect(promise).resolves.toBeNull();
+  });
+
+  it("resolves null via the focus fallback if no file is chosen", async () => {
+    vi.useFakeTimers();
+    try {
+      const promise = pickTextFile();
+      // Simulate window regaining focus with no file selected
+      window.dispatchEvent(new Event("focus"));
+      await vi.advanceTimersByTimeAsync(350);
+      await expect(promise).resolves.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("focus fallback does NOT clobber a real selection", async () => {
+    vi.useFakeTimers();
+    try {
+      const promise = pickTextFile();
+      const file = { text: () => Promise.resolve('{"a":2}') } as unknown as File;
+      Object.defineProperty(createdInput!, "files", { value: [file], configurable: true });
+      await createdInput!.onchange?.(new Event("change"));
+      // Focus fires later after the change handler resolved
+      window.dispatchEvent(new Event("focus"));
+      await vi.advanceTimersByTimeAsync(350);
+      await expect(promise).resolves.toBe('{"a":2}');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

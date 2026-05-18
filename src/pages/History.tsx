@@ -157,13 +157,31 @@ export default function History() {
         <Input
           type="date"
           value={from}
-          onChange={(e) => { setFrom(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("from", e.target.value) : p.delete("from"); return p; }); }}
+          onChange={(e) => {
+            const v = e.target.value;
+            setFrom(v);
+            setPage(0);
+            setSearchParams((p) => {
+              if (v) p.set("from", v);
+              else p.delete("from");
+              return p;
+            });
+          }}
           placeholder={t("common.from")}
         />
         <Input
           type="date"
           value={to}
-          onChange={(e) => { setTo(e.target.value); setPage(0); setSearchParams((p) => { e.target.value ? p.set("to", e.target.value) : p.delete("to"); return p; }); }}
+          onChange={(e) => {
+            const v = e.target.value;
+            setTo(v);
+            setPage(0);
+            setSearchParams((p) => {
+              if (v) p.set("to", v);
+              else p.delete("to");
+              return p;
+            });
+          }}
           placeholder={t("common.to")}
         />
       </div>

@@ -152,16 +152,32 @@ export async function pickTextFile(accept = "application/json"): Promise<string 
     const input = document.createElement("input");
     input.type = "file";
     input.accept = accept;
+    let settled = false;
+    const settle = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("focus", onFocus);
+      resolve(value);
+    };
+    // Some browsers (and older Android WebViews) don't fire `oncancel` reliably.
+    // When the picker closes without a selection, the window regains focus —
+    // give the change handler a tick to fire, then resolve null if nothing did.
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!input.files?.length) settle(null);
+      }, 300);
+    };
     input.onchange = async () => {
       const file = input.files?.[0];
-      if (!file) return resolve(null);
+      if (!file) return settle(null);
       try {
-        resolve(await file.text());
+        settle(await file.text());
       } catch {
-        resolve(null);
+        settle(null);
       }
     };
-    input.oncancel = () => resolve(null);
+    input.oncancel = () => settle(null);
+    window.addEventListener("focus", onFocus, { once: true });
     input.click();
   });
 }

@@ -330,7 +330,12 @@ export default function Profile() {
             </div>
             <input
               ref={fileRef} type="file" accept="application/json" className="hidden"
-              onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                // Reset so picking the same file twice still fires onChange
+                e.target.value = "";
+                if (file) onImport(file);
+              }}
             />
           </AccordionContent>
         </AccordionItem>

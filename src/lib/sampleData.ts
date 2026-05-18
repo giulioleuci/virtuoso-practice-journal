@@ -1,4 +1,4 @@
-import { db, wipeAll, buildSessionSnapshot, buildLessonSnapshot, THEORY_LAYERS, type Task, type SessionQuality } from "./db";
+import { db, wipeAll, buildSessionSnapshot, buildLessonSnapshot, THEORY_LAYERS, type Task, type SessionQuality, type LessonRecurrence } from "./db";
 import { dayKey, today } from "./recurrence";
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -357,7 +357,7 @@ export async function seedSampleData() {
       pianoId,
       { subjectId: pianoId, teacher: "Prof. Aldo Ferri", frequency: "weekly",
         dayOfWeek: wedDow, startTime: "17:00", endTime: "18:00",
-        startDate: dayKey(addDays(todayDate, -90)), color: "terracotta", createdAt: now } as any,
+        startDate: dayKey(addDays(todayDate, -90)), color: "terracotta", createdAt: now } satisfies LessonRecurrence,
       pieceIds,
     );
     const lessonId = (await db.lessons.add({
@@ -379,7 +379,7 @@ export async function seedSampleData() {
       harmonyId,
       { subjectId: harmonyId, teacher: "Prof.ssa Lia Conti", frequency: "biweekly",
         dayOfWeek: 5, startTime: "10:00", endTime: "11:30",
-        startDate: dayKey(addDays(todayDate, -84)), color: "blue", createdAt: now } as any,
+        startDate: dayKey(addDays(todayDate, -84)), color: "blue", createdAt: now } satisfies LessonRecurrence,
       pieceIds,
     );
     const lessonId = (await db.lessons.add({
