@@ -8,6 +8,7 @@ import {
   useRepertoire,
   useSegments,
   useActiveTasks,
+  useTasksInRange,
   useTechniques,
   useProfile,
   useCollectionItems,
@@ -89,6 +90,50 @@ describe("useActiveTasks", () => {
     const { result } = renderHook(() => useActiveTasks());
     await waitFor(() => expect(result.current).toBeDefined());
     expect(result.current!.map((t) => t.id)).toEqual([live]);
+  });
+});
+
+describe("useTasksInRange", () => {
+  it("returns an empty array when bounds are missing", async () => {
+    const { result } = renderHook(() => useTasksInRange(undefined, "2025-01-31"));
+    await waitFor(() => expect(result.current).toBeDefined());
+    expect(result.current).toEqual([]);
+  });
+
+  it("returns tasks whose date falls within the inclusive bounds", async () => {
+    await db.tasks.add({ subjectId: 1, title: "Before", date: "2024-12-31", done: false, createdAt: 1 });
+    const inA = (await db.tasks.add({ subjectId: 1, title: "Start", date: "2025-01-01", done: false, createdAt: 1 })) as number;
+    const inB = (await db.tasks.add({ subjectId: 1, title: "Middle", date: "2025-01-15", done: false, createdAt: 1 })) as number;
+    const inC = (await db.tasks.add({ subjectId: 1, title: "End", date: "2025-01-31", done: false, createdAt: 1 })) as number;
+    await db.tasks.add({ subjectId: 1, title: "After", date: "2025-02-01", done: false, createdAt: 1 });
+
+    const { result } = renderHook(() => useTasksInRange("2025-01-01", "2025-01-31"));
+    await waitFor(() => expect((result.current ?? []).length).toBe(3));
+    expect(result.current!.map((t) => t.id).sort()).toEqual([inA, inB, inC].sort());
+  });
+
+  it("excludes soft-deleted tasks within the range", async () => {
+    const live = (await db.tasks.add({ subjectId: 1, title: "Live", date: "2025-01-10", done: false, createdAt: 1 })) as number;
+    await db.tasks.add({ subjectId: 1, title: "Trashed", date: "2025-01-12", done: false, createdAt: 1, deletedAt: 2 });
+
+    const { result } = renderHook(() => useTasksInRange("2025-01-01", "2025-01-31"));
+    await waitFor(() => expect(result.current).toBeDefined());
+    expect(result.current!.map((t) => t.id)).toEqual([live]);
+  });
+
+  it("re-queries when the bounds change", async () => {
+    await db.tasks.add({ subjectId: 1, title: "Jan", date: "2025-01-15", done: false, createdAt: 1 });
+    await db.tasks.add({ subjectId: 1, title: "Feb", date: "2025-02-15", done: false, createdAt: 1 });
+
+    const { result, rerender } = renderHook(
+      ({ from, to }: { from: string; to: string }) => useTasksInRange(from, to),
+      { initialProps: { from: "2025-01-01", to: "2025-01-31" } },
+    );
+    await waitFor(() => expect((result.current ?? []).length).toBe(1));
+    expect(result.current![0].title).toBe("Jan");
+
+    rerender({ from: "2025-02-01", to: "2025-02-28" });
+    await waitFor(() => expect(result.current?.[0]?.title).toBe("Feb"));
   });
 });
 

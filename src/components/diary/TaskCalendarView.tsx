@@ -3,17 +3,17 @@ import { ChevronLeft, ChevronRight, CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task, Subject } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
+import { useTasksInRange } from "@/hooks/useEntities";
 
 function utcDateStr(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 interface Props {
-  tasks: Task[];
   subjects: Subject[];
 }
 
-export function TaskCalendarView({ tasks, subjects }: Props) {
+export function TaskCalendarView({ subjects }: Props) {
   const { t, lang } = useI18n();
 
   const today = new Date().toISOString().slice(0, 10);
@@ -24,9 +24,17 @@ export function TaskCalendarView({ tasks, subjects }: Props) {
   const [displayYear, setDisplayYear] = useState(initYear);
   const [displayMonth, setDisplayMonth] = useState(initMonth);
 
+  const monthFrom = utcDateStr(displayYear, displayMonth, 1);
+  const monthTo = utcDateStr(
+    displayYear,
+    displayMonth,
+    new Date(Date.UTC(displayYear, displayMonth + 1, 0)).getUTCDate(),
+  );
+  const tasks = useTasksInRange(monthFrom, monthTo);
+
   const tasksByDate = useMemo(() => {
     const map = new Map<string, Task[]>();
-    for (const task of tasks) {
+    for (const task of tasks ?? []) {
       const arr = map.get(task.date) ?? [];
       arr.push(task);
       map.set(task.date, arr);
@@ -55,13 +63,19 @@ export function TaskCalendarView({ tasks, subjects }: Props) {
   const dayHeaders = [1, 2, 3, 4, 5, 6, 0].map((d) => t(`weekday.${d}`).slice(0, 2));
 
   const prevMonth = () => {
-    if (displayMonth === 0) { setDisplayMonth(11); setDisplayYear((y) => y - 1); }
-    else setDisplayMonth((m) => m - 1);
+    const newYear = displayMonth === 0 ? displayYear - 1 : displayYear;
+    const newMonth = displayMonth === 0 ? 11 : displayMonth - 1;
+    setDisplayYear(newYear);
+    setDisplayMonth(newMonth);
+    setSelectedDate(utcDateStr(newYear, newMonth, 1));
   };
 
   const nextMonth = () => {
-    if (displayMonth === 11) { setDisplayMonth(0); setDisplayYear((y) => y + 1); }
-    else setDisplayMonth((m) => m + 1);
+    const newYear = displayMonth === 11 ? displayYear + 1 : displayYear;
+    const newMonth = displayMonth === 11 ? 0 : displayMonth + 1;
+    setDisplayYear(newYear);
+    setDisplayMonth(newMonth);
+    setSelectedDate(utcDateStr(newYear, newMonth, 1));
   };
 
   const selectedTasks = tasksByDate.get(selectedDate) ?? [];

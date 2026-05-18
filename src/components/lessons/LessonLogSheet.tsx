@@ -49,7 +49,7 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
     setNotes(lesson?.notes ?? "");
     setAssignments(existingAssignments?.map((a) => a.text) ?? []);
     setDraft("");
-  }, [open, lesson, existingAssignments]);
+  }, [open, lesson, existingAssignments, prefilledDate]);
 
 
   const addAssignment = () => {

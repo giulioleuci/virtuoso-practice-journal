@@ -111,7 +111,7 @@ export default function History() {
       g.sortKey = sessionSortKey(g.sessions[sortDir === "newest" ? 0 : g.sessions.length - 1]);
     }
     return Array.from(map.values()).sort((a, b) => cmp(a.sortKey, b.sortKey));
-  }, [filteredSessions, taskById, itemById, segById, collectionById, groupBy, sortDir]);
+  }, [filteredSessions, taskById, itemById, segById, collectionById, groupBy, sortDir, t]);
 
   const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
   const pageGroups = groups.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);

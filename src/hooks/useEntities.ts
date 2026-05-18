@@ -31,6 +31,25 @@ export const useSegments = () =>
 export const useActiveTasks = () =>
   useLiveQuery(() => db.tasks.filter((t) => !t.deletedAt).toArray(), []);
 
+/**
+ * Live-query tasks whose `date` falls within [from, to] (inclusive).
+ * Uses the indexed `date` field to avoid a full-table scan; `deletedAt`
+ * is filtered in memory since it isn't a covering index for this query.
+ * Dates are expected as ISO `YYYY-MM-DD` strings.
+ */
+export const useTasksInRange = (from?: string, to?: string) =>
+  useLiveQuery(
+    () => {
+      if (!from || !to) return Promise.resolve([]);
+      return db.tasks
+        .where("date")
+        .between(from, to, true, true)
+        .filter((t) => !t.deletedAt)
+        .toArray();
+    },
+    [from, to],
+  );
+
 export const useSessions = () =>
   useLiveQuery(() => db.sessions.toArray(), []);
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Lang } from "./db";
 import en from "./language/en.json";
 import it from "./language/it.json";
@@ -39,8 +39,9 @@ export function I18nProvider({ children, initial = "en" }: { children: ReactNode
 
   const setLang = (l: Lang) => setLangState(l);
 
-  const t = (key: string, vars?: TranslationVars): string => {
-    // Resolve plural form when count is provided
+  // Stable per `lang` so consumers can list `t` in effect/memo deps without
+  // re-running on every render.
+  const t = useCallback((key: string, vars?: TranslationVars): string => {
     let resolvedKey = key;
     if (vars && vars.count !== undefined && vars.count !== 1) {
       const pluralKey = `${key}_plural`;
@@ -48,12 +49,9 @@ export function I18nProvider({ children, initial = "en" }: { children: ReactNode
         resolvedKey = pluralKey;
       }
     }
-
-    // Look up in current lang, fall back to English, then to key itself
     const raw = dicts[lang][resolvedKey] ?? dicts["en"][resolvedKey] ?? key;
-
     return vars ? interpolate(raw, vars) : raw;
-  };
+  }, [lang]);
 
   return <Ctx.Provider value={{ lang, setLang, t }}>{children}</Ctx.Provider>;
 }

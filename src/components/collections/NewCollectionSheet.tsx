@@ -40,6 +40,8 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
   const [color, setColor] = useState<ColorKey | undefined>();
   const [defaultSubjectId, setDefaultSubjectId] = useState<number | undefined>();
 
+  // Seed the form when the sheet opens (or switches to a different collection);
+  // intentionally skip individual field deps so live edits aren't clobbered.
   useEffect(() => {
     if (!open) return;
     setName(collection?.name ?? "");
@@ -48,6 +50,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
     setNotes(collection?.notes ?? "");
     setColor(collection?.color);
     setDefaultSubjectId(collection?.defaultSubjectId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, collection?.id]);
 
   const input = {
