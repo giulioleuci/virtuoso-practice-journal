@@ -3,6 +3,7 @@ import { Check, ChevronDown, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface Option<T extends string | number> {
   value: T;
@@ -19,20 +20,22 @@ interface Props<T extends string | number> {
 }
 
 export function MultiChipPicker<T extends string | number>({
-  label, options, value, onChange, emptyHint, placeholder = "Select…",
+  label, options, value, onChange, emptyHint, placeholder,
 }: Props<T>) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const toggle = (v: T) =>
     onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
   const remove = (v: T) => onChange(value.filter((x) => x !== v));
 
+  const effectivePlaceholder = placeholder ?? `${t("common.select")}…`;
   const selectedOpts = options.filter((o) => value.includes(o.value));
   const summary =
     selectedOpts.length === 0
-      ? placeholder
+      ? effectivePlaceholder
       : selectedOpts.length <= 2
       ? selectedOpts.map((o) => o.label).join(", ")
-      : `${selectedOpts.length} selected`;
+      : t("common.selected", { count: selectedOpts.length });
 
   return (
     <div className="space-y-2">
@@ -42,7 +45,7 @@ export function MultiChipPicker<T extends string | number>({
         </Label>
       )}
       {options.length === 0 ? (
-        <p className="text-xs italic text-muted-foreground">{emptyHint ?? "None defined yet."}</p>
+        <p className="text-xs italic text-muted-foreground">{emptyHint ?? t("common.noneDefinedYet")}</p>
       ) : (
         <>
           <Popover open={open} onOpenChange={setOpen}>
@@ -101,7 +104,7 @@ export function MultiChipPicker<T extends string | number>({
                     type="button"
                     onClick={() => remove(o.value)}
                     className="hover:text-destructive p-0.5"
-                    aria-label={`Remove ${o.label}`}
+                    aria-label={t("common.removeItem", { label: o.label })}
                   >
                     <X className="h-3 w-3" />
                   </button>

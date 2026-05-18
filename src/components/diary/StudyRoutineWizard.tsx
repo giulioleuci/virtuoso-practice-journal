@@ -32,6 +32,7 @@ interface PagerProps {
   onChange: (p: number) => void;
 }
 function Pager({ page, pageCount, onChange }: PagerProps) {
+  const { t } = useI18n();
   if (pageCount <= 1) return null;
   return (
     <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-border">
@@ -40,7 +41,7 @@ function Pager({ page, pageCount, onChange }: PagerProps) {
         onClick={() => onChange(Math.max(1, page - 1))}
         disabled={page <= 1}
         className="p-1 text-muted-foreground disabled:opacity-30"
-        aria-label="Previous page"
+        aria-label={t("pagination.prevPage")}
       >
         <ChevronLeft className="h-3.5 w-3.5" />
       </button>
@@ -52,7 +53,7 @@ function Pager({ page, pageCount, onChange }: PagerProps) {
         onClick={() => onChange(Math.min(pageCount, page + 1))}
         disabled={page >= pageCount}
         className="p-1 text-muted-foreground disabled:opacity-30"
-        aria-label="Next page"
+        aria-label={t("pagination.nextPage")}
       >
         <ChevronRight className="h-3.5 w-3.5" />
       </button>
@@ -468,7 +469,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                     type="button"
                                     onClick={() => toggleExpandItem(item.id!)}
                                     className="p-1 -m-1 text-muted-foreground"
-                                    aria-label="Toggle segments"
+                                    aria-label={t("studyRoutine.toggleSegments")}
                                   >
                                     {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                                   </button>
@@ -502,7 +503,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                       ? "bg-primary text-primary-foreground border-primary"
                                       : "border-border text-muted-foreground hover:text-foreground"
                                   )}
-                                  aria-label={inPool ? "Remove" : "Add"}
+                                  aria-label={inPool ? t("common.remove") : t("common.add")}
                                 >
                                   {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                                 </button>
@@ -527,7 +528,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                               ? "bg-primary text-primary-foreground border-primary"
                                               : "border-border text-muted-foreground hover:text-foreground"
                                           )}
-                                          aria-label={segInPool ? "Remove" : "Add"}
+                                          aria-label={segInPool ? t("common.remove") : t("common.add")}
                                         >
                                           {segInPool ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
                                         </button>
@@ -581,7 +582,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                     ? "bg-primary text-primary-foreground border-primary"
                                     : "border-border text-muted-foreground hover:text-foreground"
                                 )}
-                                aria-label={inPool ? "Remove" : "Add"}
+                                aria-label={inPool ? t("common.remove") : t("common.add")}
                               >
                                 {inPool ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                               </button>
@@ -617,7 +618,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                               type="button"
                               onClick={() => removeFromPool(entry)}
                               className="ml-0.5 opacity-60 hover:opacity-100 shrink-0"
-                              aria-label="Remove"
+                              aria-label={t("common.remove")}
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -680,7 +681,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                       type="button"
                       onClick={() => removeGroup(group.id)}
                       className="p-1.5 text-muted-foreground hover:text-destructive"
-                      aria-label="Remove group"
+                      aria-label={t("studyRoutine.removeGroup")}
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -742,7 +743,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                               type="button"
                               onClick={() => toggleGroupEntry(group.id, entry)}
                               className="ml-0.5 opacity-60 hover:opacity-100 shrink-0"
-                              aria-label="Remove"
+                              aria-label={t("common.remove")}
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -828,7 +829,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                   onClick={() => setCount(index, group.id, c - 1)}
                                   className="w-7 h-7 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40"
                                   disabled={c === 0}
-                                  aria-label="Decrease"
+                                  aria-label={t("common.decrease")}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -837,7 +838,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                   type="button"
                                   onClick={() => setCount(index, group.id, c + 1)}
                                   className="w-7 h-7 rounded-full border flex items-center justify-center hover:bg-muted"
-                                  aria-label="Increase"
+                                  aria-label={t("common.increase")}
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>

@@ -237,9 +237,9 @@ export default function Diary() {
                       >
                         <div className={cn("font-medium break-words flex items-center gap-2", task.done && "line-through")}>
                           {subjectTypeById.get(task.subjectId) === "theory" ? (
-                            <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="theory" />
+                            <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("subjects.type.theory")} />
                           ) : (
-                            <Piano className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="instrument" />
+                            <Piano className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("subjects.type.instrument")} />
                           )}
                           <span>{task.title}</span>
                         </div>

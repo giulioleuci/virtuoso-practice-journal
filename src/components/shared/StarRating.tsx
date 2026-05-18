@@ -1,6 +1,7 @@
 import { Star, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   label?: string;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function StarRating({ label, value, onChange, max = 5 }: Props) {
+  const { t } = useI18n();
   return (
     <div className="space-y-2">
       {label && (
@@ -23,7 +25,7 @@ export function StarRating({ label, value, onChange, max = 5 }: Props) {
             <button
               key={n}
               type="button"
-              aria-label={`${n} star${n > 1 ? "s" : ""}`}
+              aria-label={t("common.starRating", { count: n })}
               onClick={() => onChange(n)}
               className="p-1 transition-transform hover:-translate-y-0.5"
             >
@@ -38,7 +40,7 @@ export function StarRating({ label, value, onChange, max = 5 }: Props) {
         })}
         <button
           type="button"
-          aria-label="Clear rating"
+          aria-label={t("common.clearRating")}
           onClick={() => onChange(undefined)}
           disabled={value === undefined}
           className={cn(

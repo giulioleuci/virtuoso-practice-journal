@@ -74,7 +74,7 @@ export function TaskCalendarView({ tasks, subjects }: Props) {
           <button
             onClick={prevMonth}
             className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-            aria-label="Previous month"
+            aria-label={t("calendar.prevMonth")}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -82,7 +82,7 @@ export function TaskCalendarView({ tasks, subjects }: Props) {
           <button
             onClick={nextMonth}
             className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-            aria-label="Next month"
+            aria-label={t("calendar.nextMonth")}
           >
             <ChevronRight className="h-4 w-4" />
           </button>

@@ -2,6 +2,7 @@ import type { NoteVal } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/lib/i18n";
 
 const NOTE_OPTIONS: { val: NoteVal; glyph: string; label: string }[] = [
   { val: "half",      glyph: "𝅗𝅥", label: "½" },
@@ -17,10 +18,11 @@ interface Props {
   label?: string;
 }
 
-export function BpmCoupler({ bpm, noteVal, onChange, label = "Target tempo" }: Props) {
+export function BpmCoupler({ bpm, noteVal, onChange, label }: Props) {
+  const { t } = useI18n();
   return (
     <div className="space-y-2">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
+      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label ?? t("library.targetTempo")}</Label>
       <div className="paper-card flex items-stretch gap-1 p-2">
         <div className="flex items-center gap-2 px-2 flex-1">
           <Input

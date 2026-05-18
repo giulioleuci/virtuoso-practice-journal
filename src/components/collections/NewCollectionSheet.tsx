@@ -161,7 +161,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelNotesOptional")}</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything worth remembering…" className="bg-card" rows={3} />
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("collections.notesPlaceholder")} className="bg-card" rows={3} />
           </div>
         </div>
 

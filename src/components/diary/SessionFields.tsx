@@ -68,7 +68,7 @@ export function SessionFields({
             type="number" inputMode="numeric" min={0} max={9999}
             value={value.reps ?? ""}
             onChange={(e) => onChange({ reps: e.target.value === "" ? undefined : Number(e.target.value) })}
-            placeholder="e.g. 10"
+            placeholder={t("session.repsPlaceholder")}
           />
         </div>
       )}
