@@ -18,6 +18,8 @@ import {
   EyeOff,
   GraduationCap,
   ArrowRight,
+  Piano,
+  BookOpen,
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
@@ -78,6 +80,14 @@ export default function Diary() {
     () => db.studyRoutines.filter((r) => !r.deletedAt).toArray(),
     [],
   );
+  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
+  const subjectTypeById = useMemo(() => {
+    const map = new Map<number, "instrument" | "theory" | string>();
+    for (const s of subjects ?? []) {
+      if (s.id !== undefined) map.set(s.id, s.type);
+    }
+    return map;
+  }, [subjects]);
   const routineNames = useMemo(() => {
     const map = new Map<number, string>();
     for (const r of studyRoutines ?? []) {
@@ -226,7 +236,14 @@ export default function Diary() {
                         }}
                         className="w-full text-left"
                       >
-                        <div className={cn("font-medium break-words", task.done && "line-through")}>{task.title}</div>
+                        <div className={cn("font-medium break-words flex items-center gap-2", task.done && "line-through")}>
+                          {subjectTypeById.get(task.subjectId) === "theory" ? (
+                            <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="theory" />
+                          ) : (
+                            <Piano className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="instrument" />
+                          )}
+                          <span>{task.title}</span>
+                        </div>
                         {task.targetBpm && (
                           <div className="text-xs text-muted-foreground tabular-nums">
                             {t("diary.targetBpm", {
