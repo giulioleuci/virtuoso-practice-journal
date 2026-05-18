@@ -346,6 +346,7 @@
   "errors.noUpcomingLesson": "No se encontró ninguna lección próxima para esta materia",
   "errors.occurrencesRange": "Las ocurrencias deben ser 1–200",
   "errors.notesMaxLength": "Notas: máx. 2000 caracteres",
+  "toast.pressBackAgainToExit": "Pulsa atrás de nuevo para salir",
   "toast.saved": "Guardado",
   "toast.added": "Añadido",
   "toast.updated": "Actualizado",

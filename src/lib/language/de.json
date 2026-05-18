@@ -346,6 +346,7 @@
   "errors.noUpcomingLesson": "Keine bevorstehende Stunde für dieses Fach gefunden",
   "errors.occurrencesRange": "Wiederholungen müssen 1–200 sein",
   "errors.notesMaxLength": "Notizen: max. 2000 Zeichen",
+  "toast.pressBackAgainToExit": "Erneut zurück drücken zum Beenden",
   "toast.saved": "Gespeichert",
   "toast.added": "Hinzugefügt",
   "toast.updated": "Aktualisiert",

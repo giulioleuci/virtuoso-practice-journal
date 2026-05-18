@@ -346,6 +346,7 @@
   "errors.noUpcomingLesson": "No upcoming lesson found for this subject",
   "errors.occurrencesRange": "Occurrences must be 1–200",
   "errors.notesMaxLength": "Notes: max 2000 characters",
+  "toast.pressBackAgainToExit": "Press back again to exit",
   "toast.saved": "Saved",
   "toast.added": "Added",
   "toast.updated": "Updated",

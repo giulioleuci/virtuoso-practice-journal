@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
+import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/lib/db";
 
@@ -20,6 +21,8 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const lastY = useRef(0);
   const keyboardInset = useKeyboardInset();
   const navHidden = hidden || keyboardInset > 0;
+
+  useAndroidBackButton(t("toast.pressBackAgainToExit"));
 
   useEffect(() => {
     const onScroll = () => {
