@@ -236,7 +236,14 @@ export default function Diary() {
                         }}
                         className="w-full text-left"
                       >
-                        <div className={cn("font-medium break-words", task.done && "line-through")}>{task.title}</div>
+                        <div className={cn("font-medium break-words flex items-center gap-2", task.done && "line-through")}>
+                          {subjectTypeById.get(task.subjectId) === "theory" ? (
+                            <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="theory" />
+                          ) : (
+                            <Piano className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="instrument" />
+                          )}
+                          <span>{task.title}</span>
+                        </div>
                         {task.targetBpm && (
                           <div className="text-xs text-muted-foreground tabular-nums">
                             {t("diary.targetBpm", {
