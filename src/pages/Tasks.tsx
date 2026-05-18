@@ -16,7 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ChevronLeft, ChevronRight, Pencil, Trash2, CheckCircle2, Circle, Repeat, CalendarClock, RefreshCw, CalendarRange } from "lucide-react";
-import { EditStudyRoutineSheet } from "@/components/diary/EditStudyRoutineSheet";
+
 import { TaskCalendarView } from "@/components/diary/TaskCalendarView";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useNavigate } from "react-router-dom";
@@ -56,7 +56,7 @@ export default function Tasks() {
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
-  const [editingRoutine, setEditingRoutine] = useState<StudyRoutine | null>(null);
+  
   const [delRoutineId, setDelRoutineId] = useState<number | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
@@ -227,7 +227,7 @@ export default function Tasks() {
                   <RefreshCw className={`h-4 w-4 ${regeneratingId === r.id ? "animate-spin" : ""}`} />
                 </button>
                 <button
-                  onClick={() => setEditingRoutine(r)}
+                  onClick={() => navigate(`/tasks/routines/edit/${r.id}`)}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
                   aria-label={t("common.edit")}
                 >
@@ -359,11 +359,6 @@ export default function Tasks() {
         </section>
       )}
 
-      <EditStudyRoutineSheet
-        open={editingRoutine !== null}
-        onOpenChange={(o) => !o && setEditingRoutine(null)}
-        routine={editingRoutine}
-      />
 
       <AlertDialog open={delRoutineId !== null} onOpenChange={(o) => !o && setDelRoutineId(null)}>
         <AlertDialogContent>

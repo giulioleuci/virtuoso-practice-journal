@@ -32,8 +32,14 @@ export default function AppShell({ profile }: { profile: Profile }) {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <main className="flex-1 px-6 pt-6 pb-32 max-w-3xl w-full mx-auto">
+    <div className="min-h-screen flex flex-col">
+      <main
+        className="flex-1 px-6 max-w-3xl w-full mx-auto"
+        style={{
+          paddingTop: "calc(1.5rem + env(safe-area-inset-top))",
+          paddingBottom: "calc(8rem + env(safe-area-inset-bottom))",
+        }}
+      >
         <Outlet context={{ profile }} />
       </main>
 

@@ -51,13 +51,16 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-3xl">
-        <SheetHeader>
+      <SheetContent
+        side="bottom"
+        className="h-[85vh] max-h-[85dvh] rounded-t-3xl bg-background p-0 flex flex-col pt-[env(safe-area-inset-top)]"
+      >
+        <SheetHeader className="px-6 pt-6">
           <SheetTitle className="font-serif text-2xl">Ask the Teacher</SheetTitle>
           <SheetDescription>{itemTitle}</SheetDescription>
         </SheetHeader>
 
-        <div className="mt-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] mt-4 space-y-4">
           <div className="paper-card p-3 space-y-2">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">New question</div>
             <div className="flex gap-2">

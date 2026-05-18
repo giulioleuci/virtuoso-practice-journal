@@ -913,7 +913,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
       )}
 
       {/* Navigation */}
-      <div className="flex gap-2 pt-2 sticky bottom-0 bg-background/95 backdrop-blur-sm">
+      <div className="flex gap-2 pt-2 pb-[env(safe-area-inset-bottom)]">
         <Button
           variant="outline"
           className="flex-1"

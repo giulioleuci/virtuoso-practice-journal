@@ -274,7 +274,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[92vh] rounded-t-3xl bg-background p-0 flex flex-col"
+        className="h-[92vh] max-h-[92dvh] rounded-t-3xl bg-background p-0 flex flex-col pt-[env(safe-area-inset-top)]"
       >
         <SheetHeader className="px-6 pt-6 pb-2 text-left">
           <SheetTitle className="font-serif text-3xl">{titleLabel}</SheetTitle>
@@ -367,7 +367,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           )}
         </div>
 
-        <SheetFooter className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur">
+        <SheetFooter className="px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background/80 backdrop-blur">
           <div className="flex gap-3 w-full">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1">
               {t("common.cancel")}
