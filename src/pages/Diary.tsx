@@ -223,7 +223,7 @@ export default function Diary() {
                         }
                       }}
                       className="mt-0.5 shrink-0"
-                      aria-label={task.done ? t("diary.markNotDone") : t("diary.markDone")}
+                      aria-label={task.done ? t("diary.markNotDone") : t("tasks.markDone")}
                     >
                       {task.done ? (
                         <span className="h-5 w-5 rounded-[4px] bg-primary flex items-center justify-center">
