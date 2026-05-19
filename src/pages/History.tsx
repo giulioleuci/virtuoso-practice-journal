@@ -236,7 +236,7 @@ export default function History() {
                             <span className="text-xs tabular-nums">
                               {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}
                               {s.bpmReached && s.quality ? " · " : ""}
-                              {s.quality ?? ""}
+                              {s.quality ? t(`session.quality${s.quality.charAt(0).toUpperCase() + s.quality.slice(1)}`) : ""}
                             </span>
                           )}
                         </button>
