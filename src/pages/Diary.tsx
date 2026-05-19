@@ -210,10 +210,20 @@ export default function Diary() {
                     )}
                   >
                     <button
-                      onClick={() => task.done && setConfirmUncomplete(task)}
+                      onClick={async () => {
+                        if (task.done) {
+                          setConfirmUncomplete(task);
+                        } else {
+                          await sessionsService.logWithCompletion(task, {
+                            date: todayKey,
+                            layersUsed: [],
+                            techniquesUsed: [],
+                          });
+                          toast.success(t("toast.sessionLogged"));
+                        }
+                      }}
                       className="mt-0.5 shrink-0"
-                      aria-label={task.done ? t("diary.markNotDone") : t("diary.pending")}
-                      disabled={!task.done}
+                      aria-label={task.done ? t("diary.markNotDone") : t("diary.markDone")}
                     >
                       {task.done ? (
                         <span className="h-5 w-5 rounded-[4px] bg-primary flex items-center justify-center">
