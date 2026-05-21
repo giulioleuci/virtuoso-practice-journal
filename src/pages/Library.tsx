@@ -336,7 +336,18 @@ export default function Library() {
 
               <div className="mt-3 pt-2 border-t border-border/40 flex justify-end">
                 <button
-                  onClick={() => setPracticeItem(it)}
+                  onClick={() => navigate("/tasks/new", {
+                    state: {
+                      date: today(),
+                      prefill: {
+                        itemId: it.id,
+                        itemTitle: it.title,
+                        itemSubjectId: it.subjectId,
+                        itemBpm: it.targetBpm,
+                        itemNoteVal: it.noteVal,
+                      },
+                    },
+                  })}
                   className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
                   <Play className="h-3 w-3" /> Practice this
