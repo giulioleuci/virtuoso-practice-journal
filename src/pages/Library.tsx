@@ -44,7 +44,7 @@ export default function Library() {
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
-  const [practiceItem, setPracticeItem] = useState<LibraryItem | null>(null);
+  
   const [search, setSearch] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
