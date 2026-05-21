@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
 import { today } from "@/lib/recurrence";
 import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
-import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
+
 import { MasterySliders } from "@/components/library/MasterySliders";
 import { MasterySparkline } from "@/components/library/MasterySparkline";
 import { Button } from "@/components/ui/button";
