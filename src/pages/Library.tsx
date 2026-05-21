@@ -494,20 +494,6 @@ export default function Library() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {practiceItem && (
-        <NewTaskSheet
-          open={practiceItem !== null}
-          onOpenChange={(o) => !o && setPracticeItem(null)}
-          date={today()}
-          prefill={{
-            itemId: practiceItem.id,
-            itemTitle: practiceItem.title,
-            itemSubjectId: practiceItem.subjectId,
-            itemBpm: practiceItem.targetBpm,
-            itemNoteVal: practiceItem.noteVal,
-          }}
-        />
-      )}
     </div>
   );
 }
