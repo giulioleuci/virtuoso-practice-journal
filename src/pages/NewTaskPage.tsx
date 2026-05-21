@@ -240,8 +240,8 @@ export default function NewTaskPage() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-1.5">
-        {(["standard", "routine"] as const).map((tab) => (
+      <div className="flex gap-1.5 flex-wrap">
+        {(["standard", "wizard", "routine"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -253,35 +253,44 @@ export default function NewTaskPage() {
                 : "border-border text-muted-foreground hover:text-foreground"
             )}
           >
-            {t(`studyRoutine.tab.${tab}`)}
+            {tab === "wizard" ? t("studyRoutine.tab.wizard") : t(`studyRoutine.tab.${tab}`)}
           </button>
         ))}
       </div>
 
-      {/* Subject picker — shared between tabs */}
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
-        <Select
-          value={subjectId?.toString() ?? ""}
-          onValueChange={(v) => {
-            setSubjectId(Number(v));
-            setItemId(undefined); setSegmentIds([]); setCollectionId(undefined);
-          }}
-        >
-          <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
-          <SelectContent>
-            {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Subject picker — shared between standard/routine tabs */}
+      {activeTab !== "wizard" && (
+        <div className="space-y-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
+          <Select
+            value={subjectId?.toString() ?? ""}
+            onValueChange={(v) => {
+              setSubjectId(Number(v));
+              setItemId(undefined); setSegmentIds([]); setCollectionId(undefined);
+            }}
+          >
+            <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
+            <SelectContent>
+              {(subjects ?? []).map((s) => (
+                <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {activeTab === "routine" ? (
         <StudyRoutineWizard
           subjectId={subjectId}
           date={date}
           onCreated={() => navigate("/")}
+          onCancel={handleCancel}
+        />
+      ) : activeTab === "wizard" ? (
+        <TaskWizard
+          date={date}
+          prefill={prefill}
+          onCreated={() => handleCancel()}
           onCancel={handleCancel}
         />
       ) : (
