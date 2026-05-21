@@ -13,7 +13,7 @@ import {
   PlayIcon,
   CarryOverIcon,
   CloseIcon,
-  ChevronLeftIcon,
+  BackIcon,
   ChevronRightIcon,
   ResetIcon,
   HideIcon,
@@ -518,7 +518,7 @@ export default function Diary() {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">
                     <Button size="icon" variant="ghost" disabled={page === 0} onClick={() => setCarryPage(page - 1)}>
-                      <ChevronLeftIcon className="h-4 w-4" />
+                      <BackIcon className="h-4 w-4" />
                     </Button>
                     <span className="tabular-nums">
                       {page + 1} / {totalPages}
@@ -600,7 +600,7 @@ export default function Diary() {
                           disabled={page === 0}
                           onClick={() => setIgnoredPage(page - 1)}
                         >
-                          <ChevronLeftIcon className="h-4 w-4" />
+                          <BackIcon className="h-4 w-4" />
                         </Button>
                         <span className="tabular-nums">
                           {page + 1} / {totalPages}
