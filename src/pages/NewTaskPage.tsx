@@ -46,15 +46,15 @@ export default function NewTaskPage() {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
-  const [activeTab, setActiveTab] = useState<"standard" | "routine">("standard");
-  const [subjectId, setSubjectId] = useState<number | undefined>(prefill?.subjectId);
-  const [linkType, setLinkType] = useState<TaskLinkType>("free");
-  const [itemId, setItemId] = useState<number | undefined>();
+  const [activeTab, setActiveTab] = useState<"standard" | "wizard" | "routine">("standard");
+  const [subjectId, setSubjectId] = useState<number | undefined>(prefill?.itemSubjectId ?? prefill?.subjectId);
+  const [linkType, setLinkType] = useState<TaskLinkType>(prefill?.itemId ? "item" : "free");
+  const [itemId, setItemId] = useState<number | undefined>(prefill?.itemId);
   const [segmentIds, setSegmentIds] = useState<number[]>([]);
   const [collectionId, setCollectionId] = useState<number | undefined>();
-  const [title, setTitle] = useState(prefill?.title ?? "");
-  const [bpm, setBpm] = useState<number | undefined>();
-  const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
+  const [title, setTitle] = useState(prefill?.itemTitle ?? prefill?.title ?? "");
+  const [bpm, setBpm] = useState<number | undefined>(prefill?.itemBpm);
+  const [noteVal, setNoteVal] = useState<NoteVal | undefined>(prefill?.itemNoteVal);
   const [layers, setLayers] = useState<string[]>([]);
   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
 
