@@ -25,6 +25,7 @@ const PAGE_SIZE = 5;
 export default function Lessons() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const recurrences = useLiveQuery(() => db.recurrences.toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
   const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().toArray());
