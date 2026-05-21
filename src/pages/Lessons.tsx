@@ -61,6 +61,17 @@ export default function Lessons() {
     setLogOpen(true);
   };
 
+  // Open lesson log when navigated here from the Diary today-lesson banner.
+  useEffect(() => {
+    const s = location.state as { openLogForRecurrenceId?: number; date?: string } | null;
+    if (!s?.openLogForRecurrenceId || !recurrences) return;
+    const rec = recurrences.find((r) => r.id === s.openLogForRecurrenceId);
+    if (rec) {
+      openLog(rec, s.date);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, recurrences]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const deleteRec = async () => {
     if (delRecId == null) return;
     await lessonsService.deleteRecurrence(delRecId);
