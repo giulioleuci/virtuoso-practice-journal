@@ -8,67 +8,36 @@
  * Exit code: 0 = all good, 1 = missing keys found
  */
 import { readFileSync } from "fs";
-import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
-
-// Read the i18n.tsx file and extract the dicts object
-const src = readFileSync(join(root, "src/lib/i18n.tsx"), "utf-8");
-
-// Extract all translation keys by regex-parsing the TypeScript source.
-// We look for lines of the form: "key.name": "...",
-const KEY_RE = /^\s+"([^"]+)":\s+"([^"]*)"/gm;
+const langDir = join(root, "src/lib/language");
 
 const SUPPORTED_LANGS = ["en", "it", "es", "de"];
 
-// Identify which language section a key belongs to by tracking lang markers.
-// We find each `  en: {`, `  it: {`, etc. block.
-const LANG_BLOCK_RE = /^\s{2}(en|it|es|de):\s*\{/gm;
-
-const langRanges = [];
-let match;
-while ((match = LANG_BLOCK_RE.exec(src)) !== null) {
-  langRanges.push({ lang: match[1], start: match.index });
-}
-// Add sentinel
-langRanges.push({ lang: null, start: src.length });
-
-// For each lang, collect keys in its range
 const langKeys = {};
-for (let i = 0; i < langRanges.length - 1; i++) {
-  const { lang, start } = langRanges[i];
-  const end = langRanges[i + 1].start;
-  const chunk = src.slice(start, end);
-  const keys = new Set();
-  let m;
-  const re = /^\s+"([^"]+)":\s+"/gm;
-  while ((m = re.exec(chunk)) !== null) {
-    keys.add(m[1]);
-  }
-  langKeys[lang] = keys;
+for (const lang of SUPPORTED_LANGS) {
+  const json = JSON.parse(readFileSync(join(langDir, `${lang}.json`), "utf-8"));
+  langKeys[lang] = new Set(Object.keys(json));
 }
 
-const enKeys = langKeys["en"] || new Set();
+const enKeys = langKeys["en"];
 const enBase = new Set([...enKeys].filter((k) => !k.endsWith("_plural")));
 
 let hasErrors = false;
 
 for (const lang of SUPPORTED_LANGS) {
   if (lang === "en") continue;
-  const langSet = langKeys[lang] || new Set();
+  const langSet = langKeys[lang];
   const missing = [];
   const extra = [];
 
   for (const key of enBase) {
-    if (!langSet.has(key) && !langSet.has(`${key}_plural`)) {
-      // Check if there's a plural variant in en that this lang should also have
+    if (!langSet.has(key)) {
       const hasPluralInEn = enKeys.has(`${key}_plural`);
-      if (!langSet.has(key)) {
-        missing.push(key + (hasPluralInEn ? " (+ _plural)" : ""));
-      }
+      missing.push(key + (hasPluralInEn ? " (+ _plural)" : ""));
     }
   }
 
