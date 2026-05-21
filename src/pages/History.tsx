@@ -12,7 +12,9 @@ import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
+import { SessionFAB } from "@/components/diary/SessionFAB";
 import { ListSkeleton } from "@/components/shared/Loading";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 type GroupKey = "task" | "day" | "item" | "segment";
 type SortDir = "newest" | "oldest";
@@ -117,7 +119,8 @@ export default function History() {
   const pageGroups = groups.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
+      <SessionFAB />
       <div className="flex items-center justify-between">
         <h2 className="font-serif text-3xl">{t("history.title")}</h2>
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -205,7 +208,7 @@ export default function History() {
       {sessions === undefined ? (
         <ListSkeleton />
       ) : pageGroups.length === 0 ? (
-        <p className="paper-card p-6 text-center text-muted-foreground italic">{t("history.noSessionsMatch")}</p>
+        <EmptyState title={t("history.noSessionsMatch")} />
       ) : (
         <Accordion type="multiple" className="space-y-3">
           {pageGroups.map((g, i) => (

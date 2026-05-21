@@ -13,6 +13,8 @@ import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
 import { studyRoutinesService, sessionsService } from "@/lib/services";
 import { SessionFields, type SessionFieldsValue } from "./SessionFields";
 import { StarRating } from "@/components/shared/StarRating";
+import { LastSessionStrip } from "./LastSessionStrip";
+import { BpmSuggestion } from "./BpmSuggestion";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -51,6 +53,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const [helpText, setHelpText] = useState("");
   const [granular, setGranular] = useState(false);
   const [segMetrics, setSegMetrics] = useState<Record<string, SegMetricState>>({});
+  const [bpmSuggestionDismissed, setBpmSuggestionDismissed] = useState(false);
 
   const subject = useLiveQuery(
     () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
@@ -94,6 +97,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       setHelpText("");
       setGranular(false);
       setSegMetrics({});
+      setBpmSuggestionDismissed(false);
     }
   }, [open, task, prefill]);
 
@@ -191,6 +195,20 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
         </SheetHeader>
 
         <div className="space-y-5 mt-5">
+          {task && <LastSessionStrip task={task} />}
+
+          {task && !isTheory && (
+            <BpmSuggestion
+              task={task}
+              dismissed={bpmSuggestionDismissed}
+              onDismiss={() => setBpmSuggestionDismissed(true)}
+              onAccept={(bpm) => {
+                setV((cur) => ({ ...cur, bpm }));
+                setBpmSuggestionDismissed(true);
+              }}
+            />
+          )}
+
           {showGranularToggle && (
             <div className="paper-card p-4 flex items-center justify-between">
               <div className="font-medium text-sm">{t("session.evaluateSegments")}</div>

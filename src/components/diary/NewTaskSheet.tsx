@@ -15,6 +15,8 @@ import { LinkTargetFields } from "./LinkTargetFields";
 import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "./RecurrenceFields";
 import { StudyRoutineWizard } from "./StudyRoutineWizard";
 import { tasksService, lessonsService } from "@/lib/services";
+import { useFormDraft } from "@/hooks/useFormDraft";
+import { TaskWizard } from "./TaskWizard";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +28,11 @@ interface Props {
     subjectId?: number;
     title?: string;
     assignmentId?: number;
+    itemId?: number;
+    itemTitle?: string;
+    itemSubjectId?: number;
+    itemBpm?: number;
+    itemNoteVal?: import("@/lib/db").NoteVal;
   };
   onCreated?: (taskId: number) => void;
 }
@@ -34,8 +41,9 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   const { t } = useI18n();
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const draft = useFormDraft(`new-task-${date}`, {});
 
-  const [activeTab, setActiveTab] = useState<"standard" | "routine">("standard");
+  const [activeTab, setActiveTab] = useState<"standard" | "routine" | "wizard">("standard");
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [linkType, setLinkType] = useState<TaskLinkType>("free");
   const [itemId, setItemId] = useState<number | undefined>();
@@ -76,14 +84,20 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
   useEffect(() => {
     if (open) {
       setActiveTab("standard");
-      setSubjectId(prefill?.subjectId);
-      setLinkType("free");
-      setItemId(undefined);
+      const resolvedSubjectId = prefill?.itemSubjectId ?? prefill?.subjectId;
+      setSubjectId(resolvedSubjectId);
+      if (prefill?.itemId) {
+        setLinkType("item");
+        setItemId(prefill.itemId);
+      } else {
+        setLinkType("free");
+        setItemId(undefined);
+      }
       setSegmentIds([]);
       setCollectionId(undefined);
-      setTitle(prefill?.title ?? "");
-      setBpm(undefined);
-      setNoteVal(undefined);
+      setTitle(prefill?.itemTitle ?? prefill?.title ?? "");
+      setBpm(prefill?.itemBpm);
+      setNoteVal(prefill?.itemNoteVal);
       setLayers([]);
       setTechniqueIds([]);
       setRecState({
@@ -97,7 +111,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
         occurrences: 10,
       });
     }
-  }, [open, prefill?.subjectId, prefill?.title, date]);
+  }, [open, prefill?.subjectId, prefill?.itemSubjectId, prefill?.itemId, prefill?.itemTitle, prefill?.title, prefill?.itemBpm, prefill?.itemNoteVal, date]);
 
   // Auto-fill title/BPM/layers from item or segments selection
   const segmentIdsKey = segmentIds.join(",");
@@ -207,6 +221,13 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
     return e;
   }, [subjectId, linkType, itemId, collectionId, title, bpm, rec, nextLessonDate, t]);
 
+  // Auto-save draft on field changes (only when sheet is open and no prefill context)
+  useEffect(() => {
+    if (!open || prefill?.itemId || prefill?.assignmentId) return;
+    if (!subjectId && !title) return;
+    draft.saveDraft({ subjectId, linkType, itemId, title, bpm, noteVal, layers, techniqueIds });
+  }, [open, subjectId, linkType, itemId, title, bpm, noteVal, layers, techniqueIds]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const save = async () => {
     if (errors.length) return;
     const baseTask = {
@@ -230,6 +251,7 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
       if (prefill?.assignmentId) {
         await lessonsService.transformAssignment(prefill.assignmentId, firstId);
       }
+      draft.clearDraft();
       toast.success(recurrence ? t("toast.recurringTaskCreated") : t("toast.taskAdded"));
       onCreated?.(firstId);
       onOpenChange(false);
@@ -246,9 +268,43 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
         </SheetHeader>
 
         <div className="space-y-5 mt-5">
+          {/* Draft resume banner */}
+          {draft.hasDraft && !prefill?.itemId && !prefill?.assignmentId && (
+            <div className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2 text-sm">
+              <span className="flex-1 text-primary">{t("draft.resume")}</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs text-primary"
+                onClick={() => {
+                  const d = draft.resumeDraft() as { subjectId?: number; linkType?: TaskLinkType; itemId?: number; title?: string; bpm?: number; noteVal?: NoteVal; layers?: string[]; techniqueIds?: number[] } | null;
+                  if (!d) return;
+                  if (d.subjectId) setSubjectId(d.subjectId);
+                  if (d.linkType) setLinkType(d.linkType);
+                  if (d.itemId) setItemId(d.itemId);
+                  if (d.title) setTitle(d.title);
+                  if (d.bpm) setBpm(d.bpm);
+                  if (d.noteVal) setNoteVal(d.noteVal);
+                  if (d.layers) setLayers(d.layers);
+                  if (d.techniqueIds) setTechniqueIds(d.techniqueIds);
+                }}
+              >
+                {t("draft.resumeBtn")}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={draft.discardDraft}
+              >
+                {t("draft.startFresh")}
+              </Button>
+            </div>
+          )}
+
           {/* Tab switcher */}
-          <div className="flex gap-1.5">
-            {(["standard", "routine"] as const).map((tab) => (
+          <div className="flex gap-1.5 flex-wrap">
+            {(["standard", "wizard", "routine"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -260,13 +316,13 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
                     : "border-border text-muted-foreground hover:text-foreground"
                 )}
               >
-                {t(`studyRoutine.tab.${tab}`)}
+                {tab === "wizard" ? "Wizard" : t(`studyRoutine.tab.${tab}`)}
               </button>
             ))}
           </div>
 
-          {/* Subject picker — shared between tabs */}
-          <div className="space-y-2">
+          {/* Subject picker — shared between standard/routine tabs */}
+          {activeTab !== "wizard" && <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
             <Select
               value={subjectId?.toString() ?? ""}
@@ -282,13 +338,20 @@ export function NewTaskSheet({ open, onOpenChange, date, prefill, onCreated }: P
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
 
           {activeTab === "routine" ? (
             <StudyRoutineWizard
               subjectId={subjectId}
               date={date}
               onCreated={() => { onCreated?.(0); onOpenChange(false); }}
+              onCancel={() => onOpenChange(false)}
+            />
+          ) : activeTab === "wizard" ? (
+            <TaskWizard
+              date={date}
+              prefill={prefill}
+              onCreated={(id) => { onCreated?.(id); onOpenChange(false); }}
               onCancel={() => onOpenChange(false)}
             />
           ) : (

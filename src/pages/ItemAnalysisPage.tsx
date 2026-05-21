@@ -1,0 +1,324 @@
+import { useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db, THEORY_LAYERS, type Session, type TheoryLayer } from "@/lib/db";
+import { useI18n } from "@/lib/i18n";
+import { NOTE_GLYPH } from "@/lib/constants";
+import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const QUALITY_SYMBOL: Record<string, string> = {
+  hard: "♭",
+  improve: "♮",
+  well: "♯",
+  great: "✦",
+};
+
+const QUALITY_ORDER = ["hard", "improve", "well", "great"];
+
+function weekKey(date: string): string {
+  const d = new Date(date);
+  const dow = d.getDay();
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - ((dow + 6) % 7));
+  return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+}
+
+interface ChartPoint { x: number; y: number; label: string }
+
+function LineChart({ points, target, color = "hsl(var(--primary))", targetColor = "hsl(var(--muted-foreground))" }: {
+  points: ChartPoint[];
+  target?: number;
+  color?: string;
+  targetColor?: string;
+}) {
+  const w = 320, h = 80;
+  if (points.length === 0) return <div className="h-20 flex items-center justify-center text-xs text-muted-foreground italic">No data</div>;
+
+  const values = points.map((p) => p.y);
+  const allValues = target != null ? [...values, target] : values;
+  const lo = Math.min(...allValues) * 0.95;
+  const hi = Math.max(...allValues) * 1.05;
+  const range = Math.max(1, hi - lo);
+  const xStep = points.length > 1 ? w / (points.length - 1) : w / 2;
+
+  const toX = (i: number) => i * xStep;
+  const toY = (v: number) => h - ((v - lo) / range) * (h - 4) - 2;
+
+  const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(p.y).toFixed(1)}`).join(" ");
+  const targetY = target != null ? toY(target) : null;
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: h }} preserveAspectRatio="none">
+      {targetY != null && (
+        <line x1={0} y1={targetY} x2={w} y2={targetY} stroke={targetColor} strokeWidth={1} strokeDasharray="4 3" />
+      )}
+      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((p, i) => (
+        <circle key={i} cx={toX(i)} cy={toY(p.y)} r={3} fill={color} />
+      ))}
+    </svg>
+  );
+}
+
+function BarChart({ data }: { data: { label: string; count: number; color: string }[] }) {
+  const max = Math.max(1, ...data.map((d) => d.count));
+  return (
+    <div className="flex items-end gap-2 h-14">
+      {data.map((d) => (
+        <div key={d.label} className="flex flex-col items-center gap-1 flex-1">
+          <div
+            className="w-full rounded-t-sm transition-all"
+            style={{
+              height: `${Math.max(2, (d.count / max) * 48)}px`,
+              backgroundColor: d.color,
+              opacity: d.count === 0 ? 0.2 : 1,
+            }}
+          />
+          <span className="text-[10px] text-muted-foreground">{d.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function ItemAnalysisPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { t, lang } = useI18n();
+  const itemId = id ? Number(id) : null;
+
+  const item = useLiveQuery(
+    () => (itemId ? db.library.get(itemId) : Promise.resolve(undefined)),
+    [itemId]
+  );
+
+  const tasks = useLiveQuery(
+    () => (itemId ? db.tasks.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
+    [itemId]
+  );
+
+  const sessions = useLiveQuery(async () => {
+    const ids = (tasks ?? []).map((t) => t.id!).filter(Boolean);
+    if (!ids.length) return [];
+    return db.sessions.where("taskId").anyOf(ids).sortBy("date");
+  }, [tasks]);
+
+  const techniques = useLiveQuery(() => db.techniques.toArray(), []);
+
+  const isTheory = item?.kind === "theory";
+
+  const bpmPoints = useMemo((): ChartPoint[] => {
+    if (!sessions) return [];
+    return sessions
+      .filter((s) => s.bpmReached)
+      .map((s, i) => ({
+        x: i,
+        y: s.bpmReached!,
+        label: new Date(s.date).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
+      }));
+  }, [sessions, lang]);
+
+  const confidencePoints = useMemo((): ChartPoint[] => {
+    if (!sessions) return [];
+    return sessions
+      .filter((s) => s.confidence != null)
+      .map((s, i) => ({
+        x: i,
+        y: s.confidence!,
+        label: new Date(s.date).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
+      }));
+  }, [sessions, lang]);
+
+  const qualityDist = useMemo(() => {
+    const counts = { hard: 0, improve: 0, well: 0, great: 0 };
+    for (const s of sessions ?? []) {
+      if (s.quality) counts[s.quality]++;
+    }
+    return [
+      { label: "♭", count: counts.hard, color: "hsl(var(--key-terracotta))" },
+      { label: "♮", count: counts.improve, color: "hsl(var(--key-gold))" },
+      { label: "♯", count: counts.well, color: "hsl(var(--key-sage))" },
+      { label: "✦", count: counts.great, color: "hsl(var(--key-blue))" },
+    ];
+  }, [sessions]);
+
+  const sessionsPerWeek = useMemo((): ChartPoint[] => {
+    if (!sessions?.length) return [];
+    const counts = new Map<string, number>();
+    for (const s of sessions) {
+      const wk = weekKey(s.date);
+      counts.set(wk, (counts.get(wk) ?? 0) + 1);
+    }
+    const weeks = Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
+    return weeks.map(([wk, count], i) => ({
+      x: i,
+      y: count,
+      label: new Date(wk).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
+    }));
+  }, [sessions, lang]);
+
+  const theoryLayerPoints = useMemo(() => {
+    if (!isTheory || !sessions?.length) return null;
+    return THEORY_LAYERS.map((layer) => {
+      const pts: ChartPoint[] = sessions
+        .filter((s) => s.layerScores?.[layer] != null)
+        .map((s, i) => ({
+          x: i,
+          y: s.layerScores![layer],
+          label: new Date(s.date).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
+        }));
+      return { layer, points: pts };
+    });
+  }, [sessions, isTheory, lang]);
+
+  const recentSessions = useMemo(
+    () => [...(sessions ?? [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20),
+    [sessions]
+  );
+
+  if (!item) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <BackIcon className="h-4 w-4 mr-1" /> {t("common.back")}
+        </Button>
+        <p className="text-muted-foreground">{t("common.loading")}</p>
+      </div>
+    );
+  }
+
+  const LAYER_COLORS = ["hsl(var(--key-terracotta))", "hsl(var(--key-gold))", "hsl(var(--key-sage))", "hsl(var(--key-blue))", "hsl(var(--key-plum))"];
+
+  return (
+    <div className="space-y-6 pb-6">
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="shrink-0">
+          <BackIcon className="h-4 w-4" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-serif text-2xl truncate">{item.title}</h2>
+          {item.composer && <p className="text-sm text-muted-foreground italic">{item.composer}</p>}
+        </div>
+      </div>
+
+      {(sessions?.length ?? 0) === 0 ? (
+        <div className="paper-card p-6 text-center text-muted-foreground italic">
+          {t("analysis.noData")}
+        </div>
+      ) : (
+        <>
+          {/* BPM trend */}
+          {!isTheory && bpmPoints.length > 0 && (
+            <section className="paper-card p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <TrendIcon className="h-4 w-4 text-primary" />
+                <h3 className="font-serif text-lg">{t("analysis.bpmTrend")}</h3>
+                {item.targetBpm && (
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {t("analysis.target")}: {NOTE_GLYPH[item.noteVal ?? "quarter"]} = {item.targetBpm}
+                  </span>
+                )}
+              </div>
+              <LineChart
+                points={bpmPoints}
+                target={item.targetBpm}
+                color="hsl(var(--key-terracotta))"
+              />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{bpmPoints[0]?.label}</span>
+                <span>{bpmPoints[bpmPoints.length - 1]?.label}</span>
+              </div>
+            </section>
+          )}
+
+          {/* Theory layer trends */}
+          {isTheory && theoryLayerPoints && (
+            <section className="paper-card p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <ChartIcon className="h-4 w-4 text-primary" />
+                <h3 className="font-serif text-lg">{t("analysis.theoryLayers")}</h3>
+              </div>
+              {theoryLayerPoints.map(({ layer, points }, idx) => (
+                points.length > 0 && (
+                  <div key={layer} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium">{t(`library.mastery.${layer}`)}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {points[points.length - 1]?.y}/100
+                      </span>
+                    </div>
+                    <LineChart points={points} max={100} color={LAYER_COLORS[idx]} />
+                  </div>
+                )
+              ))}
+            </section>
+          )}
+
+          {/* Quality distribution */}
+          <section className="paper-card p-4 space-y-3">
+            <h3 className="font-serif text-lg">{t("analysis.qualityTrend")}</h3>
+            <BarChart data={qualityDist} />
+          </section>
+
+          {/* Confidence trend */}
+          {confidencePoints.length > 0 && (
+            <section className="paper-card p-4 space-y-3">
+              <h3 className="font-serif text-lg">{t("analysis.confidenceTrend")}</h3>
+              <LineChart points={confidencePoints} target={5} color="hsl(var(--key-plum))" />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{confidencePoints[0]?.label}</span>
+                <span>{confidencePoints[confidencePoints.length - 1]?.label}</span>
+              </div>
+            </section>
+          )}
+
+          {/* Sessions per week */}
+          {sessionsPerWeek.length > 1 && (
+            <section className="paper-card p-4 space-y-3">
+              <h3 className="font-serif text-lg">{t("analysis.sessionsPerWeek")}</h3>
+              <BarChart
+                data={sessionsPerWeek.map((p) => ({
+                  label: p.label.split(" ")[0] ?? "",
+                  count: p.y,
+                  color: "hsl(var(--key-sage))",
+                }))}
+              />
+            </section>
+          )}
+
+          {/* Session log */}
+          <section className="space-y-3">
+            <h3 className="font-serif text-xl">{t("analysis.allSessions")}</h3>
+            <ul className="space-y-2">
+              {recentSessions.map((s) => (
+                <li key={s.id} className="paper-card p-3 flex items-start gap-3">
+                  <div className="shrink-0 text-center min-w-[2.5rem]">
+                    <div className="font-serif text-xl leading-none">
+                      {s.quality ? QUALITY_SYMBOL[s.quality] : "—"}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        {new Date(s.date).toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "short" })}
+                      </span>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                        {s.bpmReached && <span>{NOTE_GLYPH[s.noteVal ?? "quarter"]} = {s.bpmReached}</span>}
+                        {s.confidence != null && <span>★ {s.confidence}/5</span>}
+                      </div>
+                    </div>
+                    {s.notes && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{s.notes}</p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}

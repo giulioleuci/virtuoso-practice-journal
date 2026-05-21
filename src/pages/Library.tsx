@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/db";
@@ -7,8 +7,9 @@ import type { MasteryState } from "@/components/library/MasterySliders";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
-import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart } from "lucide-react";
-import { ItemAnalysisSheet } from "@/components/library/ItemAnalysisSheet";
+import { today } from "@/lib/recurrence";
+import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
+import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { MasterySliders } from "@/components/library/MasterySliders";
 import { MasterySparkline } from "@/components/library/MasterySparkline";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { BpmSparkline } from "@/components/library/BpmSparkline";
 import { ListSkeleton } from "@/components/shared/Loading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { useSubjects } from "@/hooks/useEntities";
 import { libraryService } from "@/lib/services";
 import {
@@ -36,12 +38,13 @@ import { toast } from "sonner";
 
 export default function Library() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [active, setActive] = useState<LibraryKind>("repertoire");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
-  const [analysisItem, setAnalysisItem] = useState<LibraryItem | null>(null);
+  const [practiceItem, setPracticeItem] = useState<LibraryItem | null>(null);
   const [search, setSearch] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
@@ -93,6 +96,42 @@ export default function Library() {
   const openEdit = (it: LibraryItem) => {
     setEditing(it);
     setSheetOpen(true);
+  };
+
+  const askDeleteItem = async (it: LibraryItem) => {
+    if (!it.id) return;
+    const taskIds = (await db.tasks.where("itemId").equals(it.id).primaryKeys()) as number[];
+    const hasSessions = taskIds.length
+      ? (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0
+      : false;
+    if (hasSessions) {
+      // Has sessions — will be soft-deleted/archived; keep dialog so user knows history is preserved
+      setDeletingId(it.id);
+      return;
+    }
+    // No sessions → low-risk hard delete: skip dialog, offer undo
+    const savedItem = { ...it };
+    const savedSegments = (allSegments ?? []).filter((s) => s.itemId === it.id).map((s) => ({ ...s }));
+    await db.transaction("rw", db.library, db.segments, db.tasks, async () => {
+      await db.segments.where("itemId").equals(it.id!).delete();
+      await db.tasks.where("itemId").equals(it.id!).delete();
+      await db.library.delete(it.id!);
+    });
+    toast.success(t("toast.deleted"), {
+      duration: 5000,
+      action: {
+        label: t("common.undo"),
+        onClick: async () => {
+          const { id: _id, ...itemRest } = savedItem;
+          const newId = (await db.library.add(itemRest)) as number;
+          if (savedSegments.length) {
+            await db.segments.bulkAdd(
+              savedSegments.map(({ id: _sid, ...seg }) => ({ ...seg, itemId: newId }))
+            );
+          }
+        },
+      },
+    });
   };
 
   const confirmDelete = async () => {
@@ -216,11 +255,11 @@ export default function Library() {
                       <DropdownMenuItem onClick={() => openEdit(it)}>
                         <Pencil className="h-4 w-4 mr-2" /> {t("common.edit")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setAnalysisItem(it)}>
+                      <DropdownMenuItem onClick={() => it.id && navigate(`/library/item/${it.id}/analysis`)}>
                         <LineChart className="h-4 w-4 mr-2" /> {t("library.analysis.menu")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => it.id && setDeletingId(it.id)}
+                        onClick={() => askDeleteItem(it)}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="h-4 w-4 mr-2" /> {t("common.delete")}
@@ -294,6 +333,15 @@ export default function Library() {
               {it.kind === "theory" && it.id && (
                 <TheoryMasterySection itemId={it.id} />
               )}
+
+              <div className="mt-3 pt-2 border-t border-border/40 flex justify-end">
+                <button
+                  onClick={() => setPracticeItem(it)}
+                  className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <Play className="h-3 w-3" /> Practice this
+                </button>
+              </div>
             </li>
           );
         };
@@ -302,7 +350,7 @@ export default function Library() {
         if (!filteredItems.length) {
           return items.length === 0
             ? <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
-            : <p className="paper-card p-6 text-center text-muted-foreground italic">{t("library.noItemsMatch")}</p>;
+            : <EmptyState title={t("library.noItemsMatch")} />;
         }
 
         const Pager = ({ current, total, onChange }: { current: number; total: number; onChange: (p: number) => void }) => {
@@ -418,14 +466,6 @@ export default function Library() {
         />
       )}
 
-      {analysisItem && (
-        <ItemAnalysisSheet
-          open={analysisItem !== null}
-          onOpenChange={(o) => !o && setAnalysisItem(null)}
-          item={analysisItem}
-        />
-      )}
-
       <AlertDialog open={deletingId !== null} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -442,6 +482,21 @@ export default function Library() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {practiceItem && (
+        <NewTaskSheet
+          open={practiceItem !== null}
+          onOpenChange={(o) => !o && setPracticeItem(null)}
+          date={today()}
+          prefill={{
+            itemId: practiceItem.id,
+            itemTitle: practiceItem.title,
+            itemSubjectId: practiceItem.subjectId,
+            itemBpm: practiceItem.targetBpm,
+            itemNoteVal: practiceItem.noteVal,
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -510,20 +565,10 @@ function EmptyLibrary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
   const { t, lang } = useI18n();
   const quote = useMemo(() => pickQuote(LIBRARY_QUOTES, lang), [lang]);
   return (
-    <button
-      onClick={onAdd}
-      className="paper-card p-10 text-center w-full hover:-translate-y-0.5 transition-transform group"
-    >
-      <p className="font-serif text-xl italic text-foreground/85 leading-snug">
-        "{quote.text}"
-      </p>
-      <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
-        — {quote.author}
-      </p>
-      <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
-      <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
-        <Plus className="h-4 w-4" /> {t("library.addToLibrary")}
-      </span>
-    </button>
+    <EmptyState
+      hint={hint}
+      quote={quote}
+      cta={{ label: t("library.addToLibrary"), onClick: onAdd }}
+    />
   );
 }

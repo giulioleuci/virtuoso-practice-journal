@@ -1,26 +1,30 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Task, type Session, type Profile } from "@/lib/db"; // db used for useLiveQuery reads only
+import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/db";
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
-import { today, dayKey } from "@/lib/recurrence";
+import { today, dayKey, upcomingLessonDates } from "@/lib/recurrence";
 import { NOTE_GLYPH } from "@/lib/constants";
+import { getSubjectColor, subjectBorderStyle } from "@/lib/subjectColors";
 import {
-  Plus,
-  Check,
-  ListChecks,
-  Play,
-  ArrowRightCircle,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  RotateCcw,
-  EyeOff,
-  GraduationCap,
-  ArrowRight,
-  Piano,
-  BookOpen,
-} from "lucide-react";
+  AddIcon,
+  CompleteIcon,
+  TasksIcon,
+  PlayIcon,
+  CarryOverIcon,
+  CloseIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ResetIcon,
+  HideIcon,
+  LessonIcon,
+  ArrowRightIcon,
+  InstrumentIcon,
+  ManualIcon,
+  StreakIcon,
+  SessionIcon,
+} from "@/lib/icons";
+import { BookOpen } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -28,7 +32,9 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { PracticeMode } from "@/components/diary/PracticeMode";
-
+import { LastSessionStrip } from "@/components/diary/LastSessionStrip";
+import { SessionFAB } from "@/components/diary/SessionFAB";
+import { SectionHeader } from "@/components/shared/SectionHeader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,11 +49,49 @@ import { pickQuote } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+const QUALITY_SYMBOL: Record<string, string> = {
+  hard: "♭",
+  improve: "♮",
+  well: "♯",
+  great: "✦",
+};
+
+function computeStreak(sessions: Session[]): { streak: number; best: number } {
+  const daySet = new Set(sessions.map((s) => s.date));
+  const d = new Date();
+  // Allow streak from yesterday if no session today
+  if (!daySet.has(dayKey(d))) d.setDate(d.getDate() - 1);
+  let streak = 0;
+  while (daySet.has(dayKey(d))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  // Best streak: scan all days
+  const allDays = Array.from(daySet).sort();
+  let best = 0, cur = 0;
+  for (let i = 0; i < allDays.length; i++) {
+    if (i === 0) {
+      cur = 1;
+    } else {
+      const prev = new Date(allDays[i - 1]!);
+      prev.setDate(prev.getDate() + 1);
+      if (dayKey(prev) === allDays[i]) {
+        cur++;
+      } else {
+        cur = 1;
+      }
+    }
+    if (cur > best) best = cur;
+  }
+  return { streak, best: Math.max(best, streak) };
+}
+
 export default function Diary() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const { profile } = useOutletContext<{ profile: Profile }>();
   const todayKey = today();
+
   const { tasks, sessionsByTask } = useLiveQuery(async () => {
     const fetchedTasks = await db.tasks
       .where("date")
@@ -56,8 +100,6 @@ export default function Diary() {
       .toArray();
 
     const taskIds = fetchedTasks.map((t) => t.id!).filter(Boolean);
-
-    // Only fetch sessions for today's tasks instead of the entire table
     const relevantSessions = taskIds.length > 0
       ? await db.sessions.where("taskId").anyOf(taskIds).toArray()
       : [];
@@ -80,14 +122,15 @@ export default function Diary() {
     () => db.studyRoutines.filter((r) => !r.deletedAt).toArray(),
     [],
   );
-  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const subjectTypeById = useMemo(() => {
-    const map = new Map<number, "instrument" | "theory" | string>();
+  const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
+  const subjectMap = useMemo(() => {
+    const map = new Map<number, Subject>();
     for (const s of subjects ?? []) {
-      if (s.id !== undefined) map.set(s.id, s.type);
+      if (s.id !== undefined) map.set(s.id, s);
     }
     return map;
   }, [subjects]);
+
   const routineNames = useMemo(() => {
     const map = new Map<number, string>();
     for (const r of studyRoutines ?? []) {
@@ -95,6 +138,22 @@ export default function Diary() {
     }
     return map;
   }, [studyRoutines]);
+
+  // Today's lessons from recurrences
+  const todayLessons = useLiveQuery(async () => {
+    const recs = await db.recurrences.filter((r) => !r.deletedAt).toArray();
+    return recs.filter((r) => {
+      const dates = upcomingLessonDates(r, 1);
+      return dates[0] === todayKey;
+    });
+  }, [todayKey]);
+
+  // All-time sessions for streak calculation
+  const allSessions = useLiveQuery(() => db.sessions.toArray(), []);
+  const { streak, best: bestStreak } = useMemo(
+    () => computeStreak(allSessions ?? []),
+    [allSessions]
+  );
 
   const carryoverDays = profile?.carryoverDays ?? 2;
   const carryoverFrom = useMemo(() => {
@@ -122,6 +181,7 @@ export default function Diary() {
   const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
   const [carryPage, setCarryPage] = useState(0);
   const [ignoredPage, setIgnoredPage] = useState(0);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const CARRY_PAGE_SIZE = 4;
   const IGNORED_PAGE_SIZE = 5;
 
@@ -142,48 +202,131 @@ export default function Diary() {
   });
 
   const doneCount = tasks?.filter((x) => x.done).length ?? 0;
+  const totalCount = tasks?.length ?? 0;
+  const allDone = totalCount > 0 && doneCount === totalCount;
+
+  // Subject filter options: only subjects present in today's tasks
+  const subjectFilterOptions = useMemo(() => {
+    if (!tasks || !subjects) return [];
+    const idSet = new Set(tasks.map((t) => t.subjectId));
+    return (subjects ?? []).filter((s) => s.id !== undefined && idSet.has(s.id!));
+  }, [tasks, subjects]);
+
+  const filteredTasks = useMemo(() => {
+    if (!tasks) return tasks;
+    if (selectedSubjectId === null) return tasks;
+    return tasks.filter((t) => t.subjectId === selectedSubjectId);
+  }, [tasks, selectedSubjectId]);
 
   const emptyQuote = useMemo(() => pickQuote(undefined, lang), [lang]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
+      <SessionFAB />
+      {/* Hero card */}
       <section className="paper-card p-6">
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{t("diary.today")}</p>
         <h2 className="font-serif text-3xl">{t("diary.hello", { name: profile?.name ?? "Musician" })}</h2>
         <p className="text-muted-foreground italic mt-1">{dateLabel}</p>
-        <p className="text-sm text-muted-foreground tabular-nums mt-3">
-          {t("diary.doneSummary", { done: doneCount, total: tasks?.length ?? 0 })}
-        </p>
+        <div className="flex items-center justify-between mt-3">
+          <p className="text-sm text-muted-foreground tabular-nums">
+            {t("diary.doneSummary", { done: doneCount, total: totalCount })}
+          </p>
+          {streak > 0 && (
+            <div className="flex items-center gap-1.5 text-sm text-primary">
+              <StreakIcon className="h-4 w-4" />
+              <span className="font-semibold tabular-nums">{streak}d</span>
+              {bestStreak > streak && (
+                <span className="text-xs text-muted-foreground">
+                  · {t("diary.bestStreak", { count: bestStreak })}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </section>
+
+      {/* Lessons today banner */}
+      {todayLessons && todayLessons.length > 0 && (
+        <div className="space-y-1">
+          {todayLessons.map((rec) => (
+            <LessonTodayBanner key={rec.id} rec={rec} subjects={subjects ?? []} t={t} navigate={navigate} />
+          ))}
+        </div>
+      )}
 
       {pendingCount > 0 && (
         <Link
           to="/lessons/assignments"
           className="paper-card p-3 flex items-center gap-3 hover:-translate-y-0.5 transition-transform border-2 border-destructive/60 bg-destructive/5"
         >
-          <GraduationCap className="h-4 w-4 text-destructive shrink-0" />
+          <LessonIcon className="h-4 w-4 text-destructive shrink-0" />
           <span className="text-sm flex-1 min-w-0 break-words font-medium text-destructive tabular-nums">
             {t("diary.homework", { count: pendingCount })}
           </span>
-          <ArrowRight className="h-4 w-4 text-destructive shrink-0" />
+          <ArrowRightIcon className="h-4 w-4 text-destructive shrink-0" />
         </Link>
       )}
 
+      {/* End-of-day summary */}
+      {allDone && tasks && tasks.length > 0 && (
+        <EndOfDaySummary tasks={tasks} sessionsByTask={sessionsByTask} t={t} navigate={navigate} />
+      )}
+
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-serif text-2xl">{t("diary.today")}</h3>
-          <div className="flex items-center gap-1">
-            <Link
-              to="/tasks"
-              className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2 py-1"
+        <SectionHeader
+          title={t("diary.today")}
+          action={
+            <>
+              <Link
+                to="/tasks"
+                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2 py-1"
+              >
+                <TasksIcon className="h-4 w-4" /> {t("common.all")}
+              </Link>
+              <Button size="sm" variant="ghost" onClick={() => navigate("/tasks/new", { state: { date: todayKey } })}>
+                <AddIcon className="h-4 w-4 mr-1" /> {t("diary.newTask")}
+              </Button>
+            </>
+          }
+        />
+
+        {/* Subject quick-filter */}
+        {subjectFilterOptions.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar">
+            <button
+              onClick={() => setSelectedSubjectId(null)}
+              className={cn(
+                "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
+                selectedSubjectId === null
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground"
+              )}
             >
-              <ListChecks className="h-4 w-4" /> {t("common.all")}
-            </Link>
-            <Button size="sm" variant="ghost" onClick={() => navigate("/tasks/new", { state: { date: todayKey } })}>
-              <Plus className="h-4 w-4 mr-1" /> {t("diary.newTask")}
-            </Button>
+              {t("diary.allSubjects")} {tasks ? `${tasks.length}` : ""}
+            </button>
+            {subjectFilterOptions.map((subj) => {
+              const color = getSubjectColor(subj.color, subj.type);
+              const count = tasks?.filter((t) => t.subjectId === subj.id).length ?? 0;
+              const isSelected = selectedSubjectId === subj.id;
+              return (
+                <button
+                  key={subj.id}
+                  onClick={() => setSelectedSubjectId(isSelected ? null : subj.id!)}
+                  className={cn(
+                    "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
+                    isSelected
+                      ? "text-white"
+                      : "bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                  style={isSelected ? { backgroundColor: `hsl(var(--key-${color}))` } : undefined}
+                >
+                  {subj.name} {count}
+                </button>
+              );
+            })}
           </div>
-        </div>
+        )}
 
         {tasks === undefined ? (
           <div className="space-y-2">
@@ -196,18 +339,24 @@ export default function Diary() {
             quote={emptyQuote}
             cta={{ label: t("diary.beginTask"), onClick: () => navigate("/tasks/new", { state: { date: todayKey } }) }}
           />
+        ) : !filteredTasks?.length ? (
+          <p className="text-sm text-muted-foreground text-center py-6">{t("common.noResults")}</p>
         ) : (
           <ul className="space-y-2">
-            {tasks.map((task) => {
+            {filteredTasks.map((task) => {
               const sess = (task.id && sessionsByTask[task.id]) || [];
               const last = sess[sess.length - 1];
+              const subject = subjectMap.get(task.subjectId);
+              const color = getSubjectColor(subject?.color, subject?.type);
               return (
                 <li key={task.id}>
                   <div
                     className={cn(
                       "paper-card p-4 w-full flex gap-3 transition-all hover:-translate-y-0.5",
+                      "border-l-4",
                       task.done && "opacity-70",
                     )}
+                    style={subjectBorderStyle(subject?.color, subject?.type)}
                   >
                     <button
                       onClick={async () => {
@@ -227,7 +376,7 @@ export default function Diary() {
                     >
                       {task.done ? (
                         <span className="h-5 w-5 rounded-[4px] bg-primary flex items-center justify-center">
-                          <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />
+                          <CompleteIcon className="h-3 w-3 text-primary-foreground" strokeWidth={3} />
                         </span>
                       ) : (
                         <span className="h-5 w-5 rounded-[4px] border-2 border-muted-foreground block" />
@@ -246,10 +395,10 @@ export default function Diary() {
                         className="w-full text-left"
                       >
                         <div className={cn("font-medium break-words flex items-center gap-2", task.done && "line-through")}>
-                          {subjectTypeById.get(task.subjectId) === "theory" ? (
+                          {subject?.type === "theory" ? (
                             <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("subjects.type.theory")} />
                           ) : (
-                            <Piano className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("subjects.type.instrument")} />
+                            <InstrumentIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("subjects.type.instrument")} />
                           )}
                           <span>{task.title}</span>
                         </div>
@@ -273,17 +422,23 @@ export default function Diary() {
                                 {last.noteVal ? NOTE_GLYPH[last.noteVal] : "♩"} = {last.bpmReached} ·
                               </>
                             )}
-                            {last.quality}
+                            {last.quality && QUALITY_SYMBOL[last.quality]}
                           </div>
                         )}
                       </button>
+
+                      {/* Last session strip for undone tasks */}
+                      {!task.done && task.itemId && (
+                        <LastSessionStrip task={task} compact />
+                      )}
+
                       {!task.done && (
                         <button
                           onClick={() => setPracticeTask(task)}
                           className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
                           aria-label={t("diary.startPractice")}
                         >
-                          <Play className="h-3.5 w-3.5" /> {t("diary.start")}
+                          <PlayIcon className="h-3.5 w-3.5" /> {t("diary.start")}
                         </button>
                       )}
                     </div>
@@ -297,12 +452,14 @@ export default function Diary() {
 
       {!!carryoverTasks?.length && (
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-serif text-2xl">{t("diary.unfinished")}</h3>
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {t("diary.fromLastDays", { count: carryoverDays })}
-            </span>
-          </div>
+          <SectionHeader
+            title={t("diary.unfinished")}
+            action={
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {t("diary.fromLastDays", { count: carryoverDays })}
+              </span>
+            }
+          />
           {(() => {
             const total = carryoverTasks.length;
             const totalPages = Math.max(1, Math.ceil(total / CARRY_PAGE_SIZE));
@@ -340,7 +497,7 @@ export default function Diary() {
                             className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
                             aria-label={t("diary.moveToToday")}
                           >
-                            <ArrowRightCircle className="h-3.5 w-3.5" /> {t("common.today")}
+                            <CarryOverIcon className="h-3.5 w-3.5" /> {t("common.today")}
                           </button>
                           <button
                             onClick={async () => {
@@ -351,7 +508,7 @@ export default function Diary() {
                             className="ml-auto p-2 rounded-xl text-muted-foreground hover:text-destructive"
                             aria-label={t("common.ignore")}
                           >
-                            <X className="h-4 w-4" />
+                            <CloseIcon className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -361,7 +518,7 @@ export default function Diary() {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">
                     <Button size="icon" variant="ghost" disabled={page === 0} onClick={() => setCarryPage(page - 1)}>
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeftIcon className="h-4 w-4" />
                     </Button>
                     <span className="tabular-nums">
                       {page + 1} / {totalPages}
@@ -372,7 +529,7 @@ export default function Diary() {
                       disabled={page >= totalPages - 1}
                       onClick={() => setCarryPage(page + 1)}
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRightIcon className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
@@ -394,7 +551,7 @@ export default function Diary() {
                 <AccordionItem value="ignored" className="border-b-0">
                   <AccordionTrigger className="text-xs uppercase tracking-widest text-muted-foreground">
                     <span className="inline-flex items-center gap-2">
-                      <EyeOff className="h-4 w-4" /> {t("diary.ignored", { count: total })}
+                      <HideIcon className="h-4 w-4" /> {t("diary.ignored", { count: total })}
                     </span>
                   </AccordionTrigger>
                   <AccordionContent>
@@ -428,7 +585,7 @@ export default function Diary() {
                                 className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
                                 aria-label={t("diary.unignore")}
                               >
-                                <RotateCcw className="h-3.5 w-3.5" /> {t("diary.unignore")}
+                                <ResetIcon className="h-3.5 w-3.5" /> {t("diary.unignore")}
                               </button>
                             </div>
                           </div>
@@ -443,7 +600,7 @@ export default function Diary() {
                           disabled={page === 0}
                           onClick={() => setIgnoredPage(page - 1)}
                         >
-                          <ChevronLeft className="h-4 w-4" />
+                          <ChevronLeftIcon className="h-4 w-4" />
                         </Button>
                         <span className="tabular-nums">
                           {page + 1} / {totalPages}
@@ -454,7 +611,7 @@ export default function Diary() {
                           disabled={page >= totalPages - 1}
                           onClick={() => setIgnoredPage(page + 1)}
                         >
-                          <ChevronRight className="h-4 w-4" />
+                          <ChevronRightIcon className="h-4 w-4" />
                         </Button>
                       </div>
                     )}
@@ -531,3 +688,89 @@ export default function Diary() {
   );
 }
 
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function LessonTodayBanner({
+  rec,
+  subjects,
+  t,
+  navigate,
+}: {
+  rec: LessonRecurrence;
+  subjects: Subject[];
+  t: (k: string, v?: Record<string, string | number>) => string;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  const subject = subjects.find((s) => s.id === rec.subjectId);
+  return (
+    <div className="paper-card p-3 flex items-center gap-3 border-l-4 border-l-primary/60 bg-primary/5">
+      <LessonIcon className="h-4 w-4 text-primary shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-primary">
+          {rec.teacher ? t("diary.lessonTodayWith", { teacher: rec.teacher }) : t("diary.lessonToday")}
+        </p>
+        {subject && (
+          <p className="text-xs text-muted-foreground">{subject.name} · {rec.startTime}</p>
+        )}
+      </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="shrink-0 text-primary"
+        onClick={() => navigate("/lessons")}
+      >
+        {t("diary.logLesson")} <ArrowRightIcon className="h-3.5 w-3.5 ml-1" />
+      </Button>
+    </div>
+  );
+}
+
+function EndOfDaySummary({
+  tasks,
+  sessionsByTask,
+  t,
+  navigate,
+}: {
+  tasks: Task[];
+  sessionsByTask: Record<number, Session[]>;
+  t: (k: string, v?: Record<string, string | number>) => string;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  const rows = tasks.map((task) => {
+    const sessions = (task.id && sessionsByTask[task.id]) || [];
+    const last = sessions[sessions.length - 1] as Session | undefined;
+    return { task, last };
+  });
+
+  return (
+    <div className="paper-card p-5 border-2 border-primary/30 bg-primary/5 space-y-4">
+      <div className="flex items-center gap-2">
+        <SessionIcon className="h-5 w-5 text-primary" />
+        <h3 className="font-serif text-xl text-primary">{t("diary.todaySummary")}</h3>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        {t("diary.totalPracticed", { count: tasks.length })}
+      </p>
+      <div className="space-y-1">
+        {rows.map(({ task, last }) => (
+          <div key={task.id} className="flex items-center justify-between text-sm py-1 border-b border-border/40 last:border-0">
+            <span className="truncate flex-1 text-muted-foreground pr-2">{task.title}</span>
+            <div className="flex items-center gap-2 shrink-0">
+              {last?.quality && (
+                <span className="font-serif text-base leading-none">{QUALITY_SYMBOL[last.quality]}</span>
+              )}
+              {last?.bpmReached && (
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {NOTE_GLYPH[last.noteVal ?? "quarter"]}={last.bpmReached}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <Button size="sm" variant="outline" className="w-full" onClick={() => navigate("/history")}>
+        {t("diary.viewHistory")} <ArrowRightIcon className="h-3.5 w-3.5 ml-1" />
+      </Button>
+    </div>
+  );
+}

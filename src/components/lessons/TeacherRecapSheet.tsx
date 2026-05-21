@@ -11,6 +11,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 interface Props {
   open: boolean;
@@ -105,9 +106,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
 
         <div className="mt-4 space-y-4">
           {list.length === 0 ? (
-            <p className="paper-card p-6 text-center text-muted-foreground italic">
-              {tab === "open" ? t("recap.noOpenQuestions") : t("recap.noAnswers")}
-            </p>
+            <EmptyState title={tab === "open" ? t("recap.noOpenQuestions") : t("recap.noAnswers")} />
           ) : (
             <>
               {tab === "open" && (

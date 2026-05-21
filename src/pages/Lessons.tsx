@@ -17,6 +17,7 @@ import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { upcomingLessonDates, dayKey, today } from "@/lib/recurrence";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 const PAGE_SIZE = 5;
 
@@ -111,7 +112,7 @@ export default function Lessons() {
       <section className="space-y-2">
         <h3 className="text-xs uppercase tracking-wider text-muted-foreground">{t("lessons.teachers")}</h3>
         {!recurrences?.length ? (
-          <EmptyLessons onAdd={openNew} hint={t("lessons.empty")} />
+          <EmptyLessons onAdd={openNew} />
         ) : (
           <ul className="space-y-2">
             {recurrences.map((r) => (
@@ -202,7 +203,7 @@ export default function Lessons() {
           </AccordionTrigger>
           <AccordionContent>
             {!lessons?.length ? (
-              <p className="paper-card p-6 text-center text-muted-foreground italic">{t("lessons.noLessonsLogged")}</p>
+              <EmptyState title={t("lessons.noLessonsLogged")} />
             ) : (() => {
               const totalPages = Math.max(1, Math.ceil(lessons.length / PAGE_SIZE));
               const page = Math.min(pageRecent, totalPages - 1);
@@ -341,24 +342,14 @@ function Pager({ page, totalPages, onPage }: { page: number; totalPages: number;
   );
 }
 
-function EmptyLessons({ onAdd, hint }: { onAdd: () => void; hint: string }) {
+function EmptyLessons({ onAdd }: { onAdd: () => void }) {
   const { t, lang } = useI18n();
   const quote = useMemo(() => pickQuote(LESSON_QUOTES, lang), [lang]);
   return (
-    <button
-      onClick={onAdd}
-      className="paper-card p-10 text-center w-full hover:-translate-y-0.5 transition-transform group"
-    >
-      <p className="font-serif text-xl italic text-foreground/85 leading-snug">
-        "{quote.text}"
-      </p>
-      <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
-        — {quote.author}
-      </p>
-      <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
-      <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
-        <Plus className="h-4 w-4" /> {t("lessons.addRecurrence")}
-      </span>
-    </button>
+    <EmptyState
+      hint={t("lessons.empty")}
+      quote={quote}
+      cta={{ label: t("lessons.addRecurrence"), onClick: onAdd }}
+    />
   );
 }

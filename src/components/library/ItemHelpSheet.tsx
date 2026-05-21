@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { HelpCircle, MessageSquareQuote, Plus, X, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { useI18n } from "@/lib/i18n";
 
 interface Props {
@@ -77,7 +78,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
           </div>
 
           {sorted.length === 0 ? (
-            <p className="paper-card p-6 text-center text-muted-foreground italic">{t("help.noQuestions")}</p>
+            <EmptyState title={t("help.noQuestions")} />
           ) : (
             <Accordion type="single" collapsible className="space-y-1.5">
               {sorted.map((r) => (

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Task, type StudyRoutine } from "@/lib/db"; // db used for useLiveQuery reads only
+import { db, type Task, type StudyRoutine } from "@/lib/db";
 import { useActiveTasks, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { studyRoutinesService, tasksService } from "@/lib/services";
@@ -22,6 +22,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ListSkeleton } from "@/components/shared/Loading";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 const PAGE_SIZE = 5;
 
@@ -112,9 +113,34 @@ export default function Tasks() {
     });
   };
 
-  const askDelete = (task: Task) => {
-    setDelId(task.id ?? null);
-    setDelMode("one");
+  const askDelete = async (task: Task) => {
+    if (!task.id) return;
+    const isSeries = !!(task.recurrence || task.recurrenceTaskId);
+    if (isSeries) {
+      // Series delete always needs a dialog (one vs. all choice)
+      setDelId(task.id);
+      setDelMode("one");
+      return;
+    }
+    const hasSessions = (await db.sessions.where("taskId").equals(task.id).count()) > 0;
+    if (hasSessions) {
+      // Has sessions → will be archived (soft delete) — keep dialog so user knows data is preserved
+      setDelId(task.id);
+      setDelMode("one");
+      return;
+    }
+    // No sessions, no series → low-risk hard delete: skip dialog, offer undo
+    const saved = { ...task };
+    await db.tasks.delete(task.id);
+    toast.success(t("toast.taskDeleted"), {
+      duration: 5000,
+      action: {
+        label: t("common.undo"),
+        onClick: async () => {
+          await db.tasks.add(saved);
+        },
+      },
+    });
   };
 
   const confirmDelete = async () => {
@@ -277,7 +303,7 @@ export default function Tasks() {
       {tasks === undefined ? (
         <ListSkeleton />
       ) : pageItems.length === 0 ? (
-        <p className="paper-card p-6 text-center text-muted-foreground italic">{t("tasks.noTasks")}</p>
+        <EmptyState title={t("tasks.noTasks")} />
       ) : (
         <>
           <div className="flex items-center justify-between text-xs text-muted-foreground px-1">

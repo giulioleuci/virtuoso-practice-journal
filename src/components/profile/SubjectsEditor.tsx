@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type Subject, type SubjectType } from "@/lib/db"; // db used for useLiveQuery reads only
+import { db, THEORY_LAYERS, type Subject, type SubjectType, type ColorKey } from "@/lib/db"; // db used for useLiveQuery reads only
 import { subjectsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
+import { COLOR_KEYS, getSubjectColor } from "@/lib/subjectColors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -184,6 +185,10 @@ function SubjectCard({
         onClick={onToggle}
         className="w-full flex items-center gap-2 p-3 text-left hover:bg-accent/40 active:bg-accent/60 transition-colors"
       >
+        <span
+          className="h-3 w-3 rounded-full shrink-0"
+          style={{ backgroundColor: `hsl(var(--key-${getSubjectColor(subject.color, subject.type)}))` }}
+        />
         <div className="flex-1 min-w-0">
           <div className="font-serif text-base truncate">{subject.name}</div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5 flex items-center gap-2">
@@ -282,6 +287,29 @@ function SubjectCard({
               <Button size="sm" variant="ghost" onClick={addTechnique} className="shrink-0">
                 <Plus className="h-4 w-4" />
               </Button>
+            </div>
+          </div>
+
+          {/* Color picker */}
+          <div className="space-y-2">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              {t("subjects.colorLabel")}
+            </span>
+            <div className="flex gap-2">
+              {COLOR_KEYS.map((ck) => (
+                <button
+                  key={ck}
+                  onClick={() => subject.id && db.subjects.update(subject.id, { color: ck as ColorKey })}
+                  className={cn(
+                    "h-6 w-6 rounded-full transition-all",
+                    getSubjectColor(subject.color, subject.type) === ck
+                      ? "ring-2 ring-offset-2 ring-foreground scale-110"
+                      : "hover:scale-110"
+                  )}
+                  style={{ backgroundColor: `hsl(var(--key-${ck}))` }}
+                  aria-label={ck}
+                />
+              ))}
             </div>
           </div>
 
