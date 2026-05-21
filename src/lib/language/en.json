@@ -619,6 +619,7 @@
   "session.segmentBreakdown": "Segment breakdown",
   "studyRoutine.tab.standard": "Standard",
   "studyRoutine.tab.routine": "Study Routine",
+  "studyRoutine.tab.wizard": "Wizard",
   "studyRoutine.name": "Routine name",
   "studyRoutine.namePlaceholder": "e.g. Daily warm-up",
   "studyRoutine.errorNoName": "Enter a routine name",

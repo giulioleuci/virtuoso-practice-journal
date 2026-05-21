@@ -618,6 +618,7 @@
   "session.segmentBreakdown": "Desglose por segmento",
   "studyRoutine.tab.standard": "Estándar",
   "studyRoutine.tab.routine": "Plan de estudio",
+  "studyRoutine.tab.wizard": "Asistente",
   "studyRoutine.name": "Nombre de la rutina",
   "studyRoutine.namePlaceholder": "ej. Calentamiento diario",
   "studyRoutine.errorNoName": "Introduce un nombre para la rutina",
