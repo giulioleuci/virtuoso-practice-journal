@@ -15,6 +15,7 @@ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { LinkTargetFields } from "@/components/diary/LinkTargetFields";
 import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "@/components/diary/RecurrenceFields";
 import { StudyRoutineWizard } from "@/components/diary/StudyRoutineWizard";
+import { TaskWizard } from "@/components/diary/TaskWizard";
 import { tasksService, lessonsService } from "@/lib/services";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,11 @@ interface LocationState {
     subjectId?: number;
     title?: string;
     assignmentId?: number;
+    itemId?: number;
+    itemTitle?: string;
+    itemSubjectId?: number;
+    itemBpm?: number;
+    itemNoteVal?: NoteVal;
   };
 }
 
