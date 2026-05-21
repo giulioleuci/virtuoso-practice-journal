@@ -16,7 +16,7 @@ import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/Less
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { upcomingLessonDates, dayKey, today } from "@/lib/recurrence";
 import { toast } from "sonner";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
 
 const PAGE_SIZE = 5;
