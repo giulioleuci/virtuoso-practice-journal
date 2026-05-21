@@ -42,6 +42,7 @@ export interface Subject {
   name: string;
   type: SubjectType;
   layers?: string[];
+  color?: ColorKey;
   createdAt: number;
   deletedAt?: number;
 }
@@ -346,6 +347,8 @@ class VirtuosoDB extends Dexie {
     this.version(8).stores({
       tasks: "++id, date, subjectId, itemId, collectionId, done, deletedAt, studyRoutineId, recurrenceTaskId",
     });
+    // v9: color field on subjects (no store change needed — just data model extension)
+    this.version(9).stores({});
   }
 }
 

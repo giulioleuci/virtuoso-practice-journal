@@ -12,6 +12,7 @@ import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
+import { SessionFAB } from "@/components/diary/SessionFAB";
 import { ListSkeleton } from "@/components/shared/Loading";
 
 type GroupKey = "task" | "day" | "item" | "segment";
@@ -117,7 +118,8 @@ export default function History() {
   const pageGroups = groups.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
+      <SessionFAB />
       <div className="flex items-center justify-between">
         <h2 className="font-serif text-3xl">{t("history.title")}</h2>
         <span className="text-xs text-muted-foreground tabular-nums">

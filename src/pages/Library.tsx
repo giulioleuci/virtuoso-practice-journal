@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/db";
@@ -7,8 +7,9 @@ import type { MasteryState } from "@/components/library/MasterySliders";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
-import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart } from "lucide-react";
-import { ItemAnalysisSheet } from "@/components/library/ItemAnalysisSheet";
+import { today } from "@/lib/recurrence";
+import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
+import { NewTaskSheet } from "@/components/diary/NewTaskSheet";
 import { MasterySliders } from "@/components/library/MasterySliders";
 import { MasterySparkline } from "@/components/library/MasterySparkline";
 import { Button } from "@/components/ui/button";
@@ -36,12 +37,13 @@ import { toast } from "sonner";
 
 export default function Library() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [active, setActive] = useState<LibraryKind>("repertoire");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
-  const [analysisItem, setAnalysisItem] = useState<LibraryItem | null>(null);
+  const [practiceItem, setPracticeItem] = useState<LibraryItem | null>(null);
   const [search, setSearch] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
@@ -216,7 +218,7 @@ export default function Library() {
                       <DropdownMenuItem onClick={() => openEdit(it)}>
                         <Pencil className="h-4 w-4 mr-2" /> {t("common.edit")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setAnalysisItem(it)}>
+                      <DropdownMenuItem onClick={() => it.id && navigate(`/library/item/${it.id}/analysis`)}>
                         <LineChart className="h-4 w-4 mr-2" /> {t("library.analysis.menu")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -294,6 +296,15 @@ export default function Library() {
               {it.kind === "theory" && it.id && (
                 <TheoryMasterySection itemId={it.id} />
               )}
+
+              <div className="mt-3 pt-2 border-t border-border/40 flex justify-end">
+                <button
+                  onClick={() => setPracticeItem(it)}
+                  className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <Play className="h-3 w-3" /> Practice this
+                </button>
+              </div>
             </li>
           );
         };
@@ -418,14 +429,6 @@ export default function Library() {
         />
       )}
 
-      {analysisItem && (
-        <ItemAnalysisSheet
-          open={analysisItem !== null}
-          onOpenChange={(o) => !o && setAnalysisItem(null)}
-          item={analysisItem}
-        />
-      )}
-
       <AlertDialog open={deletingId !== null} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -442,6 +445,21 @@ export default function Library() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {practiceItem && (
+        <NewTaskSheet
+          open={practiceItem !== null}
+          onOpenChange={(o) => !o && setPracticeItem(null)}
+          date={today()}
+          prefill={{
+            itemId: practiceItem.id,
+            itemTitle: practiceItem.title,
+            itemSubjectId: practiceItem.subjectId,
+            itemBpm: practiceItem.targetBpm,
+            itemNoteVal: practiceItem.noteVal,
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -855,6 +855,51 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
             </Accordion>
           )}
 
+          {/* Week preview */}
+          {enabledDays.length > 0 && (
+            <Accordion type="single" collapsible className="paper-card px-3">
+              <AccordionItem value="preview" className="border-0">
+                <AccordionTrigger className="py-2.5 hover:no-underline">
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {t("routine.weekPreview")}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-3">
+                  {groups.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">{t("routine.previewEmpty")}</p>
+                  ) : (
+                    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${enabledDays.length}, 1fr)` }}>
+                      {DAYS.filter(({ index }) => enabledDays.includes(index)).map(({ index, tKey }) => {
+                        const dayGroups = groups
+                          .map((g) => ({ name: g.name, count: getCount(index, g.id) }))
+                          .filter((x) => x.count > 0);
+                        const total = dayGroups.reduce((s, x) => s + x.count, 0);
+                        return (
+                          <div key={index} className="space-y-1">
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground text-center">
+                              {t(tKey)}
+                            </div>
+                            <div className="rounded-lg bg-muted/50 p-1.5 min-h-[2rem] space-y-0.5">
+                              {total === 0 ? (
+                                <p className="text-[9px] text-muted-foreground/50 text-center">—</p>
+                              ) : (
+                                dayGroups.map((g) => (
+                                  <div key={g.name} className="text-[9px] bg-primary/15 text-primary rounded px-1 py-0.5 text-center truncate">
+                                    {g.count}× {g.name}
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+
           {/* Advanced settings (collapsed by default) */}
           <Accordion type="single" collapsible className="paper-card px-3">
             <AccordionItem value="advanced" className="border-0">

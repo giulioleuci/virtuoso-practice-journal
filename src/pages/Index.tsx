@@ -20,6 +20,7 @@ const Profile = lazy(() => import("./Profile"));
 const NewTaskPage = lazy(() => import("./NewTaskPage"));
 const EditTaskPage = lazy(() => import("./EditTaskPage"));
 const EditStudyRoutinePage = lazy(() => import("./EditStudyRoutinePage"));
+const ItemAnalysisPage = lazy(() => import("./ItemAnalysisPage"));
 
 const Fallback = () => (
   <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4" style={{ paddingTop: "calc(2.5rem + env(safe-area-inset-top))" }}>
@@ -65,6 +66,7 @@ const Index = () => {
         <Route element={<AppShell profile={profile} />}>
           <Route index element={<Suspense fallback={<Fallback />}><Diary /></Suspense>} />
           <Route path="library" element={<Suspense fallback={<Fallback />}><Library /></Suspense>} />
+          <Route path="library/item/:id/analysis" element={<Suspense fallback={<Fallback />}><ItemAnalysisPage /></Suspense>} />
           <Route path="library/collections" element={<Suspense fallback={<Fallback />}><Collections /></Suspense>} />
           <Route path="lessons" element={<Suspense fallback={<Fallback />}><Lessons /></Suspense>} />
           <Route path="lessons/assignments" element={<Suspense fallback={<Fallback />}><Assignments /></Suspense>} />
