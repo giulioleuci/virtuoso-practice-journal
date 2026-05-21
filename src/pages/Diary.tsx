@@ -717,7 +717,7 @@ function LessonTodayBanner({
         size="sm"
         variant="ghost"
         className="shrink-0 text-primary"
-        onClick={() => navigate("/lessons")}
+        onClick={() => navigate("/lessons", { state: { openLogForRecurrenceId: rec.id, date: new Date().toISOString().slice(0, 10) } })}
       >
         {t("diary.logLesson")} <ArrowRightIcon className="h-3.5 w-3.5 ml-1" />
       </Button>

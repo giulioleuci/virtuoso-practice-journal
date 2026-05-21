@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
@@ -16,7 +16,7 @@ import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/Less
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { upcomingLessonDates, dayKey, today } from "@/lib/recurrence";
 import { toast } from "sonner";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
 
 const PAGE_SIZE = 5;
@@ -25,6 +25,7 @@ const PAGE_SIZE = 5;
 export default function Lessons() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const recurrences = useLiveQuery(() => db.recurrences.toArray());
   const subjects = useLiveQuery(() => db.subjects.toArray());
   const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().toArray());
@@ -59,6 +60,17 @@ export default function Lessons() {
     setLogContext({ lesson: l, recurrence: recurrences?.find((r) => r.id === l.recurrenceId) ?? null });
     setLogOpen(true);
   };
+
+  // Open lesson log when navigated here from the Diary today-lesson banner.
+  useEffect(() => {
+    const s = location.state as { openLogForRecurrenceId?: number; date?: string } | null;
+    if (!s?.openLogForRecurrenceId || !recurrences) return;
+    const rec = recurrences.find((r) => r.id === s.openLogForRecurrenceId);
+    if (rec) {
+      openLog(rec, s.date);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, recurrences]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteRec = async () => {
     if (delRecId == null) return;

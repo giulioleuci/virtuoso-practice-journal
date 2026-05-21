@@ -618,6 +618,7 @@
   "session.segmentBreakdown": "Segment-Aufschlüsselung",
   "studyRoutine.tab.standard": "Standard",
   "studyRoutine.tab.routine": "Studienplan",
+  "studyRoutine.tab.wizard": "Assistent",
   "studyRoutine.name": "Name der Routine",
   "studyRoutine.namePlaceholder": "z.B. Tägliches Aufwärmen",
   "studyRoutine.errorNoName": "Gib einen Namen für die Routine ein",

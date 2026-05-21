@@ -15,6 +15,7 @@ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { LinkTargetFields } from "@/components/diary/LinkTargetFields";
 import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "@/components/diary/RecurrenceFields";
 import { StudyRoutineWizard } from "@/components/diary/StudyRoutineWizard";
+import { TaskWizard } from "@/components/diary/TaskWizard";
 import { tasksService, lessonsService } from "@/lib/services";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,11 @@ interface LocationState {
     subjectId?: number;
     title?: string;
     assignmentId?: number;
+    itemId?: number;
+    itemTitle?: string;
+    itemSubjectId?: number;
+    itemBpm?: number;
+    itemNoteVal?: NoteVal;
   };
 }
 
@@ -40,15 +46,15 @@ export default function NewTaskPage() {
   const subjects = useLiveQuery(() => db.subjects.toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
 
-  const [activeTab, setActiveTab] = useState<"standard" | "routine">("standard");
-  const [subjectId, setSubjectId] = useState<number | undefined>(prefill?.subjectId);
-  const [linkType, setLinkType] = useState<TaskLinkType>("free");
-  const [itemId, setItemId] = useState<number | undefined>();
+  const [activeTab, setActiveTab] = useState<"standard" | "wizard" | "routine">("standard");
+  const [subjectId, setSubjectId] = useState<number | undefined>(prefill?.itemSubjectId ?? prefill?.subjectId);
+  const [linkType, setLinkType] = useState<TaskLinkType>(prefill?.itemId ? "item" : "free");
+  const [itemId, setItemId] = useState<number | undefined>(prefill?.itemId);
   const [segmentIds, setSegmentIds] = useState<number[]>([]);
   const [collectionId, setCollectionId] = useState<number | undefined>();
-  const [title, setTitle] = useState(prefill?.title ?? "");
-  const [bpm, setBpm] = useState<number | undefined>();
-  const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
+  const [title, setTitle] = useState(prefill?.itemTitle ?? prefill?.title ?? "");
+  const [bpm, setBpm] = useState<number | undefined>(prefill?.itemBpm);
+  const [noteVal, setNoteVal] = useState<NoteVal | undefined>(prefill?.itemNoteVal);
   const [layers, setLayers] = useState<string[]>([]);
   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
 
@@ -234,8 +240,8 @@ export default function NewTaskPage() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-1.5">
-        {(["standard", "routine"] as const).map((tab) => (
+      <div className="flex gap-1.5 flex-wrap">
+        {(["standard", "wizard", "routine"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -247,35 +253,44 @@ export default function NewTaskPage() {
                 : "border-border text-muted-foreground hover:text-foreground"
             )}
           >
-            {t(`studyRoutine.tab.${tab}`)}
+            {tab === "wizard" ? t("studyRoutine.tab.wizard") : t(`studyRoutine.tab.${tab}`)}
           </button>
         ))}
       </div>
 
-      {/* Subject picker — shared between tabs */}
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
-        <Select
-          value={subjectId?.toString() ?? ""}
-          onValueChange={(v) => {
-            setSubjectId(Number(v));
-            setItemId(undefined); setSegmentIds([]); setCollectionId(undefined);
-          }}
-        >
-          <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
-          <SelectContent>
-            {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Subject picker — shared between standard/routine tabs */}
+      {activeTab !== "wizard" && (
+        <div className="space-y-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
+          <Select
+            value={subjectId?.toString() ?? ""}
+            onValueChange={(v) => {
+              setSubjectId(Number(v));
+              setItemId(undefined); setSegmentIds([]); setCollectionId(undefined);
+            }}
+          >
+            <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
+            <SelectContent>
+              {(subjects ?? []).map((s) => (
+                <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {activeTab === "routine" ? (
         <StudyRoutineWizard
           subjectId={subjectId}
           date={date}
           onCreated={() => navigate("/")}
+          onCancel={handleCancel}
+        />
+      ) : activeTab === "wizard" ? (
+        <TaskWizard
+          date={date}
+          prefill={prefill}
+          onCreated={() => handleCancel()}
           onCancel={handleCancel}
         />
       ) : (
