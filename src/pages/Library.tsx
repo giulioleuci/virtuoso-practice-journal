@@ -21,6 +21,7 @@ import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { BpmSparkline } from "@/components/library/BpmSparkline";
 import { ListSkeleton } from "@/components/shared/Loading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { useSubjects } from "@/hooks/useEntities";
 import { libraryService } from "@/lib/services";
 import {
@@ -95,6 +96,42 @@ export default function Library() {
   const openEdit = (it: LibraryItem) => {
     setEditing(it);
     setSheetOpen(true);
+  };
+
+  const askDeleteItem = async (it: LibraryItem) => {
+    if (!it.id) return;
+    const taskIds = (await db.tasks.where("itemId").equals(it.id).primaryKeys()) as number[];
+    const hasSessions = taskIds.length
+      ? (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0
+      : false;
+    if (hasSessions) {
+      // Has sessions — will be soft-deleted/archived; keep dialog so user knows history is preserved
+      setDeletingId(it.id);
+      return;
+    }
+    // No sessions → low-risk hard delete: skip dialog, offer undo
+    const savedItem = { ...it };
+    const savedSegments = (allSegments ?? []).filter((s) => s.itemId === it.id).map((s) => ({ ...s }));
+    await db.transaction("rw", db.library, db.segments, db.tasks, async () => {
+      await db.segments.where("itemId").equals(it.id!).delete();
+      await db.tasks.where("itemId").equals(it.id!).delete();
+      await db.library.delete(it.id!);
+    });
+    toast.success(t("toast.deleted"), {
+      duration: 5000,
+      action: {
+        label: t("common.undo"),
+        onClick: async () => {
+          const { id: _id, ...itemRest } = savedItem;
+          const newId = (await db.library.add(itemRest)) as number;
+          if (savedSegments.length) {
+            await db.segments.bulkAdd(
+              savedSegments.map(({ id: _sid, ...seg }) => ({ ...seg, itemId: newId }))
+            );
+          }
+        },
+      },
+    });
   };
 
   const confirmDelete = async () => {
@@ -222,7 +259,7 @@ export default function Library() {
                         <LineChart className="h-4 w-4 mr-2" /> {t("library.analysis.menu")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => it.id && setDeletingId(it.id)}
+                        onClick={() => askDeleteItem(it)}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="h-4 w-4 mr-2" /> {t("common.delete")}
@@ -313,7 +350,7 @@ export default function Library() {
         if (!filteredItems.length) {
           return items.length === 0
             ? <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
-            : <p className="paper-card p-6 text-center text-muted-foreground italic">{t("library.noItemsMatch")}</p>;
+            : <EmptyState title={t("library.noItemsMatch")} />;
         }
 
         const Pager = ({ current, total, onChange }: { current: number; total: number; onChange: (p: number) => void }) => {
@@ -528,20 +565,10 @@ function EmptyLibrary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
   const { t, lang } = useI18n();
   const quote = useMemo(() => pickQuote(LIBRARY_QUOTES, lang), [lang]);
   return (
-    <button
-      onClick={onAdd}
-      className="paper-card p-10 text-center w-full hover:-translate-y-0.5 transition-transform group"
-    >
-      <p className="font-serif text-xl italic text-foreground/85 leading-snug">
-        "{quote.text}"
-      </p>
-      <p className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
-        — {quote.author}
-      </p>
-      <p className="text-sm text-muted-foreground italic mt-4">{hint}</p>
-      <span className="inline-flex items-center gap-1 text-primary font-medium text-sm mt-3 group-hover:gap-2 transition-all">
-        <Plus className="h-4 w-4" /> {t("library.addToLibrary")}
-      </span>
-    </button>
+    <EmptyState
+      hint={hint}
+      quote={quote}
+      cta={{ label: t("library.addToLibrary"), onClick: onAdd }}
+    />
   );
 }

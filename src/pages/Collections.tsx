@@ -6,11 +6,8 @@ import { useI18n } from "@/lib/i18n";
 import { LIBRARY_KINDS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, ChevronLeft, FolderOpen, Music2 } from "lucide-react";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { collectionsService } from "@/lib/services";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet";
 import { AssignPiecesSheet } from "@/components/collections/AssignPiecesSheet";
 import { cn } from "@/lib/utils";
@@ -45,7 +42,6 @@ export default function Collections() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Collection | null>(null);
   const [assigning, setAssigning] = useState<Collection | null>(null);
-  const [deleting, setDeleting] = useState<Collection | null>(null);
 
   const countFor = (id?: number) =>
     id ? (links ?? []).filter((l) => l.collectionId === id).length : 0;
@@ -53,11 +49,26 @@ export default function Collections() {
   const openCreate = () => { setEditing(null); setEditorOpen(true); };
   const openEdit = (c: Collection) => { setEditing(c); setEditorOpen(true); };
 
-  const confirmDelete = async () => {
-    if (!deleting?.id) return;
-    await collectionsService.remove(deleting.id);
-    toast.success(t("toast.collectionRemoved"));
-    setDeleting(null);
+  const deleteCollection = async (c: Collection) => {
+    if (!c.id) return;
+    const savedLinks = (links ?? []).filter((l) => l.collectionId === c.id).map((l) => ({ ...l }));
+    await collectionsService.remove(c.id);
+    toast.success(t("toast.collectionRemoved"), {
+      duration: 5000,
+      action: {
+        label: t("common.undo"),
+        onClick: async () => {
+          const now = Date.now();
+          const { deletedAt: _d, ...rest } = c as Collection & { deletedAt?: number };
+          await db.collections.put({ ...rest, deletedAt: undefined, updatedAt: now });
+          if (savedLinks.length) {
+            await db.collectionItems.bulkAdd(
+              savedLinks.map(({ id: _id, ...link }) => ({ ...link, createdAt: now }))
+            );
+          }
+        },
+      },
+    });
   };
 
   const sorted = collections.slice().sort((a, b) => a.name.localeCompare(b.name));
@@ -101,13 +112,11 @@ export default function Collections() {
       {allCollections === undefined ? (
         <div className="space-y-2"><div className="paper-skeleton h-20" /><div className="paper-skeleton h-20" /></div>
       ) : !sorted.length ? (
-        <button onClick={openCreate} className="paper-card p-8 text-center w-full hover:-translate-y-0.5 transition-transform">
-          <FolderOpen className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-          <p className="text-muted-foreground italic mb-2">{t(`collections.emptyByKind.${active}`)}</p>
-          <span className="inline-flex items-center gap-1 text-primary font-medium text-sm">
-            <Plus className="h-4 w-4" /> {t(`collections.newByKind.${active}`)}
-          </span>
-        </button>
+        <EmptyState
+          icon={FolderOpen}
+          hint={t(`collections.emptyByKind.${active}`)}
+          cta={{ label: t(`collections.newByKind.${active}`), onClick: openCreate }}
+        />
       ) : (
         <ul className="space-y-2">
           {sorted.map((c) => {
@@ -142,7 +151,7 @@ export default function Collections() {
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => setDeleting(c)}
+                      onClick={() => deleteCollection(c)}
                       className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
                       aria-label={t("common.delete")}
                     >
@@ -168,22 +177,6 @@ export default function Collections() {
         collection={assigning}
       />
 
-      <AlertDialog open={deleting !== null} onOpenChange={(o) => !o && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("dialog.deleteCollection")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("dialog.deleteCollectionDesc", { count: countFor(deleting?.id) })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t("dialog.detachDelete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

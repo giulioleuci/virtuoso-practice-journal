@@ -42,6 +42,7 @@
   "common.reopen": "Reopen",
   "common.resolve": "Resolve",
   "common.restore": "Restore",
+  "common.undo": "Undo",
   "common.save": "Save",
   "common.search": "Search",
   "common.select": "Select",

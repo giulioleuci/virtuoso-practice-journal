@@ -14,6 +14,7 @@ import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { ListSkeleton } from "@/components/shared/Loading";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 type GroupKey = "task" | "day" | "item" | "segment";
 type SortDir = "newest" | "oldest";
@@ -207,7 +208,7 @@ export default function History() {
       {sessions === undefined ? (
         <ListSkeleton />
       ) : pageGroups.length === 0 ? (
-        <p className="paper-card p-6 text-center text-muted-foreground italic">{t("history.noSessionsMatch")}</p>
+        <EmptyState title={t("history.noSessionsMatch")} />
       ) : (
         <Accordion type="multiple" className="space-y-3">
           {pageGroups.map((g, i) => (
