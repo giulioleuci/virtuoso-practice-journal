@@ -352,8 +352,9 @@ export default function Diary() {
                 <li key={task.id}>
                   <div
                     className={cn(
-                      "paper-card p-4 w-full flex gap-3 transition-all hover:-translate-y-0.5",
+                      "paper-card p-4 w-full flex gap-3 transition-all hover:-translate-y-0.5 relative",
                       "border-l-4",
+                      !task.done && "pb-14",
                       task.done && "opacity-70",
                     )}
                     style={subjectBorderStyle(subject?.color, subject?.type)}
@@ -436,7 +437,7 @@ export default function Diary() {
                     {!task.done && (
                       <button
                         onClick={() => setPracticeTask(task)}
-                        className="self-end shrink-0 inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
+                        className="absolute bottom-3 right-3 shrink-0 inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
                         aria-label={t("diary.startPractice")}
                       >
                         <PlayIcon className="h-3.5 w-3.5" /> {t("diary.start")}
