@@ -82,8 +82,8 @@ describe("libraryService.upsert — create", () => {
     const id = await libraryService.upsert(
       { subjectId, kind: "repertoire", title: "Sonata", createdAt: 0 },
       [
-        { label: "Movement I", layers: [], order: 0 },
-        { label: "Movement II", layers: [], order: 1 },
+        { label: "Movement I", layers: [] },
+        { label: "Movement II", layers: [] },
       ],
     );
     const segs = await db.segments.where("itemId").equals(id).toArray();
@@ -121,7 +121,7 @@ describe("libraryService.upsert — update", () => {
 
     await libraryService.upsert(
       { id, subjectId, kind: "repertoire", title: "Suite", createdAt: 1 },
-      [{ label: "New I", layers: [], order: 0 }],
+      [{ label: "New I", layers: [] }],
     );
 
     const segs = await db.segments.where("itemId").equals(id).toArray();
@@ -177,7 +177,7 @@ describe("libraryService.remove", () => {
     const subjectId = await seedSubject();
     const id = await libraryService.upsert(
       { subjectId, kind: "repertoire", title: "With segments", createdAt: 0 },
-      [{ label: "Movement I", layers: [], order: 0 }],
+      [{ label: "Movement I", layers: [] }],
     );
     await libraryService.remove(id);
     expect(await db.library.get(id)).toBeUndefined();
@@ -195,7 +195,7 @@ describe("libraryService — round-trip integration", () => {
 
     const id = await libraryService.upsert(
       { subjectId, kind: "repertoire", title: "Symphony", createdAt: 0 },
-      [{ label: "Allegro", layers: [], order: 0 }, { label: "Andante", layers: [], order: 1 }],
+      [{ label: "Allegro", layers: [] }, { label: "Andante", layers: [] }],
     );
 
     expect((await db.library.get(id))!.title).toBe("Symphony");
@@ -203,7 +203,7 @@ describe("libraryService — round-trip integration", () => {
 
     await libraryService.upsert(
       { id, subjectId, kind: "repertoire", title: "Symphony No. 5", createdAt: 0 },
-      [{ label: "Allegro con brio", layers: [], order: 0 }],
+      [{ label: "Allegro con brio", layers: [] }],
     );
     expect((await db.library.get(id))!.title).toBe("Symphony No. 5");
     expect(await db.segments.where("itemId").equals(id).count()).toBe(1);
