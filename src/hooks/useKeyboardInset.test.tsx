@@ -43,8 +43,7 @@ describe("useKeyboardInset", () => {
 
   afterEach(() => {
     Object.defineProperty(window, "innerHeight", { value: originalInnerHeight, configurable: true });
-    // @ts-expect-error reset
-    delete window.visualViewport;
+    delete (window as { visualViewport?: unknown }).visualViewport;
     vi.restoreAllMocks();
   });
 
@@ -93,8 +92,7 @@ describe("useKeyboardInset", () => {
   });
 
   it("returns 0 when visualViewport is not supported", () => {
-    // @ts-expect-error explicitly leave undefined
-    window.visualViewport = undefined;
+    (window as { visualViewport?: unknown }).visualViewport = undefined;
     const { result } = renderHook(() => useKeyboardInset());
     expect(result.current).toBe(0);
   });

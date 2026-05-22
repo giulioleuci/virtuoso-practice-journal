@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { pickQuote, PRACTICE_QUOTES, LESSON_QUOTES } from "./quotes";
-import type { Lang, Quote } from "./db";
+import { pickQuote, PRACTICE_QUOTES, LESSON_QUOTES, type Quote } from "./quotes";
+import type { Lang } from "./db";
 
 type QuotePool = Record<string, Quote[]>;
 

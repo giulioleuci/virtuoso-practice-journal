@@ -436,7 +436,7 @@ export default function Diary() {
                     {!task.done && (
                       <button
                         onClick={() => setPracticeTask(task)}
-                        className="self-start shrink-0 inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
+                        className="self-end shrink-0 inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
                         aria-label={t("diary.startPractice")}
                       >
                         <PlayIcon className="h-3.5 w-3.5" /> {t("diary.start")}

@@ -369,7 +369,7 @@ export const studyRoutinesService = {
     const routineId = (await db.studyRoutines.add({
       name: config.name,
       subjectId: config.subjectId,
-      groups: config.groups,
+      groups: config.groups as StudyRoutine["groups"],
       matrix: config.matrix,
       weeksAhead: config.weeksAhead,
       repetitionCap: config.repetitionCap,
