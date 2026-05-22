@@ -1,4 +1,4 @@
-/** Repeat / recurrence subform extracted from NewTaskSheet to keep that file focused. */
+/** Repeat / recurrence subform used by NewTaskPage and TaskWizard. */
 import { useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

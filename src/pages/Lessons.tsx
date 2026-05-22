@@ -66,10 +66,9 @@ export default function Lessons() {
     const s = location.state as { openLogForRecurrenceId?: number; date?: string } | null;
     if (!s?.openLogForRecurrenceId || !recurrences) return;
     const rec = recurrences.find((r) => r.id === s.openLogForRecurrenceId);
-    if (rec) {
-      openLog(rec, s.date);
-      navigate(location.pathname, { replace: true, state: null });
-    }
+    // Clear state regardless so a missing/deleted recurrence doesn't cause an infinite retry.
+    navigate(location.pathname, { replace: true, state: null });
+    if (rec) openLog(rec, s.date);
   }, [location.state, recurrences]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteRec = async () => {
