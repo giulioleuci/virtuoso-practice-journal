@@ -249,7 +249,7 @@ export default function ItemAnalysisPage() {
                         {points[points.length - 1]?.y}/100
                       </span>
                     </div>
-                    <LineChart points={points} max={100} color={LAYER_COLORS[idx]} />
+                    <LineChart points={points} color={LAYER_COLORS[idx]} />
                   </div>
                 )
               ))}
