@@ -1,4 +1,4 @@
-/** Shared "Link to" picker used by New/Edit task sheets.
+/** Shared "Link to" picker used by NewTaskPage, TaskWizard, and task edit flows.
  *  Enforces mutual exclusivity: free | item (+optional segments) | collection.
  */
 import { useMemo } from "react";
@@ -23,7 +23,7 @@ interface Props {
   setSegmentIds: (ids: number[]) => void;
   collectionId: number | undefined;
   setCollectionId: (id: number | undefined) => void;
-  /** Optional callback fired when item/segment selection changes — used to seed BPM/title in NewTaskSheet. */
+  /** Optional callback fired when item/segment selection changes. */
   onItemSelected?: (itemId: number | undefined) => void;
   onSegmentsSelected?: (ids: number[]) => void;
 }
