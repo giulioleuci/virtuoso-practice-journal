@@ -5,7 +5,7 @@ import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { today, dayKey, upcomingLessonDates } from "@/lib/recurrence";
 import { NOTE_GLYPH } from "@/lib/constants";
-import { getSubjectColor, subjectBorderStyle } from "@/lib/subjectColors";
+import { getSubjectColor, subjectBorderStyle, subjectBorderStyleLight } from "@/lib/subjectColors";
 import {
   AddIcon,
   CompleteIcon,
@@ -471,52 +471,58 @@ export default function Diary() {
             return (
               <>
                 <ul className="space-y-2">
-                  {slice.map((task) => (
-                    <li key={task.id}>
-                      <div className="paper-card p-4 w-full flex flex-col gap-3">
-                        <div className="min-w-0">
-                          <div className="font-medium break-words">{task.title}</div>
-                          <div className="text-xs text-muted-foreground tabular-nums break-words">
-                            {task.date}
-                            {task.targetBpm && (
-                              <>
-                                {" "}
-                                ·{" "}
-                                {t("diary.targetBpm", {
-                                  note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩",
-                                  bpm: task.targetBpm,
-                                })}
-                              </>
-                            )}
+                  {slice.map((task) => {
+                    const subject = subjectMap.get(task.subjectId);
+                    return (
+                      <li key={task.id}>
+                        <div
+                          className="paper-card p-4 w-full flex flex-col gap-3 border-l-4"
+                          style={subjectBorderStyleLight(subject?.color, subject?.type)}
+                        >
+                          <div className="min-w-0">
+                            <div className="font-medium break-words">{task.title}</div>
+                            <div className="text-xs text-muted-foreground tabular-nums break-words">
+                              {task.date}
+                              {task.targetBpm && (
+                                <>
+                                  {" "}
+                                  ·{" "}
+                                  {t("diary.targetBpm", {
+                                    note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩",
+                                    bpm: task.targetBpm,
+                                  })}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                if (!task.id) return;
+                                await tasksService.carryOver(task, todayKey);
+                                toast.success(t("toast.movedToToday"));
+                              }}
+                              className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
+                              aria-label={t("diary.moveToToday")}
+                            >
+                              <CarryOverIcon className="h-3.5 w-3.5" /> {t("common.today")}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!task.id) return;
+                                await tasksService.skip(task.id);
+                                toast(t("toast.ignored"));
+                              }}
+                              className="ml-auto p-2 rounded-xl text-muted-foreground hover:text-destructive"
+                              aria-label={t("common.ignore")}
+                            >
+                              <CloseIcon className="h-4 w-4" />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={async () => {
-                              if (!task.id) return;
-                              await tasksService.carryOver(task, todayKey);
-                              toast.success(t("toast.movedToToday"));
-                            }}
-                            className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
-                            aria-label={t("diary.moveToToday")}
-                          >
-                            <CarryOverIcon className="h-3.5 w-3.5" /> {t("common.today")}
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (!task.id) return;
-                              await tasksService.skip(task.id);
-                              toast(t("toast.ignored"));
-                            }}
-                            className="ml-auto p-2 rounded-xl text-muted-foreground hover:text-destructive"
-                            aria-label={t("common.ignore")}
-                          >
-                            <CloseIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">
@@ -559,41 +565,47 @@ export default function Diary() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <ul className="space-y-2">
-                      {slice.map((task) => (
-                        <li key={task.id}>
-                          <div className="paper-card p-4 w-full flex flex-col gap-3">
-                            <div className="min-w-0">
-                              <div className="font-medium break-words">{task.title}</div>
-                              <div className="text-xs text-muted-foreground tabular-nums break-words">
-                                {task.date}
-                                {task.targetBpm && (
-                                  <>
-                                    {" "}
-                                    ·{" "}
-                                    {t("diary.targetBpm", {
-                                      note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩",
-                                      bpm: task.targetBpm,
-                                    })}
-                                  </>
-                                )}
+                      {slice.map((task) => {
+                        const subject = subjectMap.get(task.subjectId);
+                        return (
+                          <li key={task.id}>
+                            <div
+                              className="paper-card p-4 w-full flex flex-col gap-3 border-l-4"
+                              style={subjectBorderStyleLight(subject?.color, subject?.type)}
+                            >
+                              <div className="min-w-0">
+                                <div className="font-medium break-words">{task.title}</div>
+                                <div className="text-xs text-muted-foreground tabular-nums break-words">
+                                  {task.date}
+                                  {task.targetBpm && (
+                                    <>
+                                      {" "}
+                                      ·{" "}
+                                      {t("diary.targetBpm", {
+                                        note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩",
+                                        bpm: task.targetBpm,
+                                      })}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={async () => {
+                                    if (!task.id) return;
+                                    await tasksService.unskip(task.id);
+                                    toast.success(t("toast.restored"));
+                                  }}
+                                  className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
+                                  aria-label={t("diary.unignore")}
+                                >
+                                  <ResetIcon className="h-3.5 w-3.5" /> {t("diary.unignore")}
+                                </button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={async () => {
-                                  if (!task.id) return;
-                                  await tasksService.unskip(task.id);
-                                  toast.success(t("toast.restored"));
-                                }}
-                                className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
-                                aria-label={t("diary.unignore")}
-                              >
-                                <ResetIcon className="h-3.5 w-3.5" /> {t("diary.unignore")}
-                              </button>
-                            </div>
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        );
+                      })}
                     </ul>
                     {totalPages > 1 && (
                       <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">

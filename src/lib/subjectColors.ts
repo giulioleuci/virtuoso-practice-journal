@@ -56,3 +56,9 @@ export function subjectBorderStyle(color?: ColorKey, type?: SubjectType): React.
   const key = getSubjectColor(color, type);
   return { borderLeftColor: `hsl(var(--key-${key}))` };
 }
+
+/** Inline style for a lighter colored left border accent (secondary/historical cards). */
+export function subjectBorderStyleLight(color?: ColorKey, type?: SubjectType): React.CSSProperties {
+  const key = getSubjectColor(color, type);
+  return { borderLeftColor: `hsl(var(--key-${key}) / 0.4)` };
+}

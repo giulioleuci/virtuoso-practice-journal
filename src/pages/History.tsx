@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type LibraryKind, type Session, type Collection } from "@/lib/db";
+import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/db";
+import { getSubjectColor } from "@/lib/subjectColors";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ export default function History() {
   const itemById = useMemo(() => new Map((items ?? []).map((i) => [i.id!, i])), [items]);
   const segById = useMemo(() => new Map((segments ?? []).map((s) => [s.id!, s])), [segments]);
   const collectionById = useMemo(() => new Map((collections ?? []).map((c) => [c.id!, c])), [collections]);
+  const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id!, s])), [subjects]);
 
   const sessionSortKey = (s: Session) => `${s.date}|${String(s.createdAt).padStart(16, "0")}`;
 
@@ -76,7 +78,7 @@ export default function History() {
   }, [sessions, from, to, subjectFilter, kindFilter, taskById, itemById]);
 
   const groups = useMemo(() => {
-    const map = new Map<string, { sortKey: string; label: string; sub?: string; sessions: Session[] }>();
+    const map = new Map<string, { sortKey: string; label: string; sub?: string; sessions: Session[]; subjectIds: number[] }>();
     for (const s of filteredSessions) {
       const task = taskById.get(s.taskId);
       const item = task?.itemId ? itemById.get(task.itemId) : undefined;
@@ -104,8 +106,12 @@ export default function History() {
           sub = item?.title ?? collection?.name;
           break;
       }
-      if (!map.has(key)) map.set(key, { sortKey: "", label, sub, sessions: [] });
-      map.get(key)!.sessions.push(s);
+      if (!map.has(key)) map.set(key, { sortKey: "", label, sub, sessions: [], subjectIds: [] });
+      const g = map.get(key)!;
+      g.sessions.push(s);
+      if (task?.subjectId != null && !g.subjectIds.includes(task.subjectId)) {
+        g.subjectIds.push(task.subjectId);
+      }
     }
     const cmp = (a: string, b: string) => sortDir === "newest" ? b.localeCompare(a) : a.localeCompare(b);
     for (const g of map.values()) {
@@ -216,7 +222,21 @@ export default function History() {
               <AccordionTrigger className="py-4 hover:no-underline gap-2">
                 <div className="flex items-start justify-between gap-2 flex-1 min-w-0 text-left">
                   <div className="min-w-0 flex-1">
-                    <div className="font-serif text-lg break-words">{g.label}</div>
+                    <div className="font-serif text-lg break-words flex items-center gap-2 flex-wrap">
+                      {g.subjectIds.map((sid) => {
+                        const subj = subjectMap.get(sid) as Subject | undefined;
+                        const color = getSubjectColor(subj?.color, subj?.type);
+                        return (
+                          <span
+                            key={sid}
+                            className="h-2 w-2 rounded-full shrink-0 inline-block"
+                            style={{ backgroundColor: `hsl(var(--key-${color}))` }}
+                            title={subj?.name}
+                          />
+                        );
+                      })}
+                      {g.label}
+                    </div>
                     {g.sub && <div className="text-xs text-muted-foreground break-words">{g.sub}</div>}
                   </div>
                   <span className="text-xs text-muted-foreground tabular-nums shrink-0 mt-1">
@@ -228,20 +248,28 @@ export default function History() {
                 <ul className="pt-2 border-t border-border/60 space-y-1">
                   {g.sessions.slice(0, 6).map((s) => {
                     const task = taskById.get(s.taskId);
+                    const subj = task?.subjectId != null ? subjectMap.get(task.subjectId) as Subject | undefined : undefined;
+                    const color = getSubjectColor(subj?.color, subj?.type);
                     return (
                       <li key={s.id}>
                         <button
                           onClick={() => setDetail(s)}
-                          className="w-full flex flex-col gap-0.5 text-left py-2 px-2 -mx-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 active:bg-accent/60 min-h-[44px]"
+                          className="w-full flex items-start gap-2 text-left py-2 px-2 -mx-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 active:bg-accent/60 min-h-[44px]"
                         >
-                          <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : s.date}</span>
-                          {(s.bpmReached || s.quality) && (
-                            <span className="text-xs tabular-nums">
-                              {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}
-                              {s.bpmReached && s.quality ? " · " : ""}
-                              {s.quality ? t(`session.quality${s.quality.charAt(0).toUpperCase() + s.quality.slice(1)}`) : ""}
-                            </span>
-                          )}
+                          <span
+                            className="h-2 w-2 rounded-full shrink-0 mt-1.5"
+                            style={{ backgroundColor: `hsl(var(--key-${color}))` }}
+                          />
+                          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                            <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : s.date}</span>
+                            {(s.bpmReached || s.quality) && (
+                              <span className="text-xs tabular-nums">
+                                {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}
+                                {s.bpmReached && s.quality ? " · " : ""}
+                                {s.quality ? t(`session.quality${s.quality.charAt(0).toUpperCase() + s.quality.slice(1)}`) : ""}
+                              </span>
+                            )}
+                          </div>
                         </button>
                       </li>
                     );
