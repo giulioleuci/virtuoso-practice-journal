@@ -383,7 +383,7 @@ export default function Diary() {
                         <span className="h-5 w-5 rounded-[4px] border-2 border-muted-foreground block" />
                       )}
                     </button>
-                    <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex-1 min-w-0 space-y-1.5">
                       <button
                         onClick={() => {
                           if (task.done && last) {
@@ -395,16 +395,16 @@ export default function Diary() {
                         }}
                         className="w-full text-left"
                       >
-                        <div className={cn("font-medium break-words flex items-center gap-2", task.done && "line-through")}>
+                        <div className={cn("font-medium flex items-start gap-2", task.done && "line-through")}>
                           {subject?.type === "theory" ? (
-                            <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("subjects.type.theory")} />
+                            <BookOpen className="h-4 w-4 shrink-0 mt-1 text-muted-foreground" aria-label={t("subjects.type.theory")} />
                           ) : (
-                            <InstrumentIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("subjects.type.instrument")} />
+                            <InstrumentIcon className="h-4 w-4 shrink-0 mt-1 text-muted-foreground" aria-label={t("subjects.type.instrument")} />
                           )}
-                          <span>{task.title}</span>
+                          <span className="flex-1 min-w-0 break-words leading-snug">{task.title}</span>
                         </div>
                         {task.targetBpm && (
-                          <div className="text-xs text-muted-foreground tabular-nums">
+                          <div className="text-xs text-muted-foreground tabular-nums mt-1 pr-24">
                             {t("diary.targetBpm", {
                               note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩",
                               bpm: task.targetBpm,
@@ -412,12 +412,12 @@ export default function Diary() {
                           </div>
                         )}
                         {task.studyRoutineId && routineNames.get(task.studyRoutineId) && (
-                          <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                          <div className="text-[10px] text-muted-foreground/70 mt-0.5 pr-24">
                             {t("diary.routine")}: {routineNames.get(task.studyRoutineId)}
                           </div>
                         )}
                         {last && (
-                          <div className="text-xs text-primary tabular-nums mt-0.5 inline-flex items-center gap-1">
+                          <div className="text-xs text-primary tabular-nums mt-0.5 inline-flex items-center gap-1 pr-24">
                             {last.bpmReached && (
                               <>
                                 {last.noteVal ? NOTE_GLYPH[last.noteVal] : "♩"} = {last.bpmReached} ·
@@ -430,7 +430,9 @@ export default function Diary() {
 
                       {/* Last session strip for undone tasks */}
                       {!task.done && task.itemId && (
-                        <LastSessionStrip task={task} compact />
+                        <div className="pr-24">
+                          <LastSessionStrip task={task} compact />
+                        </div>
                       )}
                     </div>
 
