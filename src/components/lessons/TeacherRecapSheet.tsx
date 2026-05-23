@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type HelpRequest } from "@/lib/db"; // db used for useLiveQuery reads only
+import { db, type HelpRequest, type ColorKey, type SubjectType } from "@/lib/db"; // db used for useLiveQuery reads only
 import { helpRequestsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { subjectBorderStyle } from "@/lib/subjectColors";
 
 interface Props {
   open: boolean;
@@ -44,12 +45,12 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
     const itemsMap = new Map((items ?? []).map((i) => [i.id, i]));
     const subjectsMap = new Map((subjects ?? []).map((s) => [s.id, s]));
 
-    const map = new Map<string, { subjectName: string; items: Map<number | "none", { itemId?: number; itemTitle: string; reqs: HelpRequest[] }> }>();
+    const map = new Map<string, { subjectName: string; subjectColor?: ColorKey; subjectType?: SubjectType; items: Map<number | "none", { itemId?: number; itemTitle: string; reqs: HelpRequest[] }> }>();
     for (const h of list) {
       const item = h.itemId !== undefined ? itemsMap.get(h.itemId) : undefined;
       const subject = item?.subjectId !== undefined ? subjectsMap.get(item.subjectId) : undefined;
       const subjectKey = subject?.name ?? "Other";
-      if (!map.has(subjectKey)) map.set(subjectKey, { subjectName: subjectKey, items: new Map() });
+      if (!map.has(subjectKey)) map.set(subjectKey, { subjectName: subjectKey, subjectColor: subject?.color, subjectType: subject?.type, items: new Map() });
       const bucket = map.get(subjectKey)!;
       const itemKey = h.itemId ?? "none";
       if (!bucket.items.has(itemKey)) {
@@ -149,7 +150,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                               const task = r.taskId ? taskById.get(r.taskId) : undefined;
                               const isAnswering = answeringId === r.id;
                               return (
-                                <li key={r.id} className="space-y-2 border-l-2 border-border pl-3">
+                                <li key={r.id} className="space-y-2 border-l-2 pl-3" style={subjectBorderStyle(g.subjectColor, g.subjectType)}>
                                   <div className="flex items-start gap-2">
                                     {r.resolved ? (
                                       <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
