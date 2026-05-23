@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Wand2, X, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { subjectBorderStyle } from "@/lib/subjectColors";
 
 const PAGE_SIZE = 5;
 
@@ -55,8 +56,9 @@ export default function Assignments() {
           <ul className="space-y-2">
             {slice.map((a) => {
               const lesson = lessons?.find((l) => l.id === a.lessonId);
+              const subject = subjects?.find((s) => s.id === lesson?.subjectId);
               return (
-                <li key={a.id} className="paper-card p-4 flex gap-3">
+                <li key={a.id} className="paper-card p-4 flex gap-3 border-l-4" style={subjectBorderStyle(subject?.color, subject?.type)}>
                   <Wand2 className="h-4 w-4 text-primary shrink-0 mt-1" />
                   <div className="flex-1 min-w-0 space-y-2">
                     <p className="text-sm break-words">{a.text}</p>
