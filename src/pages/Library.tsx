@@ -23,6 +23,7 @@ import { BpmSparkline } from "@/components/library/BpmSparkline";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useSubjects } from "@/hooks/useEntities";
+import { subjectBorderStyle } from "@/lib/subjectColors";
 import { libraryService } from "@/lib/services";
 import {
   AlertDialog,
@@ -52,6 +53,7 @@ export default function Library() {
   const allHelp = useLiveQuery(() => db.helpRequests.toArray(), []);
   const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
   const subjects = useSubjects();
+  const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id!, s])), [subjects]);
   const allCollections = useLiveQuery(() => db.collections.filter((c) => !c.deletedAt).toArray(), []);
   const allCollectionLinks = useLiveQuery(() => db.collectionItems.toArray(), []);
 
@@ -218,8 +220,9 @@ export default function Library() {
       {(() => {
         const renderCard = (it: LibraryItem) => {
           const segs = it.id ? (segmentsByItem[it.id] ?? []) : [];
+          const subject = subjectMap.get(it.subjectId);
           return (
-            <li key={it.id} className="paper-card p-4">
+            <li key={it.id} className="paper-card p-4 border-l-4" style={subjectBorderStyle(subject?.color, subject?.type)}>
               {/* Row 1: title + actions */}
               <div className="flex items-start justify-between gap-3">
                 <div className="font-serif text-xl flex-1 min-w-0 truncate">{it.title}</div>

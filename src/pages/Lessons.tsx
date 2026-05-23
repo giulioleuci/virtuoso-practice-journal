@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { subjectBorderStyle } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
@@ -50,7 +51,8 @@ export default function Lessons() {
   const openNew = () => { setEditingRec(null); setRecOpen(true); };
   const openEdit = (r: LessonRecurrence) => { setEditingRec(r); setRecOpen(true); };
 
-  const subjectName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
+  const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id!, s])), [subjects]);
+  const subjectName = (id: number) => subjectMap.get(id)?.name ?? "—";
 
   const openLog = (r: LessonRecurrence, date?: string) => {
     setLogContext({ recurrence: r, prefilledDate: date });
@@ -126,9 +128,10 @@ export default function Lessons() {
           <EmptyLessons onAdd={openNew} />
         ) : (
           <ul className="space-y-2">
-            {recurrences.map((r) => (
-              <li key={r.id} className="paper-card p-4 flex gap-3">
-                <span className="w-1.5 rounded-full self-stretch shrink-0" style={{ backgroundColor: `hsl(var(--key-${r.color}))` }} />
+            {recurrences.map((r) => {
+              const rSubject = subjectMap.get(r.subjectId);
+              return (
+              <li key={r.id} className="paper-card p-4 flex gap-3 border-l-4" style={subjectBorderStyle(rSubject?.color, rSubject?.type)}>
                 <div className="flex-1 min-w-0 space-y-2">
                   <div className="min-w-0">
                     <div className="font-serif text-xl break-words">{r.teacher}</div>
@@ -149,7 +152,8 @@ export default function Lessons() {
                   </div>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>
@@ -182,8 +186,10 @@ export default function Lessons() {
               </AccordionTrigger>
               <AccordionContent>
                 <ul className="space-y-2">
-                  {slice.map(({ rec, date, isToday }) => (
-                    <li key={`${rec.id}-${date}`} className="paper-card p-3 flex gap-3">
+                  {slice.map(({ rec, date, isToday }) => {
+                    const upSubject = subjectMap.get(rec.subjectId);
+                    return (
+                    <li key={`${rec.id}-${date}`} className="paper-card p-3 flex gap-3 border-l-4" style={subjectBorderStyle(upSubject?.color, upSubject?.type)}>
                       <CalendarClock className="h-4 w-4 text-primary shrink-0 mt-1" />
                       <div className="flex-1 min-w-0 space-y-2">
                         <div className="min-w-0">
@@ -199,7 +205,8 @@ export default function Lessons() {
                         </Button>
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
                 <Pager page={page} totalPages={totalPages} onPage={setPageUpcoming} />
               </AccordionContent>
@@ -224,8 +231,9 @@ export default function Lessons() {
                   <ul className="space-y-2">
                     {slice.map((l) => {
                       const las = (assignments ?? []).filter((a) => a.lessonId === l.id);
+                      const lSubject = subjectMap.get(l.subjectId);
                       return (
-                        <li key={l.id} className="paper-card p-4">
+                        <li key={l.id} className="paper-card p-4 border-l-4" style={subjectBorderStyle(lSubject?.color, lSubject?.type)}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="font-serif text-lg">{subjectName(l.subjectId)}</div>
