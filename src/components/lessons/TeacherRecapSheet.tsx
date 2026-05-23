@@ -125,7 +125,8 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                       <AccordionItem
                         key={b.itemTitle}
                         value={b.itemTitle}
-                        className="paper-card border-none px-3"
+                        className="paper-card border-none border-l-4 px-3"
+                        style={subjectBorderStyle(g.subjectColor, g.subjectType)}
                       >
                         <AccordionTrigger className="group py-3 hover:no-underline gap-2 w-full min-w-0">
                           <div className="flex items-center gap-2 flex-1 min-w-0 text-left">
