@@ -44,7 +44,7 @@ export const taskInputSchema = z.object({
 );
 export type TaskInput = z.infer<typeof taskInputSchema>;
 
-export const colorKeySchema = z.enum(["terracotta", "sage", "gold", "blue", "plum"]);
+export const colorKeySchema = z.enum(["terracotta", "sage", "gold", "blue", "plum", "coral", "amber", "teal", "indigo", "slate"]);
 export const libraryKindSchema = z.enum(["repertoire", "manual", "technique", "theory"]);
 
 export const collectionInputSchema = z.object({

@@ -17,7 +17,7 @@ export interface SegmentMetric {
   bpmReached?: number;
   reps?: number;
 }
-export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum";
+export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum" | "coral" | "amber" | "teal" | "indigo" | "slate";
 export type ReminderFreq = "daily" | "weekdays" | "custom";
 
 export interface Profile {
