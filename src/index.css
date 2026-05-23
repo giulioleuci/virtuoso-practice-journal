@@ -45,6 +45,11 @@
     --key-gold: 38 62% 50%;
     --key-blue: 210 40% 45%;
     --key-plum: 320 25% 42%;
+    --key-coral: 8 70% 58%;
+    --key-amber: 28 75% 50%;
+    --key-teal: 178 45% 38%;
+    --key-indigo: 235 40% 50%;
+    --key-slate: 215 20% 45%;
 
     /* Shadows — layered & tactile */
     --shadow-soft: 0 1px 2px hsl(25 25% 18% / 0.04), 0 4px 12px hsl(25 25% 18% / 0.06);
