@@ -57,6 +57,11 @@ export default {
           gold: "hsl(var(--key-gold))",
           blue: "hsl(var(--key-blue))",
           plum: "hsl(var(--key-plum))",
+          coral: "hsl(var(--key-coral))",
+          amber: "hsl(var(--key-amber))",
+          teal: "hsl(var(--key-teal))",
+          indigo: "hsl(var(--key-indigo))",
+          slate: "hsl(var(--key-slate))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
