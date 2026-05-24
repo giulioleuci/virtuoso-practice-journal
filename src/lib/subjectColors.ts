@@ -41,14 +41,34 @@ export function getSubjectColor(color?: ColorKey, type?: SubjectType): ColorKey 
   return "terracotta";
 }
 
+/** Resolve a CSS color string for a subject, preferring a custom color when set. */
+export function subjectColorCss(color?: ColorKey, type?: SubjectType, customColor?: string): string {
+  if (customColor) return customColor;
+  return `hsl(var(--key-${getSubjectColor(color, type)}))`;
+}
+
+/** Resolve a CSS color string with a given alpha (0-1). */
+export function subjectColorCssAlpha(color?: ColorKey, type?: SubjectType, customColor?: string, alpha = 1): string {
+  if (customColor) {
+    // hex like #rrggbb → rgba
+    const hex = customColor.replace("#", "");
+    if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    return customColor;
+  }
+  return `hsl(var(--key-${getSubjectColor(color, type)}) / ${alpha})`;
+}
+
 /** Inline style for a colored left border accent on cards. */
-export function subjectBorderStyle(color?: ColorKey, type?: SubjectType): React.CSSProperties {
-  const key = getSubjectColor(color, type);
-  return { borderLeftColor: `hsl(var(--key-${key}))` };
+export function subjectBorderStyle(color?: ColorKey, type?: SubjectType, customColor?: string): React.CSSProperties {
+  return { borderLeftColor: subjectColorCss(color, type, customColor) };
 }
 
 /** Inline style for a lighter colored left border accent (secondary/historical cards). */
-export function subjectBorderStyleLight(color?: ColorKey, type?: SubjectType): React.CSSProperties {
-  const key = getSubjectColor(color, type);
-  return { borderLeftColor: `hsl(var(--key-${key}) / 0.4)` };
+export function subjectBorderStyleLight(color?: ColorKey, type?: SubjectType, customColor?: string): React.CSSProperties {
+  return { borderLeftColor: subjectColorCssAlpha(color, type, customColor, 0.4) };
 }
