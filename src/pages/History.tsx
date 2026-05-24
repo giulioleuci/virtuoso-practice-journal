@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/db";
-import { getSubjectColor } from "@/lib/subjectColors";
+import { subjectColorCss } from "@/lib/subjectColors";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -225,12 +225,11 @@ export default function History() {
                     <div className="font-serif text-lg break-words flex items-center gap-2 flex-wrap">
                       {g.subjectIds.map((sid) => {
                         const subj = subjectMap.get(sid) as Subject | undefined;
-                        const color = getSubjectColor(subj?.color, subj?.type);
                         return (
                           <span
                             key={sid}
                             className="h-2 w-2 rounded-full shrink-0 inline-block"
-                            style={{ backgroundColor: `hsl(var(--key-${color}))` }}
+                            style={{ backgroundColor: subjectColorCss(subj?.color, subj?.type, subj?.customColor) }}
                             title={subj?.name}
                           />
                         );
@@ -249,7 +248,6 @@ export default function History() {
                   {g.sessions.slice(0, 6).map((s) => {
                     const task = taskById.get(s.taskId);
                     const subj = task?.subjectId != null ? subjectMap.get(task.subjectId) as Subject | undefined : undefined;
-                    const color = getSubjectColor(subj?.color, subj?.type);
                     return (
                       <li key={s.id}>
                         <button
@@ -258,7 +256,7 @@ export default function History() {
                         >
                           <span
                             className="h-2 w-2 rounded-full shrink-0 mt-1.5"
-                            style={{ backgroundColor: `hsl(var(--key-${color}))` }}
+                            style={{ backgroundColor: subjectColorCss(subj?.color, subj?.type, subj?.customColor) }}
                           />
                           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                             <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : s.date}</span>

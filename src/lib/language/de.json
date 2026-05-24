@@ -721,5 +721,7 @@
   "summary.bpmGains": "BPM-Fortschritt",
   "routine.weekPreview": "Wochenvorschau",
   "routine.previewTitle": "Aufgaben für die erste Woche",
-  "routine.previewEmpty": "Passe den Zeitplan oben an, um eine Vorschau zu sehen."
+  "routine.previewEmpty": "Passe den Zeitplan oben an, um eine Vorschau zu sehen.",
+  "subjects.customColor": "Eigene Farbe",
+  "common.reset": "Zurücksetzen"
 }

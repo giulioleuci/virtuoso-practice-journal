@@ -721,5 +721,7 @@
   "summary.bpmGains": "Progressi BPM",
   "routine.weekPreview": "Anteprima settimana",
   "routine.previewTitle": "Esercizi per la prima settimana",
-  "routine.previewEmpty": "Modifica il programma sopra per vedere un'anteprima."
+  "routine.previewEmpty": "Modifica il programma sopra per vedere un'anteprima.",
+  "subjects.customColor": "Colore personalizzato",
+  "common.reset": "Reimposta"
 }

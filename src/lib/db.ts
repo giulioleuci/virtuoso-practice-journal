@@ -43,6 +43,8 @@ export interface Subject {
   type: SubjectType;
   layers?: string[];
   color?: ColorKey;
+  /** Optional custom color (hex like "#aabbcc"), overrides preset `color` when set. */
+  customColor?: string;
   createdAt: number;
   deletedAt?: number;
 }

@@ -45,12 +45,12 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
     const itemsMap = new Map((items ?? []).map((i) => [i.id, i]));
     const subjectsMap = new Map((subjects ?? []).map((s) => [s.id, s]));
 
-    const map = new Map<string, { subjectName: string; subjectColor?: ColorKey; subjectType?: SubjectType; items: Map<number | "none", { itemId?: number; itemTitle: string; reqs: HelpRequest[] }> }>();
+    const map = new Map<string, { subjectName: string; subjectColor?: ColorKey; subjectType?: SubjectType; subjectCustomColor?: string; items: Map<number | "none", { itemId?: number; itemTitle: string; reqs: HelpRequest[] }> }>();
     for (const h of list) {
       const item = h.itemId !== undefined ? itemsMap.get(h.itemId) : undefined;
       const subject = item?.subjectId !== undefined ? subjectsMap.get(item.subjectId) : undefined;
       const subjectKey = subject?.name ?? "Other";
-      if (!map.has(subjectKey)) map.set(subjectKey, { subjectName: subjectKey, subjectColor: subject?.color, subjectType: subject?.type, items: new Map() });
+      if (!map.has(subjectKey)) map.set(subjectKey, { subjectName: subjectKey, subjectColor: subject?.color, subjectType: subject?.type, subjectCustomColor: subject?.customColor, items: new Map() });
       const bucket = map.get(subjectKey)!;
       const itemKey = h.itemId ?? "none";
       if (!bucket.items.has(itemKey)) {
@@ -126,7 +126,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                         key={b.itemTitle}
                         value={b.itemTitle}
                         className="paper-card border-none border-l-4 px-3"
-                        style={subjectBorderStyle(g.subjectColor, g.subjectType)}
+                        style={subjectBorderStyle(g.subjectColor, g.subjectType, g.subjectCustomColor)}
                       >
                         <AccordionTrigger className="group py-3 hover:no-underline gap-2 w-full min-w-0">
                           <div className="flex items-center gap-2 flex-1 min-w-0 text-left">
@@ -151,7 +151,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                               const task = r.taskId ? taskById.get(r.taskId) : undefined;
                               const isAnswering = answeringId === r.id;
                               return (
-                                <li key={r.id} className="space-y-2 border-l-2 pl-3" style={subjectBorderStyle(g.subjectColor, g.subjectType)}>
+                                <li key={r.id} className="space-y-2 border-l-2 pl-3" style={subjectBorderStyle(g.subjectColor, g.subjectType, g.subjectCustomColor)}>
                                   <div className="flex items-start gap-2">
                                     {r.resolved ? (
                                       <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
