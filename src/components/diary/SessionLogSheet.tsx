@@ -11,6 +11,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
 import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
 import { studyRoutinesService, sessionsService } from "@/lib/services";
+import { QUALITY_VALS } from "@/lib/constants";
 import { SessionFields, type SessionFieldsValue } from "./SessionFields";
 import { StarRating } from "@/components/shared/StarRating";
 import { LastSessionStrip } from "./LastSessionStrip";
@@ -24,12 +25,6 @@ interface Props {
   prefill?: { bpm?: number; noteVal?: NoteVal; notes?: string };
 }
 
-const QUALITY_VALS: { val: SessionQuality; symbol: string; labelKey: string }[] = [
-  { val: "hard",    symbol: "♭", labelKey: "session.qualityHard" },
-  { val: "improve", symbol: "♮", labelKey: "session.qualityImprove" },
-  { val: "well",    symbol: "♯", labelKey: "session.qualityWell" },
-  { val: "great",   symbol: "✦", labelKey: "session.qualityGreat" },
-];
 
 const initial = (task?: Task | null, prefill?: Props["prefill"]): SessionFieldsValue => ({
   bpm: prefill?.bpm ?? task?.targetBpm,

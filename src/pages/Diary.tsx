@@ -4,7 +4,7 @@ import { db, type Task, type Session, type Profile, type LessonRecurrence, type 
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { today, dayKey, upcomingLessonDates } from "@/lib/recurrence";
-import { NOTE_GLYPH } from "@/lib/constants";
+import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
 import { getSubjectColor, subjectBorderStyle, subjectBorderStyleLight } from "@/lib/subjectColors";
 import {
   AddIcon,
@@ -19,12 +19,9 @@ import {
   HideIcon,
   LessonIcon,
   ArrowRightIcon,
-  InstrumentIcon,
-  ManualIcon,
   StreakIcon,
   SessionIcon,
 } from "@/lib/icons";
-import { BookOpen } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -49,12 +46,6 @@ import { pickQuote } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const QUALITY_SYMBOL: Record<string, string> = {
-  hard: "♭",
-  improve: "♮",
-  well: "♯",
-  great: "𝄪",
-};
 
 function computeStreak(sessions: Session[]): { streak: number; best: number } {
   const daySet = new Set(sessions.map((s) => s.date));
@@ -384,19 +375,8 @@ export default function Diary() {
                         }}
                         className="w-full text-left"
                       >
-                        <div className={cn("font-medium flex items-start gap-2", task.done && "line-through")}>
-                          {subject?.type === "theory" ? (
-                            <BookOpen
-                              className="h-4 w-4 shrink-0 mt-1 text-muted-foreground"
-                              aria-label={t("subjects.type.theory")}
-                            />
-                          ) : (
-                            <InstrumentIcon
-                              className="h-4 w-4 shrink-0 mt-1 text-muted-foreground"
-                              aria-label={t("subjects.type.instrument")}
-                            />
-                          )}
-                          <span className="flex-1 min-w-0 break-words leading-snug">{task.title}</span>
+                        <div className={cn("font-medium", task.done && "line-through")}>
+                          {task.title}
                         </div>
                         {task.targetBpm && (
                           <div className="text-xs text-muted-foreground tabular-nums mt-1 pr-24">
