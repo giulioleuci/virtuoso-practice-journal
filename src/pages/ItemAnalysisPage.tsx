@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type Session, type TheoryLayer } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
+import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
 import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -126,16 +126,16 @@ export default function ItemAnalysisPage() {
   }, [sessions, lang]);
 
   const qualityDist = useMemo(() => {
-    const counts = { hard: 0, improve: 0, well: 0, great: 0 };
+    const counts: Record<string, number> = { hard: 0, improve: 0, well: 0, great: 0 };
     for (const s of sessions ?? []) {
       if (s.quality) counts[s.quality]++;
     }
-    return [
-      { label: "♭", count: counts.hard, color: "hsl(var(--key-terracotta))" },
-      { label: "♮", count: counts.improve, color: "hsl(var(--key-gold))" },
-      { label: "♯", count: counts.well, color: "hsl(var(--key-sage))" },
-      { label: "✦", count: counts.great, color: "hsl(var(--key-blue))" },
-    ];
+    const QUALITY_COLORS = ["hsl(var(--key-terracotta))", "hsl(var(--key-gold))", "hsl(var(--key-sage))", "hsl(var(--key-blue))"];
+    return QUALITY_VALS.map((q, i) => ({
+      label: q.symbol,
+      count: counts[q.val] ?? 0,
+      color: QUALITY_COLORS[i],
+    }));
   }, [sessions]);
 
   const sessionsPerWeek = useMemo((): ChartPoint[] => {

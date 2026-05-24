@@ -10,7 +10,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, X, Trash2, Piano, BookOpen, ChevronDown, Layers, Wrench } from "lucide-react";
+import { Plus, X, Trash2, Piano, BookOpen, ChevronDown, Layers, Wrench, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -137,6 +137,44 @@ function SubjectGroup({
   );
 }
 
+function InlineEdit({ value, onSave, onCancel, placeholder }: {
+  value: string;
+  onSave: (v: string) => void;
+  onCancel: () => void;
+  placeholder?: string;
+}) {
+  const [draft, setDraft] = useState(value);
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); if (draft.trim()) onSave(draft.trim()); }
+          if (e.key === "Escape") onCancel();
+        }}
+        placeholder={placeholder}
+        className="h-7 text-sm px-2"
+      />
+      <button
+        onClick={() => { if (draft.trim()) onSave(draft.trim()); }}
+        className="p-1 rounded hover:bg-accent text-primary"
+        aria-label="save"
+      >
+        <Check className="h-3.5 w-3.5" />
+      </button>
+      <button
+        onClick={onCancel}
+        className="p-1 rounded hover:bg-accent text-muted-foreground"
+        aria-label="cancel"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 function SubjectCard({
   subject, techniques, open, onToggle,
 }: {
@@ -149,6 +187,9 @@ function SubjectCard({
   const [layerDraft, setLayerDraft] = useState("");
   const [techDraft, setTechDraft] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [editingLayer, setEditingLayer] = useState<string | null>(null);
+  const [editingTechId, setEditingTechId] = useState<number | null>(null);
 
   const layerCount = subject.type === "theory" ? THEORY_LAYERS.length : (subject.layers ?? []).length;
 
@@ -157,6 +198,12 @@ function SubjectCard({
     await subjectsService.remove(subject.id);
     toast.success(t("toast.subjectDeleted"));
     setConfirmDelete(false);
+  };
+
+  const saveName = async (newName: string) => {
+    if (!subject.id) return;
+    await subjectsService.rename(subject.id, newName);
+    setEditingName(false);
   };
 
   const addLayer = async () => {
@@ -171,12 +218,23 @@ function SubjectCard({
     await subjectsService.removeLayer(subject.id, l);
   };
 
+  const saveLayer = async (oldName: string, newName: string) => {
+    if (!subject.id) return;
+    await subjectsService.renameLayer(subject.id, oldName, newName);
+    setEditingLayer(null);
+  };
+
   const addTechnique = async () => {
     const v = techDraft.trim();
     if (!v || !subject.id) return;
     if (techniques.some((tech) => tech.name.toLowerCase() === v.toLowerCase())) return;
     await subjectsService.addTechnique(subject.id, v);
     setTechDraft("");
+  };
+
+  const saveTechnique = async (id: number, newName: string) => {
+    await subjectsService.renameTechnique(id, newName);
+    setEditingTechId(null);
   };
 
   return (
@@ -201,6 +259,28 @@ function SubjectCard({
 
       {open && (
         <div className="p-3 pt-1 space-y-4 border-t border-border/40">
+          {/* Subject name editing */}
+          <div className="space-y-1">
+            {editingName ? (
+              <InlineEdit
+                value={subject.name}
+                onSave={saveName}
+                onCancel={() => setEditingName(false)}
+              />
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="font-serif text-base flex-1 min-w-0 truncate">{subject.name}</span>
+                <button
+                  onClick={() => setEditingName(true)}
+                  className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+                  aria-label={t("subjects.editSubjectName")}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Layers */}
           <div className="space-y-2">
             <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -222,16 +302,33 @@ function SubjectCard({
               <>
                 <div className="flex flex-wrap gap-1.5">
                   {(subject.layers ?? []).map((l) => (
-                    <span key={l} className="inline-flex items-center gap-1 bg-accent/70 px-2.5 py-1 rounded-full text-xs">
-                      {l}
-                      <button
-                        onClick={() => removeLayer(l)}
-                        aria-label={t("subjects.removeLayer", { name: l })}
-                        className="hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
+                    editingLayer === l ? (
+                      <div key={l} className="w-full">
+                        <InlineEdit
+                          value={l}
+                          onSave={(v) => saveLayer(l, v)}
+                          onCancel={() => setEditingLayer(null)}
+                        />
+                      </div>
+                    ) : (
+                      <span key={l} className="inline-flex items-center gap-1 bg-accent/70 px-2.5 py-1 rounded-full text-xs">
+                        {l}
+                        <button
+                          onClick={() => setEditingLayer(l)}
+                          aria-label={t("subjects.renameLayer")}
+                          className="hover:text-primary"
+                        >
+                          <Pencil className="h-2.5 w-2.5" />
+                        </button>
+                        <button
+                          onClick={() => removeLayer(l)}
+                          aria-label={t("subjects.removeLayer", { name: l })}
+                          className="hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    )
                   ))}
                   {!(subject.layers ?? []).length && (
                     <span className="text-[11px] italic text-muted-foreground">{t("subjects.layersHint")}</span>
@@ -261,16 +358,33 @@ function SubjectCard({
             </div>
             <div className="flex flex-wrap gap-1.5">
               {techniques.map((tech) => (
-                <span key={tech.id} className="inline-flex items-center gap-1 bg-accent/70 px-2.5 py-1 rounded-full text-xs">
-                  {tech.name}
-                  <button
-                    onClick={() => tech.id && subjectsService.removeTechnique(tech.id)}
-                    aria-label={t("subjects.removeTechnique", { name: tech.name })}
-                    className="hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
+                editingTechId === tech.id ? (
+                  <div key={tech.id} className="w-full">
+                    <InlineEdit
+                      value={tech.name}
+                      onSave={(v) => tech.id != null && saveTechnique(tech.id, v)}
+                      onCancel={() => setEditingTechId(null)}
+                    />
+                  </div>
+                ) : (
+                  <span key={tech.id} className="inline-flex items-center gap-1 bg-accent/70 px-2.5 py-1 rounded-full text-xs">
+                    {tech.name}
+                    <button
+                      onClick={() => tech.id != null && setEditingTechId(tech.id)}
+                      aria-label={t("subjects.renameTechnique")}
+                      className="hover:text-primary"
+                    >
+                      <Pencil className="h-2.5 w-2.5" />
+                    </button>
+                    <button
+                      onClick={() => tech.id && subjectsService.removeTechnique(tech.id)}
+                      aria-label={t("subjects.removeTechnique", { name: tech.name })}
+                      className="hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )
               ))}
               {!techniques.length && (
                 <span className="text-[11px] italic text-muted-foreground">{t("subjects.techniquesHint")}</span>
