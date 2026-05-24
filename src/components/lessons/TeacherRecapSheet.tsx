@@ -126,7 +126,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                         key={b.itemTitle}
                         value={b.itemTitle}
                         className="paper-card border-none border-l-4 px-3"
-                        style={subjectBorderStyle(g.subjectColor, g.subjectType)}
+                        style={subjectBorderStyle(g.subjectColor, g.subjectType, g.subjectCustomColor)}
                       >
                         <AccordionTrigger className="group py-3 hover:no-underline gap-2 w-full min-w-0">
                           <div className="flex items-center gap-2 flex-1 min-w-0 text-left">
@@ -151,7 +151,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                               const task = r.taskId ? taskById.get(r.taskId) : undefined;
                               const isAnswering = answeringId === r.id;
                               return (
-                                <li key={r.id} className="space-y-2 border-l-2 pl-3" style={subjectBorderStyle(g.subjectColor, g.subjectType)}>
+                                <li key={r.id} className="space-y-2 border-l-2 pl-3" style={subjectBorderStyle(g.subjectColor, g.subjectType, g.subjectCustomColor)}>
                                   <div className="flex items-start gap-2">
                                     {r.resolved ? (
                                       <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
