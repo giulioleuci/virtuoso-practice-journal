@@ -53,7 +53,7 @@ const QUALITY_SYMBOL: Record<string, string> = {
   hard: "♭",
   improve: "♮",
   well: "♯",
-  great: "✦",
+  great: "𝄪",
 };
 
 function computeStreak(sessions: Session[]): { streak: number; best: number } {
@@ -68,7 +68,8 @@ function computeStreak(sessions: Session[]): { streak: number; best: number } {
   }
   // Best streak: scan all days
   const allDays = Array.from(daySet).sort();
-  let best = 0, cur = 0;
+  let best = 0,
+    cur = 0;
   for (let i = 0; i < allDays.length; i++) {
     if (i === 0) {
       cur = 1;
@@ -100,9 +101,7 @@ export default function Diary() {
       .toArray();
 
     const taskIds = fetchedTasks.map((t) => t.id!).filter(Boolean);
-    const relevantSessions = taskIds.length > 0
-      ? await db.sessions.where("taskId").anyOf(taskIds).toArray()
-      : [];
+    const relevantSessions = taskIds.length > 0 ? await db.sessions.where("taskId").anyOf(taskIds).toArray() : [];
 
     const groupedSessions = relevantSessions.reduce<Record<number, typeof relevantSessions>>((acc, s) => {
       (acc[s.taskId] ||= [] as never).push(s as never);
@@ -118,10 +117,7 @@ export default function Diary() {
   );
   const pendingCount = pendingAssignments?.length ?? 0;
 
-  const studyRoutines = useLiveQuery(
-    () => db.studyRoutines.filter((r) => !r.deletedAt).toArray(),
-    [],
-  );
+  const studyRoutines = useLiveQuery(() => db.studyRoutines.filter((r) => !r.deletedAt).toArray(), []);
   const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
   const subjectMap = useMemo(() => {
     const map = new Map<number, Subject>();
@@ -150,10 +146,7 @@ export default function Diary() {
 
   // All-time sessions for streak calculation
   const allSessions = useLiveQuery(() => db.sessions.toArray(), []);
-  const { streak, best: bestStreak } = useMemo(
-    () => computeStreak(allSessions ?? []),
-    [allSessions]
-  );
+  const { streak, best: bestStreak } = useMemo(() => computeStreak(allSessions ?? []), [allSessions]);
 
   const carryoverDays = profile?.carryoverDays ?? 2;
   const carryoverFrom = useMemo(() => {
@@ -237,9 +230,7 @@ export default function Diary() {
               <StreakIcon className="h-4 w-4" />
               <span className="font-semibold tabular-nums">{streak}d</span>
               {bestStreak > streak && (
-                <span className="text-xs text-muted-foreground">
-                  · {t("diary.bestStreak", { count: bestStreak })}
-                </span>
+                <span className="text-xs text-muted-foreground">· {t("diary.bestStreak", { count: bestStreak })}</span>
               )}
             </div>
           )}
@@ -300,7 +291,7 @@ export default function Diary() {
                 "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
                 selectedSubjectId === null
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:text-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground",
               )}
             >
               {t("diary.allSubjects")} {tasks ? `${tasks.length}` : ""}
@@ -315,9 +306,7 @@ export default function Diary() {
                   onClick={() => setSelectedSubjectId(isSelected ? null : subj.id!)}
                   className={cn(
                     "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
-                    isSelected
-                      ? "text-white"
-                      : "bg-muted text-muted-foreground hover:text-foreground"
+                    isSelected ? "text-white" : "bg-muted text-muted-foreground hover:text-foreground",
                   )}
                   style={isSelected ? { backgroundColor: `hsl(var(--key-${color}))` } : undefined}
                 >
@@ -397,9 +386,15 @@ export default function Diary() {
                       >
                         <div className={cn("font-medium flex items-start gap-2", task.done && "line-through")}>
                           {subject?.type === "theory" ? (
-                            <BookOpen className="h-4 w-4 shrink-0 mt-1 text-muted-foreground" aria-label={t("subjects.type.theory")} />
+                            <BookOpen
+                              className="h-4 w-4 shrink-0 mt-1 text-muted-foreground"
+                              aria-label={t("subjects.type.theory")}
+                            />
                           ) : (
-                            <InstrumentIcon className="h-4 w-4 shrink-0 mt-1 text-muted-foreground" aria-label={t("subjects.type.instrument")} />
+                            <InstrumentIcon
+                              className="h-4 w-4 shrink-0 mt-1 text-muted-foreground"
+                              aria-label={t("subjects.type.instrument")}
+                            />
                           )}
                           <span className="flex-1 min-w-0 break-words leading-snug">{task.title}</span>
                         </div>
@@ -725,14 +720,20 @@ function LessonTodayBanner({
           {rec.teacher ? t("diary.lessonTodayWith", { teacher: rec.teacher }) : t("diary.lessonToday")}
         </p>
         {subject && (
-          <p className="text-xs text-muted-foreground">{subject.name} · {rec.startTime}</p>
+          <p className="text-xs text-muted-foreground">
+            {subject.name} · {rec.startTime}
+          </p>
         )}
       </div>
       <Button
         size="sm"
         variant="ghost"
         className="shrink-0 text-primary"
-        onClick={() => navigate("/lessons", { state: { openLogForRecurrenceId: rec.id, date: new Date().toISOString().slice(0, 10) } })}
+        onClick={() =>
+          navigate("/lessons", {
+            state: { openLogForRecurrenceId: rec.id, date: new Date().toISOString().slice(0, 10) },
+          })
+        }
       >
         {t("diary.logLesson")} <ArrowRightIcon className="h-3.5 w-3.5 ml-1" />
       </Button>
@@ -763,12 +764,13 @@ function EndOfDaySummary({
         <SessionIcon className="h-5 w-5 text-primary" />
         <h3 className="font-serif text-xl text-primary">{t("diary.todaySummary")}</h3>
       </div>
-      <p className="text-sm text-muted-foreground">
-        {t("diary.totalPracticed", { count: tasks.length })}
-      </p>
+      <p className="text-sm text-muted-foreground">{t("diary.totalPracticed", { count: tasks.length })}</p>
       <div className="space-y-1">
         {rows.map(({ task, last }) => (
-          <div key={task.id} className="flex items-center justify-between text-sm py-1 border-b border-border/40 last:border-0">
+          <div
+            key={task.id}
+            className="flex items-center justify-between text-sm py-1 border-b border-border/40 last:border-0"
+          >
             <span className="truncate flex-1 text-muted-foreground pr-2">{task.title}</span>
             <div className="flex items-center gap-2 shrink-0">
               {last?.quality && (
