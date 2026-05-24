@@ -187,7 +187,7 @@ function SubjectCard({
       >
         <span
           className="h-3 w-3 rounded-full shrink-0"
-          style={{ backgroundColor: `hsl(var(--key-${getSubjectColor(subject.color, subject.type)}))` }}
+          style={{ backgroundColor: subjectColorCss(subject.color, subject.type, subject.customColor) }}
         />
         <div className="flex-1 min-w-0">
           <div className="font-serif text-base truncate">{subject.name}</div>
