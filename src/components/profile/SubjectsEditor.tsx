@@ -295,14 +295,14 @@ function SubjectCard({
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
               {t("subjects.colorLabel")}
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               {COLOR_KEYS.map((ck) => (
                 <button
                   key={ck}
-                  onClick={() => subject.id && db.subjects.update(subject.id, { color: ck as ColorKey })}
+                  onClick={() => subject.id && db.subjects.update(subject.id, { color: ck as ColorKey, customColor: undefined })}
                   className={cn(
                     "h-6 w-6 rounded-full transition-all",
-                    getSubjectColor(subject.color, subject.type) === ck
+                    !subject.customColor && getSubjectColor(subject.color, subject.type) === ck
                       ? "ring-2 ring-offset-2 ring-foreground scale-110"
                       : "hover:scale-110"
                   )}
@@ -310,8 +310,38 @@ function SubjectCard({
                   aria-label={ck}
                 />
               ))}
+              <label
+                className={cn(
+                  "relative h-6 w-6 rounded-full cursor-pointer transition-all overflow-hidden border border-border/60",
+                  subject.customColor ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-110"
+                )}
+                style={
+                  subject.customColor
+                    ? { backgroundColor: subject.customColor }
+                    : { background: "conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ec4899, #ef4444)" }
+                }
+                aria-label={t("subjects.customColor")}
+                title={t("subjects.customColor")}
+              >
+                <input
+                  type="color"
+                  value={subject.customColor ?? "#a0522d"}
+                  onChange={(e) => subject.id && db.subjects.update(subject.id, { customColor: e.target.value })}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  aria-label={t("subjects.customColor")}
+                />
+              </label>
+              {subject.customColor && (
+                <button
+                  onClick={() => subject.id && db.subjects.update(subject.id, { customColor: undefined })}
+                  className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                >
+                  {t("common.reset")}
+                </button>
+              )}
             </div>
           </div>
+
 
           <div className="pt-1 border-t border-border/40 flex justify-end">
             <Button
