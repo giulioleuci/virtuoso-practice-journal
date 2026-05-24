@@ -357,7 +357,7 @@ export default function Diary() {
                       !task.done && "pb-14",
                       task.done && "opacity-70",
                     )}
-                    style={subjectBorderStyle(subject?.color, subject?.type)}
+                    style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
                   >
                     <button
                       onClick={async () => {
@@ -477,7 +477,7 @@ export default function Diary() {
                       <li key={task.id}>
                         <div
                           className="paper-card p-4 w-full flex flex-col gap-3 border-l-4"
-                          style={subjectBorderStyleLight(subject?.color, subject?.type)}
+                          style={subjectBorderStyleLight(subject?.color, subject?.type, subject?.customColor)}
                         >
                           <div className="min-w-0">
                             <div className="font-medium break-words">{task.title}</div>
@@ -571,7 +571,7 @@ export default function Diary() {
                           <li key={task.id}>
                             <div
                               className="paper-card p-4 w-full flex flex-col gap-3 border-l-4"
-                              style={subjectBorderStyleLight(subject?.color, subject?.type)}
+                              style={subjectBorderStyleLight(subject?.color, subject?.type, subject?.customColor)}
                             >
                               <div className="min-w-0">
                                 <div className="font-medium break-words">{task.title}</div>

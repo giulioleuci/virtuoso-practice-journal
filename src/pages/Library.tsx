@@ -222,7 +222,7 @@ export default function Library() {
           const segs = it.id ? (segmentsByItem[it.id] ?? []) : [];
           const subject = subjectMap.get(it.subjectId);
           return (
-            <li key={it.id} className="paper-card p-4 border-l-4" style={subjectBorderStyle(subject?.color, subject?.type)}>
+            <li key={it.id} className="paper-card p-4 border-l-4" style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}>
               {/* Row 1: title + actions */}
               <div className="flex items-start justify-between gap-3">
                 <div className="font-serif text-xl flex-1 min-w-0 truncate">{it.title}</div>
