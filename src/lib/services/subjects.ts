@@ -34,4 +34,19 @@ export const subjectsService = {
   async removeTechnique(id: number): Promise<void> {
     await db.techniques.delete(id);
   },
+
+  async rename(subjectId: number, newName: string): Promise<void> {
+    await db.subjects.update(subjectId, { name: newName });
+  },
+
+  async renameLayer(subjectId: number, oldName: string, newName: string): Promise<void> {
+    const subject = await db.subjects.get(subjectId);
+    if (!subject) return;
+    const layers = (subject.layers ?? []).map((l) => (l === oldName ? newName : l));
+    await db.subjects.update(subjectId, { layers });
+  },
+
+  async renameTechnique(id: number, newName: string): Promise<void> {
+    await db.techniques.update(id, { name: newName });
+  },
 };

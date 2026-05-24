@@ -225,8 +225,9 @@ export default function Profile() {
                         : f === "weekdays" ? [1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6];
                       update({ reminderFreq: f, reminderDays: days });
                     }}
+                    title={t(`onb.freq.${f}`)}
                     className={
-                      "rounded-md border px-2 py-1.5 text-xs font-medium transition-colors " +
+                      "rounded-md border px-2 py-1.5 text-xs font-medium transition-colors overflow-hidden truncate " +
                       (active
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-background text-muted-foreground border-border hover:bg-accent")

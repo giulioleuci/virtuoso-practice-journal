@@ -3,14 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/db";
-import type { MasteryState } from "@/components/library/MasterySliders";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
 import { today } from "@/lib/recurrence";
 import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
 
-import { MasterySliders } from "@/components/library/MasterySliders";
 import { MasterySparkline } from "@/components/library/MasterySparkline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -225,7 +223,7 @@ export default function Library() {
             <li key={it.id} className="paper-card p-4 border-l-4" style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}>
               {/* Row 1: title + actions */}
               <div className="flex items-start justify-between gap-3">
-                <div className="font-serif text-xl flex-1 min-w-0 truncate">{it.title}</div>
+                <div className="font-serif text-xl flex-1 min-w-0 break-words">{it.title}</div>
                 <div className="flex items-center gap-1 shrink-0">
                   {(() => {
                     const itemHelp = (allHelp ?? []).filter((h) => h.itemId === it.id);
@@ -353,7 +351,7 @@ export default function Library() {
                   })}
                   className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
-                  <Play className="h-3 w-3" /> Practice this
+                  <Play className="h-3 w-3" /> {t("library.practiceThis")}
                 </button>
               </div>
             </li>
@@ -537,25 +535,18 @@ function TheoryMasterySection({ itemId }: { itemId: number }) {
 
   return (
     <div className="mt-3 pt-3 border-t border-border/60">
-      <div className="flex gap-3 items-start">
-        {/* Compact radar */}
-        <div className="w-20 h-20 shrink-0">
-          <MasterySliders value={latestScores} size={80} />
-        </div>
-        {/* Per-dimension sparklines */}
-        <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-1.5">
-          {THEORY_LAYERS.map((layer) => (
-            <div key={layer} className="flex items-center gap-1.5">
-              <div className="text-[9px] uppercase tracking-wider text-muted-foreground w-10 shrink-0 truncate">
-                {t(`library.mastery.${layer}`).slice(0, 4)}
-              </div>
-              <MasterySparkline itemId={itemId} layer={layer as TheoryLayer} weeks={8} />
-              <div className="text-[10px] font-serif tabular-nums text-primary ml-auto">
-                {latestScores[layer]}
-              </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+        {THEORY_LAYERS.map((layer) => (
+          <div key={layer} className="flex items-center gap-1.5">
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground w-10 shrink-0 truncate">
+              {t(`library.mastery.${layer}`).slice(0, 4)}
             </div>
-          ))}
-        </div>
+            <MasterySparkline itemId={itemId} layer={layer as TheoryLayer} weeks={8} />
+            <div className="text-[10px] font-serif tabular-nums text-primary ml-auto">
+              {latestScores[layer]}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
