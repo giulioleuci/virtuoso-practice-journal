@@ -2,16 +2,10 @@ import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type Session, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { NOTE_GLYPH } from "@/lib/constants";
+import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
 import { today } from "@/lib/recurrence";
 import { cn } from "@/lib/utils";
 
-const QUALITY_SYMBOL: Record<string, string> = {
-  hard: "♭",
-  improve: "♮",
-  well: "♯",
-  great: "✦",
-};
 
 interface Props {
   task: Task;

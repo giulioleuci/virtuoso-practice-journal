@@ -10,14 +10,7 @@ import { StarRating } from "@/components/shared/StarRating";
 import { cn } from "@/lib/utils";
 import type { NoteVal, SessionQuality } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-
-/** Musical notation symbols used as quality indicators. */
-const QUALITY_VALS: { val: SessionQuality; symbol: string; labelKey: string }[] = [
-  { val: "hard",    symbol: "♭", labelKey: "session.qualityHard" },
-  { val: "improve", symbol: "♮", labelKey: "session.qualityImprove" },
-  { val: "well",    symbol: "♯", labelKey: "session.qualityWell" },
-  { val: "great",   symbol: "✦", labelKey: "session.qualityGreat" },
-];
+import { QUALITY_VALS } from "@/lib/constants";
 
 export interface SessionFieldsValue {
   bpm: number | undefined;

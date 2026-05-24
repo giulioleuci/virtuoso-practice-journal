@@ -15,13 +15,7 @@ import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { cn } from "@/lib/utils";
 import { SessionIcon } from "@/lib/icons";
 import { toast } from "sonner";
-
-const QUALITY_VALS: { val: SessionQuality; symbol: string; label: string }[] = [
-  { val: "hard", symbol: "♭", label: "Hard" },
-  { val: "improve", symbol: "♮", label: "Improve" },
-  { val: "well", symbol: "♯", label: "Well" },
-  { val: "great", symbol: "✦", label: "Great" },
-];
+import { QUALITY_VALS } from "@/lib/constants";
 
 interface Props {
   className?: string;
@@ -203,7 +197,7 @@ export function SessionFAB({ className }: Props) {
                     )}
                   >
                     <span className="text-2xl font-serif leading-none">{q.symbol}</span>
-                    <span className="text-xs mt-1">{q.label}</span>
+                    <span className="text-xs mt-1">{t(q.labelKey)}</span>
                   </button>
                 ))}
               </div>
