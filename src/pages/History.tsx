@@ -225,12 +225,11 @@ export default function History() {
                     <div className="font-serif text-lg break-words flex items-center gap-2 flex-wrap">
                       {g.subjectIds.map((sid) => {
                         const subj = subjectMap.get(sid) as Subject | undefined;
-                        const color = getSubjectColor(subj?.color, subj?.type);
                         return (
                           <span
                             key={sid}
                             className="h-2 w-2 rounded-full shrink-0 inline-block"
-                            style={{ backgroundColor: `hsl(var(--key-${color}))` }}
+                            style={{ backgroundColor: subjectColorCss(subj?.color, subj?.type, subj?.customColor) }}
                             title={subj?.name}
                           />
                         );
