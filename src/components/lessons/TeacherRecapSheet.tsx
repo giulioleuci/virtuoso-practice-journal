@@ -45,12 +45,12 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
     const itemsMap = new Map((items ?? []).map((i) => [i.id, i]));
     const subjectsMap = new Map((subjects ?? []).map((s) => [s.id, s]));
 
-    const map = new Map<string, { subjectName: string; subjectColor?: ColorKey; subjectType?: SubjectType; items: Map<number | "none", { itemId?: number; itemTitle: string; reqs: HelpRequest[] }> }>();
+    const map = new Map<string, { subjectName: string; subjectColor?: ColorKey; subjectType?: SubjectType; subjectCustomColor?: string; items: Map<number | "none", { itemId?: number; itemTitle: string; reqs: HelpRequest[] }> }>();
     for (const h of list) {
       const item = h.itemId !== undefined ? itemsMap.get(h.itemId) : undefined;
       const subject = item?.subjectId !== undefined ? subjectsMap.get(item.subjectId) : undefined;
       const subjectKey = subject?.name ?? "Other";
-      if (!map.has(subjectKey)) map.set(subjectKey, { subjectName: subjectKey, subjectColor: subject?.color, subjectType: subject?.type, items: new Map() });
+      if (!map.has(subjectKey)) map.set(subjectKey, { subjectName: subjectKey, subjectColor: subject?.color, subjectType: subject?.type, subjectCustomColor: subject?.customColor, items: new Map() });
       const bucket = map.get(subjectKey)!;
       const itemKey = h.itemId ?? "none";
       if (!bucket.items.has(itemKey)) {
