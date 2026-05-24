@@ -248,7 +248,6 @@ export default function History() {
                   {g.sessions.slice(0, 6).map((s) => {
                     const task = taskById.get(s.taskId);
                     const subj = task?.subjectId != null ? subjectMap.get(task.subjectId) as Subject | undefined : undefined;
-                    const color = getSubjectColor(subj?.color, subj?.type);
                     return (
                       <li key={s.id}>
                         <button
@@ -257,7 +256,7 @@ export default function History() {
                         >
                           <span
                             className="h-2 w-2 rounded-full shrink-0 mt-1.5"
-                            style={{ backgroundColor: `hsl(var(--key-${color}))` }}
+                            style={{ backgroundColor: subjectColorCss(subj?.color, subj?.type, subj?.customColor) }}
                           />
                           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                             <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : s.date}</span>
