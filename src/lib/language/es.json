@@ -721,5 +721,7 @@
   "summary.bpmGains": "Avances en BPM",
   "routine.weekPreview": "Vista previa de la semana",
   "routine.previewTitle": "Tareas para la primera semana",
-  "routine.previewEmpty": "Ajusta el horario de arriba para ver una vista previa."
+  "routine.previewEmpty": "Ajusta el horario de arriba para ver una vista previa.",
+  "subjects.customColor": "Color personalizado",
+  "common.reset": "Restablecer"
 }

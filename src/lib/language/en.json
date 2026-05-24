@@ -721,5 +721,7 @@
   "summary.bpmGains": "BPM gains",
   "routine.weekPreview": "Week preview",
   "routine.previewTitle": "Tasks for the first week",
-  "routine.previewEmpty": "Adjust the schedule above to see a preview."
+  "routine.previewEmpty": "Adjust the schedule above to see a preview.",
+  "subjects.customColor": "Custom color",
+  "common.reset": "Reset"
 }
