@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/db";
-import { getSubjectColor, subjectColorCss } from "@/lib/subjectColors";
+import { subjectColorCss } from "@/lib/subjectColors";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
