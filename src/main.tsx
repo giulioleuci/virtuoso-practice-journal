@@ -5,4 +5,6 @@ import "./index.css";
 
 configurePlatform();
 
-createRoot(document.getElementById("root")!).render(<App />);
+const rootElement = document.getElementById("root");
+if (!rootElement) throw new Error("Root element #root not found");
+createRoot(rootElement).render(<App />);

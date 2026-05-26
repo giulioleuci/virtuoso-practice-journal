@@ -153,7 +153,7 @@ export function generateRoutineTasks(
           entry.segs.push(item);
           segsByItem.set(item.itemId, entry);
         } else {
-          tasks.push(buildTask(item, dateStr, routine.subjectId, routine.id!, createdAt));
+          tasks.push(buildTask(item, dateStr, routine.subjectId, routine.id, createdAt));
         }
       }
       for (const [itemId, { segs, title }] of segsByItem) {
@@ -168,7 +168,7 @@ export function generateRoutineTasks(
           },
           dateStr,
           routine.subjectId,
-          routine.id!,
+          routine.id,
           createdAt,
         ));
       }

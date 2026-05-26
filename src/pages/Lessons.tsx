@@ -77,7 +77,7 @@ export default function Lessons() {
     setRecOpen(true);
   };
 
-  const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id!, s])), [subjects]);
+  const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id, s])), [subjects]);
   const subjectName = (id: number) => subjectMap.get(id)?.name ?? "—";
 
   const openLog = (r: LessonRecurrence, date?: string) => {

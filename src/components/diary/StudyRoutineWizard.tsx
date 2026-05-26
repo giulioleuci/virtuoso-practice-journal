@@ -324,7 +324,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
     return list.filter((i) => {
       if (i.title.toLowerCase().includes(q)) return true;
       if (i.composer?.toLowerCase().includes(q)) return true;
-      const segs = segmentsByItem.get(i.id!) ?? [];
+      const segs = segmentsByItem.get(i.id) ?? [];
       return segs.some((s) => s.label.toLowerCase().includes(q));
     });
   }, [library, q, segmentsByItem]);
@@ -447,11 +447,11 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                     <div className="paper-card">
                       <div className="divide-y divide-border">
                         {pagedLibrary.map((item) => {
-                          const segs = segmentsByItem.get(item.id!) ?? [];
+                          const segs = segmentsByItem.get(item.id) ?? [];
                           const inPool = poolKeySet.has(`item:${item.id}`);
-                          const expanded = expandedItems.has(item.id!);
+                          const expanded = expandedItems.has(item.id);
                           const segsInPool = segs.filter((s) => poolKeySet.has(`segment:${s.id}`)).length;
-                          const segPage = getSegPage(item.id!);
+                          const segPage = getSegPage(item.id);
                           const segPageCount = Math.max(1, Math.ceil(segs.length / PAGE_SIZE));
                           const pagedSegs = segs.slice((segPage - 1) * PAGE_SIZE, segPage * PAGE_SIZE);
                           return (
@@ -460,7 +460,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                 {segs.length > 0 ? (
                                   <button
                                     type="button"
-                                    onClick={() => toggleExpandItem(item.id!)}
+                                    onClick={() => toggleExpandItem(item.id)}
                                     className="p-1 -m-1 text-muted-foreground"
                                     aria-label={t("studyRoutine.toggleSegments")}
                                   >
@@ -487,8 +487,8 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                   type="button"
                                   onClick={() =>
                                     inPool
-                                      ? removeFromPool({ type: "item", id: item.id! })
-                                      : addToPool({ type: "item", id: item.id! })
+                                      ? removeFromPool({ type: "item", id: item.id })
+                                      : addToPool({ type: "item", id: item.id })
                                   }
                                   className={cn(
                                     "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",
@@ -512,8 +512,8 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                           type="button"
                                           onClick={() =>
                                             segInPool
-                                              ? removeFromPool({ type: "segment", id: seg.id! })
-                                              : addToPool({ type: "segment", id: seg.id! })
+                                              ? removeFromPool({ type: "segment", id: seg.id })
+                                              : addToPool({ type: "segment", id: seg.id })
                                           }
                                           className={cn(
                                             "shrink-0 h-6 w-6 rounded-full border flex items-center justify-center transition-colors",
@@ -531,7 +531,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                   <Pager
                                     page={segPage}
                                     pageCount={segPageCount}
-                                    onChange={(p) => setSegPage(item.id!, p)}
+                                    onChange={(p) => setSegPage(item.id, p)}
                                   />
                                 </div>
                               )}
@@ -566,8 +566,8 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                 type="button"
                                 onClick={() =>
                                   inPool
-                                    ? removeFromPool({ type: "collection", id: col.id! })
-                                    : addToPool({ type: "collection", id: col.id! })
+                                    ? removeFromPool({ type: "collection", id: col.id })
+                                    : addToPool({ type: "collection", id: col.id })
                                 }
                                 className={cn(
                                   "shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-colors",

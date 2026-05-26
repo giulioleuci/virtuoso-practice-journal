@@ -1,5 +1,5 @@
 /** Library service — wraps library + segment operations. */
-import { db, type LibraryItem, type Segment } from "@/lib/db";
+import { db, type Draft, type LibraryItem, type Segment } from "@/lib/db";
 import { notDeleted, now } from "./_shared";
 
 /** Soft-delete a library item if any of its tasks have logged sessions; otherwise hard-delete. */
@@ -29,21 +29,22 @@ export const libraryService = {
     return db.library.get(id);
   },
 
-  async upsert(item: LibraryItem, segments: Omit<Segment, "id" | "itemId" | "createdAt">[] = []) {
+  async upsert(item: Draft<LibraryItem>, segments: Omit<Segment, "id" | "itemId" | "createdAt">[] = []) {
     const ts = now();
-    let id = item.id;
-    if (id) {
+    let id: number;
+    if (item.id !== undefined) {
       await db.library.put(item);
-      await db.segments.where("itemId").equals(id).delete();
+      await db.segments.where("itemId").equals(item.id).delete();
+      id = item.id;
     } else {
       id = (await db.library.add({ ...item, createdAt: item.createdAt ?? ts })) as number;
     }
     if (segments.length) {
       await db.segments.bulkAdd(
-        segments.map((s) => ({ ...s, itemId: id!, createdAt: ts })),
+        segments.map((s) => ({ ...s, itemId: id, createdAt: ts })),
       );
     }
-    return id!;
+    return id;
   },
 
   async remove(id: number) {

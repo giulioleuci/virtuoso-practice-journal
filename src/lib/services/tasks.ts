@@ -111,7 +111,7 @@ export const tasksService = {
   async carryOver(task: Task, toDate: string): Promise<number> {
     const { id, date, done, skipped, ...rest } = task;
     const newId = (await db.tasks.add({ ...rest, date: toDate, done: false, createdAt: now() })) as number;
-    await db.tasks.update(id!, { skipped: true });
+    await db.tasks.update(id, { skipped: true });
     return newId;
   },
 

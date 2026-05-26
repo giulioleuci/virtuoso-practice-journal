@@ -15,6 +15,10 @@ const QUALITY_ORDER = ["hard", "improve", "well", "great"];
 
 interface ChartPoint { x: number; y: number; label: string }
 
+function formatDay(date: string, lang: string): string {
+  return new Date(date).toLocaleDateString(lang, { day: "2-digit", month: "short" });
+}
+
 function LineChart({ points, target, color = "hsl(var(--primary))", targetColor = "hsl(var(--muted-foreground))" }: {
   points: ChartPoint[];
   target?: number;
@@ -81,7 +85,7 @@ export default function ItemAnalysisPage() {
   const tasks = useTasksByItem(itemId ?? undefined);
 
   const sessions = useLiveQuery(async () => {
-    const ids = (tasks ?? []).map((t) => t.id!).filter(Boolean);
+    const ids = (tasks ?? []).map((t) => t.id).filter(Boolean);
     if (!ids.length) return [];
     return db.sessions.where("taskId").anyOf(ids).sortBy("date");
   }, [tasks]);
@@ -91,25 +95,21 @@ export default function ItemAnalysisPage() {
   const isTheory = item?.kind === "theory";
 
   const bpmPoints = useMemo((): ChartPoint[] => {
-    if (!sessions) return [];
-    return sessions
-      .filter((s) => s.bpmReached)
-      .map((s, i) => ({
-        x: i,
-        y: s.bpmReached!,
-        label: new Date(s.date).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
-      }));
+    const points: ChartPoint[] = [];
+    for (const s of sessions ?? []) {
+      if (s.bpmReached == null) continue;
+      points.push({ x: points.length, y: s.bpmReached, label: formatDay(s.date, lang) });
+    }
+    return points;
   }, [sessions, lang]);
 
   const confidencePoints = useMemo((): ChartPoint[] => {
-    if (!sessions) return [];
-    return sessions
-      .filter((s) => s.confidence != null)
-      .map((s, i) => ({
-        x: i,
-        y: s.confidence!,
-        label: new Date(s.date).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
-      }));
+    const points: ChartPoint[] = [];
+    for (const s of sessions ?? []) {
+      if (s.confidence == null) continue;
+      points.push({ x: points.length, y: s.confidence, label: formatDay(s.date, lang) });
+    }
+    return points;
   }, [sessions, lang]);
 
   const qualityDist = useMemo(() => {
@@ -130,20 +130,19 @@ export default function ItemAnalysisPage() {
     return weeklySessionCounts(sessions, 12).map(({ weekKey, count }, i) => ({
       x: i,
       y: count,
-      label: new Date(weekKey).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
+      label: formatDay(weekKey, lang),
     }));
   }, [sessions, lang]);
 
   const theoryLayerPoints = useMemo(() => {
     if (!isTheory || !sessions?.length) return null;
     return THEORY_LAYERS.map((layer) => {
-      const pts: ChartPoint[] = sessions
-        .filter((s) => s.layerScores?.[layer] != null)
-        .map((s, i) => ({
-          x: i,
-          y: s.layerScores![layer],
-          label: new Date(s.date).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
-        }));
+      const pts: ChartPoint[] = [];
+      for (const s of sessions) {
+        const score = s.layerScores?.[layer];
+        if (score == null) continue;
+        pts.push({ x: pts.length, y: score, label: formatDay(s.date, lang) });
+      }
       return { layer, points: pts };
     });
   }, [sessions, isTheory, lang]);

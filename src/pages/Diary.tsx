@@ -64,7 +64,7 @@ export default function Diary() {
       .filter((t) => !t.deletedAt)
       .toArray();
 
-    const taskIds = fetchedTasks.map((t) => t.id!).filter(Boolean);
+    const taskIds = fetchedTasks.map((t) => t.id).filter(Boolean);
     const relevantSessions = taskIds.length > 0 ? await db.sessions.where("taskId").anyOf(taskIds).toArray() : [];
 
     const groupedSessions = relevantSessions.reduce<Record<number, typeof relevantSessions>>((acc, s) => {
@@ -166,7 +166,7 @@ export default function Diary() {
   const subjectFilterOptions = useMemo(() => {
     if (!tasks || !subjects) return [];
     const idSet = new Set(tasks.map((t) => t.subjectId));
-    return (subjects ?? []).filter((s) => s.id !== undefined && idSet.has(s.id!));
+    return (subjects ?? []).filter((s) => s.id !== undefined && idSet.has(s.id));
   }, [tasks, subjects]);
 
   const filteredTasks = useMemo(() => {
@@ -267,7 +267,7 @@ export default function Diary() {
               return (
                 <button
                   key={subj.id}
-                  onClick={() => setSelectedSubjectId(isSelected ? null : subj.id!)}
+                  onClick={() => setSelectedSubjectId(isSelected ? null : subj.id)}
                   className={cn(
                     "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
                     isSelected ? "text-white" : "bg-muted text-muted-foreground hover:text-foreground",

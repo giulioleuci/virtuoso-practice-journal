@@ -82,8 +82,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const techniqueOptions = useMemo(() => {
     const ids = task?.techniqueIds && task.techniqueIds.length ? task.techniqueIds : null;
     const all = (allTechniques ?? []).filter((t) => t.subjectId === task?.subjectId);
-    const scoped = ids ? all.filter((t) => ids.includes(t.id!)) : all;
-    return scoped.map((t) => ({ value: t.id!, label: t.name }));
+    const scoped = ids ? all.filter((t) => ids.includes(t.id)) : all;
+    return scoped.map((t) => ({ value: t.id, label: t.name }));
   }, [allTechniques, task]);
 
   useEffect(() => {
@@ -215,7 +215,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
           {granular && taskSegments ? (
             <>
               {taskSegments.map((seg) => {
-                const segId = String(seg.id!);
+                const segId = String(seg.id);
                 const m: SegMetricState = segMetrics[segId] ?? {};
                 return (
                   <div key={segId} className="paper-card p-4 space-y-4">

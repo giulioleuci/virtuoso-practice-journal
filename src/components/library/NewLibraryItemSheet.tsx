@@ -95,14 +95,14 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       .filter((c) => c.kind === editingKind)
       .slice()
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((c) => ({ value: c.id!, label: c.name })),
+      .map((c) => ({ value: c.id, label: c.name })),
     [allCollections, editingKind]
   );
 
   const subjectTechniqueOptions = useMemo(
     () => (allTechniques ?? [])
       .filter((t) => t.subjectId === subjectId)
-      .map((t) => ({ value: t.id!, label: t.name })),
+      .map((t) => ({ value: t.id, label: t.name })),
     [allTechniques, subjectId]
   );
   const subjectLayers = useMemo(

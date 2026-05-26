@@ -70,7 +70,7 @@ export default function EditTaskPage() {
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])
       .filter((tech) => tech.subjectId === subjectId)
-      .map((tech) => ({ value: tech.id!, label: tech.name })),
+      .map((tech) => ({ value: tech.id, label: tech.name })),
     [allTechniques, subjectId]
   );
 
@@ -91,9 +91,9 @@ export default function EditTaskPage() {
   };
 
   const save = async () => {
-    if (!taskId || errors.length) return;
+    if (!taskId || errors.length || subjectId === undefined) return;
     await tasksService.update(taskId, {
-      subjectId: subjectId!,
+      subjectId,
       linkType,
       itemId: linkType === "item" ? itemId : undefined,
       segmentIds: linkType === "item" ? segmentIds : undefined,
@@ -154,7 +154,7 @@ export default function EditTaskPage() {
           <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
           <SelectContent>
             {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+              <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>

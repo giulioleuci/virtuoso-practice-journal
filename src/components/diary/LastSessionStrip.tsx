@@ -35,7 +35,7 @@ export function LastSessionStrip({ task, compact = false }: Props) {
     // For item-linked tasks, find sessions across all tasks for the same item
     if (task.itemId) {
       const relatedTasks = await db.tasks.where("itemId").equals(task.itemId).toArray();
-      const ids = relatedTasks.map((x) => x.id!).filter(Boolean);
+      const ids = relatedTasks.map((x) => x.id).filter(Boolean);
       if (!ids.length) return null;
       const sessions = await db.sessions
         .where("taskId")
@@ -65,14 +65,17 @@ export function LastSessionStrip({ task, compact = false }: Props) {
   const recentBpms = useLiveQuery(async (): Promise<number[]> => {
     if (!task.itemId || isTheory) return [];
     const relatedTasks = await db.tasks.where("itemId").equals(task.itemId).toArray();
-    const ids = relatedTasks.map((x) => x.id!).filter(Boolean);
+    const ids = relatedTasks.map((x) => x.id).filter(Boolean);
     if (!ids.length) return [];
     const sessions = await db.sessions
       .where("taskId")
       .anyOf(ids)
       .and((s) => s.date < todayKey && s.bpmReached !== undefined)
       .sortBy("date");
-    return sessions.slice(-3).map((s) => s.bpmReached!);
+    return sessions
+      .slice(-3)
+      .map((s) => s.bpmReached)
+      .filter((bpm): bpm is number => bpm !== undefined);
   }, [task.itemId, isTheory, todayKey]);
 
   const sparklinePath = useMemo(() => {
@@ -91,10 +94,11 @@ export function LastSessionStrip({ task, compact = false }: Props) {
   }, [recentBpms]);
 
   const theoryScores = useMemo(() => {
-    if (!isTheory || !lastSession?.layerScores) return null;
+    const layerScores = lastSession?.layerScores;
+    if (!isTheory || !layerScores) return null;
     return THEORY_LAYERS.map((l) => ({
       layer: l,
-      score: lastSession.layerScores![l] ?? 0,
+      score: layerScores[l] ?? 0,
     }));
   }, [isTheory, lastSession]);
 

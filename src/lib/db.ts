@@ -37,7 +37,7 @@ export interface Profile {
 }
 
 export interface Subject {
-  id?: number;
+  id: number;
   name: string;
   type: SubjectType;
   layers?: string[];
@@ -49,7 +49,7 @@ export interface Subject {
 }
 
 export interface Technique {
-  id?: number;
+  id: number;
   subjectId: number;
   name: string;
   createdAt: number;
@@ -57,7 +57,7 @@ export interface Technique {
 }
 
 export interface LibraryItem {
-  id?: number;
+  id: number;
   subjectId: number;
   kind: LibraryKind;
   title: string;
@@ -76,7 +76,7 @@ export interface LibraryItem {
 }
 
 export interface Segment {
-  id?: number;
+  id: number;
   itemId: number;
   label: string;
   targetBpm?: number;
@@ -105,7 +105,7 @@ export interface TaskRecurrence {
 export type TaskLinkType = "free" | "item" | "collection";
 
 export interface Task {
-  id?: number;
+  id: number;
   date: string;
   subjectId: number;
   linkType?: TaskLinkType;        // optional for legacy rows; treat missing as inferred
@@ -145,7 +145,7 @@ export interface SessionSnapshot {
 }
 
 export interface Session {
-  id?: number;
+  id: number;
   taskId: number;
   date: string;
   bpmReached?: number;
@@ -168,7 +168,7 @@ export interface Session {
 }
 
 export interface HelpRequest {
-  id?: number;
+  id: number;
   sessionId?: number;
   taskId?: number;
   itemId?: number;
@@ -180,7 +180,7 @@ export interface HelpRequest {
 }
 
 export interface LessonRecurrence {
-  id?: number;
+  id: number;
   subjectId: number;
   teacher: string;
   frequency: "weekly" | "biweekly" | "monthly";
@@ -202,7 +202,7 @@ export interface LessonSnapshot {
 }
 
 export interface Lesson {
-  id?: number;
+  id: number;
   recurrenceId?: number;
   subjectId: number;
   date: string;
@@ -215,7 +215,7 @@ export interface Lesson {
 }
 
 export interface Assignment {
-  id?: number;
+  id: number;
   lessonId: number;
   text: string;
   transformed: boolean;
@@ -225,7 +225,7 @@ export interface Assignment {
 }
 
 export interface Collection {
-  id?: number;
+  id: number;
   /** Library kind this collection groups. Each collection is kind-specific. */
   kind: LibraryKind;
   name: string;
@@ -240,7 +240,7 @@ export interface Collection {
 }
 
 export interface CollectionItem {
-  id?: number;
+  id: number;
   collectionId: number;
   itemId: number;
   position?: number;
@@ -259,7 +259,7 @@ export interface StudyGroup {
 }
 
 export interface StudyRoutine {
-  id?: number;
+  id: number;
   name?: string;
   parentTaskId?: number;
   subjectId: number;
@@ -274,21 +274,24 @@ export interface StudyRoutine {
   deletedAt?: number;
 }
 
+/** Shape accepted on insert: the auto-increment `id` is assigned by Dexie. */
+export type Draft<T extends { id: number }> = Omit<T, "id"> & { id?: number };
+
 class VirtuosoDB extends Dexie {
-  profile!: Table<Profile, string>;
-  subjects!: Table<Subject, number>;
-  techniques!: Table<Technique, number>;
-  library!: Table<LibraryItem, number>;
-  segments!: Table<Segment, number>;
-  tasks!: Table<Task, number>;
-  sessions!: Table<Session, number>;
-  helpRequests!: Table<HelpRequest, number>;
-  recurrences!: Table<LessonRecurrence, number>;
-  lessons!: Table<Lesson, number>;
-  assignments!: Table<Assignment, number>;
-  collections!: Table<Collection, number>;
-  collectionItems!: Table<CollectionItem, number>;
-  studyRoutines!: Table<StudyRoutine, number>;
+  declare profile: Table<Profile, string>;
+  declare subjects: Table<Subject, number, Draft<Subject>>;
+  declare techniques: Table<Technique, number, Draft<Technique>>;
+  declare library: Table<LibraryItem, number, Draft<LibraryItem>>;
+  declare segments: Table<Segment, number, Draft<Segment>>;
+  declare tasks: Table<Task, number, Draft<Task>>;
+  declare sessions: Table<Session, number, Draft<Session>>;
+  declare helpRequests: Table<HelpRequest, number, Draft<HelpRequest>>;
+  declare recurrences: Table<LessonRecurrence, number, Draft<LessonRecurrence>>;
+  declare lessons: Table<Lesson, number, Draft<Lesson>>;
+  declare assignments: Table<Assignment, number, Draft<Assignment>>;
+  declare collections: Table<Collection, number, Draft<Collection>>;
+  declare collectionItems: Table<CollectionItem, number, Draft<CollectionItem>>;
+  declare studyRoutines: Table<StudyRoutine, number, Draft<StudyRoutine>>;
 
   constructor() {
     super("virtuoso");

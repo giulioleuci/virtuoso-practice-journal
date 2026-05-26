@@ -123,7 +123,7 @@ export function SessionFAB({ className }: Props) {
                 <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
                 <SelectContent>
                   {(subjects ?? []).map((s) => (
-                    <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+                    <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -137,7 +137,7 @@ export function SessionFAB({ className }: Props) {
                   <SelectContent>
                     <SelectItem value="">—</SelectItem>
                     {(libraryItems ?? []).map((i) => (
-                      <SelectItem key={i.id} value={i.id!.toString()}>{i.title}</SelectItem>
+                      <SelectItem key={i.id} value={i.id.toString()}>{i.title}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

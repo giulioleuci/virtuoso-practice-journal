@@ -55,11 +55,11 @@ export const lessonsService = {
     const ts = now();
     await db.transaction("rw", db.lessons, db.assignments, async () => {
       await db.lessons.put({ ...lesson, date, notes: notes?.trim() || undefined });
-      await db.assignments.where("lessonId").equals(lesson.id!).delete();
+      await db.assignments.where("lessonId").equals(lesson.id).delete();
       if (assignmentTexts.length) {
         await db.assignments.bulkAdd(
           assignmentTexts.map((text) => ({
-            lessonId: lesson.id!,
+            lessonId: lesson.id,
             text,
             transformed: false,
             createdAt: ts,

@@ -21,7 +21,7 @@ export function ItemAnalysisSheet({ open, onOpenChange, item }: Props) {
     [item.id]
   );
   const sessions = useLiveQuery(async () => {
-    const ids = (tasks ?? []).map((tk) => tk.id!).filter(Boolean);
+    const ids = (tasks ?? []).map((tk) => tk.id).filter(Boolean);
     if (!ids.length) return [];
     return db.sessions.where("taskId").anyOf(ids).toArray();
   }, [tasks]);
@@ -75,7 +75,7 @@ export function ItemAnalysisSheet({ open, onOpenChange, item }: Props) {
                   <AnalysisBlock
                     key={seg.id}
                     label={seg.label}
-                    sessions={sessionsForSegment(seg.id!)}
+                    sessions={sessionsForSegment(seg.id)}
                     kind={item.kind}
                     techniques={techniques ?? []}
                     lang={lang}
@@ -166,12 +166,14 @@ function AnalysisBlock({ label, sessions, kind, techniques, lang, t }: BlockProp
             {t("library.analysis.layers")}
           </div>
           {usedLayers.map((layer) => {
-            const last = layerLatest(layer)!;
+            const last = layerLatest(layer);
+            const score = last?.layerScores?.[layer];
+            if (!last || score == null) return null;
             return (
               <Row
                 key={layer}
                 name={t(`library.mastery.${layer}`)}
-                latest={`${last.layerScores![layer]}/100`}
+                latest={`${score}/100`}
                 date={fmt(last.date)}
                 points={extractPoints(sessions, (s) => s.layerScores?.[layer] ?? null)}
                 max={100}
@@ -187,13 +189,15 @@ function AnalysisBlock({ label, sessions, kind, techniques, lang, t }: BlockProp
             {t("library.analysis.techniques")}
           </div>
           {techniqueIds.map((id) => {
-            const last = techLatest(id)!;
+            const last = techLatest(id);
+            const score = last?.techniqueScores?.[id];
             const name = techniques.find((tk) => tk.id === id)?.name ?? `#${id}`;
+            if (!last || score == null) return null;
             return (
               <Row
                 key={id}
                 name={name}
-                latest={`${last.techniqueScores![id]}/100`}
+                latest={`${score}/100`}
                 date={fmt(last.date)}
                 points={extractPoints(sessions, (s) => s.techniqueScores?.[id] ?? null)}
                 max={100}

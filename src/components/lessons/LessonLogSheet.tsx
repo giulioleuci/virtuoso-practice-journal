@@ -70,8 +70,8 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
     if (errors.length) return;
     if (isEdit && lesson?.id) {
       await lessonsService.updateLesson(lesson, date, notes, assignments);
-    } else {
-      await lessonsService.log(subjId!, recurrence, date, notes, assignments);
+    } else if (subjId !== undefined) {
+      await lessonsService.log(subjId, recurrence, date, notes, assignments);
     }
     toast.success(isEdit ? t("toast.lessonUpdated") : t("toast.lessonLogged"));
     onOpenChange(false);

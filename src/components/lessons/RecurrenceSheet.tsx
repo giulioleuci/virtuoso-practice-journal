@@ -69,9 +69,9 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
   }, [subjectId, teacher, startTime, endTime, t]);
 
   const save = async () => {
-    if (errors.length) return;
+    if (errors.length || subjectId === undefined) return;
     const base: Omit<LessonRecurrence, "id"> = {
-      subjectId: subjectId!,
+      subjectId,
       teacher: teacher.trim(),
       frequency,
       dayOfWeek,
@@ -105,7 +105,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
               <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
               <SelectContent>
                 {(subjects ?? []).map((s) => (
-                  <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -364,9 +364,3 @@ export function PracticeMode({ task, onClose, onFinish }: Props) {
 
   return createPortal(overlay, document.body);
 }
-
-// Helper to expose elapsed for prefill in parent if needed.
-export function usePracticeOutcome() {
-  const [outcome, setOutcome] = useState<{ elapsedMs: number; bpm: number; noteVal?: NoteVal } | null>(null);
-  return { outcome, setOutcome };
-}

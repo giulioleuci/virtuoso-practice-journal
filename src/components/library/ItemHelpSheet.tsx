@@ -116,8 +116,8 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
                       <div className="space-y-1.5">
                         <Textarea
                           rows={2}
-                          value={answers[r.id!] ?? ""}
-                          onChange={(e) => setAnswers((a) => ({ ...a, [r.id!]: e.target.value }))}
+                          value={answers[r.id] ?? ""}
+                          onChange={(e) => setAnswers((a) => ({ ...a, [r.id]: e.target.value }))}
                           placeholder={t("help.answerPlaceholder")}
                         />
                         <Button size="sm" variant="outline" onClick={() => r.id && saveAnswer(r.id)}>{t("recap.saveAnswer")}</Button>

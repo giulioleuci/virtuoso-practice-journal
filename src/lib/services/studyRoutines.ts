@@ -37,7 +37,7 @@ async function resolvePoolEntries(entries: StudyPoolEntry[]): Promise<Map<string
   const parents = parentIds.length
     ? await db.library.where("id").anyOf(parentIds).toArray()
     : [];
-  const parentTitleMap = new Map(parents.map((i) => [i.id!, i.title]));
+  const parentTitleMap = new Map(parents.map((i) => [i.id, i.title]));
 
   const result = new Map<string, ResolvedPoolItem>();
 
@@ -45,7 +45,7 @@ async function resolvePoolEntries(entries: StudyPoolEntry[]): Promise<Map<string
     const key = poolEntryKey(entry);
     if (entry.type === "item") {
       const item = items.find((i) => i.id === entry.id);
-      if (item) result.set(key, { key, type: "item", title: item.title, itemId: item.id!, linkType: "item" });
+      if (item) result.set(key, { key, type: "item", title: item.title, itemId: item.id, linkType: "item" });
     } else if (entry.type === "segment") {
       const seg = segments.find((s) => s.id === entry.id);
       if (seg) {
@@ -55,13 +55,13 @@ async function resolvePoolEntries(entries: StudyPoolEntry[]): Promise<Map<string
           title: `${parentTitle} — ${seg.label}`,
           parentTitle,
           itemId: seg.itemId,
-          segmentIds: [seg.id!],
+          segmentIds: [seg.id],
           linkType: "item",
         });
       }
     } else {
       const col = collections.find((c) => c.id === entry.id);
-      if (col) result.set(key, { key, type: "collection", title: col.name, collectionId: col.id!, linkType: "collection" });
+      if (col) result.set(key, { key, type: "collection", title: col.name, collectionId: col.id, linkType: "collection" });
     }
   }
 
@@ -88,7 +88,7 @@ async function computeWeights(entries: StudyPoolEntry[]): Promise<Map<string, nu
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, 5);
       const confidences = relevant
-        .map((s) => s.segmentMetrics![segIdStr].confidence)
+        .map((s) => s.segmentMetrics?.[segIdStr]?.confidence)
         .filter((c): c is number => c !== undefined);
       if (confidences.length) {
         avg = confidences.reduce((a, b) => a + b, 0) / confidences.length;
@@ -97,7 +97,7 @@ async function computeWeights(entries: StudyPoolEntry[]): Promise<Map<string, nu
     } else if (entry.type === "item") {
       const tasks = await db.tasks.where("itemId").equals(entry.id).toArray();
       if (tasks.length) {
-        const taskIds = tasks.map((t) => t.id!).filter(Boolean);
+        const taskIds = tasks.map((t) => t.id).filter(Boolean);
         const allSessions = await db.sessions.where("taskId").anyOf(taskIds).toArray();
         const sessions = allSessions.sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
         const confidences = sessions
@@ -173,12 +173,12 @@ export const studyRoutinesService = {
   async regenerateFromDate(routine: StudyRoutine, fromDateStr: string): Promise<void> {
     const toDelete = await db.tasks
       .where("studyRoutineId")
-      .equals(routine.id!)
+      .equals(routine.id)
       .filter((t) => !t.done && t.date >= fromDateStr)
       .toArray();
 
     if (toDelete.length) {
-      await db.tasks.bulkDelete(toDelete.map((t) => t.id!));
+      await db.tasks.bulkDelete(toDelete.map((t) => t.id));
     }
 
     const mondayStr = dayKey(startOfWeek(parseDayKey(fromDateStr)));
@@ -186,7 +186,7 @@ export const studyRoutinesService = {
 
     const completedThisWeek = await db.tasks
       .where("studyRoutineId")
-      .equals(routine.id!)
+      .equals(routine.id)
       .filter((t) => t.done && t.date >= mondayStr && t.date <= sundayStr)
       .toArray();
 
@@ -225,7 +225,7 @@ export const studyRoutinesService = {
       .filter((t) => !t.done && t.date >= todayStr)
       .toArray();
     if (futureUndone.length) {
-      await db.tasks.bulkDelete(futureUndone.map((t) => t.id!));
+      await db.tasks.bulkDelete(futureUndone.map((t) => t.id));
     }
     await db.studyRoutines.update(routineId, { deletedAt: now() });
   },
