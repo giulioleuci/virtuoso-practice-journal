@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useAssignments, useLessons, useSubjects } from "@/hooks/useEntities";
 import { useNavigate } from "react-router-dom";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db"; // db used for useLiveQuery reads only
+
 import { lessonsService } from "@/lib/services";
-import { today } from "@/lib/recurrence";
+import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Wand2, X, ArrowLeft } from "lucide-react";

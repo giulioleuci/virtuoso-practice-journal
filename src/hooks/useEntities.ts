@@ -131,8 +131,6 @@ export const useRecurrencesBySubject = (subjectId?: number) =>
     [subjectId],
   );
 
-export const useCollectionsByKind = (kind?: LibraryKind) => useCollections(kind);
-
 export const useSegmentsByItem = (itemId?: number) =>
   useLiveQuery(
     () => (itemId ? db.segments.where("itemId").equals(itemId).filter(notDeleted).toArray() : Promise.resolve([])),

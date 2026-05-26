@@ -1,7 +1,4 @@
 import type { TaskRecurrence, LessonRecurrence } from "./db";
-
-// Date key helpers now live in a single module; re-exported here for back-compat.
-export { dayKey, today, parseDayKey } from "./date";
 import { dayKey, parseDayKey } from "./date";
 
 /** End of the current school year (June 30). School year runs Sep 1 – Aug 31. */

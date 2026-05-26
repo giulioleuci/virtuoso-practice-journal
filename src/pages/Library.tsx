@@ -6,7 +6,7 @@ import { db, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, ty
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
-import { today } from "@/lib/recurrence";
+import { today } from "@/lib/date";
 import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
 
 import { MasterySparkline } from "@/components/library/MasterySparkline";

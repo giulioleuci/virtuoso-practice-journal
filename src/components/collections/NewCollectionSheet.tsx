@@ -1,6 +1,5 @@
-import { useLiveQuery } from "dexie-react-hooks";
 import { useSubjects } from "@/hooks/useEntities";
-import { db, type Collection, type ColorKey, type LibraryKind } from "@/lib/db";
+import { type Collection, type ColorKey, type LibraryKind } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { useSheetForm } from "@/hooks/useSheetForm";
 import {

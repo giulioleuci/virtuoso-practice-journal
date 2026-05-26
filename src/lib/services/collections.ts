@@ -158,9 +158,4 @@ export const collectionsService = {
       .sort((a, b) => a.title.localeCompare(b.title));
     return [...groups, { collection: null, items: uncollected }];
   },
-
-  /** @deprecated use groupLibraryByCollection("repertoire") */
-  async groupRepertoireByCollection() {
-    return collectionsService.groupLibraryByCollection("repertoire");
-  },
 };

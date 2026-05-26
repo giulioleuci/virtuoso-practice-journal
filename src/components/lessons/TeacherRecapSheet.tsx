@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/hooks/useEntities";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type HelpRequest, type ColorKey, type SubjectType } from "@/lib/db"; // db used for useLiveQuery reads only
+import { type HelpRequest, type ColorKey, type SubjectType } from "@/lib/db";
 import { helpRequestsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";

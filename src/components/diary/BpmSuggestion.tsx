@@ -1,7 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { today } from "@/lib/recurrence";
+import { today } from "@/lib/date";
 import { SuggestionIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 

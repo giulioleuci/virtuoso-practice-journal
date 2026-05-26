@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useSubjects, useTechniques } from "@/hooks/useEntities";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type Subject, type SubjectType, type ColorKey } from "@/lib/db"; // db used for useLiveQuery reads only
+import { THEORY_LAYERS, type Subject, type SubjectType, type ColorKey } from "@/lib/db";
 import { subjectsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { COLOR_KEYS, getSubjectColor, subjectColorCss } from "@/lib/subjectColors";

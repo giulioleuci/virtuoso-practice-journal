@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { dayKey, parseDayKey, schoolYearEnd, expandTaskRecurrence, upcomingLessonDates } from "./recurrence";
+import { schoolYearEnd, expandTaskRecurrence, upcomingLessonDates } from "./recurrence";
+import { dayKey, parseDayKey } from "./date";
 import type { LessonRecurrence } from "./db";
 
 describe("dayKey / parseDayKey", () => {

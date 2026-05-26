@@ -34,7 +34,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
-import { upcomingLessonDates, dayKey, today } from "@/lib/recurrence";
+import { upcomingLessonDates } from "@/lib/recurrence";
+import { dayKey, today } from "@/lib/date";
 import { toast } from "sonner";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
