@@ -1,5 +1,23 @@
 /** Library service — wraps library + segment operations. */
-import { db, deleteLibraryItem, type LibraryItem, type Segment } from "@/lib/db";
+import { db, type LibraryItem, type Segment } from "@/lib/db";
+
+/** Soft-delete a library item if any of its tasks have logged sessions; otherwise hard-delete. */
+async function deleteLibraryItem(itemId: number): Promise<"soft" | "hard"> {
+  const taskIds = (await db.tasks.where("itemId").equals(itemId).primaryKeys()) as number[];
+  const hasSession = taskIds.length
+    ? (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0
+    : false;
+  if (hasSession) {
+    await db.library.update(itemId, { deletedAt: Date.now() });
+    return "soft";
+  }
+  await db.transaction("rw", db.library, db.segments, db.tasks, async () => {
+    await db.segments.where("itemId").equals(itemId).delete();
+    await db.tasks.where("itemId").equals(itemId).delete();
+    await db.library.delete(itemId);
+  });
+  return "hard";
+}
 
 export const libraryService = {
   async list(): Promise<LibraryItem[]> {

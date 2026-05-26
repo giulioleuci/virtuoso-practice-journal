@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
-import {
-  db,
-  exportAll,
-  importAll,
-  wipeAll,
-  buildSessionSnapshot,
-  buildLessonSnapshot,
-  deleteTaskPreservingHistory,
-  deleteTasksPreservingHistory,
-  deleteLibraryItem,
-} from "./db";
+import { db } from "./db";
+import { backupService } from "./services/backup";
+import { buildSessionSnapshot, buildLessonSnapshot } from "./domain/snapshots";
+import { tasksService } from "./services/tasks";
+import { libraryService } from "./services/library";
+
+const { exportAll, importAll, wipeAll } = backupService;
+// Delete helpers moved into services; exercise them through the service surface.
+const deleteTaskPreservingHistory = (id: number) => tasksService.remove(id);
+const deleteTasksPreservingHistory = (ids: number[]) => tasksService.bulkRemove(ids);
+const deleteLibraryItem = (id: number) => libraryService.remove(id);
 
 beforeEach(async () => {
   await db.delete();

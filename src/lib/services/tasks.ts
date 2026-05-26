@@ -1,13 +1,49 @@
 /** Task service — repository wrapper around dexie operations.
  *  Centralizes write paths so UI components don't reach into `db` directly.
  */
-import { db, deleteTaskPreservingHistory, deleteTasksPreservingHistory, type Task, type TaskRecurrence } from "@/lib/db";
+import { db, type Task, type TaskRecurrence } from "@/lib/db";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 
 export type NewTaskInput = Omit<Task, "id" | "done" | "createdAt" | "date"> & {
   date: string;
   recurrence?: TaskRecurrence;
 };
+
+/** Soft-delete a task if it has logged sessions; otherwise hard-delete. */
+async function deleteTaskPreservingHistory(taskId: number): Promise<"soft" | "hard"> {
+  const hasSession = (await db.sessions.where("taskId").equals(taskId).count()) > 0;
+  if (hasSession) {
+    await db.tasks.update(taskId, { deletedAt: Date.now() });
+    return "soft";
+  }
+  await db.tasks.delete(taskId);
+  return "hard";
+}
+
+/** Bulk soft-delete tasks if they have logged sessions; otherwise hard-delete. */
+async function deleteTasksPreservingHistory(taskIds: number[]): Promise<{ soft: number; hard: number }> {
+  if (!taskIds.length) return { soft: 0, hard: 0 };
+  const tasksWithSessions = new Set(await db.sessions.where("taskId").anyOf(taskIds).uniqueKeys() as number[]);
+
+  const softIds: number[] = [];
+  const hardIds: number[] = [];
+  for (const id of taskIds) {
+    if (tasksWithSessions.has(id)) softIds.push(id);
+    else hardIds.push(id);
+  }
+
+  const now = Date.now();
+  await db.transaction("rw", db.tasks, async () => {
+    if (softIds.length > 0) {
+      await db.tasks.bulkUpdate(softIds.map((id) => ({ key: id, changes: { deletedAt: now } })));
+    }
+    if (hardIds.length > 0) {
+      await db.tasks.bulkDelete(hardIds);
+    }
+  });
+
+  return { soft: softIds.length, hard: hardIds.length };
+}
 
 export const tasksService = {
   async list(): Promise<Task[]> {

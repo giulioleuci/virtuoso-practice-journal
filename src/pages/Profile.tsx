@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { exportAll, importAll, wipeAll } from "@/lib/db";
-import { profileService } from "@/lib/services";
+import { backupService, profileService } from "@/lib/services";
 import { saveTextFile, pickTextFile, scheduleReminders, ensureNotificationPermission, isNative } from "@/lib/platform";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -59,7 +58,7 @@ export default function Profile() {
 
   const onExport = async () => {
     try {
-      const json = await exportAll();
+      const json = await backupService.exportAll();
       await saveTextFile(`virtuoso-backup-${new Date().toISOString().slice(0, 10)}.json`, json);
       toast.success(t("toast.exported"));
     } catch (e) {
@@ -70,7 +69,7 @@ export default function Profile() {
   const onImport = async (file: File) => {
     try {
       const text = await file.text();
-      await importAll(text);
+      await backupService.importAll(text);
       toast.success(t("toast.imported"));
     } catch {
       toast.error(t("errors.invalidFile"));
@@ -81,7 +80,7 @@ export default function Profile() {
     const text = await pickTextFile();
     if (!text) return;
     try {
-      await importAll(text);
+      await backupService.importAll(text);
       toast.success(t("toast.imported"));
     } catch {
       toast.error(t("errors.invalidFile"));
@@ -400,7 +399,7 @@ export default function Profile() {
                     className="flex-1"
                     disabled={confirmText !== "DELETE"}
                     onClick={async () => {
-                      await wipeAll();
+                      await backupService.wipeAll();
                       location.reload();
                     }}
                   >

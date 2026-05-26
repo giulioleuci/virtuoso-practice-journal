@@ -1,5 +1,6 @@
 /** Lessons service — wraps writes for recurrences, lessons, and assignments. */
-import { db, buildLessonSnapshot, type Lesson, type LessonRecurrence } from "@/lib/db";
+import { db, type Lesson, type LessonRecurrence } from "@/lib/db";
+import { buildLessonSnapshot } from "@/lib/domain/snapshots";
 
 export const lessonsService = {
   async upsertRecurrence(data: Omit<LessonRecurrence, "id">, id?: number): Promise<number> {

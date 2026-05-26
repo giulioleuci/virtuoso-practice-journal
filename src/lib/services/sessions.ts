@@ -1,5 +1,6 @@
 /** Session service — wraps reads/writes for practice sessions. */
-import { buildSessionSnapshot, db, type NoteVal, type SegmentMetric, type Session, type SessionQuality, type Task } from "@/lib/db";
+import { db, type NoteVal, type SegmentMetric, type Session, type SessionQuality, type Task } from "@/lib/db";
+import { buildSessionSnapshot } from "@/lib/domain/snapshots";
 import type { SessionInput } from "@/lib/schemas";
 
 export interface FullSessionLogInput {
