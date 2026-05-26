@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type LibraryKind, type NoteVal, type Task, type TaskRecurrence, type TaskLinkType } from "@/lib/db"; // db used for useLiveQuery reads only
+import { getSubjectLayers } from "@/lib/domain/subjectLayers";
 import { useI18n } from "@/lib/i18n";
 import { collectionsService, tasksService } from "@/lib/services";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -60,7 +61,7 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
   );
   const isTheorySubject = selectedSubject?.type === "theory";
   const subjectLayers = useMemo(
-    () => isTheorySubject ? [...THEORY_LAYERS] : (selectedSubject?.layers ?? []),
+    () => getSubjectLayers(selectedSubject),
     [selectedSubject, isTheorySubject]
   );
   const techniqueOptions = useMemo(

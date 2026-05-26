@@ -5,19 +5,12 @@ import { db, THEORY_LAYERS, type Session, type TheoryLayer } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
 import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
+import { weekKeyOf } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 
 const QUALITY_ORDER = ["hard", "improve", "well", "great"];
-
-function weekKey(date: string): string {
-  const d = new Date(date);
-  const dow = d.getDay();
-  const mon = new Date(d);
-  mon.setDate(d.getDate() - ((dow + 6) % 7));
-  return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
-}
 
 interface ChartPoint { x: number; y: number; label: string }
 
@@ -142,7 +135,7 @@ export default function ItemAnalysisPage() {
     if (!sessions?.length) return [];
     const counts = new Map<string, number>();
     for (const s of sessions) {
-      const wk = weekKey(s.date);
+      const wk = weekKeyOf(s.date);
       counts.set(wk, (counts.get(wk) ?? 0) + 1);
     }
     const weeks = Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);

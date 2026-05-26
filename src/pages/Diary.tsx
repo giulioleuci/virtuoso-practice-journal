@@ -3,7 +3,9 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/db";
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
-import { today, dayKey, upcomingLessonDates } from "@/lib/recurrence";
+import { today, dayKey } from "@/lib/date";
+import { upcomingLessonDates } from "@/lib/recurrence";
+import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
 import { getSubjectColor, subjectBorderStyle, subjectBorderStyleLight } from "@/lib/subjectColors";
 import {
@@ -46,37 +48,6 @@ import { pickQuote } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-
-function computeStreak(sessions: Session[]): { streak: number; best: number } {
-  const daySet = new Set(sessions.map((s) => s.date));
-  const d = new Date();
-  // Allow streak from yesterday if no session today
-  if (!daySet.has(dayKey(d))) d.setDate(d.getDate() - 1);
-  let streak = 0;
-  while (daySet.has(dayKey(d))) {
-    streak++;
-    d.setDate(d.getDate() - 1);
-  }
-  // Best streak: scan all days
-  const allDays = Array.from(daySet).sort();
-  let best = 0,
-    cur = 0;
-  for (let i = 0; i < allDays.length; i++) {
-    if (i === 0) {
-      cur = 1;
-    } else {
-      const prev = new Date(allDays[i - 1]!);
-      prev.setDate(prev.getDate() + 1);
-      if (dayKey(prev) === allDays[i]) {
-        cur++;
-      } else {
-        cur = 1;
-      }
-    }
-    if (cur > best) best = cur;
-  }
-  return { streak, best: Math.max(best, streak) };
-}
 
 export default function Diary() {
   const { t, lang } = useI18n();
@@ -137,7 +108,7 @@ export default function Diary() {
 
   // All-time sessions for streak calculation
   const allSessions = useLiveQuery(() => db.sessions.toArray(), []);
-  const { streak, best: bestStreak } = useMemo(() => computeStreak(allSessions ?? []), [allSessions]);
+  const { streak, best: bestStreak } = useMemo(() => computeStreakFromSessions(allSessions ?? []), [allSessions]);
 
   const carryoverDays = profile?.carryoverDays ?? 2;
   const carryoverFrom = useMemo(() => {
