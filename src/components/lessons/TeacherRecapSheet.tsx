@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { subjectBorderStyle } from "@/lib/subjectColors";
+import { subjectBorderStyle, subjectColorCss } from "@/lib/subjectColors";
 
 interface Props {
   open: boolean;
