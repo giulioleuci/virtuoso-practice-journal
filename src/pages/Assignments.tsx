@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { useAssignments, useLessons, useSubjects } from "@/hooks/useEntities";
 import { useNavigate } from "react-router-dom";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db"; // db used for useLiveQuery reads only
+
 import { lessonsService } from "@/lib/services";
-import { today } from "@/lib/recurrence";
+import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Wand2, X, ArrowLeft } from "lucide-react";
@@ -15,9 +15,9 @@ const PAGE_SIZE = 5;
 export default function Assignments() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const assignments = useLiveQuery(() => db.assignments.toArray());
-  const lessons = useLiveQuery(() => db.lessons.toArray());
-  const subjects = useLiveQuery(() => db.subjects.toArray());
+  const assignments = useAssignments();
+  const lessons = useLessons();
+  const subjects = useSubjects();
 
   const [page, setPage] = useState(0);
 

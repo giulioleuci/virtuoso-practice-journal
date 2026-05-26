@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import type { Task, Subject } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { useTasksInRange } from "@/hooks/useEntities";
-
 function utcDateStr(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }

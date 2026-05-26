@@ -7,8 +7,11 @@
  * A persistent summary chip bar shows selections from previous steps.
  */
 import { useEffect, useMemo, useState } from "react";
+import { useLessons, useRecurrences, useSubjects, useTechniques } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
+import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+import { nextLessonDate } from "@/lib/domain/lessonSchedule";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,10 +51,10 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
   const [step, setStep] = useState<Step>(1);
   const draft = useFormDraft(`task-wizard-${date}`, {});
 
-  const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
-  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
-  const lessons = useLiveQuery(() => db.lessons.toArray(), []);
-  const lessonRecurrences = useLiveQuery(() => db.recurrences.toArray(), []);
+  const subjects = useSubjects();
+  const allTechniques = useTechniques();
+  const lessons = useLessons();
+  const lessonRecurrences = useRecurrences();
 
   // Step 1 state
   const [subjectId, setSubjectId] = useState<number | undefined>(prefill?.itemSubjectId ?? prefill?.subjectId);
@@ -99,8 +102,8 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
   );
   const isTheorySubject = selectedSubject?.type === "theory";
   const subjectLayers = useMemo(
-    () => isTheorySubject ? [...THEORY_LAYERS] : (selectedSubject?.layers ?? []),
-    [selectedSubject, isTheorySubject]
+    () => getSubjectLayers(selectedSubject),
+    [selectedSubject],
   );
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])
@@ -131,28 +134,16 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
     setTitle(selectedCollection.name);
   }, [linkType, collectionId, selectedCollection]);
 
-  const nextLessonDate = useMemo(() => {
+  const nextLessonDateValue = useMemo(() => {
     if (!subjectId) return undefined;
-    const candidates: string[] = [];
-    for (const l of lessons ?? []) {
-      if (l.subjectId === subjectId && l.date > rec.startDate) candidates.push(l.date);
-    }
-    for (const r of lessonRecurrences ?? []) {
-      if (r.subjectId !== subjectId) continue;
-      const start = new Date(rec.startDate);
-      const d = new Date(start);
-      d.setDate(d.getDate() + 1);
-      const daysToAdd = (r.dayOfWeek - d.getDay() + 7) % 7;
-      d.setDate(d.getDate() + daysToAdd);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      if (r.endDate && key > r.endDate) continue;
-      if (Math.round((d.getTime() - start.getTime()) / 86400000) <= 365) candidates.push(key);
-    }
-    candidates.sort();
-    return candidates[0];
+    return nextLessonDate(lessonRecurrences ?? [], {
+      subjectId,
+      after: rec.startDate,
+      lessons: lessons ?? [],
+    });
   }, [lessons, lessonRecurrences, subjectId, rec.startDate]);
 
-  const recurrence = useMemo(() => buildRecurrence(rec, nextLessonDate), [rec, nextLessonDate]);
+  const recurrence = useMemo(() => buildRecurrence(rec, nextLessonDateValue), [rec, nextLessonDateValue]);
 
   // Validation per step
   const step1Errors = useMemo(() => {
@@ -176,11 +167,11 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
       if (rec.kind === "weekdays" && !rec.days.length) e.push(t("errors.pickOneDay"));
       if (rec.kind === "interval" && (rec.everyX < 1 || rec.everyX > 60)) e.push(t("errors.intervalRange"));
       if (rec.endMode === "date" && !rec.endDate) e.push(t("errors.setEndDate"));
-      if (rec.endMode === "nextLesson" && !nextLessonDate) e.push(t("errors.noUpcomingLesson"));
+      if (rec.endMode === "nextLesson" && !nextLessonDateValue) e.push(t("errors.noUpcomingLesson"));
       if (rec.endMode === "count" && (rec.occurrences < 1 || rec.occurrences > 200)) e.push(t("errors.occurrencesRange"));
     }
     return e;
-  }, [rec, nextLessonDate, t]);
+  }, [rec, nextLessonDateValue, t]);
 
   // Summary chips
   const summaryChips = useMemo(() => {
@@ -362,7 +353,7 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
       {/* Step 3: When */}
       {step === 3 && (
         <div className="space-y-4">
-          <RecurrenceFields state={rec} setState={setRec} nextLessonDate={nextLessonDate} />
+          <RecurrenceFields state={rec} setState={setRec} nextLessonDate={nextLessonDateValue} />
 
           {step3Errors.length > 0 && (
             <ul className="text-xs text-destructive">

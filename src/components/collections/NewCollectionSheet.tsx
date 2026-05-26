@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Collection, type ColorKey, type LibraryKind } from "@/lib/db";
+import { useSubjects } from "@/hooks/useEntities";
+import { type Collection, type ColorKey, type LibraryKind } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
+import { useSheetForm } from "@/hooks/useSheetForm";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
@@ -31,57 +31,60 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
   const isEdit = !!collection?.id;
   const effectiveKind: LibraryKind = collection?.kind ?? kind ?? "repertoire";
   const showComposerLike = effectiveKind === "repertoire" || effectiveKind === "manual";
-  const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
+  const subjects = useSubjects();
 
-  const [name, setName] = useState("");
-  const [composer, setComposer] = useState("");
-  const [catalog, setCatalog] = useState("");
-  const [notes, setNotes] = useState("");
-  const [color, setColor] = useState<ColorKey | undefined>();
-  const [defaultSubjectId, setDefaultSubjectId] = useState<number | undefined>();
+  interface FormValues {
+    name: string;
+    composer: string;
+    catalog: string;
+    notes: string;
+    color?: ColorKey;
+    defaultSubjectId?: number;
+  }
 
-  // Seed the form when the sheet opens (or switches to a different collection);
-  // intentionally skip individual field deps so live edits aren't clobbered.
-  useEffect(() => {
-    if (!open) return;
-    setName(collection?.name ?? "");
-    setComposer(collection?.composer ?? "");
-    setCatalog(collection?.catalog ?? "");
-    setNotes(collection?.notes ?? "");
-    setColor(collection?.color);
-    setDefaultSubjectId(collection?.defaultSubjectId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, collection?.id]);
-
-  const input = {
+  const toInput = (v: FormValues) => ({
     kind: effectiveKind,
-    name: name.trim(),
-    composer: showComposerLike ? (composer.trim() || undefined) : undefined,
-    catalog: showComposerLike ? (catalog.trim() || undefined) : undefined,
-    notes: notes.trim() || undefined,
-    color,
-    defaultSubjectId,
-  };
-  const parsed = collectionInputSchema.safeParse(input);
-  const canSave = parsed.success;
+    name: v.name.trim(),
+    composer: showComposerLike ? (v.composer.trim() || undefined) : undefined,
+    catalog: showComposerLike ? (v.catalog.trim() || undefined) : undefined,
+    notes: v.notes.trim() || undefined,
+    color: v.color,
+    defaultSubjectId: v.defaultSubjectId,
+  });
 
-  const save = async () => {
-    if (!canSave) return;
-    try {
-      if (isEdit && collection?.id) {
-        await collectionsService.update(collection.id, input);
-        toast.success(t("toast.collectionUpdated"));
-        onSaved?.(collection.id);
-      } else {
-        const id = await collectionsService.create(input);
-        toast.success(t("toast.collectionCreated"));
-        onSaved?.(id);
+  const { values, setField, canSave, submit } = useSheetForm<FormValues>({
+    open,
+    resetKey: collection?.id,
+    initial: { name: "", composer: "", catalog: "", notes: "", color: undefined, defaultSubjectId: undefined },
+    prefill: () => ({
+      name: collection?.name ?? "",
+      composer: collection?.composer ?? "",
+      catalog: collection?.catalog ?? "",
+      notes: collection?.notes ?? "",
+      color: collection?.color,
+      defaultSubjectId: collection?.defaultSubjectId,
+    }),
+    validate: (v) => ({ ok: collectionInputSchema.safeParse(toInput(v)).success }),
+    onSubmit: async (v) => {
+      const input = toInput(v);
+      try {
+        if (isEdit && collection?.id) {
+          await collectionsService.update(collection.id, input);
+          toast.success(t("toast.collectionUpdated"));
+          onSaved?.(collection.id);
+        } else {
+          const id = await collectionsService.create(input);
+          toast.success(t("toast.collectionCreated"));
+          onSaved?.(id);
+        }
+        onOpenChange(false);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : t("errors.couldNotSave"));
       }
-      onOpenChange(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("errors.couldNotSave"));
-    }
-  };
+    },
+  });
+  const { name, composer, catalog, notes, color, defaultSubjectId } = values;
+  const save = submit;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -100,7 +103,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("common.name")}</Label>
             <Input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setField("name", e.target.value)}
               placeholder={t(`collections.namePlaceholder.${effectiveKind}`)}
               className="bg-card text-lg h-12"
               autoFocus
@@ -113,11 +116,11 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                   {effectiveKind === "manual" ? t("library.labelAuthor") : t("library.labelComposer")}
                 </Label>
-                <Input value={composer} onChange={(e) => setComposer(e.target.value)} placeholder={effectiveKind === "manual" ? "Hanon" : "Chopin"} className="bg-card" />
+                <Input value={composer} onChange={(e) => setField("composer", e.target.value)} placeholder={effectiveKind === "manual" ? "Hanon" : "Chopin"} className="bg-card" />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelCatalog")}</Label>
-                <Input value={catalog} onChange={(e) => setCatalog(e.target.value)} placeholder="Op. 9" className="bg-card" />
+                <Input value={catalog} onChange={(e) => setField("catalog", e.target.value)} placeholder="Op. 9" className="bg-card" />
               </div>
             </div>
           )}
@@ -127,14 +130,14 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => setColor(undefined)}
+                onClick={() => setField("color", undefined)}
                 className={cn("h-9 px-3 rounded-full text-xs border", !color ? "border-foreground" : "border-input text-muted-foreground")}
               >{t("collections.colorNone")}</button>
               {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
-                  onClick={() => setColor(c)}
+                  onClick={() => setField("color", c)}
                   aria-label={c}
                   className={cn(
                     "h-9 w-9 rounded-full border-2 transition-all",
@@ -150,7 +153,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelDefaultSubject")}</Label>
             <Select
               value={defaultSubjectId !== undefined ? String(defaultSubjectId) : "none"}
-              onValueChange={(v) => setDefaultSubjectId(v === "none" ? undefined : Number(v))}
+              onValueChange={(v) => setField("defaultSubjectId", v === "none" ? undefined : Number(v))}
             >
               <SelectTrigger className="bg-card"><SelectValue placeholder={t("common.optional")} /></SelectTrigger>
               <SelectContent>
@@ -164,7 +167,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelNotesOptional")}</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("collections.notesPlaceholder")} className="bg-card" rows={3} />
+            <Textarea value={notes} onChange={(e) => setField("notes", e.target.value)} placeholder={t("collections.notesPlaceholder")} className="bg-card" rows={3} />
           </div>
         </div>
 

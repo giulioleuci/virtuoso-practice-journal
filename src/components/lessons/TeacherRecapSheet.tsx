@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type HelpRequest, type ColorKey, type SubjectType } from "@/lib/db"; // db used for useLiveQuery reads only
+import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/hooks/useEntities";
+import { type HelpRequest, type ColorKey, type SubjectType } from "@/lib/db";
 import { helpRequestsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -23,10 +23,10 @@ type Tab = "open" | "answered";
 
 export function TeacherRecapSheet({ open, onOpenChange }: Props) {
   const { t } = useI18n();
-  const helpRequests = useLiveQuery(() => db.helpRequests.toArray());
-  const items = useLiveQuery(() => db.library.toArray());
-  const subjects = useLiveQuery(() => db.subjects.toArray());
-  const tasks = useLiveQuery(() => db.tasks.toArray());
+  const helpRequests = useHelpRequests();
+  const items = useAllLibrary();
+  const subjects = useSubjects();
+  const tasks = useAllTasks();
   const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id!, task])), [tasks]);
 
   const [tab, setTab] = useState<Tab>("open");

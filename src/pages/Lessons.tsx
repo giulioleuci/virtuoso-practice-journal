@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useActiveTasks, useAssignments, useLessons, useRecurrences, useSubjects } from "@/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -33,10 +34,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
-import { upcomingLessonDates, dayKey, today } from "@/lib/recurrence";
+import { upcomingLessonDates } from "@/lib/recurrence";
+import { dayKey, today } from "@/lib/date";
 import { toast } from "sonner";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Pager } from "@/components/shared/Pager";
 
 const PAGE_SIZE = 5;
 
@@ -44,11 +47,11 @@ export default function Lessons() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
-  const recurrences = useLiveQuery(() => db.recurrences.toArray());
-  const subjects = useLiveQuery(() => db.subjects.toArray());
-  const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().toArray());
-  const assignments = useLiveQuery(() => db.assignments.toArray());
-  const tasksAll = useLiveQuery(() => db.tasks.filter((task) => !task.deletedAt).toArray());
+  const recurrences = useRecurrences();
+  const subjects = useSubjects();
+  const lessons = useLessons();
+  const assignments = useAssignments();
+  const tasksAll = useActiveTasks();
   const openHelpCount = useLiveQuery(async () => (await db.helpRequests.toArray()).filter((h) => !h.resolved).length);
 
   const [recapOpen, setRecapOpen] = useState(false);
@@ -251,7 +254,7 @@ export default function Lessons() {
                       );
                     })}
                   </ul>
-                  <Pager page={page} totalPages={totalPages} onPage={setPageUpcoming} />
+                  <Pager page={page} totalPages={totalPages} onChange={setPageUpcoming} />
                 </AccordionContent>
               </AccordionItem>
             );
@@ -373,7 +376,7 @@ export default function Lessons() {
                         );
                       })}
                     </ul>
-                    <Pager page={page} totalPages={totalPages} onPage={setPageRecent} />
+                    <Pager page={page} totalPages={totalPages} onChange={setPageRecent} />
                   </>
                 );
               })()
@@ -437,23 +440,6 @@ export default function Lessons() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-function Pager({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (p: number) => void }) {
-  if (totalPages <= 1) return null;
-  return (
-    <div className="flex items-center justify-center gap-3 pt-2">
-      <Button size="sm" variant="ghost" disabled={page === 0} onClick={() => onPage(page - 1)}>
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <span className="text-xs text-muted-foreground tabular-nums">
-        {page + 1} / {totalPages}
-      </span>
-      <Button size="sm" variant="ghost" disabled={page >= totalPages - 1} onClick={() => onPage(page + 1)}>
-        <ChevronRight className="h-4 w-4" />
-      </Button>
     </div>
   );
 }

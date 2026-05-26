@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type ColorKey, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
+import { useSubjects } from "@/hooks/useEntities";
+import { type ColorKey, type LessonRecurrence } from "@/lib/db";
 import { lessonsService } from "@/lib/services";
-import { today } from "@/lib/recurrence";
+import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ const COLORS: ColorKey[] = ["terracotta", "sage", "gold", "blue", "plum"];
 export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
   const { t } = useI18n();
   const DAYS = [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`));
-  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
+  const subjects = useSubjects();
   const isEdit = !!recurrence?.id;
 
   const [subjectId, setSubjectId] = useState<number | undefined>();

@@ -1,6 +1,7 @@
-import { db, wipeAll, buildSessionSnapshot, buildLessonSnapshot, THEORY_LAYERS, type Task, type SessionQuality, type LessonRecurrence } from "./db";
-import { dayKey, today } from "./recurrence";
-const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+import { db, THEORY_LAYERS, type Task, type SessionQuality, type LessonRecurrence } from "./db";
+import { buildSessionSnapshot, buildLessonSnapshot } from "./domain/snapshots";
+import { backupService } from "./services/backup";
+import { dayKey, today, addDays } from "./date";
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 // Deterministic pseudo-random in [0,1) from a seed (so re-seeding is stable).
 const rand = (seed: number) => {
@@ -9,7 +10,7 @@ const rand = (seed: number) => {
 };
 
 export async function seedSampleData() {
-  await wipeAll();
+  await backupService.wipeAll();
   const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
   const now = Date.now();
   const D = 86400000;

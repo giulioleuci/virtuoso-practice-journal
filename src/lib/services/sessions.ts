@@ -1,5 +1,7 @@
 /** Session service — wraps reads/writes for practice sessions. */
-import { buildSessionSnapshot, db, type NoteVal, type SegmentMetric, type Session, type SessionQuality, type Task } from "@/lib/db";
+import { db, type NoteVal, type SegmentMetric, type Session, type SessionQuality, type Task } from "@/lib/db";
+import { buildSessionSnapshot } from "@/lib/domain/snapshots";
+import { now } from "./_shared";
 import type { SessionInput } from "@/lib/schemas";
 
 export interface FullSessionLogInput {
@@ -34,7 +36,7 @@ export const sessionsService = {
       date,
       ...input,
       snapshot,
-      createdAt: Date.now(),
+      createdAt: now(),
     })) as number;
     return id;
   },
@@ -55,7 +57,7 @@ export const sessionsService = {
       targetBpm: input.bpmReached ?? task.targetBpm,
       noteVal: input.noteVal ?? task.noteVal,
     });
-    const now = Date.now();
+    const ts = now();
     let sessionId = 0;
     await db.transaction("rw", db.tasks, db.sessions, db.helpRequests, async () => {
       sessionId = (await db.sessions.add({
@@ -73,7 +75,7 @@ export const sessionsService = {
         techniqueScores: input.techniqueScores,
         segmentMetrics: input.segmentMetrics,
         snapshot,
-        createdAt: now,
+        createdAt: ts,
       })) as number;
       await db.tasks.update(task.id!, { done: true });
       if (input.helpText) {
@@ -83,7 +85,7 @@ export const sessionsService = {
           itemId: task.itemId,
           question: input.helpText,
           resolved: false,
-          createdAt: now,
+          createdAt: ts,
         });
       }
     });

@@ -3,6 +3,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { studyRoutinesService } from "@/lib/services";
+import { poolEntryKey } from "@/lib/domain/studyRoutineGenerator";
+import { useSegments, useCollections } from "@/hooks/useEntities";
 import type { StudyRoutineConfig } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,10 +67,6 @@ function genId(): string {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 }
 
-function poolKey(e: StudyPoolEntry): string {
-  return `${e.type}:${e.id}`;
-}
-
 const DAYS: { index: number; tKey: string }[] = [
   { index: 1, tKey: "weekday.1" },
   { index: 2, tKey: "weekday.2" },
@@ -100,7 +98,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
     const out: StudyPoolEntry[] = [];
     for (const g of initial.groups) {
       for (const e of g.pool) {
-        const k = poolKey(e);
+        const k = poolEntryKey(e);
         if (!seen.has(k)) { seen.add(k); out.push(e); }
       }
     }
@@ -140,14 +138,8 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
         : Promise.resolve([]),
     [subjectId]
   );
-  const allSegments = useLiveQuery(
-    () => db.segments.filter((s) => !s.deletedAt).toArray(),
-    []
-  );
-  const allCollections = useLiveQuery(
-    () => db.collections.filter((c) => !c.deletedAt).toArray(),
-    []
-  );
+  const allSegments = useSegments();
+  const allCollections = useCollections();
 
   const segmentsByItem = useMemo(() => {
     const map = new Map<number, NonNullable<typeof allSegments>>();
@@ -159,18 +151,18 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
     return map;
   }, [allSegments]);
 
-  const poolKeySet = useMemo(() => new Set(masterPool.map(poolKey)), [masterPool]);
+  const poolKeySet = useMemo(() => new Set(masterPool.map(poolEntryKey)), [masterPool]);
 
   const addToPool = (entry: StudyPoolEntry) => {
-    const k = poolKey(entry);
+    const k = poolEntryKey(entry);
     if (!poolKeySet.has(k)) setMasterPool((prev) => [...prev, entry]);
   };
 
   const removeFromPool = (entry: StudyPoolEntry) => {
-    const k = poolKey(entry);
-    setMasterPool((prev) => prev.filter((e) => poolKey(e) !== k));
+    const k = poolEntryKey(entry);
+    setMasterPool((prev) => prev.filter((e) => poolEntryKey(e) !== k));
     setGroups((prev) =>
-      prev.map((g) => ({ ...g, pool: g.pool.filter((e) => poolKey(e) !== k) }))
+      prev.map((g) => ({ ...g, pool: g.pool.filter((e) => poolEntryKey(e) !== k) }))
     );
   };
 
@@ -204,18 +196,18 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   };
 
   const toggleGroupEntry = (groupId: string, entry: StudyPoolEntry) => {
-    const k = poolKey(entry);
+    const k = poolEntryKey(entry);
     setGroups((prev) =>
       prev.map((g) => {
         if (g.id !== groupId) return g;
-        const has = g.pool.some((e) => poolKey(e) === k);
-        return { ...g, pool: has ? g.pool.filter((e) => poolKey(e) !== k) : [...g.pool, entry] };
+        const has = g.pool.some((e) => poolEntryKey(e) === k);
+        return { ...g, pool: has ? g.pool.filter((e) => poolEntryKey(e) !== k) : [...g.pool, entry] };
       })
     );
   };
 
   const groupHasEntry = (groupId: string, entry: StudyPoolEntry) =>
-    groups.find((g) => g.id === groupId)?.pool.some((e) => poolKey(e) === poolKey(entry)) ?? false;
+    groups.find((g) => g.id === groupId)?.pool.some((e) => poolEntryKey(e) === poolEntryKey(entry)) ?? false;
 
   // --- Step 3 helpers ---
 
@@ -611,7 +603,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                       <div className="flex flex-wrap gap-1.5">
                         {masterPool.map((entry) => (
                           <span
-                            key={poolKey(entry)}
+                            key={poolEntryKey(entry)}
                             className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-accent/60 max-w-full"
                           >
                             <span className="truncate max-w-[180px]">{poolEntryLabel(entry)}</span>
@@ -712,7 +704,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                               const checked = groupHasEntry(group.id, entry);
                               return (
                                 <label
-                                  key={poolKey(entry)}
+                                  key={poolEntryKey(entry)}
                                   className="flex items-center gap-2 text-sm cursor-pointer rounded px-2 py-1.5 hover:bg-accent"
                                 >
                                   <Checkbox
@@ -736,7 +728,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                       <div className="flex flex-wrap gap-1.5">
                         {group.pool.map((entry) => (
                           <span
-                            key={poolKey(entry)}
+                            key={poolEntryKey(entry)}
                             className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-accent/60 max-w-full"
                           >
                             <span className="truncate max-w-[160px]">{poolEntryLabel(entry)}</span>

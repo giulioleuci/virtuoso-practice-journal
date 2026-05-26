@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { useSubjects } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type SessionQuality, type NoteVal } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
-import { sessionsService } from "@/lib/services";
-import { today } from "@/lib/recurrence";
+import { sessionsService, tasksService } from "@/lib/services";
+import { today } from "@/lib/date";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -35,7 +36,7 @@ export function SessionFAB({ className }: Props) {
   const [notes, setNotes] = useState("");
   const [date, setDate] = useState(todayKey);
 
-  const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
+  const subjects = useSubjects();
   const libraryItems = useLiveQuery(
     () => subjectId
       ? db.library.where("subjectId").equals(subjectId).filter((i) => !i.deletedAt).toArray()
@@ -57,41 +58,14 @@ export function SessionFAB({ className }: Props) {
   const save = async () => {
     if (!subjectId) return;
 
-    // Find or create a free-form task for this date
-    let taskId: number | undefined;
-
-    if (itemId) {
-      const item = await db.library.get(itemId);
-      const existingTask = await db.tasks
-        .where("itemId").equals(itemId)
-        .and((t) => t.date === date && !t.deletedAt)
-        .first();
-
-      if (existingTask) {
-        taskId = existingTask.id;
-      } else {
-        taskId = (await db.tasks.add({
-          date,
-          subjectId,
-          linkType: "item",
-          itemId,
-          title: item?.title ?? t("common.unnamed"),
-          done: false,
-          createdAt: Date.now(),
-        })) as number;
-      }
-    } else {
-      taskId = (await db.tasks.add({
-        date,
-        subjectId,
-        linkType: "free",
-        title: t("diary.freeSession"),
-        done: false,
-        createdAt: Date.now(),
-      })) as number;
-    }
-
-    const task = await db.tasks.get(taskId!);
+    // Find or create a task for this date to attach the session to.
+    const task = await tasksService.findOrCreateForLog({
+      date,
+      subjectId,
+      itemId,
+      fallbackItemTitle: t("common.unnamed"),
+      freeTitle: t("diary.freeSession"),
+    });
     if (!task) return;
 
     await sessionsService.logWithCompletion(task, {

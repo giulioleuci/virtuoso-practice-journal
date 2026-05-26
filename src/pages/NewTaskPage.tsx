@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLessons, useRecurrences, useSubjects, useTechniques, useItem } from "@/hooks/useEntities";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
+import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+import { nextLessonDate } from "@/lib/domain/lessonSchedule";
 import { useI18n } from "@/lib/i18n";
-import { today } from "@/lib/recurrence";
+import { today } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,8 +46,8 @@ export default function NewTaskPage() {
   const date = state.date ?? today();
   const prefill = state.prefill;
 
-  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const subjects = useSubjects();
+  const allTechniques = useTechniques();
 
   const [activeTab, setActiveTab] = useState<"standard" | "wizard" | "routine">("standard");
   const [subjectId, setSubjectId] = useState<number | undefined>(prefill?.itemSubjectId ?? prefill?.subjectId);
@@ -70,10 +73,7 @@ export default function NewTaskPage() {
   });
   const setRec = (patch: Partial<RecurrenceState>) => setRecState((s) => ({ ...s, ...patch }));
 
-  const selectedItem = useLiveQuery(
-    () => (itemId ? db.library.get(itemId) : Promise.resolve(undefined)),
-    [itemId]
-  );
+  const selectedItem = useItem(itemId);
   const selectedSegments = useLiveQuery(
     () => (segmentIds.length ? db.segments.where("id").anyOf(segmentIds).toArray() : Promise.resolve([])),
     [segmentIds.join(",")]
@@ -112,8 +112,8 @@ export default function NewTaskPage() {
   );
   const isTheorySubject = selectedSubject?.type === "theory";
   const subjectLayers = useMemo(
-    () => isTheorySubject ? [...THEORY_LAYERS] : (selectedSubject?.layers ?? []),
-    [selectedSubject, isTheorySubject]
+    () => getSubjectLayers(selectedSubject),
+    [selectedSubject],
   );
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])
@@ -122,56 +122,18 @@ export default function NewTaskPage() {
     [allTechniques, subjectId]
   );
 
-  const lessons = useLiveQuery(() => db.lessons.toArray(), []);
-  const lessonRecurrences = useLiveQuery(() => db.recurrences.toArray(), []);
-  const nextLessonDate = useMemo(() => {
+  const lessons = useLessons();
+  const lessonRecurrences = useRecurrences();
+  const nextLessonDateValue = useMemo(() => {
     if (!subjectId) return undefined;
-    const candidates: string[] = [];
-    for (const l of lessons ?? []) {
-      if (l.subjectId === subjectId && l.date > rec.startDate) candidates.push(l.date);
-    }
-    for (const r of lessonRecurrences ?? []) {
-      if (r.subjectId !== subjectId) continue;
-      const start = new Date(rec.startDate);
-      const d = new Date(start);
-      d.setDate(d.getDate() + 1);
-
-      const daysToAdd = (r.dayOfWeek - d.getDay() + 7) % 7;
-      d.setDate(d.getDate() + daysToAdd);
-
-      const rStart = new Date(r.startDate).getTime();
-
-      if (r.frequency === "biweekly") {
-        const weeks = Math.floor((d.getTime() - rStart) / (7 * 86400000));
-        if (weeks % 2 !== 0) {
-          d.setDate(d.getDate() + 7);
-        }
-      } else if (r.frequency === "monthly") {
-        const days = Math.floor((d.getTime() - rStart) / 86400000);
-        if (days % 28 !== 0) {
-          let offset = 0;
-          for (let i = 1; i <= 3; i++) {
-            offset += 7;
-            if ((days + offset) % 28 === 0) {
-              d.setDate(d.getDate() + offset);
-              break;
-            }
-          }
-        }
-      }
-
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      if (r.endDate && key > r.endDate) continue;
-
-      if (Math.round((d.getTime() - start.getTime()) / 86400000) <= 365) {
-        candidates.push(key);
-      }
-    }
-    candidates.sort();
-    return candidates[0];
+    return nextLessonDate(lessonRecurrences ?? [], {
+      subjectId,
+      after: rec.startDate,
+      lessons: lessons ?? [],
+    });
   }, [lessons, lessonRecurrences, subjectId, rec.startDate]);
 
-  const recurrence = useMemo(() => buildRecurrence(rec, nextLessonDate), [rec, nextLessonDate]);
+  const recurrence = useMemo(() => buildRecurrence(rec, nextLessonDateValue), [rec, nextLessonDateValue]);
 
   const errors = useMemo(() => {
     const e: string[] = [];
@@ -184,11 +146,11 @@ export default function NewTaskPage() {
       if (rec.kind === "weekdays" && !rec.days.length) e.push(t("errors.pickOneDay"));
       if (rec.kind === "interval" && (rec.everyX < 1 || rec.everyX > 60)) e.push(t("errors.intervalRange"));
       if (rec.endMode === "date" && !rec.endDate) e.push(t("errors.setEndDate"));
-      if (rec.endMode === "nextLesson" && !nextLessonDate) e.push(t("errors.noUpcomingLesson"));
+      if (rec.endMode === "nextLesson" && !nextLessonDateValue) e.push(t("errors.noUpcomingLesson"));
       if (rec.endMode === "count" && (rec.occurrences < 1 || rec.occurrences > 200)) e.push(t("errors.occurrencesRange"));
     }
     return e;
-  }, [subjectId, linkType, itemId, collectionId, title, bpm, rec, nextLessonDate, t]);
+  }, [subjectId, linkType, itemId, collectionId, title, bpm, rec, nextLessonDateValue, t]);
 
   const handleCancel = () => {
     if (window.history.length > 1) navigate(-1);
@@ -336,7 +298,7 @@ export default function NewTaskPage() {
             emptyHint={t("tasks.addTechniquesHint")}
           />
 
-          <RecurrenceFields state={rec} setState={setRec} nextLessonDate={nextLessonDate} />
+          <RecurrenceFields state={rec} setState={setRec} nextLessonDate={nextLessonDateValue} />
 
           {errors.length > 0 && (
             <ul className="text-xs text-destructive space-y-0.5">

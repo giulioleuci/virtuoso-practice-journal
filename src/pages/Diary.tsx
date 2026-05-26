@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
+import { useSessions, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/db";
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
-import { today, dayKey, upcomingLessonDates } from "@/lib/recurrence";
+import { today, dayKey } from "@/lib/date";
+import { upcomingLessonDates } from "@/lib/recurrence";
+import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
 import { getSubjectColor, subjectBorderStyle, subjectBorderStyleLight } from "@/lib/subjectColors";
 import {
@@ -32,6 +35,7 @@ import { PracticeMode } from "@/components/diary/PracticeMode";
 import { LastSessionStrip } from "@/components/diary/LastSessionStrip";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Pager } from "@/components/shared/Pager";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,37 +50,6 @@ import { pickQuote } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-
-function computeStreak(sessions: Session[]): { streak: number; best: number } {
-  const daySet = new Set(sessions.map((s) => s.date));
-  const d = new Date();
-  // Allow streak from yesterday if no session today
-  if (!daySet.has(dayKey(d))) d.setDate(d.getDate() - 1);
-  let streak = 0;
-  while (daySet.has(dayKey(d))) {
-    streak++;
-    d.setDate(d.getDate() - 1);
-  }
-  // Best streak: scan all days
-  const allDays = Array.from(daySet).sort();
-  let best = 0,
-    cur = 0;
-  for (let i = 0; i < allDays.length; i++) {
-    if (i === 0) {
-      cur = 1;
-    } else {
-      const prev = new Date(allDays[i - 1]!);
-      prev.setDate(prev.getDate() + 1);
-      if (dayKey(prev) === allDays[i]) {
-        cur++;
-      } else {
-        cur = 1;
-      }
-    }
-    if (cur > best) best = cur;
-  }
-  return { streak, best: Math.max(best, streak) };
-}
 
 export default function Diary() {
   const { t, lang } = useI18n();
@@ -108,8 +81,8 @@ export default function Diary() {
   );
   const pendingCount = pendingAssignments?.length ?? 0;
 
-  const studyRoutines = useLiveQuery(() => db.studyRoutines.filter((r) => !r.deletedAt).toArray(), []);
-  const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
+  const studyRoutines = useStudyRoutines();
+  const subjects = useSubjects();
   const subjectMap = useMemo(() => {
     const map = new Map<number, Subject>();
     for (const s of subjects ?? []) {
@@ -136,8 +109,8 @@ export default function Diary() {
   }, [todayKey]);
 
   // All-time sessions for streak calculation
-  const allSessions = useLiveQuery(() => db.sessions.toArray(), []);
-  const { streak, best: bestStreak } = useMemo(() => computeStreak(allSessions ?? []), [allSessions]);
+  const allSessions = useSessions();
+  const { streak, best: bestStreak } = useMemo(() => computeStreakFromSessions(allSessions ?? []), [allSessions]);
 
   const carryoverDays = profile?.carryoverDays ?? 2;
   const carryoverFrom = useMemo(() => {
@@ -499,24 +472,7 @@ export default function Diary() {
                     );
                   })}
                 </ul>
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">
-                    <Button size="icon" variant="ghost" disabled={page === 0} onClick={() => setCarryPage(page - 1)}>
-                      <BackIcon className="h-4 w-4" />
-                    </Button>
-                    <span className="tabular-nums">
-                      {page + 1} / {totalPages}
-                    </span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      disabled={page >= totalPages - 1}
-                      onClick={() => setCarryPage(page + 1)}
-                    >
-                      <ChevronRightIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                <Pager page={page} totalPages={totalPages} onChange={setCarryPage} />
               </>
             );
           })()}
@@ -582,29 +538,7 @@ export default function Diary() {
                         );
                       })}
                     </ul>
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          disabled={page === 0}
-                          onClick={() => setIgnoredPage(page - 1)}
-                        >
-                          <BackIcon className="h-4 w-4" />
-                        </Button>
-                        <span className="tabular-nums">
-                          {page + 1} / {totalPages}
-                        </span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          disabled={page >= totalPages - 1}
-                          onClick={() => setIgnoredPage(page + 1)}
-                        >
-                          <ChevronRightIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
+                    <Pager page={page} totalPages={totalPages} onChange={setIgnoredPage} />
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

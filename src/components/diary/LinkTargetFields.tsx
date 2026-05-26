@@ -2,6 +2,7 @@
  *  Enforces mutual exclusivity: free | item (+optional segments) | collection.
  */
 import { useMemo } from "react";
+import { useCollectionLinks, useLibrary } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type TaskLinkType } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -37,9 +38,9 @@ export function LinkTargetFields({
   collectionId, setCollectionId,
 }: Props) {
   const { t } = useI18n();
-  const library = useLiveQuery(() => db.library.filter((i) => !i.deletedAt).toArray(), []);
+  const library = useLibrary();
   const allCollections = useLiveQuery(() => collectionsService.list(), []);
-  const allCollectionItems = useLiveQuery(() => db.collectionItems.toArray(), []);
+  const allCollectionItems = useCollectionLinks();
   const segments = useLiveQuery(
     () => (itemId ? db.segments.where("itemId").equals(itemId).filter((s) => !s.deletedAt).toArray() : Promise.resolve([])),
     [itemId]

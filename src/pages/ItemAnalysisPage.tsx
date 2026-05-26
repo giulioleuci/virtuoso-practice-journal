@@ -1,23 +1,17 @@
 import { useMemo } from "react";
+import { useTechniques, useItem, useTasksByItem } from "@/hooks/useEntities";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type Session, type TheoryLayer } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
 import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
+import { weeklySessionCounts } from "@/lib/domain/analytics";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 
 const QUALITY_ORDER = ["hard", "improve", "well", "great"];
-
-function weekKey(date: string): string {
-  const d = new Date(date);
-  const dow = d.getDay();
-  const mon = new Date(d);
-  mon.setDate(d.getDate() - ((dow + 6) % 7));
-  return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
-}
 
 interface ChartPoint { x: number; y: number; label: string }
 
@@ -83,15 +77,8 @@ export default function ItemAnalysisPage() {
   const { t, lang } = useI18n();
   const itemId = id ? Number(id) : null;
 
-  const item = useLiveQuery(
-    () => (itemId ? db.library.get(itemId) : Promise.resolve(undefined)),
-    [itemId]
-  );
-
-  const tasks = useLiveQuery(
-    () => (itemId ? db.tasks.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
-    [itemId]
-  );
+  const item = useItem(itemId ?? undefined);
+  const tasks = useTasksByItem(itemId ?? undefined);
 
   const sessions = useLiveQuery(async () => {
     const ids = (tasks ?? []).map((t) => t.id!).filter(Boolean);
@@ -99,7 +86,7 @@ export default function ItemAnalysisPage() {
     return db.sessions.where("taskId").anyOf(ids).sortBy("date");
   }, [tasks]);
 
-  const techniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const techniques = useTechniques();
 
   const isTheory = item?.kind === "theory";
 
@@ -140,16 +127,10 @@ export default function ItemAnalysisPage() {
 
   const sessionsPerWeek = useMemo((): ChartPoint[] => {
     if (!sessions?.length) return [];
-    const counts = new Map<string, number>();
-    for (const s of sessions) {
-      const wk = weekKey(s.date);
-      counts.set(wk, (counts.get(wk) ?? 0) + 1);
-    }
-    const weeks = Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
-    return weeks.map(([wk, count], i) => ({
+    return weeklySessionCounts(sessions, 12).map(({ weekKey, count }, i) => ({
       x: i,
       y: count,
-      label: new Date(wk).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
+      label: new Date(weekKey).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
     }));
   }, [sessions, lang]);
 

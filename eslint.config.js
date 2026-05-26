@@ -23,4 +23,20 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // UI layer must not write to the DB directly — route writes through services.
+    // Reads should flow through hooks (useEntities). Type-only `db` imports are fine.
+    files: ["src/pages/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.object.object.name='db'][callee.property.name=/^(add|put|update|delete|bulkAdd|bulkPut|bulkDelete|bulkUpdate|clear|modify)$/]",
+          message:
+            "Do not write to `db.<table>` from the UI layer. Use a service in @/lib/services instead.",
+        },
+      ],
+    },
+  },
 );

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSubjects } from "@/hooks/useEntities";
 import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/db";
@@ -16,6 +17,8 @@ import { StatsDashboard } from "@/components/diary/StatsDashboard";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Pager } from "@/components/shared/Pager";
+import { usePagination } from "@/hooks/usePagination";
 
 type GroupKey = "task" | "day" | "item" | "segment";
 type SortDir = "newest" | "oldest";
@@ -31,7 +34,6 @@ export default function History() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [from, setFrom] = useState(searchParams.get("from") ?? "");
   const [to, setTo] = useState(searchParams.get("to") ?? "");
-  const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<Session | null>(null);
 
   // Scope session reads by date range when set — avoids loading the entire table
@@ -41,11 +43,11 @@ export default function History() {
     if (to) return db.sessions.where("date").belowOrEqual(to).toArray();
     return db.sessions.toArray();
   }, [from, to]);
-  const tasks = useLiveQuery(() => db.tasks.toArray());
-  const items = useLiveQuery(() => db.library.toArray());
-  const segments = useLiveQuery(() => db.segments.toArray());
-  const subjects = useLiveQuery(() => db.subjects.toArray());
-  const collections = useLiveQuery(() => db.collections.toArray());
+  const tasks = useAllTasks();
+  const items = useAllLibrary();
+  const segments = useAllSegments();
+  const subjects = useSubjects();
+  const collections = useAllCollections();
 
   useEffect(() => {
     const f = searchParams.get("from") ?? "";
@@ -121,8 +123,7 @@ export default function History() {
     return Array.from(map.values()).sort((a, b) => cmp(a.sortKey, b.sortKey));
   }, [filteredSessions, taskById, itemById, segById, collectionById, groupBy, sortDir, t]);
 
-  const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
-  const pageGroups = groups.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const { page, setPage, totalPages, pageItems: pageGroups } = usePagination(groups, PAGE_SIZE);
 
   return (
     <div className="space-y-5 pb-24">
@@ -284,17 +285,7 @@ export default function History() {
         </Accordion>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <Button size="sm" variant="ghost" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground tabular-nums">{page + 1} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <Pager page={page} totalPages={totalPages} onChange={setPage} />
 
       <SessionDetailSheet open={detail !== null} onOpenChange={(o) => !o && setDetail(null)} session={detail} />
     </div>

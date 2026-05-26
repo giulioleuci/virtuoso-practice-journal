@@ -8,3 +8,5 @@ export { profileService } from "./profile";
 export { subjectsService } from "./subjects";
 export { lessonsService } from "./lessons";
 export { helpRequestsService } from "./helpRequests";
+export { backupService } from "./backup";
+export { deleteWithUndo } from "./_shared";

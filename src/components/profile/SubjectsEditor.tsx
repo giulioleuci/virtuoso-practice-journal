@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type Subject, type SubjectType, type ColorKey } from "@/lib/db"; // db used for useLiveQuery reads only
+import { useSubjects, useTechniques } from "@/hooks/useEntities";
+import { THEORY_LAYERS, type Subject, type SubjectType, type ColorKey } from "@/lib/db";
 import { subjectsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { COLOR_KEYS, getSubjectColor, subjectColorCss } from "@/lib/subjectColors";
@@ -16,8 +16,8 @@ import { cn } from "@/lib/utils";
 
 export function SubjectsEditor() {
   const { t } = useI18n();
-  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const techniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const subjects = useSubjects();
+  const techniques = useTechniques();
 
   const instruments = (subjects ?? []).filter((s) => s.type === "instrument");
   const theory = (subjects ?? []).filter((s) => s.type === "theory");
@@ -413,7 +413,7 @@ function SubjectCard({
               {COLOR_KEYS.map((ck) => (
                 <button
                   key={ck}
-                  onClick={() => subject.id && db.subjects.update(subject.id, { color: ck as ColorKey, customColor: undefined })}
+                  onClick={() => subject.id && subjectsService.setColor(subject.id, ck as ColorKey)}
                   className={cn(
                     "h-6 w-6 rounded-full transition-all",
                     !subject.customColor && getSubjectColor(subject.color, subject.type) === ck
@@ -440,14 +440,14 @@ function SubjectCard({
                 <input
                   type="color"
                   value={subject.customColor ?? "#a0522d"}
-                  onChange={(e) => subject.id && db.subjects.update(subject.id, { customColor: e.target.value })}
+                  onChange={(e) => subject.id && subjectsService.setCustomColor(subject.id, e.target.value)}
                   className="absolute inset-0 opacity-0 cursor-pointer"
                   aria-label={t("subjects.customColor")}
                 />
               </label>
               {subject.customColor && (
                 <button
-                  onClick={() => subject.id && db.subjects.update(subject.id, { customColor: undefined })}
+                  onClick={() => subject.id && subjectsService.setCustomColor(subject.id, undefined)}
                   className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
                 >
                   {t("common.reset")}

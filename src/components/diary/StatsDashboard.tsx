@@ -3,23 +3,9 @@ import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Session } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
+import { dayKey } from "@/lib/date";
+import { computeStreak } from "@/lib/domain/streak";
 import { Flame } from "lucide-react";
-
-function dayKey(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function computeStreak(daysWithSessions: Set<string>): number {
-  let streak = 0;
-  const d = new Date();
-  // If no session today, allow streak to start from yesterday
-  if (!daysWithSessions.has(dayKey(d))) d.setDate(d.getDate() - 1);
-  while (daysWithSessions.has(dayKey(d))) {
-    streak++;
-    d.setDate(d.getDate() - 1);
-  }
-  return streak;
-}
 
 interface Props {
   /** YYYY-MM-DD inclusive lower bound */
@@ -103,7 +89,7 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
     }).length;
 
     return {
-      streak: computeStreak(daySet),
+      streak: computeStreak(daySet).streak,
       last14,
       heatmap: weeks,
       totalWeek,

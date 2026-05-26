@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTechniques } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -28,7 +29,7 @@ export function ItemAnalysisSheet({ open, onOpenChange, item }: Props) {
     () => (item.id ? db.segments.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
     [item.id]
   );
-  const techniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const techniques = useTechniques();
 
   const tasksById = useMemo(() => {
     const m = new Map<number, Task>();

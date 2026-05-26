@@ -56,7 +56,7 @@ describe("collectionsService", () => {
     expect(await collectionsService.countItems(id)).toBe(1);
   });
 
-  it("groupRepertoireByCollection includes uncollected bucket and multi-membership", async () => {
+  it("groupLibraryByCollection includes uncollected bucket and multi-membership", async () => {
     const a = await collectionsService.create({ kind: "repertoire", name: "Aaa" });
     const b = await collectionsService.create({ kind: "repertoire", name: "Bbb" });
     const i1 = await seedItem("In both");
@@ -65,7 +65,7 @@ describe("collectionsService", () => {
     await collectionsService.setItemCollections(i1, [a, b]);
     await collectionsService.setItemCollections(i2, [a]);
 
-    const groups = await collectionsService.groupRepertoireByCollection();
+    const groups = await collectionsService.groupLibraryByCollection("repertoire");
     // Last group is always Uncollected
     expect(groups[groups.length - 1].collection).toBeNull();
     expect(groups[groups.length - 1].items.map((i) => i.id)).toEqual([i3]);
@@ -80,7 +80,7 @@ describe("collectionsService", () => {
     const a = await collectionsService.create({ kind: "repertoire", name: "A" });
     const item = await seedItem("Piece");
     await collectionsService.setItemCollections(item, [a]);
-    const groups = await collectionsService.groupRepertoireByCollection();
+    const groups = await collectionsService.groupLibraryByCollection("repertoire");
     expect(groups[groups.length - 1].collection).toBeNull();
     expect(groups[groups.length - 1].items).toEqual([]);
   });
@@ -89,7 +89,7 @@ describe("collectionsService", () => {
     const a = await collectionsService.create({ kind: "repertoire", name: "A" });
     const m = await seedItem("Manual", "manual");
     await collectionsService.addItems(a, [m]);
-    const groups = await collectionsService.groupRepertoireByCollection();
+    const groups = await collectionsService.groupLibraryByCollection("repertoire");
     const groupA = groups.find((g) => g.collection?.id === a)!;
     expect(groupA.items.length).toBe(0);
   });
