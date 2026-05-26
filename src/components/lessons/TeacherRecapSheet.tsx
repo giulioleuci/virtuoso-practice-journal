@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { subjectBorderStyle } from "@/lib/subjectColors";
+import { subjectBorderStyle, subjectColorCss } from "@/lib/subjectColors";
 
 interface Props {
   open: boolean;
@@ -130,6 +130,11 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                       >
                         <AccordionTrigger className="group py-3 hover:no-underline gap-2 w-full min-w-0">
                           <div className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                            <span
+                              aria-hidden
+                              className="h-2.5 w-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: subjectColorCss(g.subjectColor, g.subjectType, g.subjectCustomColor) }}
+                            />
                             <span className="font-serif text-lg flex-1 min-w-0 block group-data-[state=closed]:truncate group-data-[state=open]:whitespace-normal group-data-[state=open]:break-words">{b.itemTitle}</span>
                             <span className="text-xs text-muted-foreground shrink-0">({b.reqs.length})</span>
                           </div>
