@@ -1,5 +1,6 @@
 /** Help-requests service — wraps writes for practice help questions. */
 import { db } from "@/lib/db";
+import { now } from "./_shared";
 
 export const helpRequestsService = {
   async add(itemId: number, question: string): Promise<number> {
@@ -7,12 +8,12 @@ export const helpRequestsService = {
       itemId,
       question,
       resolved: false,
-      createdAt: Date.now(),
+      createdAt: now(),
     })) as number;
   },
 
   async answer(id: number, text: string): Promise<void> {
-    await db.helpRequests.update(id, { answer: text, answeredAt: Date.now(), resolved: true });
+    await db.helpRequests.update(id, { answer: text, answeredAt: now(), resolved: true });
   },
 
   async remove(id: number): Promise<void> {
@@ -23,7 +24,7 @@ export const helpRequestsService = {
     const trimmed = text.trim();
     await db.helpRequests.update(id, {
       answer: trimmed || undefined,
-      answeredAt: trimmed ? Date.now() : undefined,
+      answeredAt: trimmed ? now() : undefined,
       resolved: !!trimmed,
     });
   },

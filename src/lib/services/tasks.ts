@@ -3,6 +3,7 @@
  */
 import { db, type Task, type TaskRecurrence } from "@/lib/db";
 import { expandTaskRecurrence } from "@/lib/recurrence";
+import { notDeleted, now } from "./_shared";
 
 export type NewTaskInput = Omit<Task, "id" | "done" | "createdAt" | "date"> & {
   date: string;
@@ -13,7 +14,7 @@ export type NewTaskInput = Omit<Task, "id" | "done" | "createdAt" | "date"> & {
 async function deleteTaskPreservingHistory(taskId: number): Promise<"soft" | "hard"> {
   const hasSession = (await db.sessions.where("taskId").equals(taskId).count()) > 0;
   if (hasSession) {
-    await db.tasks.update(taskId, { deletedAt: Date.now() });
+    await db.tasks.update(taskId, { deletedAt: now() });
     return "soft";
   }
   await db.tasks.delete(taskId);
@@ -32,10 +33,10 @@ async function deleteTasksPreservingHistory(taskIds: number[]): Promise<{ soft: 
     else hardIds.push(id);
   }
 
-  const now = Date.now();
+  const ts = now();
   await db.transaction("rw", db.tasks, async () => {
     if (softIds.length > 0) {
-      await db.tasks.bulkUpdate(softIds.map((id) => ({ key: id, changes: { deletedAt: now } })));
+      await db.tasks.bulkUpdate(softIds.map((id) => ({ key: id, changes: { deletedAt: ts } })));
     }
     if (hardIds.length > 0) {
       await db.tasks.bulkDelete(hardIds);
@@ -47,18 +48,18 @@ async function deleteTasksPreservingHistory(taskIds: number[]): Promise<{ soft: 
 
 export const tasksService = {
   async list(): Promise<Task[]> {
-    return db.tasks.filter((t) => !t.deletedAt).toArray();
+    return db.tasks.filter(notDeleted).toArray();
   },
 
   async byDate(date: string): Promise<Task[]> {
-    return db.tasks.where("date").equals(date).filter((t) => !t.deletedAt).toArray();
+    return db.tasks.where("date").equals(date).filter(notDeleted).toArray();
   },
 
   async create(input: NewTaskInput): Promise<number> {
-    const now = Date.now();
+    const ts = now();
     const { recurrence, ...rest } = input;
     if (!recurrence) {
-      return (await db.tasks.add({ ...rest, done: false, createdAt: now })) as number;
+      return (await db.tasks.add({ ...rest, done: false, createdAt: ts })) as number;
     }
     const dates = expandTaskRecurrence(recurrence);
     if (!dates.length) throw new Error("Recurrence produced no dates");
@@ -69,7 +70,7 @@ export const tasksService = {
         date: dates[0],
         recurrence,
         done: false,
-        createdAt: now,
+        createdAt: ts,
       })) as number;
       if (dates.length > 1) {
         await db.tasks.bulkAdd(
@@ -78,7 +79,7 @@ export const tasksService = {
             date: d,
             done: false,
             recurrenceTaskId: firstId,
-            createdAt: now,
+            createdAt: ts,
           })),
         );
       }
@@ -109,7 +110,7 @@ export const tasksService = {
 
   async carryOver(task: Task, toDate: string): Promise<number> {
     const { id, date, done, skipped, ...rest } = task;
-    const newId = (await db.tasks.add({ ...rest, date: toDate, done: false, createdAt: Date.now() })) as number;
+    const newId = (await db.tasks.add({ ...rest, date: toDate, done: false, createdAt: now() })) as number;
     await db.tasks.update(id!, { skipped: true });
     return newId;
   },

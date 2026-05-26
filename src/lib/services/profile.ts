@@ -1,5 +1,6 @@
 /** Profile service — wraps all writes to the profile and onboarding tables. */
 import { db, type Profile, type Subject } from "@/lib/db";
+import { now } from "./_shared";
 
 export type OnboardingInput = Omit<Profile, "id" | "createdAt"> & {
   subjects: Array<Pick<Subject, "name" | "type">>;
@@ -15,10 +16,10 @@ export const profileService = {
   },
 
   async initialize({ subjects, ...profileData }: OnboardingInput): Promise<void> {
-    const now = Date.now();
+    const ts = now();
     await db.transaction("rw", db.subjects, db.profile, async () => {
-      await db.subjects.bulkAdd(subjects.map((s) => ({ ...s, createdAt: now })));
-      await db.profile.put({ ...profileData, id: "me", createdAt: now });
+      await db.subjects.bulkAdd(subjects.map((s) => ({ ...s, createdAt: ts })));
+      await db.profile.put({ ...profileData, id: "me", createdAt: ts });
     });
   },
 };

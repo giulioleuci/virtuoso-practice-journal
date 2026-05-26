@@ -1,10 +1,11 @@
 /** Collections service — repertoire grouping (many-to-many). */
 import { db, type Collection, type LibraryItem } from "@/lib/db";
 import { collectionInputSchema, type CollectionInput } from "@/lib/schemas";
+import { notDeleted, now, resolveMany } from "./_shared";
 
 export const collectionsService = {
   async list(kind?: import("@/lib/db").LibraryKind): Promise<Collection[]> {
-    const rows = await db.collections.filter((c) => !c.deletedAt && (!kind || c.kind === kind)).toArray();
+    const rows = await db.collections.filter((c) => notDeleted(c) && (!kind || c.kind === kind)).toArray();
     return rows.sort((a, b) => a.name.localeCompare(b.name));
   },
 
@@ -14,7 +15,7 @@ export const collectionsService = {
 
   async create(input: CollectionInput): Promise<number> {
     const data = collectionInputSchema.parse(input);
-    const now = Date.now();
+    const ts = now();
     const row: Collection = {
       kind: data.kind,
       name: data.name,
@@ -23,8 +24,8 @@ export const collectionsService = {
       notes: data.notes,
       color: data.color,
       defaultSubjectId: data.defaultSubjectId,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: ts,
+      updatedAt: ts,
     };
     return (await db.collections.add(row)) as number;
   },
@@ -40,31 +41,27 @@ export const collectionsService = {
       color: merged.color,
       defaultSubjectId: merged.defaultSubjectId,
     });
-    await db.collections.update(id, { ...patch, updatedAt: Date.now() });
+    await db.collections.update(id, { ...patch, updatedAt: now() });
   },
 
   /** Detach all linked items, then soft-delete the collection. */
   async remove(id: number): Promise<void> {
     await db.transaction("rw", db.collections, db.collectionItems, async () => {
       await db.collectionItems.where("collectionId").equals(id).delete();
-      await db.collections.update(id, { deletedAt: Date.now(), updatedAt: Date.now() });
+      await db.collections.update(id, { deletedAt: now(), updatedAt: now() });
     });
   },
 
   /** All non-deleted collections an item belongs to. */
   async listForItem(itemId: number): Promise<Collection[]> {
-    const links = await db.collectionItems.where("itemId").equals(itemId).toArray();
-    if (!links.length) return [];
-    const cols = await db.collections.where("id").anyOf(links.map((l) => l.collectionId)).toArray();
-    return cols.filter((c) => !c.deletedAt).sort((a, b) => a.name.localeCompare(b.name));
+    const cols = await resolveMany(db.collectionItems, "itemId", itemId, "collectionId", db.collections);
+    return cols.sort((a, b) => a.name.localeCompare(b.name));
   },
 
   /** Repertoire items in a collection (excluding soft-deleted items). */
   async listItems(collectionId: number): Promise<LibraryItem[]> {
-    const links = await db.collectionItems.where("collectionId").equals(collectionId).toArray();
-    if (!links.length) return [];
-    const items = await db.library.where("id").anyOf(links.map((l) => l.itemId)).toArray();
-    return items.filter((i) => !i.deletedAt && i.kind === "repertoire");
+    const items = await resolveMany(db.collectionItems, "collectionId", collectionId, "itemId", db.library);
+    return items.filter((i) => i.kind === "repertoire");
   },
 
   /** Replace the full set of collection memberships for one item. */
@@ -77,9 +74,9 @@ export const collectionsService = {
       const toAdd = [...target].filter((cid) => !existingIds.has(cid));
       if (toRemove.length) await db.collectionItems.bulkDelete(toRemove);
       if (toAdd.length) {
-        const now = Date.now();
+        const ts = now();
         await db.collectionItems.bulkAdd(
-          toAdd.map((collectionId) => ({ collectionId, itemId, createdAt: now })),
+          toAdd.map((collectionId) => ({ collectionId, itemId, createdAt: ts })),
         );
       }
     });
@@ -93,9 +90,9 @@ export const collectionsService = {
       const have = new Set(existing.map((l) => l.itemId));
       const toAdd = itemIds.filter((id) => !have.has(id));
       if (toAdd.length) {
-        const now = Date.now();
+        const ts = now();
         await db.collectionItems.bulkAdd(
-          toAdd.map((itemId) => ({ collectionId, itemId, createdAt: now })),
+          toAdd.map((itemId) => ({ collectionId, itemId, createdAt: ts })),
         );
       }
     });
@@ -124,7 +121,7 @@ export const collectionsService = {
   ): Promise<{ collection: Collection | null; items: LibraryItem[] }[]> {
     const [collections, items, links] = await Promise.all([
       collectionsService.list(kind),
-      db.library.where("kind").equals(kind).filter((i) => !i.deletedAt).toArray(),
+      db.library.where("kind").equals(kind).filter(notDeleted).toArray(),
       db.collectionItems.toArray(),
     ]);
     const itemsById = new Map(items.map((i) => [i.id!, i]));

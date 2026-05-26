@@ -1,6 +1,7 @@
 /** Lessons service — wraps writes for recurrences, lessons, and assignments. */
 import { db, type Lesson, type LessonRecurrence } from "@/lib/db";
 import { buildLessonSnapshot } from "@/lib/domain/snapshots";
+import { cascadeDelete, now } from "./_shared";
 
 export const lessonsService = {
   async upsertRecurrence(data: Omit<LessonRecurrence, "id">, id?: number): Promise<number> {
@@ -24,7 +25,7 @@ export const lessonsService = {
   ): Promise<number> {
     const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(subjectId, recurrence ?? null, []);
     let lessonId = 0;
-    const now = Date.now();
+    const ts = now();
     await db.transaction("rw", db.lessons, db.assignments, async () => {
       lessonId = (await db.lessons.add({
         recurrenceId: recurrence?.id,
@@ -34,7 +35,7 @@ export const lessonsService = {
         piecesPlayed: [],
         snapshot,
         piecesPlayedTitles,
-        createdAt: now,
+        createdAt: ts,
       })) as number;
       if (assignmentTexts.length) {
         await db.assignments.bulkAdd(
@@ -42,7 +43,7 @@ export const lessonsService = {
             lessonId,
             text,
             transformed: false,
-            createdAt: now,
+            createdAt: ts,
           })),
         );
       }
@@ -51,7 +52,7 @@ export const lessonsService = {
   },
 
   async updateLesson(lesson: Lesson, date: string, notes: string | undefined, assignmentTexts: string[]): Promise<void> {
-    const now = Date.now();
+    const ts = now();
     await db.transaction("rw", db.lessons, db.assignments, async () => {
       await db.lessons.put({ ...lesson, date, notes: notes?.trim() || undefined });
       await db.assignments.where("lessonId").equals(lesson.id!).delete();
@@ -61,7 +62,7 @@ export const lessonsService = {
             lessonId: lesson.id!,
             text,
             transformed: false,
-            createdAt: now,
+            createdAt: ts,
           })),
         );
       }
@@ -69,10 +70,7 @@ export const lessonsService = {
   },
 
   async deleteLesson(lessonId: number): Promise<void> {
-    await db.transaction("rw", db.lessons, db.assignments, async () => {
-      await db.assignments.where("lessonId").equals(lessonId).delete();
-      await db.lessons.delete(lessonId);
-    });
+    await cascadeDelete(db.lessons, lessonId, [{ table: db.assignments, fk: "lessonId" }]);
   },
 
   async ignoreAssignment(id: number): Promise<void> {

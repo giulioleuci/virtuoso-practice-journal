@@ -1,16 +1,14 @@
 /** Subjects service — wraps writes for subjects and techniques. */
 import { db, type Subject } from "@/lib/db";
+import { cascadeDelete, now } from "./_shared";
 
 export const subjectsService = {
   async create(name: string, type: Subject["type"]): Promise<number> {
-    return (await db.subjects.add({ name, type, layers: [], createdAt: Date.now() })) as number;
+    return (await db.subjects.add({ name, type, layers: [], createdAt: now() })) as number;
   },
 
   async remove(subjectId: number): Promise<void> {
-    await db.transaction("rw", db.subjects, db.techniques, async () => {
-      await db.techniques.where("subjectId").equals(subjectId).delete();
-      await db.subjects.delete(subjectId);
-    });
+    await cascadeDelete(db.subjects, subjectId, [{ table: db.techniques, fk: "subjectId" }]);
   },
 
   async addLayer(subjectId: number, layer: string): Promise<void> {
@@ -28,7 +26,7 @@ export const subjectsService = {
   },
 
   async addTechnique(subjectId: number, name: string): Promise<number> {
-    return (await db.techniques.add({ subjectId, name, createdAt: Date.now() })) as number;
+    return (await db.techniques.add({ subjectId, name, createdAt: now() })) as number;
   },
 
   async removeTechnique(id: number): Promise<void> {
