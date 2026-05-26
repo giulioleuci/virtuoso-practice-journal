@@ -49,4 +49,29 @@ export const libraryService = {
   async remove(id: number) {
     return deleteLibraryItem(id);
   },
+
+  /** Count tasks with logged sessions for an item (to decide hard vs soft delete in the UI). */
+  async hasSessions(itemId: number): Promise<boolean> {
+    const taskIds = (await db.tasks.where("itemId").equals(itemId).primaryKeys()) as number[];
+    return taskIds.length ? (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0 : false;
+  },
+
+  /** Hard-delete an item along with its segments and tasks (no history to preserve). */
+  async hardDelete(itemId: number): Promise<void> {
+    await db.transaction("rw", db.library, db.segments, db.tasks, async () => {
+      await db.segments.where("itemId").equals(itemId).delete();
+      await db.tasks.where("itemId").equals(itemId).delete();
+      await db.library.delete(itemId);
+    });
+  },
+
+  /** Re-create an item (and its segments) after an undo. Returns the new id. */
+  async restore(item: LibraryItem, segments: Segment[]): Promise<number> {
+    const { id: _id, ...itemRest } = item;
+    const newId = (await db.library.add(itemRest)) as number;
+    if (segments.length) {
+      await db.segments.bulkAdd(segments.map(({ id: _sid, ...seg }) => ({ ...seg, itemId: newId })));
+    }
+    return newId;
+  },
 };

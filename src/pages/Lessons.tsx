@@ -37,6 +37,7 @@ import { upcomingLessonDates, dayKey, today } from "@/lib/recurrence";
 import { toast } from "sonner";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Pager } from "@/components/shared/Pager";
 
 const PAGE_SIZE = 5;
 
@@ -251,7 +252,7 @@ export default function Lessons() {
                       );
                     })}
                   </ul>
-                  <Pager page={page} totalPages={totalPages} onPage={setPageUpcoming} />
+                  <Pager page={page} totalPages={totalPages} onChange={setPageUpcoming} />
                 </AccordionContent>
               </AccordionItem>
             );
@@ -373,7 +374,7 @@ export default function Lessons() {
                         );
                       })}
                     </ul>
-                    <Pager page={page} totalPages={totalPages} onPage={setPageRecent} />
+                    <Pager page={page} totalPages={totalPages} onChange={setPageRecent} />
                   </>
                 );
               })()
@@ -437,23 +438,6 @@ export default function Lessons() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-function Pager({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (p: number) => void }) {
-  if (totalPages <= 1) return null;
-  return (
-    <div className="flex items-center justify-center gap-3 pt-2">
-      <Button size="sm" variant="ghost" disabled={page === 0} onClick={() => onPage(page - 1)}>
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <span className="text-xs text-muted-foreground tabular-nums">
-        {page + 1} / {totalPages}
-      </span>
-      <Button size="sm" variant="ghost" disabled={page >= totalPages - 1} onClick={() => onPage(page + 1)}>
-        <ChevronRight className="h-4 w-4" />
-      </Button>
     </div>
   );
 }

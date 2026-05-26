@@ -119,6 +119,61 @@ export const tasksService = {
     await db.tasks.bulkUpdate(ids.map((id) => ({ key: id, changes: { done } })));
   },
 
+  /**
+   * Find an existing task for an item on a date, or create a task (item- or
+   * free-linked) to attach a session to. Used by the quick-log FAB.
+   */
+  async findOrCreateForLog(opts: {
+    date: string;
+    subjectId: number;
+    itemId?: number;
+    fallbackItemTitle: string;
+    freeTitle: string;
+  }): Promise<Task | undefined> {
+    let taskId: number;
+    if (opts.itemId) {
+      const existing = await db.tasks
+        .where("itemId").equals(opts.itemId)
+        .and((t) => t.date === opts.date && !t.deletedAt)
+        .first();
+      if (existing?.id) return existing;
+      const item = await db.library.get(opts.itemId);
+      taskId = (await db.tasks.add({
+        date: opts.date,
+        subjectId: opts.subjectId,
+        linkType: "item",
+        itemId: opts.itemId,
+        title: item?.title ?? opts.fallbackItemTitle,
+        done: false,
+        createdAt: now(),
+      })) as number;
+    } else {
+      taskId = (await db.tasks.add({
+        date: opts.date,
+        subjectId: opts.subjectId,
+        linkType: "free",
+        title: opts.freeTitle,
+        done: false,
+        createdAt: now(),
+      })) as number;
+    }
+    return db.tasks.get(taskId);
+  },
+
+  async hasSessions(taskId: number): Promise<boolean> {
+    return (await db.sessions.where("taskId").equals(taskId).count()) > 0;
+  },
+
+  /** Hard-delete a single task (no history to preserve). */
+  async hardDelete(taskId: number): Promise<void> {
+    await db.tasks.delete(taskId);
+  },
+
+  /** Re-add a task after an undo (keeps its original id). */
+  async restore(task: Task): Promise<void> {
+    await db.tasks.add(task);
+  },
+
   async remove(id: number): Promise<"soft" | "hard"> {
     return deleteTaskPreservingHistory(id);
   },

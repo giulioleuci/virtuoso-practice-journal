@@ -52,6 +52,18 @@ export const collectionsService = {
     });
   },
 
+  /** Undo a soft-delete: un-delete the collection and re-attach saved item links. */
+  async restore(collection: Collection, links: { collectionId: number; itemId: number; position?: number }[]): Promise<void> {
+    const ts = now();
+    const { deletedAt: _d, ...rest } = collection;
+    await db.transaction("rw", db.collections, db.collectionItems, async () => {
+      await db.collections.put({ ...rest, deletedAt: undefined, updatedAt: ts });
+      if (links.length) {
+        await db.collectionItems.bulkAdd(links.map((l) => ({ ...l, createdAt: ts })));
+      }
+    });
+  },
+
   /** All non-deleted collections an item belongs to. */
   async listForItem(itemId: number): Promise<Collection[]> {
     const cols = await resolveMany(db.collectionItems, "itemId", itemId, "collectionId", db.collections);

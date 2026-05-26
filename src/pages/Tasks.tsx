@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type StudyRoutine } from "@/lib/db";
 import { useActiveTasks, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
-import { studyRoutinesService, tasksService } from "@/lib/services";
+import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/services";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Pager } from "@/components/shared/Pager";
+import { usePagination } from "@/hooks/usePagination";
 
 const PAGE_SIZE = 5;
 
@@ -56,8 +58,7 @@ export default function Tasks() {
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [q, setQ] = useState("");
-  const [page, setPage] = useState(0);
-  
+
   const [delRoutineId, setDelRoutineId] = useState<number | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
@@ -84,8 +85,7 @@ export default function Tasks() {
     });
   }, [tasks, view, filter, subjectFilter, q]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageItems = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const { page, setPage, totalPages, pageItems } = usePagination(filtered, PAGE_SIZE);
   const pageIds = pageItems.map((task) => task.id!).filter(Boolean);
   const allSelectedOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
 
@@ -122,8 +122,7 @@ export default function Tasks() {
       setDelMode("one");
       return;
     }
-    const hasSessions = (await db.sessions.where("taskId").equals(task.id).count()) > 0;
-    if (hasSessions) {
+    if (await tasksService.hasSessions(task.id)) {
       // Has sessions → will be archived (soft delete) — keep dialog so user knows data is preserved
       setDelId(task.id);
       setDelMode("one");
@@ -131,15 +130,13 @@ export default function Tasks() {
     }
     // No sessions, no series → low-risk hard delete: skip dialog, offer undo
     const saved = { ...task };
-    await db.tasks.delete(task.id);
-    toast.success(t("toast.taskDeleted"), {
+    await deleteWithUndo({
+      remove: () => tasksService.hardDelete(task.id!),
+      restore: () => tasksService.restore(saved),
+      message: t("toast.taskDeleted"),
+      undoLabel: t("common.undo"),
+      toast: (msg, opts) => toast.success(msg, opts),
       duration: 5000,
-      action: {
-        label: t("common.undo"),
-        onClick: async () => {
-          await db.tasks.add(saved);
-        },
-      },
     });
   };
 
@@ -361,17 +358,7 @@ export default function Tasks() {
         </>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <Button size="sm" variant="ghost" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground tabular-nums">{page + 1} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <Pager page={page} totalPages={totalPages} onChange={setPage} />
 
       {tasks !== undefined && (
         <section className="space-y-2 pt-2">

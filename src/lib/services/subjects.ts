@@ -1,5 +1,5 @@
 /** Subjects service — wraps writes for subjects and techniques. */
-import { db, type Subject } from "@/lib/db";
+import { db, type Subject, type ColorKey } from "@/lib/db";
 import { cascadeDelete, now } from "./_shared";
 
 export const subjectsService = {
@@ -35,6 +35,16 @@ export const subjectsService = {
 
   async rename(subjectId: number, newName: string): Promise<void> {
     await db.subjects.update(subjectId, { name: newName });
+  },
+
+  /** Set a preset color, clearing any custom color. */
+  async setColor(subjectId: number, color: ColorKey): Promise<void> {
+    await db.subjects.update(subjectId, { color, customColor: undefined });
+  },
+
+  /** Set or clear a custom hex color. */
+  async setCustomColor(subjectId: number, customColor: string | undefined): Promise<void> {
+    await db.subjects.update(subjectId, { customColor });
   },
 
   async renameLayer(subjectId: number, oldName: string, newName: string): Promise<void> {

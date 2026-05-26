@@ -20,9 +20,10 @@ import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { BpmSparkline } from "@/components/library/BpmSparkline";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Pager } from "@/components/shared/Pager";
 import { useSubjects } from "@/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
-import { libraryService } from "@/lib/services";
+import { libraryService, deleteWithUndo } from "@/lib/services";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,11 +101,7 @@ export default function Library() {
 
   const askDeleteItem = async (it: LibraryItem) => {
     if (!it.id) return;
-    const taskIds = (await db.tasks.where("itemId").equals(it.id).primaryKeys()) as number[];
-    const hasSessions = taskIds.length
-      ? (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0
-      : false;
-    if (hasSessions) {
+    if (await libraryService.hasSessions(it.id)) {
       // Has sessions — will be soft-deleted/archived; keep dialog so user knows history is preserved
       setDeletingId(it.id);
       return;
@@ -112,25 +109,13 @@ export default function Library() {
     // No sessions → low-risk hard delete: skip dialog, offer undo
     const savedItem = { ...it };
     const savedSegments = (allSegments ?? []).filter((s) => s.itemId === it.id).map((s) => ({ ...s }));
-    await db.transaction("rw", db.library, db.segments, db.tasks, async () => {
-      await db.segments.where("itemId").equals(it.id!).delete();
-      await db.tasks.where("itemId").equals(it.id!).delete();
-      await db.library.delete(it.id!);
-    });
-    toast.success(t("toast.deleted"), {
+    await deleteWithUndo({
+      remove: () => libraryService.hardDelete(it.id!),
+      restore: () => libraryService.restore(savedItem, savedSegments),
+      message: t("toast.deleted"),
+      undoLabel: t("common.undo"),
+      toast: (msg, opts) => toast.success(msg, opts),
       duration: 5000,
-      action: {
-        label: t("common.undo"),
-        onClick: async () => {
-          const { id: _id, ...itemRest } = savedItem;
-          const newId = (await db.library.add(itemRest)) as number;
-          if (savedSegments.length) {
-            await db.segments.bulkAdd(
-              savedSegments.map(({ id: _sid, ...seg }) => ({ ...seg, itemId: newId }))
-            );
-          }
-        },
-      },
     });
   };
 
@@ -365,17 +350,6 @@ export default function Library() {
             : <EmptyState title={t("library.noItemsMatch")} />;
         }
 
-        const Pager = ({ current, total, onChange }: { current: number; total: number; onChange: (p: number) => void }) => {
-          if (total <= 1) return null;
-          return (
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <Button size="sm" variant="ghost" disabled={current <= 1} onClick={() => onChange(current - 1)}>{t("common.prev")}</Button>
-              <span className="text-xs text-muted-foreground tabular-nums">{current} / {total}</span>
-              <Button size="sm" variant="ghost" disabled={current >= total} onClick={() => onChange(current + 1)}>{t("common.next")}</Button>
-            </div>
-          );
-        };
-
         const paginate = <T,>(arr: T[], p: number) => arr.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE);
 
         if (groupByCollection) {
@@ -419,7 +393,7 @@ export default function Library() {
                         ) : (
                           <>
                             <ul className="space-y-2 pb-2">{paginate(g.items, p).map(renderCard)}</ul>
-                            <Pager current={p} total={totalPages} onChange={(np) => setGroupPage(key, np)} />
+                            <Pager page={p - 1} totalPages={totalPages} onChange={(np) => setGroupPage(key, np + 1)} />
                           </>
                         )}
                       </AccordionContent>
@@ -440,7 +414,7 @@ export default function Library() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <ul className="space-y-2 pb-2">{paginate(uncollected, uncollectedPage).map(renderCard)}</ul>
-                      <Pager current={uncollectedPage} total={uncollectedTotalPages} onChange={(np) => setGroupPage("__uncollected", np)} />
+                      <Pager page={uncollectedPage - 1} totalPages={uncollectedTotalPages} onChange={(np) => setGroupPage("__uncollected", np + 1)} />
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
@@ -454,7 +428,7 @@ export default function Library() {
         return (
           <>
             <ul className="space-y-2">{paginate(filteredItems, currentPage).map(renderCard)}</ul>
-            <Pager current={currentPage} total={totalPages} onChange={setPage} />
+            <Pager page={currentPage - 1} totalPages={totalPages} onChange={(np) => setPage(np + 1)} />
           </>
         );
       })()}

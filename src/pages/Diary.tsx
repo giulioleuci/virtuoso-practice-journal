@@ -34,6 +34,7 @@ import { PracticeMode } from "@/components/diary/PracticeMode";
 import { LastSessionStrip } from "@/components/diary/LastSessionStrip";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Pager } from "@/components/shared/Pager";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -470,24 +471,7 @@ export default function Diary() {
                     );
                   })}
                 </ul>
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">
-                    <Button size="icon" variant="ghost" disabled={page === 0} onClick={() => setCarryPage(page - 1)}>
-                      <BackIcon className="h-4 w-4" />
-                    </Button>
-                    <span className="tabular-nums">
-                      {page + 1} / {totalPages}
-                    </span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      disabled={page >= totalPages - 1}
-                      onClick={() => setCarryPage(page + 1)}
-                    >
-                      <ChevronRightIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                <Pager page={page} totalPages={totalPages} onChange={setCarryPage} />
               </>
             );
           })()}
@@ -553,29 +537,7 @@ export default function Diary() {
                         );
                       })}
                     </ul>
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          disabled={page === 0}
-                          onClick={() => setIgnoredPage(page - 1)}
-                        >
-                          <BackIcon className="h-4 w-4" />
-                        </Button>
-                        <span className="tabular-nums">
-                          {page + 1} / {totalPages}
-                        </span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          disabled={page >= totalPages - 1}
-                          onClick={() => setIgnoredPage(page + 1)}
-                        >
-                          <ChevronRightIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
+                    <Pager page={page} totalPages={totalPages} onChange={setIgnoredPage} />
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

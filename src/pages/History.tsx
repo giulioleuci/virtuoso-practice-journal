@@ -16,6 +16,8 @@ import { StatsDashboard } from "@/components/diary/StatsDashboard";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Pager } from "@/components/shared/Pager";
+import { usePagination } from "@/hooks/usePagination";
 
 type GroupKey = "task" | "day" | "item" | "segment";
 type SortDir = "newest" | "oldest";
@@ -31,7 +33,6 @@ export default function History() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [from, setFrom] = useState(searchParams.get("from") ?? "");
   const [to, setTo] = useState(searchParams.get("to") ?? "");
-  const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<Session | null>(null);
 
   // Scope session reads by date range when set — avoids loading the entire table
@@ -121,8 +122,7 @@ export default function History() {
     return Array.from(map.values()).sort((a, b) => cmp(a.sortKey, b.sortKey));
   }, [filteredSessions, taskById, itemById, segById, collectionById, groupBy, sortDir, t]);
 
-  const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
-  const pageGroups = groups.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const { page, setPage, totalPages, pageItems: pageGroups } = usePagination(groups, PAGE_SIZE);
 
   return (
     <div className="space-y-5 pb-24">
@@ -284,17 +284,7 @@ export default function History() {
         </Accordion>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <Button size="sm" variant="ghost" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground tabular-nums">{page + 1} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <Pager page={page} totalPages={totalPages} onChange={setPage} />
 
       <SessionDetailSheet open={detail !== null} onOpenChange={(o) => !o && setDetail(null)} session={detail} />
     </div>

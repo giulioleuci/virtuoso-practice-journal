@@ -37,6 +37,29 @@ export async function resolveMany<L, T extends { id?: number; deletedAt?: number
   return rows.filter(notDeleted);
 }
 
+export interface UndoToast {
+  (message: string, opts: { action: { label: string; onClick: () => void }; duration?: number }): void;
+}
+
+/**
+ * Run a delete, then surface an undo toast that restores the entity. Centralizes
+ * the snapshot → delete → toast-with-restore pattern used by list pages.
+ */
+export async function deleteWithUndo(opts: {
+  remove: () => Promise<unknown>;
+  restore: () => Promise<unknown>;
+  message: string;
+  undoLabel: string;
+  toast: UndoToast;
+  duration?: number;
+}): Promise<void> {
+  await opts.remove();
+  opts.toast(opts.message, {
+    action: { label: opts.undoLabel, onClick: () => void opts.restore() },
+    duration: opts.duration ?? 6000,
+  });
+}
+
 /** Delete a parent row and its FK-linked children in one transaction (hard delete). */
 export async function cascadeDelete(
   parentTable: Table<{ id?: number }, number>,

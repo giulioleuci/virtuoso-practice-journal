@@ -413,7 +413,7 @@ function SubjectCard({
               {COLOR_KEYS.map((ck) => (
                 <button
                   key={ck}
-                  onClick={() => subject.id && db.subjects.update(subject.id, { color: ck as ColorKey, customColor: undefined })}
+                  onClick={() => subject.id && subjectsService.setColor(subject.id, ck as ColorKey)}
                   className={cn(
                     "h-6 w-6 rounded-full transition-all",
                     !subject.customColor && getSubjectColor(subject.color, subject.type) === ck
@@ -440,14 +440,14 @@ function SubjectCard({
                 <input
                   type="color"
                   value={subject.customColor ?? "#a0522d"}
-                  onChange={(e) => subject.id && db.subjects.update(subject.id, { customColor: e.target.value })}
+                  onChange={(e) => subject.id && subjectsService.setCustomColor(subject.id, e.target.value)}
                   className="absolute inset-0 opacity-0 cursor-pointer"
                   aria-label={t("subjects.customColor")}
                 />
               </label>
               {subject.customColor && (
                 <button
-                  onClick={() => subject.id && db.subjects.update(subject.id, { customColor: undefined })}
+                  onClick={() => subject.id && subjectsService.setCustomColor(subject.id, undefined)}
                   className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
                 >
                   {t("common.reset")}

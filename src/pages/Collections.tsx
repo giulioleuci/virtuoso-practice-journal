@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { LIBRARY_KINDS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, ChevronLeft, FolderOpen, Music2 } from "lucide-react";
-import { collectionsService } from "@/lib/services";
+import { collectionsService, deleteWithUndo } from "@/lib/services";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet";
 import { AssignPiecesSheet } from "@/components/collections/AssignPiecesSheet";
@@ -51,23 +51,16 @@ export default function Collections() {
 
   const deleteCollection = async (c: Collection) => {
     if (!c.id) return;
-    const savedLinks = (links ?? []).filter((l) => l.collectionId === c.id).map((l) => ({ ...l }));
-    await collectionsService.remove(c.id);
-    toast.success(t("toast.collectionRemoved"), {
+    const savedLinks = (links ?? [])
+      .filter((l) => l.collectionId === c.id)
+      .map(({ id: _id, ...link }) => ({ ...link }));
+    await deleteWithUndo({
+      remove: () => collectionsService.remove(c.id!),
+      restore: () => collectionsService.restore(c, savedLinks),
+      message: t("toast.collectionRemoved"),
+      undoLabel: t("common.undo"),
+      toast: (msg, opts) => toast.success(msg, opts),
       duration: 5000,
-      action: {
-        label: t("common.undo"),
-        onClick: async () => {
-          const now = Date.now();
-          const { deletedAt: _d, ...rest } = c as Collection & { deletedAt?: number };
-          await db.collections.put({ ...rest, deletedAt: undefined, updatedAt: now });
-          if (savedLinks.length) {
-            await db.collectionItems.bulkAdd(
-              savedLinks.map(({ id: _id, ...link }) => ({ ...link, createdAt: now }))
-            );
-          }
-        },
-      },
     });
   };
 
