@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTechniques } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/db"; // db used for useLiveQuery reads only
 import { sessionsService } from "@/lib/services";
@@ -61,7 +62,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
     [task?.subjectId]
   );
-  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const allTechniques = useTechniques();
   const isTheory = subject?.type === "theory";
   const layerOptions = isTheory
     ? THEORY_LAYERS.map((l) => ({ value: l, label: t(`library.mastery.${l}`) }))

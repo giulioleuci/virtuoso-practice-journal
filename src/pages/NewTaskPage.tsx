@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLessons, useRecurrences, useSubjects, useTechniques, useItem } from "@/hooks/useEntities";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
@@ -45,8 +46,8 @@ export default function NewTaskPage() {
   const date = state.date ?? today();
   const prefill = state.prefill;
 
-  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const subjects = useSubjects();
+  const allTechniques = useTechniques();
 
   const [activeTab, setActiveTab] = useState<"standard" | "wizard" | "routine">("standard");
   const [subjectId, setSubjectId] = useState<number | undefined>(prefill?.itemSubjectId ?? prefill?.subjectId);
@@ -72,10 +73,7 @@ export default function NewTaskPage() {
   });
   const setRec = (patch: Partial<RecurrenceState>) => setRecState((s) => ({ ...s, ...patch }));
 
-  const selectedItem = useLiveQuery(
-    () => (itemId ? db.library.get(itemId) : Promise.resolve(undefined)),
-    [itemId]
-  );
+  const selectedItem = useItem(itemId);
   const selectedSegments = useLiveQuery(
     () => (segmentIds.length ? db.segments.where("id").anyOf(segmentIds).toArray() : Promise.resolve([])),
     [segmentIds.join(",")]
@@ -115,7 +113,7 @@ export default function NewTaskPage() {
   const isTheorySubject = selectedSubject?.type === "theory";
   const subjectLayers = useMemo(
     () => getSubjectLayers(selectedSubject),
-    [selectedSubject, isTheorySubject]
+    [selectedSubject],
   );
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])
@@ -124,8 +122,8 @@ export default function NewTaskPage() {
     [allTechniques, subjectId]
   );
 
-  const lessons = useLiveQuery(() => db.lessons.toArray(), []);
-  const lessonRecurrences = useLiveQuery(() => db.recurrences.toArray(), []);
+  const lessons = useLessons();
+  const lessonRecurrences = useRecurrences();
   const nextLessonDateValue = useMemo(() => {
     if (!subjectId) return undefined;
     return nextLessonDate(lessonRecurrences ?? [], {

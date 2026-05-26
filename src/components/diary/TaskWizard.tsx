@@ -7,6 +7,7 @@
  * A persistent summary chip bar shows selections from previous steps.
  */
 import { useEffect, useMemo, useState } from "react";
+import { useLessons, useRecurrences, useSubjects, useTechniques } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
 import { getSubjectLayers } from "@/lib/domain/subjectLayers";
@@ -50,10 +51,10 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
   const [step, setStep] = useState<Step>(1);
   const draft = useFormDraft(`task-wizard-${date}`, {});
 
-  const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
-  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
-  const lessons = useLiveQuery(() => db.lessons.toArray(), []);
-  const lessonRecurrences = useLiveQuery(() => db.recurrences.toArray(), []);
+  const subjects = useSubjects();
+  const allTechniques = useTechniques();
+  const lessons = useLessons();
+  const lessonRecurrences = useRecurrences();
 
   // Step 1 state
   const [subjectId, setSubjectId] = useState<number | undefined>(prefill?.itemSubjectId ?? prefill?.subjectId);
@@ -102,7 +103,7 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
   const isTheorySubject = selectedSubject?.type === "theory";
   const subjectLayers = useMemo(
     () => getSubjectLayers(selectedSubject),
-    [selectedSubject, isTheorySubject]
+    [selectedSubject],
   );
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAssignments, useLessons, useSubjects } from "@/hooks/useEntities";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db"; // db used for useLiveQuery reads only
@@ -15,9 +16,9 @@ const PAGE_SIZE = 5;
 export default function Assignments() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const assignments = useLiveQuery(() => db.assignments.toArray());
-  const lessons = useLiveQuery(() => db.lessons.toArray());
-  const subjects = useLiveQuery(() => db.subjects.toArray());
+  const assignments = useAssignments();
+  const lessons = useLessons();
+  const subjects = useSubjects();
 
   const [page, setPage] = useState(0);
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSubjects, useTechniques } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type LibraryItem, type PracticeStatus } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -55,8 +56,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const isEdit = !!item?.id;
   const editingKind = item?.kind ?? kind;
 
-  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const subjects = useSubjects();
+  const allTechniques = useTechniques();
   const existingSegments = useLiveQuery(
     () => (item?.id ? db.segments.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
     [item?.id]

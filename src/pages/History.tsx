@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSubjects } from "@/hooks/useEntities";
 import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/db";
@@ -42,11 +43,11 @@ export default function History() {
     if (to) return db.sessions.where("date").belowOrEqual(to).toArray();
     return db.sessions.toArray();
   }, [from, to]);
-  const tasks = useLiveQuery(() => db.tasks.toArray());
-  const items = useLiveQuery(() => db.library.toArray());
-  const segments = useLiveQuery(() => db.segments.toArray());
-  const subjects = useLiveQuery(() => db.subjects.toArray());
-  const collections = useLiveQuery(() => db.collections.toArray());
+  const tasks = useAllTasks();
+  const items = useAllLibrary();
+  const segments = useAllSegments();
+  const subjects = useSubjects();
+  const collections = useAllCollections();
 
   useEffect(() => {
     const f = searchParams.get("from") ?? "";

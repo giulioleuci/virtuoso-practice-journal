@@ -1,4 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { useSubjects } from "@/hooks/useEntities";
 import { db, type Collection, type ColorKey, type LibraryKind } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { useSheetForm } from "@/hooks/useSheetForm";
@@ -31,7 +32,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
   const isEdit = !!collection?.id;
   const effectiveKind: LibraryKind = collection?.kind ?? kind ?? "repertoire";
   const showComposerLike = effectiveKind === "repertoire" || effectiveKind === "manual";
-  const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
+  const subjects = useSubjects();
 
   interface FormValues {
     name: string;

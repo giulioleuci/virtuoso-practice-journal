@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSubjects, useTechniques, useTask } from "@/hooks/useEntities";
 import { useNavigate, useParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db"; // db used for useLiveQuery reads only
@@ -23,15 +24,10 @@ export default function EditTaskPage() {
   const { id } = useParams<{ id: string }>();
   const taskId = id ? Number(id) : undefined;
 
-  const task = useLiveQuery(
-    () => taskId
-      ? db.tasks.get(taskId).then((t) => t ?? null)
-      : Promise.resolve(null),
-    [taskId]
-  );
+  const task = useTask(taskId);
 
-  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const subjects = useSubjects();
+  const allTechniques = useTechniques();
 
   const [initialized, setInitialized] = useState(false);
   const [subjectId, setSubjectId] = useState<number | undefined>();
@@ -70,7 +66,7 @@ export default function EditTaskPage() {
   const isTheorySubject = selectedSubject?.type === "theory";
   const subjectLayers = useMemo(
     () => getSubjectLayers(selectedSubject),
-    [selectedSubject, isTheorySubject]
+    [selectedSubject],
   );
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])

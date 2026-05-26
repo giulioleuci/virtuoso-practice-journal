@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSubjects } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type SessionQuality, type NoteVal } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -35,7 +36,7 @@ export function SessionFAB({ className }: Props) {
   const [notes, setNotes] = useState("");
   const [date, setDate] = useState(todayKey);
 
-  const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
+  const subjects = useSubjects();
   const libraryItems = useLiveQuery(
     () => subjectId
       ? db.library.where("subjectId").equals(subjectId).filter((i) => !i.deletedAt).toArray()

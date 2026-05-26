@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useCollectionLinks, useCollections } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { db, type Collection, type LibraryKind } from "@/lib/db";
@@ -28,11 +29,8 @@ export default function Collections() {
     }
   }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const allCollections = useLiveQuery(
-    () => db.collections.filter((c) => !c.deletedAt).toArray(),
-    []
-  );
-  const links = useLiveQuery(() => db.collectionItems.toArray(), []);
+  const allCollections = useCollections();
+  const links = useCollectionLinks();
 
   const collections = useMemo(
     () => (allCollections ?? []).filter((c) => c.kind === active),

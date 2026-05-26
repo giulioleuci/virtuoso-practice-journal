@@ -10,6 +10,7 @@ import { today } from "@/lib/recurrence";
 import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
 
 import { MasterySparkline } from "@/components/library/MasterySparkline";
+import { type MasteryState } from "@/components/library/MasterySliders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,7 +22,7 @@ import { BpmSparkline } from "@/components/library/BpmSparkline";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pager } from "@/components/shared/Pager";
-import { useSubjects } from "@/hooks/useEntities";
+import { useCollectionLinks, useCollections, useHelpRequests, useSegments, useSubjects, useTechniques } from "@/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
 import { libraryService, deleteWithUndo } from "@/lib/services";
 import {
@@ -49,18 +50,18 @@ export default function Library() {
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
   const [groupByCollection, setGroupByCollection] = useState(false);
-  const allHelp = useLiveQuery(() => db.helpRequests.toArray(), []);
-  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const allHelp = useHelpRequests();
+  const allTechniques = useTechniques();
   const subjects = useSubjects();
   const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id!, s])), [subjects]);
-  const allCollections = useLiveQuery(() => db.collections.filter((c) => !c.deletedAt).toArray(), []);
-  const allCollectionLinks = useLiveQuery(() => db.collectionItems.toArray(), []);
+  const allCollections = useCollections();
+  const allCollectionLinks = useCollectionLinks();
 
   const items = useLiveQuery(
     () => db.library.where("kind").equals(active).filter((i) => !i.deletedAt).toArray(),
     [active]
   );
-  const allSegments = useLiveQuery(() => db.segments.toArray(), []);
+  const allSegments = useSegments();
   const segmentsByItem = (allSegments ?? []).reduce<Record<number, Segment[]>>((acc, s) => {
     (acc[s.itemId] ||= []).push(s);
     return acc;

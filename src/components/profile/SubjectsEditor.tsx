@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSubjects, useTechniques } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type Subject, type SubjectType, type ColorKey } from "@/lib/db"; // db used for useLiveQuery reads only
 import { subjectsService } from "@/lib/services";
@@ -16,8 +17,8 @@ import { cn } from "@/lib/utils";
 
 export function SubjectsEditor() {
   const { t } = useI18n();
-  const subjects = useLiveQuery(() => db.subjects.toArray(), []);
-  const techniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const subjects = useSubjects();
+  const techniques = useTechniques();
 
   const instruments = (subjects ?? []).filter((s) => s.type === "instrument");
   const theory = (subjects ?? []).filter((s) => s.type === "theory");

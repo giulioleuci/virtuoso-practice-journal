@@ -1,4 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { useTasksByItem } from "@/hooks/useEntities";
 import { db } from "@/lib/db";
 import { useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
@@ -14,7 +15,7 @@ interface Props {
  */
 export function BpmSparkline({ itemId, weeks = 8 }: Props) {
   const { t } = useI18n();
-  const tasks = useLiveQuery(() => db.tasks.where("itemId").equals(itemId).toArray(), [itemId]);
+  const tasks = useTasksByItem(itemId);
   const sessions = useLiveQuery(async () => {
     const ts = await db.tasks.where("itemId").equals(itemId).toArray();
     const ids = ts.map((t) => t.id!).filter(Boolean);

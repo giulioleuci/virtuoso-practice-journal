@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useActiveTasks, useAssignments, useLessons, useRecurrences, useSubjects } from "@/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -45,11 +46,11 @@ export default function Lessons() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
-  const recurrences = useLiveQuery(() => db.recurrences.toArray());
-  const subjects = useLiveQuery(() => db.subjects.toArray());
-  const lessons = useLiveQuery(() => db.lessons.orderBy("date").reverse().toArray());
-  const assignments = useLiveQuery(() => db.assignments.toArray());
-  const tasksAll = useLiveQuery(() => db.tasks.filter((task) => !task.deletedAt).toArray());
+  const recurrences = useRecurrences();
+  const subjects = useSubjects();
+  const lessons = useLessons();
+  const assignments = useAssignments();
+  const tasksAll = useActiveTasks();
   const openHelpCount = useLiveQuery(async () => (await db.helpRequests.toArray()).filter((h) => !h.resolved).length);
 
   const [recapOpen, setRecapOpen] = useState(false);

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSessions, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/db";
 import { tasksService, sessionsService } from "@/lib/services";
@@ -80,8 +81,8 @@ export default function Diary() {
   );
   const pendingCount = pendingAssignments?.length ?? 0;
 
-  const studyRoutines = useLiveQuery(() => db.studyRoutines.filter((r) => !r.deletedAt).toArray(), []);
-  const subjects = useLiveQuery(() => db.subjects.filter((s) => !s.deletedAt).toArray(), []);
+  const studyRoutines = useStudyRoutines();
+  const subjects = useSubjects();
   const subjectMap = useMemo(() => {
     const map = new Map<number, Subject>();
     for (const s of subjects ?? []) {
@@ -108,7 +109,7 @@ export default function Diary() {
   }, [todayKey]);
 
   // All-time sessions for streak calculation
-  const allSessions = useLiveQuery(() => db.sessions.toArray(), []);
+  const allSessions = useSessions();
   const { streak, best: bestStreak } = useMemo(() => computeStreakFromSessions(allSessions ?? []), [allSessions]);
 
   const carryoverDays = profile?.carryoverDays ?? 2;

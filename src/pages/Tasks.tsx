@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type StudyRoutine } from "@/lib/db";
-import { useActiveTasks, useSubjects } from "@/hooks/useEntities";
+import { useActiveTasks, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/services";
 import { NOTE_GLYPH } from "@/lib/constants";
@@ -49,10 +49,7 @@ export default function Tasks() {
   const navigate = useNavigate();
   const tasks = useActiveTasks();
   const subjects = useSubjects();
-  const routines = useLiveQuery(
-    () => db.studyRoutines.filter((r) => !r.deletedAt).toArray(),
-    []
-  );
+  const routines = useStudyRoutines();
 
   const [view, setView] = useState<"occurrences" | "series">("occurrences");
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");

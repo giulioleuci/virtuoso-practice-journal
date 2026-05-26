@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTechniques, useItem, useTasksByItem } from "@/hooks/useEntities";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type Session, type TheoryLayer } from "@/lib/db";
@@ -76,15 +77,8 @@ export default function ItemAnalysisPage() {
   const { t, lang } = useI18n();
   const itemId = id ? Number(id) : null;
 
-  const item = useLiveQuery(
-    () => (itemId ? db.library.get(itemId) : Promise.resolve(undefined)),
-    [itemId]
-  );
-
-  const tasks = useLiveQuery(
-    () => (itemId ? db.tasks.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
-    [itemId]
-  );
+  const item = useItem(itemId ?? undefined);
+  const tasks = useTasksByItem(itemId ?? undefined);
 
   const sessions = useLiveQuery(async () => {
     const ids = (tasks ?? []).map((t) => t.id!).filter(Boolean);
@@ -92,7 +86,7 @@ export default function ItemAnalysisPage() {
     return db.sessions.where("taskId").anyOf(ids).sortBy("date");
   }, [tasks]);
 
-  const techniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const techniques = useTechniques();
 
   const isTheory = item?.kind === "theory";
 

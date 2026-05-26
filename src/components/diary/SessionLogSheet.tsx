@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTechniques } from "@/hooks/useEntities";
 import { db, THEORY_LAYERS, type NoteVal, type SessionQuality, type Task, type SegmentMetric } from "@/lib/db"; // db used for useLiveQuery reads only
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -58,7 +59,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     () => (task?.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
     [task?.itemId]
   );
-  const allTechniques = useLiveQuery(() => db.techniques.toArray(), []);
+  const allTechniques = useTechniques();
   const taskSegments = useLiveQuery(
     () =>
       task?.segmentIds?.length
