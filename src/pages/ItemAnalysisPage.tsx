@@ -6,7 +6,7 @@ import { db, THEORY_LAYERS, type Session, type TheoryLayer } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
 import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
-import { weekKeyOf } from "@/lib/date";
+import { weeklySessionCounts } from "@/lib/domain/analytics";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -127,16 +127,10 @@ export default function ItemAnalysisPage() {
 
   const sessionsPerWeek = useMemo((): ChartPoint[] => {
     if (!sessions?.length) return [];
-    const counts = new Map<string, number>();
-    for (const s of sessions) {
-      const wk = weekKeyOf(s.date);
-      counts.set(wk, (counts.get(wk) ?? 0) + 1);
-    }
-    const weeks = Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
-    return weeks.map(([wk, count], i) => ({
+    return weeklySessionCounts(sessions, 12).map(({ weekKey, count }, i) => ({
       x: i,
       y: count,
-      label: new Date(wk).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
+      label: new Date(weekKey).toLocaleDateString(lang, { day: "2-digit", month: "short" }),
     }));
   }, [sessions, lang]);
 
