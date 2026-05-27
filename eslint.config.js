@@ -24,6 +24,15 @@ export default tseslint.config(
     },
   },
   {
+    // Vendored shadcn/ui primitives intentionally export variant helpers and
+    // hooks alongside their components; fast-refresh granularity is irrelevant
+    // for this leaf library, so the rule is scoped out here.
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
+  {
     // UI layer must not write to the DB directly — route writes through services.
     // Reads should flow through hooks (useEntities). Type-only `db` imports are fine.
     files: ["src/pages/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
