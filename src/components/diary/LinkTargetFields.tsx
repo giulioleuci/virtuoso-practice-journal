@@ -89,7 +89,7 @@ export function LinkTargetFields({
       {linkType === "item" && itemId && !!segments?.length && (
         <MultiChipPicker
           label={t("link.segmentsOptional")}
-          options={segments.map((s) => ({ value: s.id!, label: s.label }))}
+          options={segments.map((s) => ({ value: s.id, label: s.label }))}
           value={segmentIds}
           onChange={setSegmentIds}
           placeholder={t("link.wholeItem")}
@@ -109,7 +109,7 @@ export function LinkTargetFields({
                 <div className="px-3 py-2 text-sm text-muted-foreground">{t("link.noCollections")}</div>
               )}
               {(allCollections ?? []).map((c) => (
-                <SelectItem key={c.id} value={c.id!.toString()}>
+                <SelectItem key={c.id} value={c.id.toString()}>
                   {c.name}{c.composer ? ` — ${c.composer}` : ""}
                 </SelectItem>
               ))}
@@ -150,7 +150,7 @@ function ItemPicker({
     const filtered = library.filter((l) => {
       if (l.subjectId !== subjectId) return false;
       if (kindFilter !== "all" && l.kind !== kindFilter) return false;
-      if (colSet && !colSet.has(l.id!)) return false;
+      if (colSet && !colSet.has(l.id)) return false;
       return true;
     });
     return filtered.sort((a, b) => {
@@ -189,7 +189,7 @@ function ItemPicker({
       {(kindFilter === "all" || kindFilter === "repertoire") && allCollections.length > 0 && (
         <MultiChipPicker
           label={t("link.filterByCollection")}
-          options={allCollections.map((c) => ({ value: c.id!, label: c.name }))}
+          options={allCollections.map((c) => ({ value: c.id, label: c.name }))}
           value={collectionFilter === "all" ? [] : [collectionFilter]}
           onChange={(next) => setCollectionFilter(next.length ? next[next.length - 1] : "all")}
           placeholder={t("link.allCollections")}
@@ -230,7 +230,7 @@ function ItemPicker({
               <div className="px-3 py-2 text-sm text-muted-foreground">{t("link.noItems")}</div>
             )}
             {items.map((i) => (
-              <SelectItem key={i.id} value={i.id!.toString()}>
+              <SelectItem key={i.id} value={i.id.toString()}>
                 {i.title}{i.composer ? ` — ${i.composer}` : ""}
               </SelectItem>
             ))}

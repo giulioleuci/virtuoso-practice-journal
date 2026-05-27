@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db"; // db used for useLiveQuery reads only
 import { profileService } from "@/lib/services";
-import { I18nProvider } from "@/lib/i18n";
+import { I18nProvider } from "@/lib/I18nProvider";
 import Onboarding from "@/components/onboarding/Onboarding";
 import IntroSlides from "@/components/onboarding/IntroSlides";
 import AppShell from "@/components/AppShell";

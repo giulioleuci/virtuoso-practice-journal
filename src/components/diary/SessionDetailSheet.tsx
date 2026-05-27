@@ -69,7 +69,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
     : (subject?.layers ?? []).map((l) => ({ value: l, label: l }));
   const techniqueOptions = (allTechniques ?? [])
     .filter((t) => t.subjectId === task?.subjectId)
-    .map((t) => ({ value: t.id!, label: t.name }));
+    .map((t) => ({ value: t.id, label: t.name }));
 
   useEffect(() => {
     if (open && session) {
@@ -200,7 +200,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                       {t("session.segmentBreakdown")}
                     </div>
                     {session.snapshot.segments.map(({ id, label }) => {
-                      const m = session.segmentMetrics![id];
+                      const m = session.segmentMetrics?.[id];
                       if (!m) return null;
                       return (
                         <div key={id} className="space-y-0.5">

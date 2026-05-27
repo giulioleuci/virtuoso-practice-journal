@@ -55,13 +55,13 @@ export default function History() {
     setFrom(f);
     setTo(toVal);
     setPage(0);
-  }, [searchParams]);
+  }, [searchParams, setPage]);
 
-  const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id!, task])), [tasks]);
-  const itemById = useMemo(() => new Map((items ?? []).map((i) => [i.id!, i])), [items]);
-  const segById = useMemo(() => new Map((segments ?? []).map((s) => [s.id!, s])), [segments]);
-  const collectionById = useMemo(() => new Map((collections ?? []).map((c) => [c.id!, c])), [collections]);
-  const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id!, s])), [subjects]);
+  const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id, task])), [tasks]);
+  const itemById = useMemo(() => new Map((items ?? []).map((i) => [i.id, i])), [items]);
+  const segById = useMemo(() => new Map((segments ?? []).map((s) => [s.id, s])), [segments]);
+  const collectionById = useMemo(() => new Map((collections ?? []).map((c) => [c.id, c])), [collections]);
+  const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id, s])), [subjects]);
 
   const sessionSortKey = (s: Session) => `${s.date}|${String(s.createdAt).padStart(16, "0")}`;
 
@@ -108,8 +108,11 @@ export default function History() {
           sub = item?.title ?? collection?.name;
           break;
       }
-      if (!map.has(key)) map.set(key, { sortKey: "", label, sub, sessions: [], subjectIds: [] });
-      const g = map.get(key)!;
+      let g = map.get(key);
+      if (!g) {
+        g = { sortKey: "", label, sub, sessions: [], subjectIds: [] };
+        map.set(key, g);
+      }
       g.sessions.push(s);
       if (task?.subjectId != null && !g.subjectIds.includes(task.subjectId)) {
         g.subjectIds.push(task.subjectId);
@@ -150,7 +153,7 @@ export default function History() {
           <SelectContent>
             <SelectItem value="all">{t("history.allSubjects")}</SelectItem>
             {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+              <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>

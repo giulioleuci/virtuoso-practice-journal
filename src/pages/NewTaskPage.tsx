@@ -16,7 +16,8 @@ import {
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { LinkTargetFields } from "@/components/diary/LinkTargetFields";
-import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "@/components/diary/RecurrenceFields";
+import { RecurrenceFields } from "@/components/diary/RecurrenceFields";
+import { buildRecurrence, type RecurrenceState } from "@/components/diary/recurrence-state";
 import { StudyRoutineWizard } from "@/components/diary/StudyRoutineWizard";
 import { TaskWizard } from "@/components/diary/TaskWizard";
 import { tasksService, lessonsService } from "@/lib/services";
@@ -118,7 +119,7 @@ export default function NewTaskPage() {
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])
       .filter((tech) => tech.subjectId === subjectId)
-      .map((tech) => ({ value: tech.id!, label: tech.name })),
+      .map((tech) => ({ value: tech.id, label: tech.name })),
     [allTechniques, subjectId]
   );
 
@@ -158,9 +159,9 @@ export default function NewTaskPage() {
   };
 
   const save = async () => {
-    if (errors.length) return;
+    if (errors.length || subjectId === undefined) return;
     const baseTask = {
-      subjectId: subjectId!,
+      subjectId,
       linkType,
       itemId: linkType === "item" ? itemId : undefined,
       segmentIds: linkType === "item" ? segmentIds : undefined,
@@ -234,7 +235,7 @@ export default function NewTaskPage() {
             <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
             <SelectContent>
               {(subjects ?? []).map((s) => (
-                <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+                <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

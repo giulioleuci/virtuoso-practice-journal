@@ -48,7 +48,7 @@ export default function Tasks() {
   const navigate = useNavigate();
   const tasks = useActiveTasks();
   const subjects = useSubjects();
-  const routines = useStudyRoutines();
+  const routines = useStudyRoutines() ?? [];
 
   const [view, setView] = useState<"occurrences" | "series">("occurrences");
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
@@ -82,7 +82,7 @@ export default function Tasks() {
   }, [tasks, view, filter, subjectFilter, q]);
 
   const { page, setPage, totalPages, pageItems } = usePagination(filtered, PAGE_SIZE);
-  const pageIds = pageItems.map((task) => task.id!).filter(Boolean);
+  const pageIds = pageItems.map((task) => task.id).filter(Boolean);
   const allSelectedOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
 
   const subjectName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
@@ -127,7 +127,7 @@ export default function Tasks() {
     // No sessions, no series → low-risk hard delete: skip dialog, offer undo
     const saved = { ...task };
     await deleteWithUndo({
-      remove: () => tasksService.hardDelete(task.id!),
+      remove: () => tasksService.hardDelete(task.id),
       restore: () => tasksService.restore(saved),
       message: t("toast.taskDeleted"),
       undoLabel: t("common.undo"),
@@ -217,17 +217,17 @@ export default function Tasks() {
         <span className="text-xs text-muted-foreground tabular-nums">{filtered.length}</span>
       </div>
 
-      {(routines ?? []).length > 0 && (
+      {routines.length > 0 && (
         <section className="space-y-2">
           <div className="flex items-center gap-2 px-1">
             <CalendarClock className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-xs uppercase tracking-wider text-muted-foreground flex-1">
               {t("tasks.studyRoutines")}
             </h3>
-            <span className="text-xs text-muted-foreground tabular-nums">{routines!.length}</span>
+            <span className="text-xs text-muted-foreground tabular-nums">{routines.length}</span>
           </div>
           <ul className="space-y-2">
-            {routines!.map((r) => (
+            {routines.map((r) => (
               <li key={r.id} className="paper-card p-3 flex items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">
@@ -286,7 +286,7 @@ export default function Tasks() {
           <SelectContent>
             <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
             {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+              <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>

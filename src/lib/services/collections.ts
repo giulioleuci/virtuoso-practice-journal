@@ -82,7 +82,7 @@ export const collectionsService = {
     await db.transaction("rw", db.collectionItems, async () => {
       const existing = await db.collectionItems.where("itemId").equals(itemId).toArray();
       const existingIds = new Set(existing.map((l) => l.collectionId));
-      const toRemove = existing.filter((l) => !target.has(l.collectionId)).map((l) => l.id!);
+      const toRemove = existing.filter((l) => !target.has(l.collectionId)).map((l) => l.id);
       const toAdd = [...target].filter((cid) => !existingIds.has(cid));
       if (toRemove.length) await db.collectionItems.bulkDelete(toRemove);
       if (toAdd.length) {
@@ -116,7 +116,7 @@ export const collectionsService = {
       .where("collectionId").equals(collectionId)
       .filter((l) => itemIds.includes(l.itemId))
       .toArray();
-    if (links.length) await db.collectionItems.bulkDelete(links.map((l) => l.id!));
+    if (links.length) await db.collectionItems.bulkDelete(links.map((l) => l.id));
   },
 
   async countItems(collectionId: number): Promise<number> {
@@ -136,7 +136,7 @@ export const collectionsService = {
       db.library.where("kind").equals(kind).filter(notDeleted).toArray(),
       db.collectionItems.toArray(),
     ]);
-    const itemsById = new Map(items.map((i) => [i.id!, i]));
+    const itemsById = new Map(items.map((i) => [i.id, i]));
     const linksByCollection = new Map<number, number[]>();
     const itemsWithMembership = new Set<number>();
     for (const l of links) {
@@ -148,13 +148,13 @@ export const collectionsService = {
     }
     const groups = collections.map((c) => ({
       collection: c,
-      items: (linksByCollection.get(c.id!) ?? [])
-        .map((id) => itemsById.get(id)!)
-        .filter(Boolean)
+      items: (linksByCollection.get(c.id) ?? [])
+        .map((id) => itemsById.get(id))
+        .filter((item): item is LibraryItem => item !== undefined)
         .sort((a, b) => a.title.localeCompare(b.title)),
     }));
     const uncollected = items
-      .filter((i) => !itemsWithMembership.has(i.id!))
+      .filter((i) => !itemsWithMembership.has(i.id))
       .sort((a, b) => a.title.localeCompare(b.title));
     return [...groups, { collection: null, items: uncollected }];
   },

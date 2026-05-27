@@ -20,7 +20,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { LinkTargetFields } from "./LinkTargetFields";
-import { RecurrenceFields, buildRecurrence, type RecurrenceState } from "./RecurrenceFields";
+import { RecurrenceFields } from "./RecurrenceFields";
+import { buildRecurrence, type RecurrenceState } from "./recurrence-state";
 import { tasksService, lessonsService } from "@/lib/services";
 import { useFormDraft } from "@/hooks/useFormDraft";
 import { cn } from "@/lib/utils";
@@ -108,7 +109,7 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
   const techniqueOptions = useMemo(
     () => (allTechniques ?? [])
       .filter((tech) => tech.subjectId === subjectId)
-      .map((tech) => ({ value: tech.id!, label: tech.name })),
+      .map((tech) => ({ value: tech.id, label: tech.name })),
     [allTechniques, subjectId]
   );
 
@@ -185,9 +186,9 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
   }, [selectedSubject, selectedItem, selectedCollection, title, bpm]);
 
   const save = async () => {
-    if (step1Errors.length || step2Errors.length || step3Errors.length) return;
+    if (step1Errors.length || step2Errors.length || step3Errors.length || subjectId === undefined) return;
     const baseTask = {
-      subjectId: subjectId!,
+      subjectId,
       linkType,
       itemId: linkType === "item" ? itemId : undefined,
       segmentIds: linkType === "item" ? segmentIds : undefined,
@@ -279,7 +280,7 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
               <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
               <SelectContent>
                 {(subjects ?? []).map((s) => (
-                  <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -27,7 +27,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
   const items = useAllLibrary();
   const subjects = useSubjects();
   const tasks = useAllTasks();
-  const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id!, task])), [tasks]);
+  const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id, task])), [tasks]);
 
   const [tab, setTab] = useState<Tab>("open");
   const [answeringId, setAnsweringId] = useState<number | null>(null);
@@ -50,13 +50,18 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
       const item = h.itemId !== undefined ? itemsMap.get(h.itemId) : undefined;
       const subject = item?.subjectId !== undefined ? subjectsMap.get(item.subjectId) : undefined;
       const subjectKey = subject?.name ?? "Other";
-      if (!map.has(subjectKey)) map.set(subjectKey, { subjectName: subjectKey, subjectColor: subject?.color, subjectType: subject?.type, subjectCustomColor: subject?.customColor, items: new Map() });
-      const bucket = map.get(subjectKey)!;
-      const itemKey = h.itemId ?? "none";
-      if (!bucket.items.has(itemKey)) {
-        bucket.items.set(itemKey, { itemId: h.itemId, itemTitle: item?.title ?? "General", reqs: [] });
+      let bucket = map.get(subjectKey);
+      if (!bucket) {
+        bucket = { subjectName: subjectKey, subjectColor: subject?.color, subjectType: subject?.type, subjectCustomColor: subject?.customColor, items: new Map() };
+        map.set(subjectKey, bucket);
       }
-      bucket.items.get(itemKey)!.reqs.push(h);
+      const itemKey = h.itemId ?? "none";
+      let entry = bucket.items.get(itemKey);
+      if (!entry) {
+        entry = { itemId: h.itemId, itemTitle: item?.title ?? "General", reqs: [] };
+        bucket.items.set(itemKey, entry);
+      }
+      entry.reqs.push(h);
     }
     return Array.from(map.values());
   }, [list, items, subjects]);

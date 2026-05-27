@@ -33,7 +33,7 @@ export function BpmSuggestion({ task, onAccept, dismissed, onDismiss }: Props) {
     if (!task.itemId) return null;
 
     const relatedTasks = await db.tasks.where("itemId").equals(task.itemId).toArray();
-    const ids = relatedTasks.map((x) => x.id!).filter(Boolean);
+    const ids = relatedTasks.map((x) => x.id).filter(Boolean);
     if (!ids.length) return null;
 
     const sessions = await db.sessions
@@ -45,7 +45,8 @@ export function BpmSuggestion({ task, onAccept, dismissed, onDismiss }: Props) {
     if (sessions.length < 3) return null;
 
     const last3 = sessions.slice(-3);
-    const bpm = last3[0].bpmReached!;
+    const bpm = last3[0]?.bpmReached;
+    if (bpm == null) return null;
 
     const consistent = last3.every(
       (s) =>

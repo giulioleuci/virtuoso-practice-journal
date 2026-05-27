@@ -23,7 +23,7 @@ export async function buildSessionSnapshot(task: Task): Promise<SessionSnapshot>
     subjectName: subject?.name ?? "—",
     itemTitle: item?.title,
     itemComposer: item?.composer,
-    segments: segs.length ? segs.map((s) => ({ id: String(s.id!), label: s.label })) : undefined,
+    segments: segs.length ? segs.map((s) => ({ id: String(s.id), label: s.label })) : undefined,
     collectionName: collection?.name,
     targetBpm: task.targetBpm,
     noteVal: task.noteVal,

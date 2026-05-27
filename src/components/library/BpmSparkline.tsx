@@ -18,7 +18,7 @@ export function BpmSparkline({ itemId, weeks = 8 }: Props) {
   const tasks = useTasksByItem(itemId);
   const sessions = useLiveQuery(async () => {
     const ts = await db.tasks.where("itemId").equals(itemId).toArray();
-    const ids = ts.map((t) => t.id!).filter(Boolean);
+    const ids = ts.map((t) => t.id).filter(Boolean);
     if (!ids.length) return [];
     return db.sessions.where("taskId").anyOf(ids).toArray();
   }, [itemId]);

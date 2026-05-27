@@ -15,7 +15,7 @@ interface Props {
 export function MasterySparkline({ itemId, layer, weeks = 8 }: Props) {
   const sessions = useLiveQuery(async () => {
     const tasks = await db.tasks.where("itemId").equals(itemId).toArray();
-    const ids = tasks.map((t) => t.id!).filter(Boolean);
+    const ids = tasks.map((t) => t.id).filter(Boolean);
     if (!ids.length) return [];
     return db.sessions.where("taskId").anyOf(ids).toArray();
   }, [itemId]);

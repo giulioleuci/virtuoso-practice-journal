@@ -32,7 +32,7 @@ export const sessionsService = {
   async log(task: Task, date: string, input: SessionInput): Promise<number> {
     const snapshot = await buildSessionSnapshot(task);
     const id = (await db.sessions.add({
-      taskId: task.id!,
+      taskId: task.id,
       date,
       ...input,
       snapshot,
@@ -61,7 +61,7 @@ export const sessionsService = {
     let sessionId = 0;
     await db.transaction("rw", db.tasks, db.sessions, db.helpRequests, async () => {
       sessionId = (await db.sessions.add({
-        taskId: task.id!,
+        taskId: task.id,
         date: input.date,
         bpmReached: input.bpmReached,
         noteVal: input.noteVal,
@@ -77,11 +77,11 @@ export const sessionsService = {
         snapshot,
         createdAt: ts,
       })) as number;
-      await db.tasks.update(task.id!, { done: true });
+      await db.tasks.update(task.id, { done: true });
       if (input.helpText) {
         await db.helpRequests.add({
           sessionId,
-          taskId: task.id!,
+          taskId: task.id,
           itemId: task.itemId,
           question: input.helpText,
           resolved: false,
@@ -106,7 +106,7 @@ export const sessionsService = {
       .equals(taskId)
       .and((s) => s.date === date)
       .toArray();
-    await db.sessions.bulkDelete(sessions.map((s) => s.id!).filter(Boolean) as number[]);
+    await db.sessions.bulkDelete(sessions.map((s) => s.id).filter(Boolean) as number[]);
     await db.tasks.update(taskId, { done: false });
   },
 };

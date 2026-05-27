@@ -53,7 +53,7 @@ export default function Library() {
   const allHelp = useHelpRequests();
   const allTechniques = useTechniques();
   const subjects = useSubjects();
-  const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id!, s])), [subjects]);
+  const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id, s])), [subjects]);
   const allCollections = useCollections();
   const allCollectionLinks = useCollectionLinks();
 
@@ -111,7 +111,7 @@ export default function Library() {
     const savedItem = { ...it };
     const savedSegments = (allSegments ?? []).filter((s) => s.itemId === it.id).map((s) => ({ ...s }));
     await deleteWithUndo({
-      remove: () => libraryService.hardDelete(it.id!),
+      remove: () => libraryService.hardDelete(it.id),
       restore: () => libraryService.restore(savedItem, savedSegments),
       message: t("toast.deleted"),
       undoLabel: t("common.undo"),
@@ -165,7 +165,7 @@ export default function Library() {
           <SelectContent>
             <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
             {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id!.toString()}>{s.name}</SelectItem>
+              <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -356,15 +356,19 @@ export default function Library() {
         if (groupByCollection) {
           const cols = (allCollections ?? []).filter((c) => c.kind === active).slice().sort((a, b) => a.name.localeCompare(b.name));
           const links = allCollectionLinks ?? [];
-          const filteredIds = new Set(filteredItems.map((i) => i.id!));
-          const itemsById = new Map(filteredItems.map((i) => [i.id!, i]));
+          const filteredIds = new Set(filteredItems.map((i) => i.id));
+          const itemsById = new Map(filteredItems.map((i) => [i.id, i]));
           const inAnyCollection = new Set<number>();
           const groups = cols.map((c) => {
             const ids = links.filter((l) => l.collectionId === c.id).map((l) => l.itemId).filter((id) => filteredIds.has(id));
             ids.forEach((id) => inAnyCollection.add(id));
-            return { collection: c, items: ids.map((id) => itemsById.get(id)!).sort((a, b) => a.title.localeCompare(b.title)) };
+            const groupItems = ids
+              .map((id) => itemsById.get(id))
+              .filter((item): item is LibraryItem => item !== undefined)
+              .sort((a, b) => a.title.localeCompare(b.title));
+            return { collection: c, items: groupItems };
           });
-          const uncollected = filteredItems.filter((i) => !inAnyCollection.has(i.id!));
+          const uncollected = filteredItems.filter((i) => !inAnyCollection.has(i.id));
           const uncollectedPage = pageByGroup["__uncollected"] ?? 1;
           const uncollectedTotalPages = Math.max(1, Math.ceil(uncollected.length / PAGE_SIZE));
 
@@ -448,7 +452,7 @@ export default function Library() {
         <ItemHelpSheet
           open={helpItem !== null}
           onOpenChange={(o) => !o && setHelpItem(null)}
-          itemId={helpItem.id!}
+          itemId={helpItem.id}
           itemTitle={helpItem.title}
         />
       )}
@@ -480,7 +484,7 @@ function TheoryMasterySection({ itemId }: { itemId: number }) {
 
   const sessions = useLiveQuery(async () => {
     const tasks = await db.tasks.where("itemId").equals(itemId).toArray();
-    const ids = tasks.map((t) => t.id!).filter(Boolean);
+    const ids = tasks.map((t) => t.id).filter(Boolean);
     if (!ids.length) return [];
     return db.sessions.where("taskId").anyOf(ids).toArray();
   }, [itemId]);
@@ -493,7 +497,8 @@ function TheoryMasterySection({ itemId }: { itemId: number }) {
       const scored = sessions
         .filter((s) => s.layerScores?.[layer] != null)
         .sort((a, b) => b.date.localeCompare(a.date));
-      if (scored.length) result[layer] = scored[0].layerScores![layer];
+      const topScore = scored[0]?.layerScores?.[layer];
+      if (topScore != null) result[layer] = topScore;
     }
     return result;
   }, [sessions]);

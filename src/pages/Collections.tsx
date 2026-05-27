@@ -52,7 +52,7 @@ export default function Collections() {
       .filter((l) => l.collectionId === c.id)
       .map(({ id: _id, ...link }) => ({ ...link }));
     await deleteWithUndo({
-      remove: () => collectionsService.remove(c.id!),
+      remove: () => collectionsService.remove(c.id),
       restore: () => collectionsService.restore(c, savedLinks),
       message: t("toast.collectionRemoved"),
       undoLabel: t("common.undo"),

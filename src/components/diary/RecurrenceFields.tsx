@@ -5,46 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { expandTaskRecurrence, schoolYearEnd } from "@/lib/recurrence";
-import type { TaskRecurrence } from "@/lib/db";
+import { expandTaskRecurrence } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
-
-export type EndMode = "never" | "nextLesson" | "date" | "count";
-
-export interface RecurrenceState {
-  enabled: boolean;
-  kind: "weekdays" | "interval";
-  days: number[];
-  everyX: number;
-  startDate: string;
-  endMode: EndMode;
-  endDate: string;
-  occurrences: number;
-}
+import { buildRecurrence, type RecurrenceState } from "./recurrence-state";
 
 interface Props {
   state: RecurrenceState;
   setState: (patch: Partial<RecurrenceState>) => void;
   nextLessonDate?: string;
-}
-
-export function buildRecurrence(state: RecurrenceState, nextLessonDate?: string): TaskRecurrence | undefined {
-  if (!state.enabled) return undefined;
-  return {
-    kind: state.kind,
-    days: state.kind === "weekdays" ? [...state.days].sort() : undefined,
-    everyXDays: state.kind === "interval" ? state.everyX : undefined,
-    startDate: state.startDate,
-    endDate:
-      state.endMode === "date" && state.endDate
-        ? state.endDate
-        : state.endMode === "nextLesson" && nextLessonDate
-        ? nextLessonDate
-        : state.endMode === "never"
-        ? schoolYearEnd(new Date())
-        : undefined,
-    occurrences: state.endMode === "count" ? state.occurrences : undefined,
-  };
 }
 
 export function RecurrenceFields({ state, setState, nextLessonDate }: Props) {
