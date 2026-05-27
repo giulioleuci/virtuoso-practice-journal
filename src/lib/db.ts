@@ -57,7 +57,7 @@ export interface Technique {
 }
 
 export interface LibraryItem {
-  id: number;
+  id?: number;
   subjectId: number;
   kind: LibraryKind;
   title: string;
@@ -105,7 +105,7 @@ export interface TaskRecurrence {
 export type TaskLinkType = "free" | "item" | "collection";
 
 export interface Task {
-  id: number;
+  id?: number;
   date: string;
   subjectId: number;
   linkType?: TaskLinkType;        // optional for legacy rows; treat missing as inferred
@@ -180,7 +180,7 @@ export interface HelpRequest {
 }
 
 export interface LessonRecurrence {
-  id: number;
+  id?: number;
   subjectId: number;
   teacher: string;
   frequency: "weekly" | "biweekly" | "monthly";
@@ -202,7 +202,7 @@ export interface LessonSnapshot {
 }
 
 export interface Lesson {
-  id: number;
+  id?: number;
   recurrenceId?: number;
   subjectId: number;
   date: string;
@@ -225,7 +225,7 @@ export interface Assignment {
 }
 
 export interface Collection {
-  id: number;
+  id?: number;
   /** Library kind this collection groups. Each collection is kind-specific. */
   kind: LibraryKind;
   name: string;
@@ -275,7 +275,7 @@ export interface StudyRoutine {
 }
 
 /** Shape accepted on insert: the auto-increment `id` is assigned by Dexie. */
-export type Draft<T extends { id: number }> = Omit<T, "id"> & { id?: number };
+export type Draft<T extends { id?: number }> = Omit<T, "id"> & { id?: number };
 
 class VirtuosoDB extends Dexie {
   declare profile: Table<Profile, string>;

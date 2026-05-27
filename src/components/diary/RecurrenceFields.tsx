@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
-import { buildRecurrence, type RecurrenceState } from "./recurrence-state";
+import { buildRecurrence, type RecurrenceState, type EndMode } from "./recurrence-state";
 
 interface Props {
   state: RecurrenceState;
