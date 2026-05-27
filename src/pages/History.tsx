@@ -49,14 +49,6 @@ export default function History() {
   const subjects = useSubjects();
   const collections = useAllCollections();
 
-  useEffect(() => {
-    const f = searchParams.get("from") ?? "";
-    const toVal = searchParams.get("to") ?? "";
-    setFrom(f);
-    setTo(toVal);
-    setPage(0);
-  }, [searchParams, setPage]);
-
   const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id, task])), [tasks]);
   const itemById = useMemo(() => new Map((items ?? []).map((i) => [i.id, i])), [items]);
   const segById = useMemo(() => new Map((segments ?? []).map((s) => [s.id, s])), [segments]);
@@ -127,6 +119,14 @@ export default function History() {
   }, [filteredSessions, taskById, itemById, segById, collectionById, groupBy, sortDir, t]);
 
   const { page, setPage, totalPages, pageItems: pageGroups } = usePagination(groups, PAGE_SIZE);
+
+  useEffect(() => {
+    const f = searchParams.get("from") ?? "";
+    const toVal = searchParams.get("to") ?? "";
+    setFrom(f);
+    setTo(toVal);
+    setPage(0);
+  }, [searchParams, setPage]);
 
   return (
     <div className="space-y-5 pb-24">
