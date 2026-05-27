@@ -176,6 +176,7 @@ export default function Diary() {
   }, [tasks, selectedSubjectId]);
 
   const emptyQuote = useMemo(() => pickQuote(undefined, lang), [lang]);
+  const heroQuote = useMemo(() => pickQuote(undefined, lang), [lang, todayKey]);
 
   return (
     <div className="space-y-6 pb-24">
@@ -199,7 +200,12 @@ export default function Diary() {
             </div>
           )}
         </div>
+        <figure className="mt-4 pt-4 border-t border-border/40">
+          <p className="font-serif italic text-foreground/80 leading-snug">"{heroQuote.text}"</p>
+          <figcaption className="text-xs uppercase tracking-widest text-muted-foreground mt-1.5">— {heroQuote.author}</figcaption>
+        </figure>
       </section>
+
 
       {/* Lessons today banner */}
       {todayLessons && todayLessons.length > 0 && (
