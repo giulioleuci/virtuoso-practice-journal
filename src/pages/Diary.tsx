@@ -8,7 +8,7 @@ import { today, dayKey } from "@/lib/date";
 import { upcomingLessonDates } from "@/lib/recurrence";
 import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
-import { getSubjectColor, subjectBorderStyle, subjectBorderStyleLight } from "@/lib/subjectColors";
+import { subjectBorderStyle, subjectBorderStyleLight, subjectColorCss } from "@/lib/subjectColors";
 import {
   AddIcon,
   CompleteIcon,
