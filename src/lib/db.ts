@@ -37,7 +37,7 @@ export interface Profile {
 }
 
 export interface Subject {
-  id: number;
+  id?: number;
   name: string;
   type: SubjectType;
   layers?: string[];
