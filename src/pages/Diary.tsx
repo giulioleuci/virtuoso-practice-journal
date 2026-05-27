@@ -8,7 +8,7 @@ import { today, dayKey } from "@/lib/date";
 import { upcomingLessonDates } from "@/lib/recurrence";
 import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
-import { getSubjectColor, subjectBorderStyle, subjectBorderStyleLight } from "@/lib/subjectColors";
+import { subjectBorderStyle, subjectBorderStyleLight, subjectColorCss } from "@/lib/subjectColors";
 import {
   AddIcon,
   CompleteIcon,
@@ -261,7 +261,7 @@ export default function Diary() {
               {t("diary.allSubjects")} {tasks ? `${tasks.length}` : ""}
             </button>
             {subjectFilterOptions.map((subj) => {
-              const color = getSubjectColor(subj.color, subj.type);
+              const bgColor = subjectColorCss(subj.color, subj.type, subj.customColor);
               const count = tasks?.filter((t) => t.subjectId === subj.id).length ?? 0;
               const isSelected = selectedSubjectId === subj.id;
               return (
@@ -272,7 +272,7 @@ export default function Diary() {
                     "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
                     isSelected ? "text-white" : "bg-muted text-muted-foreground hover:text-foreground",
                   )}
-                  style={isSelected ? { backgroundColor: `hsl(var(--key-${color}))` } : undefined}
+                  style={isSelected ? { backgroundColor: bgColor } : undefined}
                 >
                   {subj.name} {count}
                 </button>
@@ -299,8 +299,7 @@ export default function Diary() {
             {filteredTasks.map((task) => {
               const sess = (task.id && sessionsByTask[task.id]) || [];
               const last = sess[sess.length - 1];
-              const subject = subjectMap.get(task.subjectId);
-              const color = getSubjectColor(subject?.color, subject?.type);
+                const subject = subjectMap.get(task.subjectId);
               return (
                 <li key={task.id}>
                   <div
