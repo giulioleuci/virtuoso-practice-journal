@@ -261,7 +261,7 @@ export default function Diary() {
               {t("diary.allSubjects")} {tasks ? `${tasks.length}` : ""}
             </button>
             {subjectFilterOptions.map((subj) => {
-              const color = getSubjectColor(subj.color, subj.type);
+              const bgColor = subjectColorCss(subj.color, subj.type, subj.customColor);
               const count = tasks?.filter((t) => t.subjectId === subj.id).length ?? 0;
               const isSelected = selectedSubjectId === subj.id;
               return (
@@ -272,7 +272,7 @@ export default function Diary() {
                     "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
                     isSelected ? "text-white" : "bg-muted text-muted-foreground hover:text-foreground",
                   )}
-                  style={isSelected ? { backgroundColor: `hsl(var(--key-${color}))` } : undefined}
+                  style={isSelected ? { backgroundColor: bgColor } : undefined}
                 >
                   {subj.name} {count}
                 </button>
