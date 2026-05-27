@@ -176,6 +176,7 @@ export default function Diary() {
   }, [tasks, selectedSubjectId]);
 
   const emptyQuote = useMemo(() => pickQuote(undefined, lang), [lang]);
+  const heroQuote = useMemo(() => pickQuote(undefined, lang), [lang, todayKey]);
 
   return (
     <div className="space-y-6 pb-24">
