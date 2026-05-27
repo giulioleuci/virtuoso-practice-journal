@@ -299,8 +299,7 @@ export default function Diary() {
             {filteredTasks.map((task) => {
               const sess = (task.id && sessionsByTask[task.id]) || [];
               const last = sess[sess.length - 1];
-              const subject = subjectMap.get(task.subjectId);
-              const color = getSubjectColor(subject?.color, subject?.type);
+                const subject = subjectMap.get(task.subjectId);
               return (
                 <li key={task.id}>
                   <div
