@@ -16,6 +16,7 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
@@ -70,6 +71,7 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>(prefill?.itemNoteVal);
   const [layers, setLayers] = useState<string[]>([]);
   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
+  const [executionNotes, setExecutionNotes] = useState("");
 
   // Step 3 state
   const [rec, setRecState] = useState<RecurrenceState>({
@@ -198,6 +200,7 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
       noteVal,
       layers: isTheorySubject ? [...THEORY_LAYERS] : layers,
       techniqueIds,
+      executionNotes: executionNotes.trim() || undefined,
     };
     try {
       const firstId = await tasksService.create({
@@ -342,6 +345,16 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
             onChange={setTechniqueIds}
             emptyHint={t("tasks.addTechniquesHint")}
           />
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("tasks.executionNotes")}</Label>
+            <Textarea
+              value={executionNotes}
+              onChange={(e) => setExecutionNotes(e.target.value)}
+              placeholder={t("tasks.executionNotesPlaceholder")}
+              rows={3}
+            />
+          </div>
 
           {step2Errors.length > 0 && (
             <ul className="text-xs text-destructive">

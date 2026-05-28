@@ -177,6 +177,8 @@
   "tasks.techniques": "Techniken",
   "tasks.defineLayersHint": "Definiere die Schichten dieses Fachs im Profil.",
   "tasks.addTechniquesHint": "Techniken im Profil hinzufügen.",
+  "tasks.executionNotes": "Ausführungsnotizen",
+  "tasks.executionNotesPlaceholder": "Spezifische Anweisungen, Erinnerungen, Worauf zu achten ist…",
   "history.title": "Verlauf",
   "history.sessions": "{{count}} Sitzung",
   "history.sessions_plural": "{{count}} Sitzungen",

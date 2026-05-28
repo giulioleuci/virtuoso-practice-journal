@@ -177,6 +177,8 @@
   "tasks.techniques": "Técnicas",
   "tasks.defineLayersHint": "Define las capas de esta materia en Perfil.",
   "tasks.addTechniquesHint": "Añade técnicas en Perfil.",
+  "tasks.executionNotes": "Notas de ejecución",
+  "tasks.executionNotesPlaceholder": "Instrucciones específicas, recordatorios, en qué enfocarse…",
   "history.title": "Historial",
   "history.sessions": "{{count}} sesión",
   "history.sessions_plural": "{{count}} sesiones",
