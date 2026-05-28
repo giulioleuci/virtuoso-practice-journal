@@ -220,6 +220,7 @@
   "profile.carryover": "Unfertige übertragen (Tage)",
   "profile.graceDay": "Gnadentag für Serie",
   "profile.groupByPhase": "Nach Phase gruppieren",
+  "profile.hideHeroQuote": "Tageszitat ausblenden",
   "profile.data": "Daten",
   "profile.typeDelete": "Gib DELETE ein, um zu bestätigen.",
   "profile.dev": "Entwickleroptionen",

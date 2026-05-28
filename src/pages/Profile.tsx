@@ -304,6 +304,12 @@ export default function Profile() {
             <Row label={t("profile.groupByPhase")}>
               <Switch checked={profile.groupByPhase} onCheckedChange={(v) => update({ groupByPhase: v })} />
             </Row>
+            <Row label={t("profile.hideHeroQuote")}>
+              <Switch
+                checked={profile.hideHeroQuote === true}
+                onCheckedChange={(v) => update({ hideHeroQuote: v })}
+              />
+            </Row>
             <div className="pt-1">
               <Button variant="outline" size="sm" className="w-full" onClick={() => update({ introSeen: false })}>
                 <PlayCircle className="h-4 w-4 mr-2" />{t("profile.introTour")}

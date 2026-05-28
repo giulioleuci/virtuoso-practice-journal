@@ -220,6 +220,7 @@
   "profile.carryover": "Carry over uncompleted (days)",
   "profile.graceDay": "Grace day for streak",
   "profile.groupByPhase": "Group by phase",
+  "profile.hideHeroQuote": "Hide hero quote",
   "profile.data": "Data",
   "profile.typeDelete": "Type DELETE to confirm.",
   "profile.dev": "Developer Options",

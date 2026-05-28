@@ -31,6 +31,8 @@ export interface Profile {
   carryoverDays?: number;        // how many past days to surface uncompleted tasks from
   graceDay: boolean;
   groupByPhase: boolean;
+  /** When true, the inspirational quote on the diary hero card is hidden. */
+  hideHeroQuote?: boolean;
   onboarded: boolean;
   introSeen?: boolean;
   createdAt: number;
