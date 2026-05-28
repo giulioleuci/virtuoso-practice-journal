@@ -220,6 +220,7 @@
   "profile.carryover": "Riporta non completati (giorni)",
   "profile.graceDay": "Giorno di grazia per la serie",
   "profile.groupByPhase": "Raggruppa per fase",
+  "profile.hideHeroQuote": "Nascondi la citazione del diario",
   "profile.data": "Dati",
   "profile.typeDelete": "Digita DELETE per confermare.",
   "profile.dev": "Opzioni sviluppatore",

@@ -220,6 +220,7 @@
   "profile.carryover": "Arrastrar incompletos (días)",
   "profile.graceDay": "Día de gracia para la racha",
   "profile.groupByPhase": "Agrupar por fase",
+  "profile.hideHeroQuote": "Ocultar la cita del diario",
   "profile.data": "Datos",
   "profile.typeDelete": "Escribe DELETE para confirmar.",
   "profile.dev": "Opciones de desarrollador",
