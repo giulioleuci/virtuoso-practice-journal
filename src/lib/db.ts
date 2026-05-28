@@ -123,6 +123,7 @@ export interface Task {
   techniqueIds?: number[];
   done: boolean;
   skipped?: boolean;
+  executionNotes?: string;
   recurrenceTaskId?: number;
   recurrence?: TaskRecurrence;
   studyRoutineId?: number;

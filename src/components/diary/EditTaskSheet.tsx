@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -38,6 +39,7 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
   const [layers, setLayers] = useState<string[]>([]);
   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
+  const [executionNotes, setExecutionNotes] = useState("");
 
   useEffect(() => {
     if (open && task) {
@@ -52,6 +54,7 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
       setNoteVal(task.noteVal);
       setLayers(task.layers ?? []);
       setTechniqueIds(task.techniqueIds ?? []);
+      setExecutionNotes(task.executionNotes ?? "");
     }
   }, [open, task]);
 
@@ -93,6 +96,7 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
       title: title.trim(), date, targetBpm: bpm, noteVal,
       layers: isTheorySubject ? [...THEORY_LAYERS] : layers,
       techniqueIds,
+      executionNotes: executionNotes.trim() || undefined,
     });
     toast.success(t("toast.taskUpdated"));
     onOpenChange(false);
@@ -161,6 +165,16 @@ export function EditTaskSheet({ open, onOpenChange, task }: Props) {
             onChange={setTechniqueIds}
             emptyHint={t("tasks.addTechniquesHint")}
           />
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("tasks.executionNotes")}</Label>
+            <Textarea
+              value={executionNotes}
+              onChange={(e) => setExecutionNotes(e.target.value)}
+              placeholder={t("tasks.executionNotesPlaceholder")}
+              rows={3}
+            />
+          </div>
 
           {errors.length > 0 && (
             <ul className="text-xs text-destructive space-y-0.5">

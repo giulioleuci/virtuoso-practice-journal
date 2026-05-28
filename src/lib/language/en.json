@@ -177,6 +177,8 @@
   "tasks.techniques": "Techniques",
   "tasks.defineLayersHint": "Define this subject's layers in Profile.",
   "tasks.addTechniquesHint": "Add techniques in Profile.",
+  "tasks.executionNotes": "Execution notes",
+  "tasks.executionNotesPlaceholder": "Specific instructions, reminders, what to focus on…",
   "history.title": "History",
   "history.sessions": "{{count}} session",
   "history.sessions_plural": "{{count}} sessions",

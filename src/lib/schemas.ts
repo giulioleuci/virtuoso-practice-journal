@@ -33,6 +33,7 @@ export const taskInputSchema = z.object({
   noteVal: noteValSchema.optional(),
   layers: z.array(z.string()).optional(),
   techniqueIds: z.array(z.number()).optional(),
+  executionNotes: z.string().trim().max(2000).optional(),
 }).refine(
   (v) => {
     // Mutual exclusivity: collection ⇒ no item/segments; segments ⇒ requires item

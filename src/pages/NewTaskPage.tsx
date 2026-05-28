@@ -10,6 +10,7 @@ import { today } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -61,6 +62,7 @@ export default function NewTaskPage() {
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>(prefill?.itemNoteVal);
   const [layers, setLayers] = useState<string[]>([]);
   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
+  const [executionNotes, setExecutionNotes] = useState("");
 
   const [rec, setRecState] = useState<RecurrenceState>({
     enabled: false,
@@ -171,6 +173,7 @@ export default function NewTaskPage() {
       noteVal,
       layers: isTheorySubject ? [...THEORY_LAYERS] : layers,
       techniqueIds,
+      executionNotes: executionNotes.trim() || undefined,
     };
     try {
       const firstId = await tasksService.create({
@@ -298,6 +301,16 @@ export default function NewTaskPage() {
             onChange={setTechniqueIds}
             emptyHint={t("tasks.addTechniquesHint")}
           />
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("tasks.executionNotes")}</Label>
+            <Textarea
+              value={executionNotes}
+              onChange={(e) => setExecutionNotes(e.target.value)}
+              placeholder={t("tasks.executionNotesPlaceholder")}
+              rows={3}
+            />
+          </div>
 
           <RecurrenceFields state={rec} setState={setRec} nextLessonDate={nextLessonDateValue} />
 

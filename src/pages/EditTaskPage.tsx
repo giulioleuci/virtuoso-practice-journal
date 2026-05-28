@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -40,6 +41,7 @@ export default function EditTaskPage() {
   const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
   const [layers, setLayers] = useState<string[]>([]);
   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
+  const [executionNotes, setExecutionNotes] = useState("");
 
   useEffect(() => {
     if (task && !initialized) {
@@ -54,6 +56,7 @@ export default function EditTaskPage() {
       setNoteVal(task.noteVal);
       setLayers(task.layers ?? []);
       setTechniqueIds(task.techniqueIds ?? []);
+      setExecutionNotes(task.executionNotes ?? "");
       setInitialized(true);
     }
   }, [task, initialized]);
@@ -101,6 +104,7 @@ export default function EditTaskPage() {
       title: title.trim(), date, targetBpm: bpm, noteVal,
       layers: isTheorySubject ? [...THEORY_LAYERS] : layers,
       techniqueIds,
+      executionNotes: executionNotes.trim() || undefined,
     });
     toast.success(t("toast.taskUpdated"));
     handleCancel();
@@ -195,6 +199,16 @@ export default function EditTaskPage() {
         onChange={setTechniqueIds}
         emptyHint={t("tasks.addTechniquesHint")}
       />
+
+      <div className="space-y-2">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("tasks.executionNotes")}</Label>
+        <Textarea
+          value={executionNotes}
+          onChange={(e) => setExecutionNotes(e.target.value)}
+          placeholder={t("tasks.executionNotesPlaceholder")}
+          rows={3}
+        />
+      </div>
 
       {errors.length > 0 && (
         <ul className="text-xs text-destructive space-y-0.5">
