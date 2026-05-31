@@ -1,0 +1,253 @@
+import { describe, it, expect } from "vitest";
+import { schoolYearEnd, expandTaskRecurrence, upcomingLessonDates } from "./recurrence";
+import { dayKey, parseDayKey } from "./date";
+import type { LessonRecurrence } from "./db";
+
+describe("dayKey / parseDayKey", () => {
+  it("round-trips a date", () => {
+    const d = new Date(2025, 0, 7);
+    expect(dayKey(d)).toBe("2025-01-07");
+    expect(parseDayKey("2025-01-07").getTime()).toBe(d.getTime());
+  });
+});
+
+describe("schoolYearEnd", () => {
+  it("returns June 30 of the current academic year (autumn)", () => {
+    expect(schoolYearEnd(new Date(2024, 9, 1))).toBe("2025-06-30");
+  });
+  it("returns June 30 of current calendar year before September", () => {
+    expect(schoolYearEnd(new Date(2025, 2, 1))).toBe("2025-06-30");
+  });
+});
+
+describe("expandTaskRecurrence — weekdays", () => {
+  it("returns only matching weekdays within range", () => {
+    const dates = expandTaskRecurrence({
+      kind: "weekdays",
+      days: [1, 3], // Mon, Wed
+      startDate: "2025-01-06", // Monday
+      endDate: "2025-01-15",
+    });
+    expect(dates).toEqual(["2025-01-06", "2025-01-08", "2025-01-13", "2025-01-15"]);
+  });
+
+  it("respects occurrences cap", () => {
+    const dates = expandTaskRecurrence({
+      kind: "weekdays",
+      days: [0, 1, 2, 3, 4, 5, 6],
+      startDate: "2025-01-01",
+      occurrences: 3,
+    });
+    expect(dates).toHaveLength(3);
+  });
+
+  it("returns empty when no days picked", () => {
+    expect(expandTaskRecurrence({ kind: "weekdays", days: [], startDate: "2025-01-01" })).toEqual([]);
+  });
+
+  it("stops when hitting MAX_GENERATED if no endDate/occurrences are provided", () => {
+    // Picking every single day, so it will hit 200 limit before 365 days horizon
+    const dates = expandTaskRecurrence({
+      kind: "weekdays",
+      days: [0, 1, 2, 3, 4, 5, 6],
+      startDate: "2025-01-01",
+    });
+    expect(dates).toHaveLength(200);
+  });
+
+  it("stops when hitting HORIZON_DAYS if cap is not reached", () => {
+    // Picking only Sunday, 52 or 53 Sundays in 365 days
+    const dates = expandTaskRecurrence({
+      kind: "weekdays",
+      days: [0],
+      startDate: "2025-01-05", // First Sunday of 2025
+    });
+    expect(dates.length).toBeLessThan(60);
+    // Horizon is 365 days. 2025-01-05 + 365 = 2026-01-05
+    expect(dates[dates.length - 1] < "2026-01-06").toBe(true);
+  });
+
+  it("handles leap year boundaries correctly", () => {
+    const dates = expandTaskRecurrence({
+      kind: "weekdays",
+      days: [4], // Thursday
+      startDate: "2024-02-22",
+      occurrences: 3,
+    });
+    expect(dates).toEqual(["2024-02-22", "2024-02-29", "2024-03-07"]);
+  });
+
+  it("handles Daylight Saving Time (DST) boundaries correctly", () => {
+    const dates = expandTaskRecurrence({
+      kind: "weekdays",
+      days: [1], // Monday
+      startDate: "2024-03-04",
+      occurrences: 5,
+    });
+    expect(dates).toEqual(["2024-03-04", "2024-03-11", "2024-03-18", "2024-03-25", "2024-04-01"]);
+  });
+});
+
+describe("expandTaskRecurrence — interval", () => {
+  it("steps every X days", () => {
+    const dates = expandTaskRecurrence({
+      kind: "interval",
+      everyXDays: 3,
+      startDate: "2025-01-01",
+      endDate: "2025-01-10",
+    });
+    expect(dates).toEqual(["2025-01-01", "2025-01-04", "2025-01-07", "2025-01-10"]);
+  });
+
+  it("defaults step to 1 if everyXDays is undefined, 0, or negative", () => {
+    const datesUndef = expandTaskRecurrence({
+      kind: "interval",
+      startDate: "2025-01-01",
+      occurrences: 3,
+    });
+    expect(datesUndef).toEqual(["2025-01-01", "2025-01-02", "2025-01-03"]);
+
+    const datesZero = expandTaskRecurrence({
+      kind: "interval",
+      everyXDays: 0,
+      startDate: "2025-01-01",
+      occurrences: 3,
+    });
+    expect(datesZero).toEqual(["2025-01-01", "2025-01-02", "2025-01-03"]);
+
+    const datesNeg = expandTaskRecurrence({
+      kind: "interval",
+      everyXDays: -5,
+      startDate: "2025-01-01",
+      occurrences: 3,
+    });
+    expect(datesNeg).toEqual(["2025-01-01", "2025-01-02", "2025-01-03"]);
+  });
+
+  it("respects occurrences cap", () => {
+    const dates = expandTaskRecurrence({
+      kind: "interval",
+      everyXDays: 2,
+      startDate: "2025-01-01",
+      occurrences: 4,
+    });
+    expect(dates).toEqual(["2025-01-01", "2025-01-03", "2025-01-05", "2025-01-07"]);
+  });
+
+  it("stops when hitting MAX_GENERATED if no endDate/occurrences are provided", () => {
+    const dates = expandTaskRecurrence({
+      kind: "interval",
+      everyXDays: 1,
+      startDate: "2025-01-01",
+    });
+    expect(dates).toHaveLength(200);
+  });
+
+  it("stops when hitting HORIZON_DAYS if cap is not reached", () => {
+    const dates = expandTaskRecurrence({
+      kind: "interval",
+      everyXDays: 10,
+      startDate: "2025-01-01",
+    });
+    // 365 / 10 = ~37 occurrences
+    expect(dates.length).toBeLessThan(40);
+    expect(dates[dates.length - 1] < "2026-01-02").toBe(true);
+  });
+
+  it("handles leap year boundaries correctly", () => {
+    const dates = expandTaskRecurrence({
+      kind: "interval",
+      everyXDays: 7,
+      startDate: "2024-02-22",
+      occurrences: 3,
+    });
+    expect(dates).toEqual(["2024-02-22", "2024-02-29", "2024-03-07"]);
+  });
+
+  it("handles Daylight Saving Time (DST) boundaries correctly", () => {
+    const dates = expandTaskRecurrence({
+      kind: "interval",
+      everyXDays: 7,
+      startDate: "2024-03-04",
+      occurrences: 5,
+    });
+    expect(dates).toEqual(["2024-03-04", "2024-03-11", "2024-03-18", "2024-03-25", "2024-04-01"]);
+  });
+});
+
+describe("upcomingLessonDates", () => {
+  it("projects weekly lessons from a start date", () => {
+    const rec: LessonRecurrence = {
+      subjectId: 1,
+      teacher: "T",
+      frequency: "weekly",
+      dayOfWeek: 1, // Monday
+      startTime: "10:00",
+      endTime: "11:00",
+      startDate: "2025-01-06",
+      color: "blue",
+      createdAt: 0,
+    };
+    const dates = upcomingLessonDates(rec, 3, new Date(2025, 0, 6));
+    expect(dates).toEqual(["2025-01-06", "2025-01-13", "2025-01-20"]);
+  });
+
+  it("handles leap year boundaries correctly", () => {
+    const rec: LessonRecurrence = {
+      subjectId: 1,
+      teacher: "T",
+      frequency: "weekly",
+      dayOfWeek: 4, // Thursday
+      startTime: "10:00",
+      endTime: "11:00",
+      startDate: "2024-02-22", // Thursday before leap day
+      color: "blue",
+      createdAt: 0,
+    };
+    const dates = upcomingLessonDates(rec, 3, new Date(2024, 1, 22)); // Feb 22, 2024
+    // 2024 is a leap year, so Feb 29 exists
+    expect(dates).toEqual(["2024-02-22", "2024-02-29", "2024-03-07"]);
+  });
+
+  it("handles Daylight Saving Time (DST) boundaries correctly", () => {
+    const rec: LessonRecurrence = {
+      subjectId: 1,
+      teacher: "T",
+      frequency: "weekly",
+      dayOfWeek: 1, // Monday
+      startTime: "10:00",
+      endTime: "11:00",
+      startDate: "2024-03-04", // Monday before DST change (US Mar 10, EU Mar 31)
+      color: "blue",
+      createdAt: 0,
+    };
+    const dates = upcomingLessonDates(rec, 5, new Date(2024, 2, 4)); // Mar 4, 2024
+    expect(dates).toEqual(["2024-03-04", "2024-03-11", "2024-03-18", "2024-03-25", "2024-04-01"]);
+  });
+
+  it("maintains biweekly parity across DST boundaries", () => {
+    const rec: LessonRecurrence = {
+      subjectId: 1,
+      teacher: "T",
+      frequency: "biweekly",
+      dayOfWeek: 1, // Monday
+      startTime: "10:00",
+      endTime: "11:00",
+      startDate: "2024-01-01", // Start beginning of year
+      color: "blue",
+      createdAt: 0,
+    };
+
+    // Check biweekly dates right from the start
+    const startDates = upcomingLessonDates(rec, 5, new Date(2024, 0, 1));
+    expect(startDates).toEqual([
+      "2024-01-01", "2024-01-15", "2024-01-29", "2024-02-12", "2024-02-26"
+    ]);
+
+    // Check biweekly dates long after a DST transition (e.g. May 2024)
+    // 2024-01-01 + 18 weeks = 2024-05-06
+    // If parity is calculated wrongly via Math.floor, it might skip 2024-05-06 and yield 2024-05-13
+    const lateDates = upcomingLessonDates(rec, 3, new Date(2024, 4, 6)); // May 6, 2024
+    expect(lateDates).toEqual(["2024-05-06", "2024-05-20", "2024-06-03"]);
+  });
+});

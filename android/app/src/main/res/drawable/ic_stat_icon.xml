@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Notification status-bar icon. Android requires this to be a white silhouette
+  on transparent background; the system tints it for the current theme.
+  Simple musical eighth note glyph.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,3 L12,14.55 C11.41,14.21 10.73,14 10,14 C7.79,14 6,15.79 6,18 C6,20.21 7.79,22 10,22 C12.21,22 14,20.21 14,18 L14,7 L18,7 L18,3 L12,3 Z" />
+</vector>
