@@ -8,7 +8,7 @@ import { today, dayKey } from "@/lib/date";
 import { upcomingLessonDates } from "@/lib/recurrence";
 import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
-import { subjectBorderStyle, subjectBorderStyleLight, subjectColorCss } from "@/lib/subjectColors";
+import { subjectBorderStyle, subjectBorderStyleLight, subjectColorCss, COLOR_CLASSES, getSubjectColor } from "@/lib/subjectColors";
 import {
   AddIcon,
   CompleteIcon,
@@ -24,6 +24,8 @@ import {
   ArrowRightIcon,
   StreakIcon,
   SessionIcon,
+  CalendarIcon,
+  BpmIcon,
 } from "@/lib/icons";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
@@ -467,26 +469,40 @@ export default function Diary() {
                     return (
                       <li key={task.id}>
                         <div
-                          className="paper-card p-3 w-full flex flex-col gap-2.5 border-l-4"
+                          className="paper-card p-3 w-full flex flex-col gap-2 border-l-4"
                           style={subjectBorderStyleLight(subject?.color, subject?.type, subject?.customColor)}
                         >
-                          <div className="min-w-0 space-y-1.5">
-                            <div className="font-medium leading-snug break-words line-clamp-2">{task.title}</div>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
-                                {task.date}
+                          {/* Header row: subject chip + date */}
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            {subject && (
+                              <span className={cn(
+                                "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 max-w-[55%] truncate",
+                                COLOR_CLASSES[getSubjectColor(subject.color, subject.type)].chip,
+                              )}>
+                                {subject.name}
                               </span>
-                              {task.targetBpm && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
-                                  {t("diary.targetBpm", {
-                                    note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩",
-                                    bpm: task.targetBpm,
-                                  })}
-                                </span>
-                              )}
-                            </div>
+                            )}
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums shrink-0">
+                              <CalendarIcon className="h-3 w-3" />
+                              {task.date}
+                            </span>
                           </div>
-                          <div className="flex items-stretch gap-2">
+
+                          {/* Title */}
+                          <div className="font-serif font-semibold text-[15px] leading-snug break-words line-clamp-2">
+                            {task.title}
+                          </div>
+
+                          {/* BPM chip */}
+                          {task.targetBpm && (
+                            <span className="inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
+                              <BpmIcon className="h-3 w-3" />
+                              {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}
+                            </span>
+                          )}
+
+                          {/* Actions */}
+                          <div className="flex items-stretch gap-2 pt-0.5">
                             <button
                               onClick={async () => {
                                 if (!task.id) return;
