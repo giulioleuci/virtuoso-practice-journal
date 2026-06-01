@@ -8,7 +8,7 @@ import { today, dayKey } from "@/lib/date";
 import { upcomingLessonDates } from "@/lib/recurrence";
 import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
-import { subjectBorderStyle, subjectBorderStyleLight, subjectColorCss } from "@/lib/subjectColors";
+import { subjectBorderStyle, subjectBorderStyleLight, subjectColorCss, COLOR_CLASSES, getSubjectColor } from "@/lib/subjectColors";
 import {
   AddIcon,
   CompleteIcon,
@@ -24,6 +24,8 @@ import {
   ArrowRightIcon,
   StreakIcon,
   SessionIcon,
+  CalendarIcon,
+  BpmIcon,
 } from "@/lib/icons";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
