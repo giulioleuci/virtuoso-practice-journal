@@ -5,6 +5,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/db";
 import { subjectColorCss } from "@/lib/subjectColors";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
