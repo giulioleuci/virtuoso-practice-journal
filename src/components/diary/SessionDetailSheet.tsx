@@ -38,7 +38,7 @@ const initial = (s?: Session | null): SessionFieldsValue => ({
 });
 
 export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const task = useLiveQuery(
     () => (session?.taskId ? db.tasks.get(session.taskId) : Promise.resolve(undefined)),
     [session?.taskId]
