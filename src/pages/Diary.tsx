@@ -4,7 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/db";
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
-import { today, dayKey } from "@/lib/date";
+import { today, dayKey, formatDate } from "@/lib/date";
 import { upcomingLessonDates } from "@/lib/recurrence";
 import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
