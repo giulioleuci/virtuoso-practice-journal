@@ -11,6 +11,7 @@ import { HelpCircle, MessageSquareQuote, Plus, X, CheckCircle2 } from "lucide-re
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 
 interface Props {
   open: boolean;
