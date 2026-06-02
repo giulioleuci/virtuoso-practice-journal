@@ -4,7 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/db";
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
-import { today, dayKey, formatDate } from "@/lib/date";
+import { today, dayKey, formatDate, now } from "@/lib/date";
 import { upcomingLessonDates } from "@/lib/recurrence";
 import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
@@ -118,7 +118,7 @@ export default function Diary() {
 
   const carryoverDays = profile?.carryoverDays ?? 2;
   const carryoverFrom = useMemo(() => {
-    const d = new Date();
+    const d = new Date(now());
     d.setDate(d.getDate() - carryoverDays);
     return dayKey(d);
   }, [carryoverDays]);
@@ -165,7 +165,7 @@ export default function Diary() {
     [carryoverFrom, todayKey],
   );
 
-  const dateLabel = formatDate(new Date(), lang, "long");
+  const dateLabel = formatDate(new Date(now()), lang, "long", true);
 
   const doneCount = tasks?.filter((x) => x.done).length ?? 0;
   const totalCount = tasks?.length ?? 0;
@@ -477,7 +477,7 @@ export default function Diary() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
                               <CalendarIcon className="h-3 w-3" />
-                              {formatDate(task.date, lang)}
+                              {formatDate(task.date, lang, "short", true)}
                             </span>
                             {task.targetBpm && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
@@ -553,7 +553,7 @@ export default function Diary() {
                               <div className="min-w-0">
                                 <div className="font-medium break-words">{task.title}</div>
                                 <div className="text-xs text-muted-foreground tabular-nums break-words">
-                                  {formatDate(task.date, lang)}
+                                  {formatDate(task.date, lang, "short", true)}
                                   {task.targetBpm && (
                                     <>
                                       {" "}
@@ -699,7 +699,7 @@ function LessonTodayBanner({
         className="shrink-0 text-primary"
         onClick={() =>
           navigate("/lessons", {
-            state: { openLogForRecurrenceId: rec.id, date: new Date().toISOString().slice(0, 10) },
+            state: { openLogForRecurrenceId: rec.id, date: today() },
           })
         }
       >

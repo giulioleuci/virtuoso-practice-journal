@@ -2,15 +2,14 @@ import { useMemo } from "react";
 import { useTechniques, useItem, useTasksByItem } from "@/hooks/useEntities";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type Session, type TheoryLayer } from "@/lib/db";
+import { db, THEORY_LAYERS, type Session } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
 import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
 import { weeklySessionCounts } from "@/lib/domain/analytics";
-import { formatDate } from "@/lib/date";
+import { formatDate, getDefaultWeekStartsOn } from "@/lib/date";
 import type { Lang } from "@/lib/db";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 
 const QUALITY_ORDER = ["hard", "improve", "well", "great"];
@@ -85,6 +84,7 @@ export default function ItemAnalysisPage() {
 
   const item = useItem(itemId ?? undefined);
   const tasks = useTasksByItem(itemId ?? undefined);
+  const profile = useLiveQuery(() => db.profile.get("me"));
 
   const sessions = useLiveQuery(async () => {
     const ids = (tasks ?? []).map((t) => t.id).filter(Boolean);
@@ -129,12 +129,13 @@ export default function ItemAnalysisPage() {
 
   const sessionsPerWeek = useMemo((): ChartPoint[] => {
     if (!sessions?.length) return [];
-    return weeklySessionCounts(sessions, 12).map(({ weekKey, count }, i) => ({
+    const weekStartsOn = profile?.weekStartsOn ?? (profile ? getDefaultWeekStartsOn(profile.lang) : 1);
+    return weeklySessionCounts(sessions, 12, weekStartsOn).map(({ weekKey, count }, i) => ({
       x: i,
       y: count,
       label: formatDay(weekKey, lang),
     }));
-  }, [sessions, lang]);
+  }, [sessions, lang, profile]);
 
   const theoryLayerPoints = useMemo(() => {
     if (!isTheory || !sessions?.length) return null;

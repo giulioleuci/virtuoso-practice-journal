@@ -1,6 +1,6 @@
 import { db, type StudyRoutine, type StudyPoolEntry } from "@/lib/db";
 import type { StudyRoutineConfig } from "@/lib/schemas";
-import { dayKey, today, parseDayKey, startOfWeek, endOfWeek, now } from "@/lib/date";
+import { dayKey, today, parseDayKey, startOfWeek, endOfWeek, now, getDefaultWeekStartsOn } from "@/lib/date";
 import {
   poolEntryKey,
   confidenceToWeight,
@@ -142,7 +142,10 @@ async function generate(
 
   const weights = routine.useSpacedRepetition ? await computeWeights(allEntries) : null;
 
-  const tasks = generateRoutineTasks(routine, groupItems, weights, fromDate, now(), seedCounters);
+  const profile = await db.profile.get("me");
+  const weekStartsOn = profile?.weekStartsOn ?? (profile ? getDefaultWeekStartsOn(profile.lang) : 1);
+
+  const tasks = generateRoutineTasks(routine, groupItems, weights, fromDate, now(), seedCounters, weekStartsOn);
   if (tasks.length) await db.tasks.bulkAdd(tasks);
 }
 
@@ -181,13 +184,16 @@ export const studyRoutinesService = {
       await db.tasks.bulkDelete(toDelete.map((t) => t.id));
     }
 
-    const mondayStr = dayKey(startOfWeek(parseDayKey(fromDateStr)));
-    const sundayStr = dayKey(endOfWeek(parseDayKey(fromDateStr)));
+    const profile = await db.profile.get("me");
+    const weekStartsOn = profile?.weekStartsOn ?? (profile ? getDefaultWeekStartsOn(profile.lang) : 1);
+
+    const startOfWeekStr = dayKey(startOfWeek(parseDayKey(fromDateStr), weekStartsOn));
+    const endOfWeekStr = dayKey(endOfWeek(parseDayKey(fromDateStr), weekStartsOn));
 
     const completedThisWeek = await db.tasks
       .where("studyRoutineId")
       .equals(routine.id)
-      .filter((t) => t.done && t.date >= mondayStr && t.date <= sundayStr)
+      .filter((t) => t.done && t.date >= startOfWeekStr && t.date <= endOfWeekStr)
       .toArray();
 
     const seedCounters = new Map<string, number>();
