@@ -41,6 +41,7 @@ export interface Profile {
   groupByPhase: boolean;
   /** When true, the inspirational quote on the diary hero card is hidden. */
   hideHeroQuote?: boolean;
+  weekStartsOn?: number;         // 0=Sun, 1=Mon, etc.
   onboarded: boolean;
   introSeen?: boolean;
   createdAt: number;

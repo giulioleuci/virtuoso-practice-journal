@@ -98,18 +98,19 @@ export function generateRoutineTasks(
   fromDate: string,
   createdAt: number,
   seedCounters?: Map<string, number>,
+  weekStartsOn: number = 1,
 ): Omit<Task, "id">[] {
   const startDate = parseDayKey(fromDate);
   const endDate = addDays(startDate, routine.weeksAhead * 7);
 
   const tasks: Omit<Task, "id">[] = [];
 
-  let currentWeekKey = weekKey(startDate);
+  let currentWeekKey = weekKey(startDate, weekStartsOn);
   let weekCounts = new Map<string, number>(seedCounters ?? []);
 
   let d = new Date(startDate);
   while (d.getTime() < endDate.getTime()) {
-    const wk = weekKey(d);
+    const wk = weekKey(d, weekStartsOn);
     if (wk !== currentWeekKey) {
       currentWeekKey = wk;
       weekCounts = new Map<string, number>();

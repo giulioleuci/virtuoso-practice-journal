@@ -33,29 +33,34 @@ export function addDays(date: Date, n: number): Date {
   return result;
 }
 
-/** Monday of the week containing `date` (local time, ISO weeks start Monday). */
-export function startOfWeek(date: Date): Date {
+/** Start of the week containing `date` (local time). `weekStartsOn` is 0=Sun, 1=Mon, etc. */
+export function startOfWeek(date: Date, weekStartsOn: number = 1): Date {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const dow = d.getDay(); // 0=Sun…6=Sat
-  return addDays(d, dow === 0 ? -6 : 1 - dow);
+  const diff = (dow < weekStartsOn ? 7 : 0) + dow - weekStartsOn;
+  return addDays(d, -diff);
 }
 
-/** Sunday of the week containing `date` (local time). */
-export function endOfWeek(date: Date): Date {
-  return addDays(startOfWeek(date), 6);
+/** End of the week (start + 6 days) containing `date` (local time). */
+export function endOfWeek(date: Date, weekStartsOn: number = 1): Date {
+  return addDays(startOfWeek(date, weekStartsOn), 6);
 }
 
 /**
- * Week key for `date`: the day key of that week's Monday. Two dates in the
- * same Mon–Sun week share a key; consecutive weeks differ.
+ * Week key for `date`: the day key of that week's start day.
  */
-export function weekKey(date: Date): string {
-  return dayKey(startOfWeek(date));
+export function weekKey(date: Date, weekStartsOn: number = 1): string {
+  return dayKey(startOfWeek(date, weekStartsOn));
 }
 
 /** Convenience: week key from a `YYYY-MM-DD` string. */
-export function weekKeyOf(dateStr: string): string {
-  return weekKey(parseDayKey(dateStr));
+export function weekKeyOf(dateStr: string, weekStartsOn: number = 1): string {
+  return weekKey(parseDayKey(dateStr), weekStartsOn);
+}
+
+/** Default first day of week for a language (0=Sun for en, 1=Mon for others). */
+export function getDefaultWeekStartsOn(lang: Lang): number {
+  return lang === "en" ? 0 : 1;
 }
 
 /** Current epoch milliseconds. Centralized so time is mockable in one place. */
@@ -103,11 +108,38 @@ function toDate(input: string | Date): Date {
  * Format a date for display in the user's language. Accepts a `YYYY-MM-DD`
  * day key or any Date / parseable string. `style` defaults to `"short"`,
  * which renders as DD/MM/YYYY in Italian, MM/DD/YYYY in English-US, etc.
+ *
+ * If `relative` is true, returns "today", "yesterday", etc. for dates within
+ * 3 days of today.
  */
 export function formatDate(
   input: string | Date,
   lang: Lang,
   style: DateStyle = "short",
+  relative: boolean = false,
 ): string {
+  if (relative) {
+    const rel = formatRelativeDate(input, lang);
+    if (rel) return rel;
+  }
   return toDate(input).toLocaleDateString(LANG_LOCALE[lang], STYLE_OPTIONS[style]);
+}
+
+/**
+ * Returns a relative date string (e.g. "today", "in 2 days") if the date is
+ * within 3 days of today, otherwise returns null.
+ */
+export function formatRelativeDate(input: string | Date, lang: Lang): string | null {
+  const d = toDate(input);
+  const t = parseDayKey(today());
+  // Normalize both to midnight for day-based difference
+  const dMid = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const tMid = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  const diffDays = Math.round((dMid.getTime() - tMid.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (Math.abs(diffDays) <= 3) {
+    const rtf = new Intl.RelativeTimeFormat(LANG_LOCALE[lang], { numeric: "auto" });
+    return rtf.format(diffDays, "day");
+  }
+  return null;
 }

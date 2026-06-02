@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { backupService, profileService } from "@/lib/services";
 import { saveTextFile, pickTextFile, scheduleReminders, ensureNotificationPermission, isNative } from "@/lib/platform";
+import { getDefaultWeekStartsOn } from "@/lib/date";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
 import { REMINDER_PRESETS, resolveReminderText, getReminderBodies, type ReminderPreset } from "@/lib/reminderPresets";
 import { Button } from "@/components/ui/button";
@@ -355,6 +356,17 @@ export default function Profile() {
                 onChange={(e) => update({ carryoverDays: Number(e.target.value) })}
                 className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-20 tabular-nums"
               />
+            </Row>
+            <Row label={t("profile.weekStartsOn")}>
+              <select
+                value={profile.weekStartsOn ?? getDefaultWeekStartsOn(lang)}
+                onChange={(e) => update({ weekStartsOn: Number(e.target.value) })}
+                className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-32 tabular-nums"
+              >
+                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                  <option key={i} value={i}>{t(`weekday.${i}`)}</option>
+                ))}
+              </select>
             </Row>
             <Row label={t("profile.graceDay")}>
               <Switch checked={profile.graceDay} onCheckedChange={(v) => update({ graceDay: v })} />

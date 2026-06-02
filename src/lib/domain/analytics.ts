@@ -9,16 +9,17 @@ export interface WeeklyCount {
 }
 
 /**
- * Count sessions per ISO week, sorted chronologically. Optionally keep only the
- * most recent `limit` weeks.
+ * Count sessions per week, sorted chronologically. Optionally keep only the
+ * most recent `limit` weeks. Respects `weekStartsOn` (0=Sun, 1=Mon, etc).
  */
 export function weeklySessionCounts(
   sessions: Pick<Session, "date">[],
   limit?: number,
+  weekStartsOn: number = 1,
 ): WeeklyCount[] {
   const counts = new Map<string, number>();
   for (const s of sessions) {
-    const wk = weekKeyOf(s.date);
+    const wk = weekKeyOf(s.date, weekStartsOn);
     counts.set(wk, (counts.get(wk) ?? 0) + 1);
   }
   const sorted = [...counts.entries()]
