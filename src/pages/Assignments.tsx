@@ -13,7 +13,7 @@ import { subjectBorderStyle } from "@/lib/subjectColors";
 const PAGE_SIZE = 5;
 
 export default function Assignments() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const assignments = useAssignments();
   const lessons = useLessons();
