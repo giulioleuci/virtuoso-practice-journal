@@ -192,7 +192,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                                         </p>
                                         {r.answeredAt && (
                                           <div className="text-[10px] uppercase tracking-wider text-muted-foreground tabular-nums mt-1">
-                                            {new Date(r.answeredAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                                            {formatDate(new Date(r.answeredAt), lang, "medium")}
                                           </div>
                                         )}
                                       </div>
