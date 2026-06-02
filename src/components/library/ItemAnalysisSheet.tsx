@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTechniques } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer } from "@/lib/db";
+import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer, type Lang } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
