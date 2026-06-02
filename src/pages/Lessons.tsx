@@ -6,6 +6,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
 import { lessonsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
