@@ -264,7 +264,7 @@ export default function History() {
                             style={{ backgroundColor: subjectColorCss(subj?.color, subj?.type, subj?.customColor) }}
                           />
                           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                            <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : s.date}</span>
+                            <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : formatDate(s.date, lang)}</span>
                             {(s.bpmReached || s.quality) && (
                               <span className="text-xs tabular-nums">
                                 {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}
