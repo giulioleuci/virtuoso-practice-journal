@@ -130,8 +130,7 @@ function AnalysisBlock({ label, sessions, kind, techniques, lang, t }: BlockProp
   const hasAny =
     latestBpm || latestConfidence || usedLayers.length > 0 || techniqueIds.length > 0;
 
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleDateString(lang, { day: "2-digit", month: "short" });
+  const fmt = (iso: string) => formatDate(iso, lang, "dayMonth");
 
   return (
     <div className="paper-card p-4 space-y-3">
