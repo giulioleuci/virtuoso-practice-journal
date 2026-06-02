@@ -45,7 +45,7 @@ import { Pager } from "@/components/shared/Pager";
 const PAGE_SIZE = 5;
 
 export default function Lessons() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const recurrences = useRecurrences();
