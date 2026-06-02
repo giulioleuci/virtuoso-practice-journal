@@ -165,7 +165,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                 <dl className="paper-card p-3 grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("common.date")}</dt>
-                    <dd className="tabular-nums">{session.date}</dd>
+                    <dd className="tabular-nums">{formatDate(session.date, lang)}</dd>
                   </div>
                   <div>
                     <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.qualityFieldLabel")}</dt>
