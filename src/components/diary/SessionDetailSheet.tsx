@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/db"; // db used for useLiveQuery reads only
 import { sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
