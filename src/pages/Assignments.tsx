@@ -70,7 +70,7 @@ export default function Assignments() {
                       <p className="text-[15px] leading-snug break-words">{a.text}</p>
                       {lesson && (
                         <p className="text-[11px] uppercase tracking-wider text-muted-foreground mt-1.5 truncate">
-                          {lesson.date}
+                          {formatDate(lesson.date, lang)}
                         </p>
                       )}
                     </div>
