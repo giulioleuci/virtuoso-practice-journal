@@ -18,7 +18,7 @@ interface Props {
  * for a library item. Designed for one-handed mobile use during practice.
  */
 export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const item = useLiveQuery(() => db.library.get(itemId), [itemId]);
   const label = itemTitle ?? item?.title ?? "";
   const answered = useLiveQuery(
