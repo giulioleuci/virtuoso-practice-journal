@@ -3,7 +3,7 @@ import { useAssignments, useLessons, useSubjects } from "@/hooks/useEntities";
 import { useNavigate } from "react-router-dom";
 
 import { lessonsService } from "@/lib/services";
-import { today } from "@/lib/date";
+import { today, formatDate } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Wand2, X, ArrowLeft } from "lucide-react";
