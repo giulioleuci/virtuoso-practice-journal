@@ -278,7 +278,7 @@ export default function ItemAnalysisPage() {
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">
-                        {new Date(s.date).toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "short" })}
+                        {formatDate(s.date, lang, "weekdayShort")}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
                         {s.bpmReached && <span>{NOTE_GLYPH[s.noteVal ?? "quarter"]} = {s.bpmReached}</span>}
