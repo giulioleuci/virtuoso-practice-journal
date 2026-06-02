@@ -89,7 +89,7 @@ export default function History() {
           break;
         case "day":
           key = `d:${s.date}`;
-          label = s.date;
+          label = formatDate(s.date, lang);
           break;
         case "item":
           if (collection) { key = `c:${collection.id}`; label = collection.name; sub = t("history.collection"); }
