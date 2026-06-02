@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { type Task, type StudyRoutine } from "@/lib/db";
 import { useActiveTasks, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
+import type { Lang } from "@/lib/db";
 import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/services";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -29,7 +31,8 @@ const PAGE_SIZE = 5;
 
 function summarizeRecurrence(
   rec: NonNullable<Task["recurrence"]>,
-  t: (key: string, vars?: Record<string, string | number>) => string
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  lang: Lang,
 ): string {
   const parts: string[] = [];
   if (rec.kind === "weekdays") {
@@ -38,13 +41,13 @@ function summarizeRecurrence(
   } else {
     parts.push(t("recurrence.summaryEvery", { count: rec.everyXDays ?? 1 }));
   }
-  if (rec.endDate) parts.push(t("recurrence.summaryUntil", { date: rec.endDate }));
+  if (rec.endDate) parts.push(t("recurrence.summaryUntil", { date: formatDate(rec.endDate, lang) }));
   else if (rec.occurrences) parts.push(t("recurrence.summaryOccurrences", { count: rec.occurrences }));
   return parts.join(" · ");
 }
 
 export default function Tasks() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const tasks = useActiveTasks();
   const subjects = useSubjects();
@@ -337,8 +340,8 @@ export default function Tasks() {
                   </div>
                   <div className="text-xs text-muted-foreground tabular-nums">
                     {view === "series" && task.recurrence
-                      ? <>{t("tasks.fromDate", { date: task.date })} · {summarizeRecurrence(task.recurrence, t)} · {subjectName(task.subjectId)}</>
-                      : <>{task.date} · {subjectName(task.subjectId)}</>}
+                      ? <>{t("tasks.fromDate", { date: formatDate(task.date, lang) })} · {summarizeRecurrence(task.recurrence, t, lang)} · {subjectName(task.subjectId)}</>
+                      : <>{formatDate(task.date, lang)} · {subjectName(task.subjectId)}</>}
                     {task.targetBpm && <> · {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}</>}
                   </div>
                 </div>

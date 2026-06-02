@@ -6,6 +6,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
 import { lessonsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -44,7 +45,7 @@ import { Pager } from "@/components/shared/Pager";
 const PAGE_SIZE = 5;
 
 export default function Lessons() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const recurrences = useRecurrences();
@@ -256,7 +257,7 @@ export default function Lessons() {
                                 {rec.teacher} · {subjectName(rec.subjectId)}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {isToday ? t("lessons.today") : date} · {rec.startTime}–{rec.endTime}
+                                {isToday ? t("lessons.today") : formatDate(date, lang)} · {rec.startTime}–{rec.endTime}
                               </div>
                             </div>
                             <Button
@@ -306,7 +307,7 @@ export default function Lessons() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
                                 <div className="font-serif text-lg">{subjectName(l.subjectId)}</div>
-                                <div className="text-xs text-muted-foreground">{l.date}</div>
+                                <div className="text-xs text-muted-foreground">{formatDate(l.date, lang)}</div>
                                 {l.notes && <p className="text-sm mt-1 line-clamp-2">{l.notes}</p>}
                               </div>
                               <div className="flex items-center gap-1 shrink-0">

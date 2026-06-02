@@ -11,6 +11,7 @@ import { HelpCircle, MessageSquareQuote, Plus, X, CheckCircle2 } from "lucide-re
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 
 interface Props {
   open: boolean;
@@ -20,7 +21,7 @@ interface Props {
 }
 
 export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const reqs = useLiveQuery(
     () => db.helpRequests.where("itemId").equals(itemId).toArray(),
     [itemId]
@@ -124,7 +125,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
                           </div>
                           {r.answeredAt && (
                             <div className="text-[11px] text-muted-foreground tabular-nums pt-0.5">
-                              {new Date(r.answeredAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                              {formatDate(new Date(r.answeredAt), lang, "medium")}
                             </div>
                           )}
                         </div>

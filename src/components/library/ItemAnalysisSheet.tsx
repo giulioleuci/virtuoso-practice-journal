@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { useTechniques } from "@/hooks/useEntities";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer } from "@/lib/db";
+import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer, type Lang } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 import { Activity } from "lucide-react";
 
 interface Props {
@@ -96,7 +97,7 @@ interface BlockProps {
   sessions: Session[];
   kind: LibraryItem["kind"];
   techniques: { id?: number; name: string }[];
-  lang: string;
+  lang: Lang;
   t: (k: string, p?: Record<string, string | number>) => string;
 }
 
@@ -129,8 +130,7 @@ function AnalysisBlock({ label, sessions, kind, techniques, lang, t }: BlockProp
   const hasAny =
     latestBpm || latestConfidence || usedLayers.length > 0 || techniqueIds.length > 0;
 
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleDateString(lang, { day: "2-digit", month: "short" });
+  const fmt = (iso: string) => formatDate(iso, lang, "dayMonth");
 
   return (
     <div className="paper-card p-4 space-y-3">

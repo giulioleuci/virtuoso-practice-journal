@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/db"; // db used for useLiveQuery reads only
 import { sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -37,7 +38,7 @@ const initial = (s?: Session | null): SessionFieldsValue => ({
 });
 
 export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const task = useLiveQuery(
     () => (session?.taskId ? db.tasks.get(session.taskId) : Promise.resolve(undefined)),
     [session?.taskId]
@@ -164,7 +165,7 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                 <dl className="paper-card p-3 grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("common.date")}</dt>
-                    <dd className="tabular-nums">{session.date}</dd>
+                    <dd className="tabular-nums">{formatDate(session.date, lang)}</dd>
                   </div>
                   <div>
                     <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("session.qualityFieldLabel")}</dt>

@@ -3,6 +3,7 @@ import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/hook
 import { type HelpRequest, type ColorKey, type SubjectType } from "@/lib/db";
 import { helpRequestsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +23,7 @@ interface Props {
 type Tab = "open" | "answered";
 
 export function TeacherRecapSheet({ open, onOpenChange }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const helpRequests = useHelpRequests();
   const items = useAllLibrary();
   const subjects = useSubjects();
@@ -191,7 +192,7 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
                                         </p>
                                         {r.answeredAt && (
                                           <div className="text-[10px] uppercase tracking-wider text-muted-foreground tabular-nums mt-1">
-                                            {new Date(r.answeredAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                                            {formatDate(new Date(r.answeredAt), lang, "medium")}
                                           </div>
                                         )}
                                       </div>

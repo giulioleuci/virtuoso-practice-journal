@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { MessageSquareQuote, BookOpen } from "lucide-react";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 
 interface Props {
   open: boolean;
@@ -17,7 +18,7 @@ interface Props {
  * for a library item. Designed for one-handed mobile use during practice.
  */
 export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const item = useLiveQuery(() => db.library.get(itemId), [itemId]);
   const label = itemTitle ?? item?.title ?? "";
   const answered = useLiveQuery(
@@ -80,11 +81,7 @@ export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: P
                   </p>
                   {r.answeredAt && (
                     <div className="text-[11px] text-muted-foreground tabular-nums pt-0.5">
-                      {new Date(r.answeredAt).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {formatDate(new Date(r.answeredAt), lang, "medium")}
                     </div>
                   )}
                 </div>

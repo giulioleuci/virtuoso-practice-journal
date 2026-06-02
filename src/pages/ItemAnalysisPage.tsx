@@ -7,6 +7,8 @@ import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
 import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
 import { weeklySessionCounts } from "@/lib/domain/analytics";
+import { formatDate } from "@/lib/date";
+import type { Lang } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -15,8 +17,8 @@ const QUALITY_ORDER = ["hard", "improve", "well", "great"];
 
 interface ChartPoint { x: number; y: number; label: string }
 
-function formatDay(date: string, lang: string): string {
-  return new Date(date).toLocaleDateString(lang, { day: "2-digit", month: "short" });
+function formatDay(date: string, lang: Lang): string {
+  return formatDate(date, lang, "dayMonth");
 }
 
 function LineChart({ points, target, color = "hsl(var(--primary))", targetColor = "hsl(var(--muted-foreground))" }: {
@@ -276,7 +278,7 @@ export default function ItemAnalysisPage() {
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">
-                        {new Date(s.date).toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "short" })}
+                        {formatDate(s.date, lang, "weekdayShort")}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
                         {s.bpmReached && <span>{NOTE_GLYPH[s.noteVal ?? "quarter"]} = {s.bpmReached}</span>}

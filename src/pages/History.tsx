@@ -5,6 +5,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/db";
 import { subjectColorCss } from "@/lib/subjectColors";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,7 @@ const PAGE_SIZE = 15;
 const KINDS: ("all" | LibraryKind)[] = ["all", "repertoire", "manual", "technique", "theory"];
 
 export default function History() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [groupBy, setGroupBy] = useState<GroupKey>("day");
   const [sortDir, setSortDir] = useState<SortDir>("newest");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
@@ -88,7 +89,7 @@ export default function History() {
           break;
         case "day":
           key = `d:${s.date}`;
-          label = s.date;
+          label = formatDate(s.date, lang);
           break;
         case "item":
           if (collection) { key = `c:${collection.id}`; label = collection.name; sub = t("history.collection"); }
@@ -263,7 +264,7 @@ export default function History() {
                             style={{ backgroundColor: subjectColorCss(subj?.color, subj?.type, subj?.customColor) }}
                           />
                           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                            <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : s.date}</span>
+                            <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : formatDate(s.date, lang)}</span>
                             {(s.bpmReached || s.quality) && (
                               <span className="text-xs tabular-nums">
                                 {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}

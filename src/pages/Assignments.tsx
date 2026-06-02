@@ -3,7 +3,7 @@ import { useAssignments, useLessons, useSubjects } from "@/hooks/useEntities";
 import { useNavigate } from "react-router-dom";
 
 import { lessonsService } from "@/lib/services";
-import { today } from "@/lib/date";
+import { today, formatDate } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Wand2, X, ArrowLeft } from "lucide-react";
@@ -13,7 +13,7 @@ import { subjectBorderStyle } from "@/lib/subjectColors";
 const PAGE_SIZE = 5;
 
 export default function Assignments() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const assignments = useAssignments();
   const lessons = useLessons();
@@ -70,7 +70,7 @@ export default function Assignments() {
                       <p className="text-[15px] leading-snug break-words">{a.text}</p>
                       {lesson && (
                         <p className="text-[11px] uppercase tracking-wider text-muted-foreground mt-1.5 truncate">
-                          {lesson.date}
+                          {formatDate(lesson.date, lang)}
                         </p>
                       )}
                     </div>
