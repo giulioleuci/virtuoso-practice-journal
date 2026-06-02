@@ -23,7 +23,7 @@ interface Props {
 type Tab = "open" | "answered";
 
 export function TeacherRecapSheet({ open, onOpenChange }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const helpRequests = useHelpRequests();
   const items = useAllLibrary();
   const subjects = useSubjects();
