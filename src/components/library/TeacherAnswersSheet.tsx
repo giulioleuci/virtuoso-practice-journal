@@ -81,11 +81,7 @@ export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: P
                   </p>
                   {r.answeredAt && (
                     <div className="text-[11px] text-muted-foreground tabular-nums pt-0.5">
-                      {new Date(r.answeredAt).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {formatDate(new Date(r.answeredAt), lang, "medium")}
                     </div>
                   )}
                 </div>
