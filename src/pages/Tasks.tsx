@@ -340,8 +340,8 @@ export default function Tasks() {
                   </div>
                   <div className="text-xs text-muted-foreground tabular-nums">
                     {view === "series" && task.recurrence
-                      ? <>{t("tasks.fromDate", { date: task.date })} · {summarizeRecurrence(task.recurrence, t)} · {subjectName(task.subjectId)}</>
-                      : <>{task.date} · {subjectName(task.subjectId)}</>}
+                      ? <>{t("tasks.fromDate", { date: formatDate(task.date, lang) })} · {summarizeRecurrence(task.recurrence, t, lang)} · {subjectName(task.subjectId)}</>
+                      : <>{formatDate(task.date, lang)} · {subjectName(task.subjectId)}</>}
                     {task.targetBpm && <> · {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}</>}
                   </div>
                 </div>
