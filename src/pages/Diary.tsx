@@ -165,11 +165,7 @@ export default function Diary() {
     [carryoverFrom, todayKey],
   );
 
-  const dateLabel = new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+  const dateLabel = formatDate(new Date(), lang, "long");
 
   const doneCount = tasks?.filter((x) => x.done).length ?? 0;
   const totalCount = tasks?.length ?? 0;
