@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { MessageSquareQuote, BookOpen } from "lucide-react";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 
 interface Props {
   open: boolean;
