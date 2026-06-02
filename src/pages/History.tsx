@@ -27,7 +27,7 @@ const PAGE_SIZE = 15;
 const KINDS: ("all" | LibraryKind)[] = ["all", "repertoire", "manual", "technique", "theory"];
 
 export default function History() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [groupBy, setGroupBy] = useState<GroupKey>("day");
   const [sortDir, setSortDir] = useState<SortDir>("newest");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
