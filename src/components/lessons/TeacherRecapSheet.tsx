@@ -3,6 +3,7 @@ import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/hook
 import { type HelpRequest, type ColorKey, type SubjectType } from "@/lib/db";
 import { helpRequestsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/date";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
