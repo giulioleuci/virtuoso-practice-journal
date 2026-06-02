@@ -97,7 +97,7 @@ interface BlockProps {
   sessions: Session[];
   kind: LibraryItem["kind"];
   techniques: { id?: number; name: string }[];
-  lang: string;
+  lang: Lang;
   t: (k: string, p?: Record<string, string | number>) => string;
 }
 
