@@ -26,7 +26,7 @@ export default function Assignments() {
   const safePage = Math.min(page, totalPages - 1);
   const slice = pending.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
-  const subjectName = (id?: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
+  
 
   return (
     <div className="space-y-6">
@@ -70,7 +70,7 @@ export default function Assignments() {
                       <p className="text-[15px] leading-snug break-words">{a.text}</p>
                       {lesson && (
                         <p className="text-[11px] uppercase tracking-wider text-muted-foreground mt-1.5 truncate">
-                          {subjectName(lesson.subjectId)} · {lesson.date}
+                          {lesson.date}
                         </p>
                       )}
                     </div>
