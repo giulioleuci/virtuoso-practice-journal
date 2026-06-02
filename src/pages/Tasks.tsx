@@ -31,7 +31,8 @@ const PAGE_SIZE = 5;
 
 function summarizeRecurrence(
   rec: NonNullable<Task["recurrence"]>,
-  t: (key: string, vars?: Record<string, string | number>) => string
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  lang: Lang,
 ): string {
   const parts: string[] = [];
   if (rec.kind === "weekdays") {
@@ -40,13 +41,13 @@ function summarizeRecurrence(
   } else {
     parts.push(t("recurrence.summaryEvery", { count: rec.everyXDays ?? 1 }));
   }
-  if (rec.endDate) parts.push(t("recurrence.summaryUntil", { date: rec.endDate }));
+  if (rec.endDate) parts.push(t("recurrence.summaryUntil", { date: formatDate(rec.endDate, lang) }));
   else if (rec.occurrences) parts.push(t("recurrence.summaryOccurrences", { count: rec.occurrences }));
   return parts.join(" · ");
 }
 
 export default function Tasks() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const tasks = useActiveTasks();
   const subjects = useSubjects();
