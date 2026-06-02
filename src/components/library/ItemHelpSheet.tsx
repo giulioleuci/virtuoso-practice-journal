@@ -21,7 +21,7 @@ interface Props {
 }
 
 export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const reqs = useLiveQuery(
     () => db.helpRequests.where("itemId").equals(itemId).toArray(),
     [itemId]
