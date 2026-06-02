@@ -307,7 +307,7 @@ export default function Lessons() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
                                 <div className="font-serif text-lg">{subjectName(l.subjectId)}</div>
-                                <div className="text-xs text-muted-foreground">{l.date}</div>
+                                <div className="text-xs text-muted-foreground">{formatDate(l.date, lang)}</div>
                                 {l.notes && <p className="text-sm mt-1 line-clamp-2">{l.notes}</p>}
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
