@@ -553,7 +553,7 @@ export default function Diary() {
                               <div className="min-w-0">
                                 <div className="font-medium break-words">{task.title}</div>
                                 <div className="text-xs text-muted-foreground tabular-nums break-words">
-                                  {task.date}
+                                  {formatDate(task.date, lang)}
                                   {task.targetBpm && (
                                     <>
                                       {" "}
