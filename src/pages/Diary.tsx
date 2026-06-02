@@ -469,37 +469,27 @@ export default function Diary() {
                     return (
                       <li key={task.id}>
                         <div
-                          className="paper-card p-3 w-full flex flex-col gap-2 border-l-4"
+                          className="paper-card p-3 w-full flex flex-col gap-2.5 border-l-4"
                           style={subjectBorderStyleLight(subject?.color, subject?.type, subject?.customColor)}
                         >
-                          {/* Header row: subject chip + date */}
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            {subject && (
-                              <span className={cn(
-                                "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 max-w-[55%] truncate",
-                                COLOR_CLASSES[getSubjectColor(subject.color, subject.type)].chip,
-                              )}>
-                                {subject.name}
-                              </span>
-                            )}
-                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums shrink-0">
-                              <CalendarIcon className="h-3 w-3" />
-                              {task.date}
-                            </span>
-                          </div>
-
                           {/* Title */}
                           <div className="font-serif font-semibold text-[15px] leading-snug break-words line-clamp-2">
                             {task.title}
                           </div>
 
-                          {/* BPM chip */}
-                          {task.targetBpm && (
-                            <span className="inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
-                              <BpmIcon className="h-3 w-3" />
-                              {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}
+                          {/* Metadata row: date + BPM */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
+                              <CalendarIcon className="h-3 w-3" />
+                              {task.date}
                             </span>
-                          )}
+                            {task.targetBpm && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
+                                <BpmIcon className="h-3 w-3" />
+                                {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}
+                              </span>
+                            )}
+                          </div>
 
                           {/* Actions */}
                           <div className="flex items-stretch gap-2 pt-0.5">
