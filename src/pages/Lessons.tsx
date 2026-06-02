@@ -196,7 +196,7 @@ export default function Lessons() {
                       {t(`weekday.${r.dayOfWeek}`)} · {r.startTime}–{r.endTime}
                     </span>
                     <span className="inline-flex items-center text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/10 text-primary">
-                      {r.frequency}
+                      {t(`teacher.freq.${r.frequency}`)}
                     </span>
                   </div>
 
