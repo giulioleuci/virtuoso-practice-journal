@@ -7,6 +7,8 @@ import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
 import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
 import { weeklySessionCounts } from "@/lib/domain/analytics";
+import { formatDate } from "@/lib/date";
+import type { Lang } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
