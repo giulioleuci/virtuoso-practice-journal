@@ -477,7 +477,7 @@ export default function Diary() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
                               <CalendarIcon className="h-3 w-3" />
-                              {task.date}
+                              {formatDate(task.date, lang)}
                             </span>
                             {task.targetBpm && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
