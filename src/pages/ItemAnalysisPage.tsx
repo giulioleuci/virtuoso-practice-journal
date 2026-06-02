@@ -17,8 +17,8 @@ const QUALITY_ORDER = ["hard", "improve", "well", "great"];
 
 interface ChartPoint { x: number; y: number; label: string }
 
-function formatDay(date: string, lang: string): string {
-  return new Date(date).toLocaleDateString(lang, { day: "2-digit", month: "short" });
+function formatDay(date: string, lang: Lang): string {
+  return formatDate(date, lang, "dayMonth");
 }
 
 function LineChart({ points, target, color = "hsl(var(--primary))", targetColor = "hsl(var(--muted-foreground))" }: {
