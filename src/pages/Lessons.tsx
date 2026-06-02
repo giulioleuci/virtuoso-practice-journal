@@ -257,7 +257,7 @@ export default function Lessons() {
                                 {rec.teacher} · {subjectName(rec.subjectId)}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {isToday ? t("lessons.today") : date} · {rec.startTime}–{rec.endTime}
+                                {isToday ? t("lessons.today") : formatDate(date, lang)} · {rec.startTime}–{rec.endTime}
                               </div>
                             </div>
                             <Button
