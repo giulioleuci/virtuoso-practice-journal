@@ -337,7 +337,7 @@ export default function Tasks() {
         </>
       )}
 
-      <Pager page={page} totalPages={totalPages} onChange={setPage} />
+
 
       {tasks !== undefined && (
         <section className="space-y-2 pt-2">
