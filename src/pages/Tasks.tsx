@@ -63,10 +63,7 @@ export default function Tasks() {
   const [delMode, setDelMode] = useState<"one" | "series">("one");
 
   const filtered = useMemo(() => {
-    let arr = tasks ?? [];
-    if (view === "series") {
-      arr = arr.filter((task) => !!task.recurrence);
-    }
+    let arr = (tasks ?? []).filter((task) => !!task.recurrence);
     if (filter === "active") arr = arr.filter((task) => !task.done);
     if (filter === "done") arr = arr.filter((task) => task.done);
     if (subjectFilter !== "all") arr = arr.filter((task) => task.subjectId === Number(subjectFilter));
@@ -79,7 +76,7 @@ export default function Tasks() {
       if (a.done) return b.date.localeCompare(a.date);
       return a.date.localeCompare(b.date);
     });
-  }, [tasks, view, filter, subjectFilter, q]);
+  }, [tasks, filter, subjectFilter, q]);
 
   const { page, setPage, totalPages, pageItems } = usePagination(filtered, PAGE_SIZE);
 
