@@ -137,26 +137,8 @@ export default function Tasks() {
     setDelId(null);
   };
 
-  const bulkMarkDone = async (done: boolean) => {
-    const ids = [...selected];
-    if (!ids.length) return;
-    await tasksService.bulkSetDone(ids, done);
-    toast.success(done
-      ? t("toast.tasksBulkDone", { count: ids.length })
-      : t("toast.tasksBulkReopened", { count: ids.length }));
-    setSelected(new Set());
-  };
 
-  const bulkDelete = async () => {
-    const ids = [...selected];
-    if (!ids.length) return;
-    const { soft } = await tasksService.bulkRemove(ids);
-    toast.success(soft
-      ? t("toast.tasksBulkDeleted", { count: ids.length, soft })
-      : t("toast.tasksBulkDeletedClean", { count: ids.length }));
-    setSelected(new Set());
-    setBulkDel(false);
-  };
+
 
   // ── Study routine helpers ──────────────────────────────────────
   const DAY_SHORT = [t("weekday.0"), t("weekday.1"), t("weekday.2"), t("weekday.3"), t("weekday.4"), t("weekday.5"), t("weekday.6")];
