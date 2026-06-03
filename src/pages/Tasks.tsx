@@ -436,20 +436,6 @@ export default function Tasks() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={bulkDel} onOpenChange={setBulkDel}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("dialog.deleteTasksBulk", { count: selected.size })}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("dialog.deleteTasksBulkDesc")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={bulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
