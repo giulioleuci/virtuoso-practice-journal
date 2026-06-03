@@ -8,7 +8,6 @@ import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/servic
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -16,7 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, Pencil, Trash2, CheckCircle2, Circle, Repeat, CalendarClock, RefreshCw, CalendarRange } from "lucide-react";
+import { ChevronLeft, Pencil, Trash2, Repeat, CalendarClock, RefreshCw, CalendarRange } from "lucide-react";
 
 import { TaskCalendarView } from "@/components/diary/TaskCalendarView";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
