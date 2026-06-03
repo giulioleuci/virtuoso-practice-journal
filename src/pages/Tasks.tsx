@@ -82,8 +82,6 @@ export default function Tasks() {
   }, [tasks, view, filter, subjectFilter, q]);
 
   const { page, setPage, totalPages, pageItems } = usePagination(filtered, PAGE_SIZE);
-  const pageIds = pageItems.map((task) => task.id).filter(Boolean);
-  const allSelectedOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
 
   const subjectName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
 
@@ -92,22 +90,6 @@ export default function Tasks() {
     await tasksService.toggleDone(task.id, !task.done);
   };
 
-  const toggleSel = (id: number) => {
-    setSelected((s) => {
-      const n = new Set(s);
-      if (n.has(id)) { n.delete(id); } else { n.add(id); }
-      return n;
-    });
-  };
-
-  const togglePage = () => {
-    setSelected((s) => {
-      const n = new Set(s);
-      if (allSelectedOnPage) pageIds.forEach((id) => n.delete(id));
-      else pageIds.forEach((id) => n.add(id));
-      return n;
-    });
-  };
 
   const askDelete = async (task: Task) => {
     if (!task.id) return;
