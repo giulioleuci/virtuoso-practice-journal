@@ -301,60 +301,75 @@ export default function Tasks() {
       ) : pageItems.length === 0 ? (
         <EmptyState title={t("tasks.noTasks")} />
       ) : (
-        <>
-          <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-              <Checkbox checked={allSelectedOnPage} onCheckedChange={togglePage} />
-              <span>{selected.size > 0 ? t("common.selected", { count: selected.size }) : t("common.selectAll")}</span>
-            </label>
-            {selected.size > 0 && (
-              <div className="flex items-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => bulkMarkDone(true)}>{t("tasks.markDone")}</Button>
-                <Button size="sm" variant="ghost" onClick={() => bulkMarkDone(false)}>{t("common.reopen")}</Button>
-                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setBulkDel(true)}>
-                  <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("common.delete")}
-                </Button>
-              </div>
-            )}
-          </div>
-          <ul className="space-y-2">
-            {pageItems.map((task) => (
-              <li key={task.id} className="paper-card p-3 flex items-start gap-2">
-                <Checkbox
-                  className="mt-1 shrink-0"
-                  checked={task.id ? selected.has(task.id) : false}
-                  onCheckedChange={() => task.id && toggleSel(task.id)}
-                  aria-label={t("common.select")}
-                />
-                <button onClick={() => toggleDone(task)} className="mt-0.5 shrink-0">
-                  {task.done
-                    ? <CheckCircle2 className="h-5 w-5 text-primary" />
-                    : <Circle className="h-5 w-5 text-muted-foreground" />}
-                </button>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className={`font-medium truncate ${task.done ? "line-through opacity-70" : ""}`}>{task.title}</span>
-                    {(task.recurrence || task.recurrenceTaskId) && (
-                      <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground tabular-nums">
-                    {view === "series" && task.recurrence
-                      ? <>{t("tasks.fromDate", { date: formatDate(task.date, lang) })} · {summarizeRecurrence(task.recurrence, t, lang)} · {subjectName(task.subjectId)}</>
-                      : <>{formatDate(task.date, lang)} · {subjectName(task.subjectId)}</>}
-                    {task.targetBpm && <> · {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}</>}
+        <ul className="space-y-2.5">
+          {pageItems.map((task) => {
+            const isRecurring = !!(task.recurrence || task.recurrenceTaskId);
+            return (
+              <li key={task.id} className={`paper-card p-3.5 flex flex-col gap-3 ${task.done ? "opacity-70" : ""}`}>
+                <div className="flex items-start gap-2">
+                  <h3 className={`flex-1 min-w-0 text-base font-medium leading-snug break-words ${task.done ? "line-through" : ""}`}>
+                    {task.title}
+                  </h3>
+                  {isRecurring && (
+                    <Repeat className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" aria-label={t("tasks.recurringSeries")} />
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums">
+                  {view === "series" && task.recurrence ? (
+                    <>
+                      <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                        {t("tasks.fromDate", { date: formatDate(task.date, lang) })}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                        {summarizeRecurrence(task.recurrence, t, lang)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                      {formatDate(task.date, lang)}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                    {subjectName(task.subjectId)}
+                  </span>
+                  {task.targetBpm && (
+                    <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                      {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
+                  <Button
+                    size="sm"
+                    variant={task.done ? "ghost" : "secondary"}
+                    onClick={() => toggleDone(task)}
+                    className="h-9 px-3"
+                  >
+                    {task.done ? t("common.reopen") : t("tasks.markDone")}
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => navigate(`/tasks/edit/${task.id}`)}
+                      className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                      aria-label={t("common.edit")}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => askDelete(task)}
+                      className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
+                      aria-label={t("common.delete")}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-                <button onClick={() => navigate(`/tasks/edit/${task.id}`)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent">
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button onClick={() => askDelete(task)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent">
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </li>
-            ))}
-          </ul>
-        </>
+            );
+          })}
+        </ul>
       )}
 
       <Pager page={page} totalPages={totalPages} onChange={setPage} />
