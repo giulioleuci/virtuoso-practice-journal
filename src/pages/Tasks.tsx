@@ -229,7 +229,7 @@ export default function Tasks() {
         </section>
       )}
 
-      <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); setSelected(new Set()); }}>
+      <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); }}>
         <TabsList className="w-full grid grid-cols-2">
           <TabsTrigger value="occurrences">{t("tasks.occurrences")}</TabsTrigger>
           <TabsTrigger value="series">{t("tasks.recurringSeries")}</TabsTrigger>
