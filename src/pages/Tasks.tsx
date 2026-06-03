@@ -61,7 +61,6 @@ export default function Tasks() {
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
   const [delMode, setDelMode] = useState<"one" | "series">("one");
-  const [bulkDel, setBulkDel] = useState(false);
 
   const filtered = useMemo(() => {
     let arr = tasks ?? [];
