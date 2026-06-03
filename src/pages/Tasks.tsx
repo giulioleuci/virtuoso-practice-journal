@@ -52,7 +52,7 @@ export default function Tasks() {
   const subjects = useSubjects();
   const routines = useStudyRoutines() ?? [];
 
-  const [view, setView] = useState<"occurrences" | "series">("occurrences");
+  const [view, setView] = useState<"series" | "routines">("series");
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [q, setQ] = useState("");
@@ -63,10 +63,7 @@ export default function Tasks() {
   const [delMode, setDelMode] = useState<"one" | "series">("one");
 
   const filtered = useMemo(() => {
-    let arr = tasks ?? [];
-    if (view === "series") {
-      arr = arr.filter((task) => !!task.recurrence);
-    }
+    let arr = (tasks ?? []).filter((task) => !!task.recurrence);
     if (filter === "active") arr = arr.filter((task) => !task.done);
     if (filter === "done") arr = arr.filter((task) => task.done);
     if (subjectFilter !== "all") arr = arr.filter((task) => task.subjectId === Number(subjectFilter));
@@ -79,7 +76,7 @@ export default function Tasks() {
       if (a.done) return b.date.localeCompare(a.date);
       return a.date.localeCompare(b.date);
     });
-  }, [tasks, view, filter, subjectFilter, q]);
+  }, [tasks, filter, subjectFilter, q]);
 
   const { page, setPage, totalPages, pageItems } = usePagination(filtered, PAGE_SIZE);
 
@@ -178,148 +175,63 @@ export default function Tasks() {
       <div className="flex items-center gap-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></Link>
         <h2 className="font-serif text-3xl flex-1">{t("tasks.allTasks")}</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">{filtered.length}</span>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {view === "series" ? filtered.length : routines.length}
+        </span>
       </div>
-
-      {routines.length > 0 && (
-        <section className="space-y-2">
-          <div className="flex items-center gap-2 px-1">
-            <CalendarClock className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-xs uppercase tracking-wider text-muted-foreground flex-1">
-              {t("tasks.studyRoutines")}
-            </h3>
-            <span className="text-xs text-muted-foreground tabular-nums">{routines.length}</span>
-          </div>
-          <ul className="space-y-2">
-            {routines.map((r) => (
-              <li key={r.id} className="paper-card p-3 flex items-start gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">
-                    {r.name ?? subjectName(r.subjectId)}
-                  </div>
-                  <div className="text-xs text-muted-foreground tabular-nums mt-0.5">
-                    {subjectName(r.subjectId)} · {r.groups.length} {t("studyRoutine.groupsLabel", { count: r.groups.length })} · {summarizeRoutineDays(r.matrix)}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleRegenerate(r)}
-                  disabled={regeneratingId === r.id}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50"
-                  aria-label={t("studyRoutine.regenerate")}
-                >
-                  <RefreshCw className={`h-4 w-4 ${regeneratingId === r.id ? "animate-spin" : ""}`} />
-                </button>
-                <button
-                  onClick={() => navigate(`/tasks/routines/edit/${r.id}`)}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                  aria-label={t("common.edit")}
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => r.id && setDelRoutineId(r.id)}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
-                  aria-label={t("common.delete")}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); }}>
         <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="occurrences">{t("tasks.occurrences")}</TabsTrigger>
           <TabsTrigger value="series">{t("tasks.recurringSeries")}</TabsTrigger>
+          <TabsTrigger value="routines">{t("tasks.studyRoutines")}</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Select value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(0); }}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("common.all")}</SelectItem>
-            <SelectItem value="active">{t("tasks.active")}</SelectItem>
-            <SelectItem value="done">{t("common.done")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(0); }}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
-            {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <Input placeholder={t("tasks.searchByTitle")} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
-
-      {tasks === undefined ? (
-        <ListSkeleton />
-      ) : pageItems.length === 0 ? (
-        <EmptyState title={t("tasks.noTasks")} />
-      ) : (
-        <ul className="space-y-2.5">
-          {pageItems.map((task) => {
-            const isRecurring = !!(task.recurrence || task.recurrenceTaskId);
-            return (
-              <li key={task.id} className={`paper-card p-3.5 flex flex-col gap-3 ${task.done ? "opacity-70" : ""}`}>
+      {view === "routines" ? (
+        routines.length === 0 ? (
+          <EmptyState title={t("tasks.studyRoutines")} />
+        ) : (
+          <ul className="space-y-2.5">
+            {routines.map((r) => (
+              <li key={r.id} className="paper-card p-3.5 flex flex-col gap-3">
                 <div className="flex items-start gap-2">
-                  <h3 className={`flex-1 min-w-0 text-base font-medium leading-snug break-words ${task.done ? "line-through" : ""}`}>
-                    {task.title}
+                  <h3 className="flex-1 min-w-0 text-base font-medium leading-snug break-words">
+                    {r.name ?? subjectName(r.subjectId)}
                   </h3>
-                  {isRecurring && (
-                    <Repeat className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" aria-label={t("tasks.recurringSeries")} />
-                  )}
+                  <CalendarClock className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" />
                 </div>
-
                 <div className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums">
-                  {view === "series" && task.recurrence ? (
-                    <>
-                      <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                        {t("tasks.fromDate", { date: formatDate(task.date, lang) })}
-                      </span>
-                      <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                        {summarizeRecurrence(task.recurrence, t, lang)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                      {formatDate(task.date, lang)}
-                    </span>
-                  )}
                   <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                    {subjectName(task.subjectId)}
+                    {subjectName(r.subjectId)}
                   </span>
-                  {task.targetBpm && (
-                    <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                      {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}
-                    </span>
-                  )}
+                  <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                    {r.groups.length} {t("studyRoutine.groupsLabel", { count: r.groups.length })}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                    {summarizeRoutineDays(r.matrix)}
+                  </span>
                 </div>
-
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
                   <Button
                     size="sm"
-                    variant={task.done ? "ghost" : "secondary"}
-                    onClick={() => toggleDone(task)}
+                    variant="secondary"
+                    onClick={() => handleRegenerate(r)}
+                    disabled={regeneratingId === r.id}
                     className="h-9 px-3"
                   >
-                    {task.done ? t("common.reopen") : t("tasks.markDone")}
+                    <RefreshCw className={`h-4 w-4 mr-1.5 ${regeneratingId === r.id ? "animate-spin" : ""}`} />
+                    {t("studyRoutine.regenerate")}
                   </Button>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => navigate(`/tasks/edit/${task.id}`)}
+                      onClick={() => navigate(`/tasks/routines/edit/${r.id}`)}
                       className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
                       aria-label={t("common.edit")}
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => askDelete(task)}
+                      onClick={() => r.id && setDelRoutineId(r.id)}
                       className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
                       aria-label={t("common.delete")}
                     >
@@ -328,12 +240,104 @@ export default function Tasks() {
                   </div>
                 </div>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        )
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(0); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                <SelectItem value="active">{t("tasks.active")}</SelectItem>
+                <SelectItem value="done">{t("common.done")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(0); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
+                {(subjects ?? []).map((s) => (
+                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Input placeholder={t("tasks.searchByTitle")} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
+
+          {tasks === undefined ? (
+            <ListSkeleton />
+          ) : pageItems.length === 0 ? (
+            <EmptyState title={t("tasks.noTasks")} />
+          ) : (
+            <ul className="space-y-2.5">
+              {pageItems.map((task) => (
+                <li key={task.id} className={`paper-card p-3.5 flex flex-col gap-3 ${task.done ? "opacity-70" : ""}`}>
+                  <div className="flex items-start gap-2">
+                    <h3 className={`flex-1 min-w-0 text-base font-medium leading-snug break-words ${task.done ? "line-through" : ""}`}>
+                      {task.title}
+                    </h3>
+                    <Repeat className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" aria-label={t("tasks.recurringSeries")} />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums">
+                    {task.recurrence && (
+                      <>
+                        <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                          {t("tasks.fromDate", { date: formatDate(task.date, lang) })}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                          {summarizeRecurrence(task.recurrence, t, lang)}
+                        </span>
+                      </>
+                    )}
+                    <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                      {subjectName(task.subjectId)}
+                    </span>
+                    {task.targetBpm && (
+                      <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                        {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
+                    <Button
+                      size="sm"
+                      variant={task.done ? "ghost" : "secondary"}
+                      onClick={() => toggleDone(task)}
+                      className="h-9 px-3"
+                    >
+                      {task.done ? t("common.reopen") : t("tasks.markDone")}
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => navigate(`/tasks/edit/${task.id}`)}
+                        className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                        aria-label={t("common.edit")}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => askDelete(task)}
+                        className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
+                        aria-label={t("common.delete")}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <Pager page={page} totalPages={totalPages} onChange={setPage} />
+        </>
       )}
 
-      <Pager page={page} totalPages={totalPages} onChange={setPage} />
+
 
       {tasks !== undefined && (
         <section className="space-y-2 pt-2">
