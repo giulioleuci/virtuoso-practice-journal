@@ -52,7 +52,7 @@ export default function Tasks() {
   const subjects = useSubjects();
   const routines = useStudyRoutines() ?? [];
 
-  const [view, setView] = useState<"occurrences" | "series">("occurrences");
+  const [view, setView] = useState<"series" | "routines">("series");
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [q, setQ] = useState("");
