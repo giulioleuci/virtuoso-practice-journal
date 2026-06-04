@@ -6,6 +6,8 @@ import { formatDate } from "@/lib/date";
 import type { Lang } from "@/lib/db";
 import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/services";
 import { NOTE_GLYPH } from "@/lib/constants";
+import { subjectBorderStyle } from "@/lib/subjectColors";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
