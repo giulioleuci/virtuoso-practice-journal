@@ -155,17 +155,21 @@ export function TaskCalendarView({ subjects }: Props) {
             {t("tasks.noTasksOnDay")}
           </p>
         ) : (
-          selectedTasks.map((task) => (
-            <div key={task.id} className="paper-card p-2.5 flex items-center gap-2">
-              {task.done
-                ? <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                : <Circle className="h-4 w-4 text-muted-foreground shrink-0" />}
-              <span className={cn("text-sm flex-1 min-w-0 truncate", task.done && "line-through opacity-60")}>
-                {task.title}
-              </span>
-              <span className="text-xs text-muted-foreground shrink-0">{subjectName(task.subjectId)}</span>
-            </div>
-          ))
+          selectedTasks.map((task) => {
+            const subject = subjects.find((s) => s.id === task.subjectId);
+            return (
+              <div
+                key={task.id}
+                className={cn("paper-card p-2.5 flex items-center gap-2 border-l-4", task.done && "opacity-60")}
+                style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
+              >
+                <span className={cn("text-sm flex-1 min-w-0 truncate", task.done && "line-through")}>
+                  {task.title}
+                </span>
+                <span className="text-xs text-muted-foreground shrink-0">{subjectName(task.subjectId)}</span>
+              </div>
+            );
+          })
         )}
       </div>
     </div>
