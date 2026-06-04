@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, CheckCircle2, Circle } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { subjectBorderStyle } from "@/lib/subjectColors";
 import type { Task, Subject } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { useTasksInRange } from "@/hooks/useEntities";
