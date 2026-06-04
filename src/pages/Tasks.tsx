@@ -246,7 +246,9 @@ export default function Tasks() {
                   </div>
                 </div>
               </li>
-            ))}
+              );
+            })}
+
           </ul>
         )
       ) : (
