@@ -1,28 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound } from "lucide-react";
+import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound, ListChecks, MoreHorizontal } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Profile } from "@/lib/db";
 
 export default function AppShell({ profile }: { profile: Profile }) {
   const { t } = useI18n();
   const location = useLocation();
-  // Use the top-level route segment as the transition key so navigating between
-  // primary sections fades, but in-page state changes (query/search params,
-  // nested routes) don't replay the animation.
   const pageKey = "/" + (location.pathname.split("/")[1] ?? "");
   const items = [
     { to: "/", label: t("nav.diary"), icon: CalendarDays, end: true },
+    { to: "/tasks", label: t("nav.tasks"), icon: ListChecks },
     { to: "/library", label: t("nav.library"), icon: BookMarked },
     { to: "/lessons", label: t("nav.lessons"), icon: GraduationCap },
+  ];
+  const moreItems = [
     { to: "/history", label: t("nav.history"), icon: HistoryIcon },
     { to: "/profile", label: t("nav.profile"), icon: UserRound },
   ];
+  const moreActive = moreItems.some((m) => location.pathname.startsWith(m.to));
 
   const [hidden, setHidden] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const lastY = useRef(0);
   const keyboardInset = useKeyboardInset();
   const navHidden = hidden || keyboardInset > 0;
@@ -102,6 +105,53 @@ export default function AppShell({ profile }: { profile: Profile }) {
               )}
             </NavLink>
           ))}
+
+          <Popover open={moreOpen} onOpenChange={setMoreOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("nav.more")}
+                className={cn(
+                  "group relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[60px] transition-colors",
+                  moreActive
+                    ? "text-primary"
+                    : "text-muted-foreground active:text-foreground active:bg-accent/40"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0 h-0.5 rounded-full bg-primary transition-all duration-300 ease-out",
+                    moreActive ? "w-8 opacity-100" : "w-0 opacity-0"
+                  )}
+                />
+                <MoreHorizontal
+                  className={cn("h-[22px] w-[22px] transition-transform duration-300 ease-out", moreActive ? "scale-110" : "")}
+                  strokeWidth={moreActive ? 2.25 : 1.75}
+                />
+                <span className={cn("text-[10px] font-medium tracking-wide leading-none", moreActive && "font-semibold")}>
+                  {t("nav.more")}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" side="top" className="w-48 p-1">
+              {moreItems.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setMoreOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
+                      isActive ? "text-primary bg-accent/60" : "text-foreground hover:bg-accent/60"
+                    )
+                  }
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </PopoverContent>
+          </Popover>
         </div>
       </nav>
     </div>
