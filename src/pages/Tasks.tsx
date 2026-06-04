@@ -194,8 +194,14 @@ export default function Tasks() {
           <EmptyState title={t("tasks.studyRoutines")} />
         ) : (
           <ul className="space-y-2.5">
-            {routines.map((r) => (
-              <li key={r.id} className="paper-card p-3.5 flex flex-col gap-3">
+            {routines.map((r) => {
+              const subject = subjects?.find((s) => s.id === r.subjectId);
+              return (
+              <li
+                key={r.id}
+                className="paper-card p-3.5 flex flex-col gap-3 border-l-4"
+                style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
+              >
                 <div className="flex items-start gap-2">
                   <h3 className="flex-1 min-w-0 text-base font-medium leading-snug break-words">
                     {r.name ?? subjectName(r.subjectId)}
@@ -204,15 +210,13 @@ export default function Tasks() {
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums">
                   <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                    {subjectName(r.subjectId)}
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
                     {r.groups.length} {t("studyRoutine.groupsLabel", { count: r.groups.length })}
                   </span>
                   <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
                     {summarizeRoutineDays(r.matrix)}
                   </span>
                 </div>
+
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
                   <Button
                     size="sm"
@@ -242,7 +246,9 @@ export default function Tasks() {
                   </div>
                 </div>
               </li>
-            ))}
+              );
+            })}
+
           </ul>
         )
       ) : (
