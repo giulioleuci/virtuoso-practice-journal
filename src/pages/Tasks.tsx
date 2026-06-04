@@ -272,8 +272,14 @@ export default function Tasks() {
             <EmptyState title={t("tasks.noTasks")} />
           ) : (
             <ul className="space-y-2.5">
-              {pageItems.map((task) => (
-                <li key={task.id} className={`paper-card p-3.5 flex flex-col gap-3 ${task.done ? "opacity-70" : ""}`}>
+              {pageItems.map((task) => {
+                const subject = subjects?.find((s) => s.id === task.subjectId);
+                return (
+                <li
+                  key={task.id}
+                  className={`paper-card p-3.5 flex flex-col gap-3 border-l-4 ${task.done ? "opacity-70" : ""}`}
+                  style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
+                >
                   <div className="flex items-start gap-2">
                     <h3 className={`flex-1 min-w-0 text-base font-medium leading-snug break-words ${task.done ? "line-through" : ""}`}>
                       {task.title}
@@ -292,15 +298,13 @@ export default function Tasks() {
                         </span>
                       </>
                     )}
-                    <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                      {subjectName(task.subjectId)}
-                    </span>
                     {task.targetBpm && (
                       <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
                         {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}
                       </span>
                     )}
                   </div>
+
 
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
                     <Button
