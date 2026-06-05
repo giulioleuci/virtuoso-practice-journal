@@ -314,6 +314,10 @@
   "teacher.freq.weekly": "Weekly",
   "teacher.freq.biweekly": "Bi-weekly",
   "teacher.freq.monthly": "Monthly",
+  "teacher.schedules": "Schedule",
+  "teacher.addSchedule": "Add day",
+  "teacher.scheduleN": "Day {{n}}",
+
   "lesson.log": "Log lesson",
   "lesson.edit": "Edit lesson",
   "lesson.with": "with {{teacher}}",
