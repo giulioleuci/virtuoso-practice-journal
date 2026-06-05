@@ -5,15 +5,13 @@ import type { Lesson, LessonRecurrence } from "@/lib/db";
 const rec = (over: Partial<LessonRecurrence>): LessonRecurrence => ({
   subjectId: 1,
   teacher: "T",
-  frequency: "weekly",
-  dayOfWeek: 1, // Monday
-  startTime: "10:00",
-  endTime: "11:00",
+  schedules: [{ dayOfWeek: 1, startTime: "10:00", endTime: "11:00", frequency: "weekly" }],
   startDate: "2026-05-01",
   color: "blue",
   createdAt: 0,
   ...over,
 });
+
 
 describe("nextLessonDate", () => {
   it("finds the next weekly recurrence date after the anchor", () => {

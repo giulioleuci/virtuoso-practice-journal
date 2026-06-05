@@ -14,10 +14,7 @@ async function seedRecurrence() {
   return (await db.recurrences.add({
     subjectId: 1,
     teacher: "Maestro",
-    frequency: "weekly",
-    dayOfWeek: 1,
-    startTime: "17:00",
-    endTime: "18:00",
+    schedules: [{ dayOfWeek: 1, startTime: "17:00", endTime: "18:00", frequency: "weekly" }],
     startDate: "2025-01-01",
     color: "terracotta",
     createdAt: 1_000_000,
@@ -32,14 +29,12 @@ describe("lessonsService.upsertRecurrence", () => {
   const base = {
     subjectId: 1,
     teacher: "Maestro",
-    frequency: "weekly" as const,
-    dayOfWeek: 1,
-    startTime: "17:00",
-    endTime: "18:00",
+    schedules: [{ dayOfWeek: 1, startTime: "17:00", endTime: "18:00", frequency: "weekly" as const }],
     startDate: "2025-01-01",
     color: "terracotta" as const,
     createdAt: 1_000_000,
   };
+
 
   it("inserts a new recurrence when no id is provided", async () => {
     const id = await lessonsService.upsertRecurrence(base);
