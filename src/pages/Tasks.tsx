@@ -314,15 +314,7 @@ export default function Tasks() {
                   </div>
 
 
-                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
-                    <Button
-                      size="sm"
-                      variant={task.done ? "ghost" : "secondary"}
-                      onClick={() => toggleDone(task)}
-                      className="h-9 px-3"
-                    >
-                      {task.done ? t("common.reopen") : t("tasks.markDone")}
-                    </Button>
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/40">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => navigate(`/tasks/edit/${task.id}`)}
