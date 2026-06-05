@@ -46,7 +46,7 @@ export async function buildLessonSnapshot(
     snapshot: {
       subjectName: subject?.name ?? "—",
       teacher: recurrence?.teacher,
-      frequency: recurrence?.frequency,
+      frequency: recurrence?.schedules?.[0]?.frequency,
     },
     piecesPlayedTitles: pieces.map((p) => p.title),
   };
