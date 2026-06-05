@@ -293,18 +293,23 @@ targetBpm: 84, noteVal: "quarter",
   // ---------- Lesson recurrences ----------
   const wedDow = 3;
   const lessonRecId = (await db.recurrences.add({
-    subjectId: pianoId, teacher: "Prof. Aldo Ferri", frequency: "weekly",
-    dayOfWeek: wedDow, startTime: "17:00", endTime: "18:00",
+    subjectId: pianoId, teacher: "Prof. Aldo Ferri",
+    schedules: [{ dayOfWeek: wedDow, startTime: "17:00", endTime: "18:00", frequency: "weekly" }],
     startDate: dayKey(addDays(todayDate, -90)), color: "terracotta",
     createdAt: now - 100 * D,
   })) as number;
 
+  // Harmony has two weekly slots (Tuesday & Friday)
   const harmonyRecId = (await db.recurrences.add({
-    subjectId: harmonyId, teacher: "Prof.ssa Lia Conti", frequency: "biweekly",
-    dayOfWeek: 5, startTime: "10:00", endTime: "11:30",
+    subjectId: harmonyId, teacher: "Prof.ssa Lia Conti",
+    schedules: [
+      { dayOfWeek: 2, startTime: "15:00", endTime: "16:00", frequency: "weekly" },
+      { dayOfWeek: 5, startTime: "10:00", endTime: "11:30", frequency: "weekly" },
+    ],
     startDate: dayKey(addDays(todayDate, -84)), color: "blue",
     createdAt: now - 100 * D,
   })) as number;
+
 
   // ---------- Past lessons + assignments ----------
   // Build the last 6 Wednesdays (from todayDate)
@@ -356,11 +361,12 @@ targetBpm: 84, noteVal: "quarter",
     const pieceIds = Array.from(new Set(items.flatMap((a) => a.pieces)));
     const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(
       pianoId,
-      { subjectId: pianoId, teacher: "Prof. Aldo Ferri", frequency: "weekly",
-        dayOfWeek: wedDow, startTime: "17:00", endTime: "18:00",
+      { subjectId: pianoId, teacher: "Prof. Aldo Ferri",
+        schedules: [{ dayOfWeek: wedDow, startTime: "17:00", endTime: "18:00", frequency: "weekly" }],
         startDate: dayKey(addDays(todayDate, -90)), color: "terracotta", createdAt: now } satisfies LessonRecurrence,
       pieceIds,
     );
+
     const lessonId = (await db.lessons.add({
       recurrenceId: lessonRecId, subjectId: pianoId, date: dayKey(d),
       notes: "Voicing of inner lines; pedaling for legato bass; tempo control.",
@@ -378,11 +384,15 @@ targetBpm: 84, noteVal: "quarter",
     const pieceIds = [piston, secDom];
     const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(
       harmonyId,
-      { subjectId: harmonyId, teacher: "Prof.ssa Lia Conti", frequency: "biweekly",
-        dayOfWeek: 5, startTime: "10:00", endTime: "11:30",
+      { subjectId: harmonyId, teacher: "Prof.ssa Lia Conti",
+        schedules: [
+          { dayOfWeek: 2, startTime: "15:00", endTime: "16:00", frequency: "weekly" },
+          { dayOfWeek: 5, startTime: "10:00", endTime: "11:30", frequency: "weekly" },
+        ],
         startDate: dayKey(addDays(todayDate, -84)), color: "blue", createdAt: now } satisfies LessonRecurrence,
       pieceIds,
     );
+
     const lessonId = (await db.lessons.add({
       recurrenceId: harmonyRecId, subjectId: harmonyId, date: dayKey(d),
       notes: "Reviewed secondary dominants; introduced Neapolitan sixth.",

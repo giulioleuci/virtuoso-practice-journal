@@ -191,14 +191,22 @@ export interface HelpRequest {
   createdAt: number;
 }
 
+export type LessonFrequency = "weekly" | "biweekly" | "monthly";
+
+/** One weekday slot in a multi-day lesson schedule. */
+export interface LessonScheduleSlot {
+  dayOfWeek: number;          // 0=Sun…6=Sat
+  startTime: string;          // "HH:MM"
+  endTime: string;            // "HH:MM"
+  frequency: LessonFrequency; // per-slot frequency
+}
+
 export interface LessonRecurrence {
   id?: number;
   subjectId: number;
   teacher: string;
-  frequency: "weekly" | "biweekly" | "monthly";
-  dayOfWeek: number;
-  startTime: string;
-  endTime: string;
+  /** One or more weekly slots; each can have its own frequency. */
+  schedules: LessonScheduleSlot[];
   startDate: string;
   endDate?: string;
   color: ColorKey;
@@ -210,8 +218,9 @@ export interface LessonRecurrence {
 export interface LessonSnapshot {
   subjectName: string;
   teacher?: string;
-  frequency?: LessonRecurrence["frequency"];
+  frequency?: LessonFrequency;
 }
+
 
 export interface Lesson {
   id?: number;
@@ -365,6 +374,25 @@ class VirtuosoDB extends Dexie {
     });
     // v9: color field on subjects (no store change needed — just data model extension)
     this.version(9).stores({});
+    // v10: lesson recurrences support multiple weekday slots
+    this.version(10).stores({}).upgrade(async (tx) => {
+      await tx.table("recurrences").toCollection().modify((r: LessonRecurrence & {
+        dayOfWeek?: number; startTime?: string; endTime?: string; frequency?: LessonFrequency;
+      }) => {
+        if (!r.schedules || !r.schedules.length) {
+          r.schedules = [{
+            dayOfWeek: r.dayOfWeek ?? 1,
+            startTime: r.startTime ?? "17:00",
+            endTime: r.endTime ?? "18:00",
+            frequency: r.frequency ?? "weekly",
+          }];
+        }
+        delete r.dayOfWeek;
+        delete r.startTime;
+        delete r.endTime;
+        delete r.frequency;
+      });
+    });
   }
 }
 

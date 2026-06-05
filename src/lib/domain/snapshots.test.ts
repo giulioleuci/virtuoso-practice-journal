@@ -65,11 +65,13 @@ describe("buildLessonSnapshot", () => {
 
     const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(
       subjectId,
-      { id: 1, subjectId, teacher: "Maestro", frequency: "weekly", dayOfWeek: 3,
-        startTime: "10:00", endTime: "11:00", startDate: "2025-01-01",
+      { id: 1, subjectId, teacher: "Maestro",
+        schedules: [{ dayOfWeek: 3, startTime: "10:00", endTime: "11:00", frequency: "weekly" }],
+        startDate: "2025-01-01",
         color: "terracotta", createdAt: 1 },
       [itemId],
     );
+
 
     expect(snapshot.subjectName).toBe("Cello");
     expect(snapshot.teacher).toBe("Maestro");

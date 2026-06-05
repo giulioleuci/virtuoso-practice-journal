@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSubjects } from "@/hooks/useEntities";
-import { type ColorKey, type LessonRecurrence } from "@/lib/db";
+import { type ColorKey, type LessonRecurrence, type LessonScheduleSlot, type LessonFrequency } from "@/lib/db";
 import { lessonsService } from "@/lib/services";
 import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Plus, Trash2 } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -22,6 +23,13 @@ interface Props {
 
 const COLORS: ColorKey[] = ["terracotta", "sage", "gold", "blue", "plum"];
 
+const defaultSlot = (): LessonScheduleSlot => ({
+  dayOfWeek: 1,
+  startTime: "17:00",
+  endTime: "18:00",
+  frequency: "weekly",
+});
+
 export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
   const { t } = useI18n();
   const DAYS = [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`));
@@ -30,10 +38,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
 
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [teacher, setTeacher] = useState("");
-  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly">("weekly");
-  const [dayOfWeek, setDayOfWeek] = useState(1);
-  const [startTime, setStartTime] = useState("17:00");
-  const [endTime, setEndTime] = useState("18:00");
+  const [schedules, setSchedules] = useState<LessonScheduleSlot[]>([defaultSlot()]);
   const [startDate, setStartDate] = useState(() => today());
   const [color, setColor] = useState<ColorKey>("terracotta");
 
@@ -42,41 +47,45 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
     if (recurrence) {
       setSubjectId(recurrence.subjectId);
       setTeacher(recurrence.teacher);
-      setFrequency(recurrence.frequency);
-      setDayOfWeek(recurrence.dayOfWeek);
-      setStartTime(recurrence.startTime);
-      setEndTime(recurrence.endTime);
+      setSchedules(recurrence.schedules?.length ? recurrence.schedules.map((s) => ({ ...s })) : [defaultSlot()]);
       setStartDate(recurrence.startDate);
       setColor(recurrence.color);
     } else {
       setSubjectId(undefined);
       setTeacher("");
-      setFrequency("weekly");
-      setDayOfWeek(1);
-      setStartTime("17:00");
-      setEndTime("18:00");
+      setSchedules([defaultSlot()]);
       setStartDate(today());
       setColor("terracotta");
     }
   }, [open, recurrence]);
 
+  const updateSlot = (idx: number, patch: Partial<LessonScheduleSlot>) => {
+    setSchedules((arr) => arr.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  };
+  const addSlot = () => setSchedules((arr) => [...arr, defaultSlot()]);
+  const removeSlot = (idx: number) =>
+    setSchedules((arr) => (arr.length <= 1 ? arr : arr.filter((_, i) => i !== idx)));
+
   const errors = useMemo(() => {
     const e: string[] = [];
     if (!subjectId) e.push(t("errors.pickSubject"));
     if (!teacher.trim()) e.push(t("errors.teacherRequired"));
-    if (startTime >= endTime) e.push(t("errors.endTimeAfterStart"));
+    if (!schedules.length) e.push(t("teacher.schedules"));
+    for (const s of schedules) {
+      if (s.startTime >= s.endTime) {
+        e.push(t("errors.endTimeAfterStart"));
+        break;
+      }
+    }
     return e;
-  }, [subjectId, teacher, startTime, endTime, t]);
+  }, [subjectId, teacher, schedules, t]);
 
   const save = async () => {
     if (errors.length || subjectId === undefined) return;
     const base: Omit<LessonRecurrence, "id"> = {
       subjectId,
       teacher: teacher.trim(),
-      frequency,
-      dayOfWeek,
-      startTime,
-      endTime,
+      schedules,
       startDate,
       color,
       createdAt: recurrence?.createdAt ?? Date.now(),
@@ -116,38 +125,67 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
             <Input value={teacher} onChange={(e) => setTeacher(e.target.value)} placeholder={t("teacher.namePlaceholder")} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.frequency")}</Label>
-              <Select value={frequency} onValueChange={(v) => setFrequency(v as typeof frequency)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="weekly">{t("teacher.freq.weekly")}</SelectItem>
-                  <SelectItem value="biweekly">{t("teacher.freq.biweekly")}</SelectItem>
-                  <SelectItem value="monthly">{t("teacher.freq.monthly")}</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.schedules")}</Label>
+              <Button type="button" size="sm" variant="ghost" onClick={addSlot} className="-mr-2">
+                <Plus className="h-4 w-4 mr-1" /> {t("teacher.addSchedule")}
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.day")}</Label>
-              <Select value={dayOfWeek.toString()} onValueChange={(v) => setDayOfWeek(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DAYS.map((d, i) => <SelectItem key={i} value={i.toString()}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.start")}</Label>
-              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.end")}</Label>
-              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-            </div>
+            <ul className="space-y-3">
+              {schedules.map((slot, i) => (
+                <li key={i} className="rounded-lg border border-border/60 bg-card/40 p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {t("teacher.scheduleN", { n: i + 1 })}
+                    </span>
+                    {schedules.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeSlot(i)}
+                        aria-label={t("common.delete")}
+                        className="text-muted-foreground hover:text-destructive p-1 -mr-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("teacher.day")}</Label>
+                      <Select value={slot.dayOfWeek.toString()} onValueChange={(v) => updateSlot(i, { dayOfWeek: Number(v) })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {DAYS.map((d, k) => <SelectItem key={k} value={k.toString()}>{d}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("teacher.frequency")}</Label>
+                      <Select value={slot.frequency} onValueChange={(v) => updateSlot(i, { frequency: v as LessonFrequency })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly">{t("teacher.freq.weekly")}</SelectItem>
+                          <SelectItem value="biweekly">{t("teacher.freq.biweekly")}</SelectItem>
+                          <SelectItem value="monthly">{t("teacher.freq.monthly")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("teacher.start")}</Label>
+                      <Input type="time" value={slot.startTime} onChange={(e) => updateSlot(i, { startTime: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("teacher.end")}</Label>
+                      <Input type="time" value={slot.endTime} onChange={(e) => updateSlot(i, { endTime: e.target.value })} />
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="space-y-2">
