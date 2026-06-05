@@ -84,10 +84,6 @@ export default function Tasks() {
 
   const subjectName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? "—";
 
-  const toggleDone = async (task: Task) => {
-    if (!task.id) return;
-    await tasksService.toggleDone(task.id, !task.done);
-  };
 
 
   const askDelete = async (task: Task) => {
