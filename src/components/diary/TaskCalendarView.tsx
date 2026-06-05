@@ -79,7 +79,7 @@ export function TaskCalendarView({ subjects }: Props) {
   };
 
   const selectedTasks = tasksByDate.get(selectedDate) ?? [];
-  const subjectName = (id: number) => subjects.find((s) => s.id === id)?.name ?? "—";
+  
 
   return (
     <div className="space-y-3">
@@ -166,7 +166,6 @@ export function TaskCalendarView({ subjects }: Props) {
                 <span className={cn("text-sm flex-1 min-w-0 truncate", task.done && "line-through")}>
                   {task.title}
                 </span>
-                <span className="text-xs text-muted-foreground shrink-0">{subjectName(task.subjectId)}</span>
               </div>
             );
           })
