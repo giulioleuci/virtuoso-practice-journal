@@ -191,14 +191,20 @@ export default function Lessons() {
 
                   {/* Schedule chips */}
                   <div className="px-3.5 pb-3 flex flex-wrap gap-1.5">
-                    <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-accent/60 text-foreground/80">
-                      <CalendarClock className="h-3.5 w-3.5" />
-                      {t(`weekday.${r.dayOfWeek}`)} · {r.startTime}–{r.endTime}
-                    </span>
-                    <span className="inline-flex items-center text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/10 text-primary">
-                      {t(`teacher.freq.${r.frequency}`)}
-                    </span>
+                    {(r.schedules ?? []).map((slot, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-accent/60 text-foreground/80"
+                      >
+                        <CalendarClock className="h-3.5 w-3.5" />
+                        {t(`weekday.${slot.dayOfWeek}`)} · {slot.startTime}–{slot.endTime}
+                        <span className="text-[10px] uppercase tracking-wider text-primary/80">
+                          · {t(`teacher.freq.${slot.frequency}`)}
+                        </span>
+                      </span>
+                    ))}
                   </div>
+
 
                   {/* Footer: full-width log action */}
                   <button
