@@ -5,7 +5,7 @@ import { db, type Task, type Session, type Profile, type LessonRecurrence, type 
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { today, dayKey, formatDate, now } from "@/lib/date";
-import { upcomingLessonDates } from "@/lib/recurrence";
+import { slotForDate } from "@/lib/recurrence";
 import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
 import { subjectBorderStyle, subjectBorderStyleLight, subjectColorCss, COLOR_CLASSES, getSubjectColor } from "@/lib/subjectColors";
@@ -103,14 +103,17 @@ export default function Diary() {
     return map;
   }, [studyRoutines]);
 
-  // Today's lessons from recurrences
+  // Today's lessons from recurrences (with the matching slot for the day)
   const todayLessons = useLiveQuery(async () => {
     const recs = await db.recurrences.filter((r) => !r.deletedAt).toArray();
-    return recs.filter((r) => {
-      const dates = upcomingLessonDates(r, 1);
-      return dates[0] === todayKey;
-    });
+    const out: { rec: LessonRecurrence; slot: ReturnType<typeof slotForDate> }[] = [];
+    for (const r of recs) {
+      const slot = slotForDate(r, todayKey);
+      if (slot) out.push({ rec: r, slot });
+    }
+    return out;
   }, [todayKey]);
+
 
   // All-time sessions for streak calculation
   const allSessions = useSessions();
@@ -222,11 +225,12 @@ export default function Diary() {
       {/* Lessons today banner */}
       {todayLessons && todayLessons.length > 0 && (
         <div className="space-y-1">
-          {todayLessons.map((rec) => (
-            <LessonTodayBanner key={rec.id} rec={rec} subjects={subjects ?? []} t={t} navigate={navigate} />
+          {todayLessons.map(({ rec, slot }) => (
+            <LessonTodayBanner key={`${rec.id}-${slot?.dayOfWeek}-${slot?.startTime}`} rec={rec} slot={slot} subjects={subjects ?? []} t={t} navigate={navigate} />
           ))}
         </div>
       )}
+
 
       {pendingCount > 0 && (
         <Link
@@ -670,11 +674,13 @@ export default function Diary() {
 
 function LessonTodayBanner({
   rec,
+  slot,
   subjects,
   t,
   navigate,
 }: {
   rec: LessonRecurrence;
+  slot?: ReturnType<typeof slotForDate>;
   subjects: Subject[];
   t: (k: string, v?: Record<string, string | number>) => string;
   navigate: ReturnType<typeof useNavigate>;
@@ -689,7 +695,7 @@ function LessonTodayBanner({
         </p>
         {subject && (
           <p className="text-xs text-muted-foreground">
-            {subject.name} · {rec.startTime}
+            {subject.name}{slot ? ` · ${slot.startTime}` : ""}
           </p>
         )}
       </div>
@@ -708,6 +714,7 @@ function LessonTodayBanner({
     </div>
   );
 }
+
 
 function EndOfDaySummary({
   tasks,
