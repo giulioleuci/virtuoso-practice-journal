@@ -70,7 +70,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
     const e: string[] = [];
     if (!subjectId) e.push(t("errors.pickSubject"));
     if (!teacher.trim()) e.push(t("errors.teacherRequired"));
-    if (!schedules.length) e.push(t("errors.scheduleRequired"));
+    if (!schedules.length) e.push(t("teacher.schedules"));
     for (const s of schedules) {
       if (s.startTime >= s.endTime) {
         e.push(t("errors.endTimeAfterStart"));
