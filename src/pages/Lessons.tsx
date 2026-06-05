@@ -35,7 +35,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
-import { upcomingLessonDates } from "@/lib/recurrence";
+import { upcomingLessonDates, slotForDate } from "@/lib/recurrence";
 import { dayKey, today } from "@/lib/date";
 import { toast } from "sonner";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -118,16 +118,17 @@ export default function Lessons() {
   const upcoming = useMemo(() => {
     const today = dayKey(new Date());
     const loggedDates = new Set((lessons ?? []).map((l) => `${l.recurrenceId ?? "x"}:${l.date}`));
-    const out: { rec: LessonRecurrence; date: string; isToday: boolean }[] = [];
+    const out: { rec: LessonRecurrence; date: string; isToday: boolean; slot?: ReturnType<typeof slotForDate> }[] = [];
     for (const r of recurrences ?? []) {
       const dates = upcomingLessonDates(r, 3);
       for (const d of dates) {
         if (loggedDates.has(`${r.id}:${d}`)) continue;
-        out.push({ rec: r, date: d, isToday: d === today });
+        out.push({ rec: r, date: d, isToday: d === today, slot: slotForDate(r, d) });
       }
     }
     return out.sort((a, b) => a.date.localeCompare(b.date));
   }, [recurrences, lessons]);
+
 
   return (
     <div className="space-y-6">
@@ -248,7 +249,7 @@ export default function Lessons() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <ul className="space-y-2">
-                    {slice.map(({ rec, date, isToday }) => {
+                    {slice.map(({ rec, date, isToday, slot }) => {
                       const upSubject = subjectMap.get(rec.subjectId);
                       return (
                         <li
@@ -263,7 +264,7 @@ export default function Lessons() {
                                 {rec.teacher} · {subjectName(rec.subjectId)}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {isToday ? t("lessons.today") : formatDate(date, lang)} · {rec.startTime}–{rec.endTime}
+                                {isToday ? t("lessons.today") : formatDate(date, lang)}{slot ? ` · ${slot.startTime}–${slot.endTime}` : ""}
                               </div>
                             </div>
                             <Button
