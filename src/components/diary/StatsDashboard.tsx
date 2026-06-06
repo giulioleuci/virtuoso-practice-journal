@@ -124,7 +124,7 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
       <div className="grid grid-cols-3 gap-3">
         <Stat label={t("stats.streak")} value={`${streak}d`} icon={<Flame className="h-4 w-4 text-primary mx-auto" />} />
         <Stat label={t("stats.thisWeek")} value={`${totalWeek}`} sub={t("stats.sessions")} />
-        <Stat label={rangeLabel} value={`${hasRange ? rangeCount : (sessions ?? []).length}`} sub={`~${hasRange ? rangeMinutes : (sessions ?? []).length * 10}m`} />
+        <Stat label={rangeLabel} value={`${hasRange ? rangeCount : (sessions ?? []).length}`} />
       </div>
 
       <div>
