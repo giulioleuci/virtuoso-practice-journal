@@ -4,8 +4,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Session } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { dayKey } from "@/lib/date";
-import { computeStreak } from "@/lib/domain/streak";
-import { Flame } from "lucide-react";
+
+
 
 interface Props {
   /** YYYY-MM-DD inclusive lower bound */
@@ -27,7 +27,7 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
 
   const hasRange = !!(from || to);
 
-  const { streak, last14, heatmap, totalWeek, rangeCount, rangeMinutes, rangeDays, rangeLabel, last14Label, heatmapLabel } = useMemo(() => {
+  const { last14, heatmap, totalWeek, rangeCount, rangeMinutes, rangeDays, rangeLabel, last14Label, heatmapLabel } = useMemo(() => {
     const counts = new Map<string, number>();
     for (const s of sessions ?? []) counts.set(s.date, (counts.get(s.date) ?? 0) + 1);
     const daySet = new Set(counts.keys());
@@ -89,7 +89,6 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
     }).length;
 
     return {
-      streak: computeStreak(daySet).streak,
       last14,
       heatmap: weeks,
       totalWeek,
@@ -121,8 +120,7 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
 
   return (
     <section className="paper-card p-5 space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label={t("stats.streak")} value={`${streak}d`} icon={<Flame className="h-4 w-4 text-primary mx-auto" />} />
+      <div className="grid grid-cols-2 gap-3">
         <Stat label={t("stats.thisWeek")} value={`${totalWeek}`} sub={t("stats.sessions")} />
         <Stat label={rangeLabel} value={`${hasRange ? rangeCount : (sessions ?? []).length}`} />
       </div>
