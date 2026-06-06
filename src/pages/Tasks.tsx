@@ -17,7 +17,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, Pencil, Trash2, Repeat, CalendarClock, RefreshCw, CalendarRange } from "lucide-react";
+import { ChevronLeft, Pencil, Trash2, CalendarClock, RefreshCw, CalendarRange, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { TaskCalendarView } from "@/components/diary/TaskCalendarView";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -288,7 +291,29 @@ export default function Tasks() {
                     <h3 className={`flex-1 min-w-0 text-base font-medium leading-snug break-words ${task.done ? "line-through" : ""}`}>
                       {task.title}
                     </h3>
-                    <Repeat className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" aria-label={t("tasks.recurringSeries")} />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="h-8 w-8 -mt-1 -mr-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent shrink-0"
+                          aria-label={t("common.more")}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/tasks/edit/${task.id}`)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          {t("common.edit")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => askDelete(task)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {t("common.delete")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums">
@@ -307,26 +332,6 @@ export default function Tasks() {
                         {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}
                       </span>
                     )}
-                  </div>
-
-
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/40">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => navigate(`/tasks/edit/${task.id}`)}
-                        className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                        aria-label={t("common.edit")}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => askDelete(task)}
-                        className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
-                        aria-label={t("common.delete")}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
                   </div>
                 </li>
                 );
