@@ -4,7 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Session } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { dayKey } from "@/lib/date";
-import { computeStreak } from "@/lib/domain/streak";
+
 
 
 interface Props {
@@ -89,7 +89,6 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
     }).length;
 
     return {
-      streak: computeStreak(daySet).streak,
       last14,
       heatmap: weeks,
       totalWeek,
