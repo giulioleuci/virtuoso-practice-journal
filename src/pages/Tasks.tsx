@@ -8,7 +8,7 @@ import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/servic
 import { NOTE_GLYPH } from "@/lib/constants";
 import { subjectBorderStyle } from "@/lib/subjectColors";
 
-import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -17,7 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, Pencil, Trash2, CalendarClock, RefreshCw, CalendarRange, MoreVertical } from "lucide-react";
+import { ChevronLeft, Pencil, Trash2, RefreshCw, CalendarRange, MoreVertical } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -205,7 +205,33 @@ export default function Tasks() {
                   <h3 className="flex-1 min-w-0 text-base font-medium leading-snug break-words">
                     {r.name ?? subjectName(r.subjectId)}
                   </h3>
-                  <CalendarClock className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent shrink-0"
+                        aria-label={t("common.actions")}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleRegenerate(r)} disabled={regeneratingId === r.id}>
+                        <RefreshCw className={`h-4 w-4 mr-2 ${regeneratingId === r.id ? "animate-spin" : ""}`} />
+                        {t("studyRoutine.regenerate")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate(`/tasks/routines/edit/${r.id}`)}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        {t("common.edit")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => r.id && setDelRoutineId(r.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {t("common.delete")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums">
                   <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
@@ -214,35 +240,6 @@ export default function Tasks() {
                   <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
                     {summarizeRoutineDays(r.matrix)}
                   </span>
-                </div>
-
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleRegenerate(r)}
-                    disabled={regeneratingId === r.id}
-                    className="h-9 px-3"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-1.5 ${regeneratingId === r.id ? "animate-spin" : ""}`} />
-                    {t("studyRoutine.regenerate")}
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => navigate(`/tasks/routines/edit/${r.id}`)}
-                      className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                      aria-label={t("common.edit")}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => r.id && setDelRoutineId(r.id)}
-                      className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
-                      aria-label={t("common.delete")}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
                 </div>
               </li>
               );
