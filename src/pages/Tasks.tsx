@@ -17,7 +17,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, Pencil, Trash2, Repeat, CalendarClock, RefreshCw, CalendarRange } from "lucide-react";
+import { ChevronLeft, Pencil, Trash2, CalendarClock, RefreshCw, CalendarRange, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { TaskCalendarView } from "@/components/diary/TaskCalendarView";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
