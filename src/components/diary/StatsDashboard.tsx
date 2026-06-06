@@ -121,8 +121,7 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
 
   return (
     <section className="paper-card p-5 space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label={t("stats.streak")} value={`${streak}d`} icon={<Flame className="h-4 w-4 text-primary mx-auto" />} />
+      <div className="grid grid-cols-2 gap-3">
         <Stat label={t("stats.thisWeek")} value={`${totalWeek}`} sub={t("stats.sessions")} />
         <Stat label={rangeLabel} value={`${hasRange ? rangeCount : (sessions ?? []).length}`} />
       </div>
