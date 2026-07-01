@@ -46,16 +46,30 @@ const initial = (task?: Task | null, prefill?: Props["prefill"]): SessionFieldsV
   techniqueScores: {},
 });
 
-type SegMetricState = { confidence?: number; quality?: SessionQuality; bpmReached?: number; reps?: number };
+type SegMetricState = {
+  confidence?: number;
+  quality?: SessionQuality;
+  bpmReached?: number;
+  reps?: number;
+  layersOverridden?: boolean;
+  layersUsed?: string[];
+  layerScores?: Record<string, number>;
+  techniquesOverridden?: boolean;
+  techniquesUsed?: number[];
+  techniqueScores?: Record<number, number>;
+};
 
 export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const { t } = useI18n();
   const [v, setV] = useState<SessionFieldsValue>(() => initial(task, prefill));
   const [needHelp, setNeedHelp] = useState(false);
   const [helpText, setHelpText] = useState("");
-  const [granular, setGranular] = useState(false);
+  const initialGranular = (task?.segmentIds?.length ?? 0) >= 2;
+  const [granular, setGranular] = useState(initialGranular);
   const [segMetrics, setSegMetrics] = useState<Record<string, SegMetricState>>({});
   const [bpmSuggestionDismissed, setBpmSuggestionDismissed] = useState(false);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
 
   const [showAnswers, setShowAnswers] = useState(false);
 
@@ -107,11 +121,22 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       setV(initial(task, prefill));
       setNeedHelp(false);
       setHelpText("");
-      setGranular(false);
+      setGranular((task?.segmentIds?.length ?? 0) >= 2);
       setSegMetrics({});
       setBpmSuggestionDismissed(false);
+      setCarouselIndex(0);
     }
   }, [open, task, prefill]);
+
+  useEffect(() => {
+    if (!carouselApi) return;
+    const onSelect = () => setCarouselIndex(carouselApi.selectedScrollSnap());
+    carouselApi.on("select", onSelect);
+    onSelect();
+    return () => {
+      carouselApi.off("select", onSelect);
+    };
+  }, [carouselApi]);
 
   const updateSegMetric = (segId: string, patch: Partial<SegMetricState>) => {
     setSegMetrics((prev) => ({ ...prev, [segId]: { ...prev[segId], ...patch } }));
@@ -120,9 +145,37 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const buildSegmentMetrics = (): Record<string, SegmentMetric> => {
     const result: Record<string, SegmentMetric> = {};
     for (const [segId, m] of Object.entries(segMetrics)) {
-      if (m.confidence !== undefined || m.quality !== undefined || m.bpmReached !== undefined || m.reps !== undefined) {
-        result[segId] = m;
+      const hasMetric =
+        m.confidence !== undefined ||
+        m.quality !== undefined ||
+        m.bpmReached !== undefined ||
+        m.reps !== undefined ||
+        m.layersOverridden ||
+        m.techniquesOverridden;
+      if (!hasMetric) continue;
+      const entry: SegmentMetric = {
+        confidence: m.confidence,
+        quality: m.quality,
+        bpmReached: m.bpmReached,
+        reps: m.reps,
+      };
+      if (m.layersOverridden) {
+        entry.layersUsed = m.layersUsed ?? [];
+        if (entry.layersUsed.length) {
+          entry.layerScores = Object.fromEntries(
+            entry.layersUsed.map((l) => [l, m.layerScores?.[l] ?? 0])
+          );
+        }
       }
+      if (m.techniquesOverridden) {
+        entry.techniquesUsed = m.techniquesUsed ?? [];
+        if (entry.techniquesUsed.length) {
+          entry.techniqueScores = Object.fromEntries(
+            entry.techniquesUsed.map((id) => [id, m.techniqueScores?.[id] ?? 0])
+          );
+        }
+      }
+      result[segId] = entry;
     }
     return result;
   };
