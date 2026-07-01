@@ -204,22 +204,49 @@ export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
                       const m = session.segmentMetrics?.[id];
                       if (!m) return null;
                       return (
-                        <div key={id} className="space-y-0.5">
+                        <div key={id} className="space-y-1 pb-2 border-b border-border/40 last:border-0 last:pb-0">
                           <div className="font-medium text-sm">{label}</div>
                           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                            {m.confidence != null && (
-                              <span>★ {m.confidence}/5</span>
-                            )}
+                            {m.confidence != null && <span>★ {m.confidence}/5</span>}
                             {m.quality && (
                               <span>{t(`session.quality${m.quality.charAt(0).toUpperCase() + m.quality.slice(1)}`)}</span>
                             )}
-                            {m.bpmReached != null && (
-                              <span>{m.bpmReached} BPM</span>
-                            )}
-                            {m.reps != null && (
-                              <span>{m.reps} reps</span>
-                            )}
+                            {m.bpmReached != null && <span>{m.bpmReached} BPM</span>}
+                            {m.reps != null && <span>{m.reps} reps</span>}
                           </div>
+                          {!!m.layersUsed?.length && (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {m.layersUsed.map((l) => {
+                                const score = m.layerScores?.[l];
+                                const lbl = isTheory ? t(`library.mastery.${l}`) : l;
+                                return (
+                                  <span key={l} className="px-2 py-0.5 rounded-full text-[11px] bg-accent/60 inline-flex items-center gap-1">
+                                    <span>{lbl}</span>
+                                    {score != null && (
+                                      <span className="tabular-nums text-primary font-medium">{score}<span className="text-muted-foreground">/100</span></span>
+                                    )}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {!!m.techniquesUsed?.length && (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {m.techniquesUsed.map((tid) => {
+                                const n = (allTechniques ?? []).find((tech) => tech.id === tid)?.name;
+                                if (!n) return null;
+                                const score = m.techniqueScores?.[tid];
+                                return (
+                                  <span key={tid} className="px-2 py-0.5 rounded-full text-[11px] bg-accent/60 inline-flex items-center gap-1">
+                                    <span>{n}</span>
+                                    {score != null && (
+                                      <span className="tabular-nums text-primary font-medium">{score}<span className="text-muted-foreground">/100</span></span>
+                                    )}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
