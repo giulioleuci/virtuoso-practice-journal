@@ -295,91 +295,237 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
 
           {granular && taskSegments ? (
             <>
-              {taskSegments.map((seg) => {
-                const segId = String(seg.id);
-                const m: SegMetricState = segMetrics[segId] ?? {};
-                return (
-                  <div key={segId} className="paper-card p-4 space-y-4">
-                    <div className="font-serif text-base font-medium">{seg.label}</div>
-
-                    <StarRating
-                      label={t("session.confidenceLabel")}
-                      value={m.confidence}
-                      onChange={(c) => updateSegMetric(segId, { confidence: c })}
-                    />
-
-                    <div className="space-y-2">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                        {t("session.qualityLabel")}
-                      </Label>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {QUALITY_VALS.map((q) => (
-                          <button
-                            key={q.val}
-                            type="button"
-                            onClick={() => updateSegMetric(segId, { quality: q.val })}
-                            className={cn(
-                              "paper-card flex flex-col items-center py-2 transition-all",
-                              m.quality === q.val ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
-                            )}
-                          >
-                            <span className="text-xl font-serif leading-none">{q.symbol}</span>
-                            <span className="text-[10px] mt-0.5">{t(q.labelKey)}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {!isTheory && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                            {t("session.bpmReached")}
-                          </Label>
-                          <Input
-                            type="number"
-                            inputMode="numeric"
-                            min={20}
-                            max={400}
-                            value={m.bpmReached ?? ""}
-                            onChange={(e) =>
-                              updateSegMetric(segId, {
-                                bpmReached: e.target.value === "" ? undefined : Number(e.target.value),
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                            {t("session.repetitions")}
-                          </Label>
-                          <Input
-                            type="number"
-                            inputMode="numeric"
-                            min={0}
-                            max={9999}
-                            value={m.reps ?? ""}
-                            onChange={(e) =>
-                              updateSegMetric(segId, {
-                                reps: e.target.value === "" ? undefined : Number(e.target.value),
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
-                    )}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {t("session.segmentIndicator", {
+                      current: String(carouselIndex + 1),
+                      total: String(taskSegments.length),
+                    })}
                   </div>
-                );
-              })}
+                  <div className="flex gap-1">
+                    {taskSegments.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        aria-label={`${i + 1}`}
+                        onClick={() => carouselApi?.scrollTo(i)}
+                        className={cn(
+                          "h-1.5 rounded-full transition-all",
+                          i === carouselIndex ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <Carousel setApi={setCarouselApi} opts={{ align: "start" }} className="w-full">
+                  <CarouselContent>
+                    {taskSegments.map((seg) => {
+                      const segId = String(seg.id);
+                      const m: SegMetricState = segMetrics[segId] ?? {};
+                      const segLayers = m.layersOverridden ? (m.layersUsed ?? []) : (task?.layers ?? []);
+                      const segTechs = m.techniquesOverridden ? (m.techniquesUsed ?? []) : (task?.techniqueIds ?? []);
+                      return (
+                        <CarouselItem key={segId} className="basis-full">
+                          <div className="paper-card p-4 space-y-4">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <div className="font-serif text-base font-medium leading-tight">{seg.label}</div>
+                            </div>
 
-              <SessionFields
-                value={v}
-                onChange={(patch) => setV((cur) => ({ ...cur, ...patch }))}
-                layerOptions={layerOptions}
-                techniqueOptions={techniqueOptions}
-                isTheory={isTheory}
-                hideMetrics
-              />
+                            <StarRating
+                              label={t("session.confidenceLabel")}
+                              value={m.confidence}
+                              onChange={(c) => updateSegMetric(segId, { confidence: c })}
+                            />
+
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                                {t("session.qualityLabel")}
+                              </Label>
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {QUALITY_VALS.map((q) => (
+                                  <button
+                                    key={q.val}
+                                    type="button"
+                                    onClick={() => updateSegMetric(segId, { quality: q.val })}
+                                    className={cn(
+                                      "paper-card flex flex-col items-center py-2 transition-all",
+                                      m.quality === q.val ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
+                                    )}
+                                  >
+                                    <span className="text-xl font-serif leading-none">{q.symbol}</span>
+                                    <span className="text-[10px] mt-0.5">{t(q.labelKey)}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {!isTheory && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                                    {t("session.bpmReached")}
+                                  </Label>
+                                  <Input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={20}
+                                    max={400}
+                                    value={m.bpmReached ?? ""}
+                                    onChange={(e) =>
+                                      updateSegMetric(segId, {
+                                        bpmReached: e.target.value === "" ? undefined : Number(e.target.value),
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                                    {t("session.repetitions")}
+                                  </Label>
+                                  <Input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={0}
+                                    max={9999}
+                                    value={m.reps ?? ""}
+                                    onChange={(e) =>
+                                      updateSegMetric(segId, {
+                                        reps: e.target.value === "" ? undefined : Number(e.target.value),
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Layers override */}
+                            <div className="space-y-2">
+                              <MultiChipPicker
+                                label={t("session.segmentLayersOverride")}
+                                options={layerOptions}
+                                value={segLayers}
+                                onChange={(next) =>
+                                  updateSegMetric(segId, {
+                                    layersOverridden: true,
+                                    layersUsed: next,
+                                  })
+                                }
+                              />
+                              {segLayers.length > 0 && (
+                                <Accordion type="single" collapsible className="paper-card overflow-hidden">
+                                  <AccordionItem value="seg-layer-scores" className="border-none">
+                                    <AccordionTrigger className="px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground hover:no-underline">
+                                      {t("session.layerScores")}
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-4 pb-4">
+                                      <div className="space-y-4 pt-1">
+                                        {segLayers.map((layer) => {
+                                          const score = m.layerScores?.[layer] ?? 0;
+                                          return (
+                                            <div key={layer} className="space-y-2">
+                                              <div className="flex items-baseline justify-between">
+                                                <div className="font-medium text-sm">
+                                                  {isTheory ? t(`library.mastery.${layer}`) : layer}
+                                                </div>
+                                                <div className="font-serif text-base tabular-nums text-primary">
+                                                  {score}
+                                                  <span className="text-xs text-muted-foreground">/100</span>
+                                                </div>
+                                              </div>
+                                              <Slider
+                                                value={[score]}
+                                                min={0}
+                                                max={100}
+                                                step={5}
+                                                onValueChange={(nv) =>
+                                                  updateSegMetric(segId, {
+                                                    layersOverridden: true,
+                                                    layerScores: { ...(m.layerScores ?? {}), [layer]: nv[0] },
+                                                  })
+                                                }
+                                              />
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
+                              )}
+                            </div>
+
+                            {/* Techniques override */}
+                            <div className="space-y-2">
+                              <MultiChipPicker
+                                label={t("session.segmentTechniquesOverride")}
+                                options={techniqueOptions}
+                                value={segTechs}
+                                onChange={(next) =>
+                                  updateSegMetric(segId, {
+                                    techniquesOverridden: true,
+                                    techniquesUsed: next,
+                                  })
+                                }
+                              />
+                              {segTechs.length > 0 && (
+                                <Accordion type="single" collapsible className="paper-card overflow-hidden">
+                                  <AccordionItem value="seg-tech-scores" className="border-none">
+                                    <AccordionTrigger className="px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground hover:no-underline">
+                                      {t("session.techniqueScores")}
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-4 pb-4">
+                                      <div className="space-y-4 pt-1">
+                                        {segTechs.map((id) => {
+                                          const label = techniqueOptions.find((o) => o.value === id)?.label ?? String(id);
+                                          const score = m.techniqueScores?.[id] ?? 0;
+                                          return (
+                                            <div key={id} className="space-y-2">
+                                              <div className="flex items-baseline justify-between">
+                                                <div className="font-medium text-sm">{label}</div>
+                                                <div className="font-serif text-base tabular-nums text-primary">
+                                                  {score}
+                                                  <span className="text-xs text-muted-foreground">/100</span>
+                                                </div>
+                                              </div>
+                                              <Slider
+                                                value={[score]}
+                                                min={0}
+                                                max={100}
+                                                step={5}
+                                                onValueChange={(nv) =>
+                                                  updateSegMetric(segId, {
+                                                    techniquesOverridden: true,
+                                                    techniqueScores: { ...(m.techniqueScores ?? {}), [id]: nv[0] },
+                                                  })
+                                                }
+                                              />
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
+                              )}
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      );
+                    })}
+                  </CarouselContent>
+                </Carousel>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("session.notes")}</Label>
+                <Textarea
+                  rows={3}
+                  value={v.notes}
+                  onChange={(e) => setV((cur) => ({ ...cur, notes: e.target.value }))}
+                  placeholder={t("session.notesPlaceholder")}
+                />
+              </div>
             </>
           ) : (
             <SessionFields
