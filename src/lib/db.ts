@@ -15,6 +15,12 @@ export interface SegmentMetric {
   quality?: SessionQuality;
   bpmReached?: number;
   reps?: number;
+  /** Per-segment overrides of task-level layers/techniques.
+   *  When present, replace the task-level selection for that segment. */
+  layersUsed?: string[];
+  techniquesUsed?: number[];
+  layerScores?: Record<string, number>;
+  techniqueScores?: Record<number, number>;
 }
 export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum" | "coral" | "amber" | "teal" | "indigo" | "slate";
 export type ReminderFreq = "daily" | "weekdays" | "custom";
