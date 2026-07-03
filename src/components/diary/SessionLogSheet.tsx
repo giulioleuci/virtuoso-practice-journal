@@ -164,6 +164,29 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     setSegMetrics((prev) => ({ ...prev, [segId]: { ...prev[segId], ...patch } }));
   };
 
+  const applyDefaultsToAllSegments = () => {
+    if (!taskSegments?.length) return;
+    const defaultLayers = task?.layers ?? [];
+    const defaultTechs = task?.techniqueIds ?? [];
+    setSegMetrics((prev) => {
+      const next = { ...prev };
+      for (const seg of taskSegments) {
+        const segId = String(seg.id);
+        next[segId] = {
+          ...next[segId],
+          layersOverridden: true,
+          layersUsed: [...defaultLayers],
+          layerScores: { ...(next[segId]?.layerScores ?? {}) },
+          techniquesOverridden: true,
+          techniquesUsed: [...defaultTechs],
+          techniqueScores: { ...(next[segId]?.techniqueScores ?? {}) },
+        };
+      }
+      return next;
+    });
+    toast.success(t("session.defaultsCopied"));
+  };
+
   const buildSegmentMetrics = (): Record<string, SegmentMetric> => {
     const result: Record<string, SegmentMetric> = {};
     for (const [segId, m] of Object.entries(segMetrics)) {
