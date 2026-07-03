@@ -276,6 +276,9 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       }
     }
 
+    if (task.id) {
+      try { localStorage.removeItem(segDraftKey(task.id)); } catch { /* ignore */ }
+    }
     toast.success(t("toast.sessionLogged"));
     onOpenChange(false);
   };
