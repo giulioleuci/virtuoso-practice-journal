@@ -102,6 +102,17 @@ export function LastSessionStrip({ task, compact = false }: Props) {
     }));
   }, [isTheory, lastSession]);
 
+  const segmentBreakdown = useMemo(() => {
+    const segs = lastSession?.snapshot?.segments;
+    const metrics = lastSession?.segmentMetrics;
+    if (!segs?.length || !metrics) return null;
+    const rows = segs
+      .map(({ id, label }) => ({ id, label, m: metrics[id] }))
+      .filter((r) => !!r.m);
+    return rows.length ? rows : null;
+  }, [lastSession]);
+
+
   if (!lastSession) return null;
 
   if (compact) {
@@ -179,6 +190,52 @@ export function LastSessionStrip({ task, compact = false }: Props) {
               <span className="text-[8px] text-muted-foreground capitalize">{layer.slice(0, 3)}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {segmentBreakdown && (
+        <div className="pt-2 mt-1 border-t border-border/40 space-y-1">
+          <div className="text-[9px] uppercase tracking-widest text-muted-foreground/70 font-medium">
+            {t("session.segmentBreakdown")}
+          </div>
+          <ul className="space-y-1">
+            {segmentBreakdown.map(({ id, label, m }) => {
+              const scores = [
+                ...Object.values(m!.layerScores ?? {}),
+                ...Object.values(m!.techniqueScores ?? {}),
+              ];
+              const avg = scores.length
+                ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+                : null;
+              return (
+                <li key={id} className="flex items-center gap-2 text-[11px]">
+                  <span className="truncate flex-1 text-foreground/80">{label}</span>
+                  <span className="flex items-center gap-1.5 tabular-nums text-muted-foreground shrink-0">
+                    {m!.quality && (
+                      <span className="font-serif text-sm leading-none text-foreground">
+                        {QUALITY_SYMBOL[m!.quality]}
+                      </span>
+                    )}
+                    {m!.bpmReached != null && (
+                      <span>{NOTE_GLYPH[lastSession.noteVal ?? "quarter"]}={m!.bpmReached}</span>
+                    )}
+                    {m!.confidence != null && <span>★{m!.confidence}</span>}
+                  </span>
+                  {avg != null && (
+                    <span className="w-10 h-1.5 rounded-full bg-muted-foreground/20 overflow-hidden shrink-0">
+                      <span
+                        className={cn(
+                          "block h-full rounded-full",
+                          avg >= 70 ? "bg-primary" : avg >= 40 ? "bg-primary/50" : "bg-muted-foreground/40"
+                        )}
+                        style={{ width: `${Math.max(4, avg)}%` }}
+                      />
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </div>

@@ -545,6 +545,85 @@ targetBpm: 84, noteVal: "quarter",
     });
   }
 
+  // ---------- Multi-segment history: Ballade Intro + A theme run-throughs ----------
+  // Adds 8 past sessions with per-segment metrics so segment breakdown views
+  // (LastSessionStrip, SessionDetailSheet) have real data to visualize.
+  const multiSegLayers = ["RH", "LH", "Both", "Slow"];
+  const multiSegTechs = [tVoicing, tLegato, tPedal];
+  for (let k = 0; k < 8; k++) {
+    const ageDays = 2 + k * 3; // 2, 5, 8, 11, ... days ago
+    const dateObj = addDays(todayDate, -ageDays);
+    const d = dayKey(dateObj);
+    const taskId = (await db.tasks.add({
+      date: d,
+      subjectId: pianoId,
+      linkType: "item",
+      itemId: chopinBallade,
+      segmentIds: [balladeIntro, balladeA],
+      title: "Ballade — Intro + First theme (slow run-through)",
+      targetBpm: 68,
+      noteVal: "quarter",
+      layers: multiSegLayers,
+      techniqueIds: multiSegTechs,
+      done: true,
+      createdAt: now - ageDays * D,
+    })) as number;
+    const fullTask = await db.tasks.get(taskId);
+    if (!fullTask) continue;
+    const snapshot = await buildSessionSnapshot(fullTask);
+
+    // Deterministic per-segment metrics; Intro slightly ahead of first theme,
+    // and both improving over time (recent = higher).
+    const trend = clamp(68 + (30 - ageDays) * 0.8, 45, 92);
+    const segIds = [balladeIntro, balladeA];
+    const segmentMetrics: Record<string, import("./db").SegmentMetric> = {};
+    const allScores: number[] = [];
+    segIds.forEach((sid, si) => {
+      const segKey = String(sid);
+      const bias = si === 0 ? 6 : -4; // Intro stronger
+      const layerScores: Record<string, number> = {};
+      multiSegLayers.forEach((l, i) => {
+        const v = clamp(Math.round(trend + bias - 6 + rand(k * 31 + si * 7 + i) * 14), 0, 100);
+        layerScores[l] = v;
+        allScores.push(v);
+      });
+      const techniqueScores: Record<number, number> = {};
+      multiSegTechs.forEach((tid, i) => {
+        const v = clamp(Math.round(trend + bias - 8 + rand(k * 53 + si * 11 + i) * 18), 0, 100);
+        techniqueScores[tid] = v;
+        allScores.push(v);
+      });
+      const segMean = (Object.values(layerScores).concat(Object.values(techniqueScores)))
+        .reduce((a, b) => a + b, 0) / (multiSegLayers.length + multiSegTechs.length);
+      segmentMetrics[segKey] = {
+        confidence: clamp(Math.round(segMean / 20), 1, 5),
+        quality: pickQuality(segMean),
+        bpmReached: clamp(Math.round(68 - 4 + bias / 2 + rand(k * 17 + si) * 8), 20, 400),
+        reps: 3 + Math.round(rand(k * 19 + si) * 5),
+        layersUsed: multiSegLayers,
+        techniquesUsed: multiSegTechs,
+        layerScores,
+        techniqueScores,
+      };
+    });
+    const overallMean = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+
+    await db.sessions.add({
+      taskId,
+      date: d,
+      // Top-level metrics omitted: granular per-segment mode
+      quality: pickQuality(overallMean),
+      notes: k % 3 === 0
+        ? "Intro voicing settled; first theme still needs pedal cleanup at bar 16."
+        : undefined,
+      layersUsed: multiSegLayers,
+      techniquesUsed: multiSegTechs,
+      segmentMetrics,
+      snapshot,
+      createdAt: now - ageDays * D + 3600000,
+    });
+  }
+
   // ---------- Today + upcoming ----------
   const upcoming: TaskRow[] = [];
 
