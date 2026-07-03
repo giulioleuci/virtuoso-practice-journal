@@ -22,8 +22,10 @@ import { StarRating } from "@/components/shared/StarRating";
 import { LastSessionStrip } from "./LastSessionStrip";
 import { BpmSuggestion } from "./BpmSuggestion";
 import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
-import { MessageSquareQuote } from "lucide-react";
+import { MessageSquareQuote, ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const segDraftKey = (taskId: number) => `virtuoso-segmetrics-${taskId}`;
 
 interface Props {
   open: boolean;
