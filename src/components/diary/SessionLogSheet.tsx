@@ -344,14 +344,23 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
           {granular && taskSegments ? (
             <>
               <div className="space-y-2">
-                <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2 px-1">
+                  <button
+                    type="button"
+                    aria-label={t("common.previous")}
+                    disabled={carouselIndex === 0}
+                    onClick={() => carouselApi?.scrollPrev()}
+                    className="p-1 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     {t("session.segmentIndicator", {
                       current: String(carouselIndex + 1),
                       total: String(taskSegments.length),
                     })}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-1 justify-center">
                     {taskSegments.map((_, i) => (
                       <button
                         key={i}
@@ -365,6 +374,24 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
                       />
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    aria-label={t("session.copyDefaultsToAll")}
+                    title={t("session.copyDefaultsToAll")}
+                    onClick={applyDefaultsToAllSegments}
+                    className="p-1 rounded-full text-muted-foreground hover:text-foreground"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("common.next")}
+                    disabled={carouselIndex >= taskSegments.length - 1}
+                    onClick={() => carouselApi?.scrollNext()}
+                    className="p-1 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
                 <Carousel setApi={setCarouselApi} opts={{ align: "start" }} className="w-full">
                   <CarouselContent>
