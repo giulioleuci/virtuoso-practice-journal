@@ -624,6 +624,7 @@ targetBpm: 84, noteVal: "quarter",
     });
   }
 
+  // ---------- Today + upcoming ----------
   const upcoming: TaskRow[] = [];
 
   // Hanon — daily template
