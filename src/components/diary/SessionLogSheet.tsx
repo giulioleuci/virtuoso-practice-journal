@@ -22,8 +22,10 @@ import { StarRating } from "@/components/shared/StarRating";
 import { LastSessionStrip } from "./LastSessionStrip";
 import { BpmSuggestion } from "./BpmSuggestion";
 import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
-import { MessageSquareQuote } from "lucide-react";
+import { MessageSquareQuote, ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const segDraftKey = (taskId: number) => `virtuoso-segmetrics-${taskId}`;
 
 interface Props {
   open: boolean;
@@ -122,11 +124,31 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       setNeedHelp(false);
       setHelpText("");
       setGranular((task?.segmentIds?.length ?? 0) >= 2);
-      setSegMetrics({});
+      // Restore persisted per-segment overrides for this task, if any
+      let restored: Record<string, SegMetricState> = {};
+      if (task.id) {
+        try {
+          const raw = localStorage.getItem(segDraftKey(task.id));
+          if (raw) restored = JSON.parse(raw) ?? {};
+        } catch { /* ignore */ }
+      }
+      setSegMetrics(restored);
       setBpmSuggestionDismissed(false);
       setCarouselIndex(0);
     }
   }, [open, task, prefill]);
+
+  // Autosave segment overrides to localStorage
+  useEffect(() => {
+    if (!open || !task?.id) return;
+    try {
+      if (Object.keys(segMetrics).length === 0) {
+        localStorage.removeItem(segDraftKey(task.id));
+      } else {
+        localStorage.setItem(segDraftKey(task.id), JSON.stringify(segMetrics));
+      }
+    } catch { /* ignore */ }
+  }, [segMetrics, open, task?.id]);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -140,6 +162,29 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
 
   const updateSegMetric = (segId: string, patch: Partial<SegMetricState>) => {
     setSegMetrics((prev) => ({ ...prev, [segId]: { ...prev[segId], ...patch } }));
+  };
+
+  const applyDefaultsToAllSegments = () => {
+    if (!taskSegments?.length) return;
+    const defaultLayers = task?.layers ?? [];
+    const defaultTechs = task?.techniqueIds ?? [];
+    setSegMetrics((prev) => {
+      const next = { ...prev };
+      for (const seg of taskSegments) {
+        const segId = String(seg.id);
+        next[segId] = {
+          ...next[segId],
+          layersOverridden: true,
+          layersUsed: [...defaultLayers],
+          layerScores: { ...(next[segId]?.layerScores ?? {}) },
+          techniquesOverridden: true,
+          techniquesUsed: [...defaultTechs],
+          techniqueScores: { ...(next[segId]?.techniqueScores ?? {}) },
+        };
+      }
+      return next;
+    });
+    toast.success(t("session.defaultsCopied"));
   };
 
   const buildSegmentMetrics = (): Record<string, SegmentMetric> => {
@@ -231,6 +276,9 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       }
     }
 
+    if (task.id) {
+      try { localStorage.removeItem(segDraftKey(task.id)); } catch { /* ignore */ }
+    }
     toast.success(t("toast.sessionLogged"));
     onOpenChange(false);
   };
@@ -296,14 +344,23 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
           {granular && taskSegments ? (
             <>
               <div className="space-y-2">
-                <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2 px-1">
+                  <button
+                    type="button"
+                    aria-label={t("common.previous")}
+                    disabled={carouselIndex === 0}
+                    onClick={() => carouselApi?.scrollPrev()}
+                    className="p-1 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     {t("session.segmentIndicator", {
                       current: String(carouselIndex + 1),
                       total: String(taskSegments.length),
                     })}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-1 justify-center">
                     {taskSegments.map((_, i) => (
                       <button
                         key={i}
@@ -317,6 +374,24 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
                       />
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    aria-label={t("session.copyDefaultsToAll")}
+                    title={t("session.copyDefaultsToAll")}
+                    onClick={applyDefaultsToAllSegments}
+                    className="p-1 rounded-full text-muted-foreground hover:text-foreground"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("common.next")}
+                    disabled={carouselIndex >= taskSegments.length - 1}
+                    onClick={() => carouselApi?.scrollNext()}
+                    className="p-1 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
                 <Carousel setApi={setCarouselApi} opts={{ align: "start" }} className="w-full">
                   <CarouselContent>
