@@ -217,7 +217,7 @@ export function LastSessionStrip({ task, compact = false }: Props) {
                       </span>
                     )}
                     {m!.bpmReached != null && (
-                      <span>{NOTE_GLYPH[m!.noteVal ?? lastSession.noteVal ?? "quarter"]}={m!.bpmReached}</span>
+                      <span>{NOTE_GLYPH[lastSession.noteVal ?? "quarter"]}={m!.bpmReached}</span>
                     )}
                     {m!.confidence != null && <span>★{m!.confidence}</span>}
                   </span>
