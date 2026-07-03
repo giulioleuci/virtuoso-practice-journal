@@ -124,11 +124,31 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       setNeedHelp(false);
       setHelpText("");
       setGranular((task?.segmentIds?.length ?? 0) >= 2);
-      setSegMetrics({});
+      // Restore persisted per-segment overrides for this task, if any
+      let restored: Record<string, SegMetricState> = {};
+      if (task.id) {
+        try {
+          const raw = localStorage.getItem(segDraftKey(task.id));
+          if (raw) restored = JSON.parse(raw) ?? {};
+        } catch { /* ignore */ }
+      }
+      setSegMetrics(restored);
       setBpmSuggestionDismissed(false);
       setCarouselIndex(0);
     }
   }, [open, task, prefill]);
+
+  // Autosave segment overrides to localStorage
+  useEffect(() => {
+    if (!open || !task?.id) return;
+    try {
+      if (Object.keys(segMetrics).length === 0) {
+        localStorage.removeItem(segDraftKey(task.id));
+      } else {
+        localStorage.setItem(segDraftKey(task.id), JSON.stringify(segMetrics));
+      }
+    } catch { /* ignore */ }
+  }, [segMetrics, open, task?.id]);
 
   useEffect(() => {
     if (!carouselApi) return;
