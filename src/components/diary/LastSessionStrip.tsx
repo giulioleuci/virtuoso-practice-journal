@@ -102,6 +102,17 @@ export function LastSessionStrip({ task, compact = false }: Props) {
     }));
   }, [isTheory, lastSession]);
 
+  const segmentBreakdown = useMemo(() => {
+    const segs = lastSession?.snapshot?.segments;
+    const metrics = lastSession?.segmentMetrics;
+    if (!segs?.length || !metrics) return null;
+    const rows = segs
+      .map(({ id, label }) => ({ id, label, m: metrics[id] }))
+      .filter((r) => !!r.m);
+    return rows.length ? rows : null;
+  }, [lastSession]);
+
+
   if (!lastSession) return null;
 
   if (compact) {
