@@ -704,6 +704,7 @@
   "studyRoutine.searchPlaceholder": "Cerca brani, segmenti, raccolte…",
   "studyRoutine.noResults": "Nessun risultato",
   "studyRoutine.addItems": "Aggiungi elementi dal pool",
+  "studyRoutine.selectedItems": "Elementi selezionati",
   "studyRoutine.noItemsAssigned": "Nessun elemento assegnato",
   "studyRoutine.advanced": "Impostazioni avanzate",
   "studyRoutine.toggleSegments": "Mostra/nascondi segmenti",
