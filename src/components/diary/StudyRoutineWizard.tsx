@@ -74,6 +74,146 @@ function genId(): string {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 }
 
+interface GroupItemsEditorProps {
+  group: StudyGroup;
+  masterPool: StudyPoolEntry[];
+  poolEntryLabel: (entry: StudyPoolEntry) => string;
+  groupHasEntry: (groupId: string, entry: StudyPoolEntry) => boolean;
+  toggleGroupEntry: (groupId: string, entry: StudyPoolEntry) => void;
+}
+
+function GroupItemsEditor({
+  group,
+  masterPool,
+  poolEntryLabel,
+  groupHasEntry,
+  toggleGroupEntry,
+}: GroupItemsEditorProps) {
+  const { t } = useI18n();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [pickerPage, setPickerPage] = useState(1);
+  const PICKER_PAGE_SIZE = 8;
+
+  useEffect(() => {
+    if (pickerOpen) setPickerPage(1);
+  }, [pickerOpen]);
+
+  const pageCount = Math.max(1, Math.ceil(masterPool.length / PICKER_PAGE_SIZE));
+  const pagedPool = masterPool.slice(
+    (pickerPage - 1) * PICKER_PAGE_SIZE,
+    pickerPage * PICKER_PAGE_SIZE,
+  );
+
+  return (
+    <>
+      <div className="flex gap-2">
+        <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex-1 justify-start h-8"
+              disabled={masterPool.length === 0}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              {t("studyRoutine.addItems")}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("studyRoutine.addItems")}</DialogTitle>
+            </DialogHeader>
+            {masterPool.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4">
+                {t("studyRoutine.poolEmpty")}
+              </p>
+            ) : (
+              <>
+                <div className="divide-y divide-border max-h-[420px] overflow-y-auto">
+                  {pagedPool.map((entry) => {
+                    const checked = groupHasEntry(group.id, entry);
+                    return (
+                      <label
+                        key={poolEntryKey(entry)}
+                        className="flex items-start gap-2 text-sm cursor-pointer px-1 py-2 hover:bg-accent/50 rounded"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleGroupEntry(group.id, entry)}
+                          className="mt-0.5 shrink-0"
+                        />
+                        <span className="flex-1 break-words whitespace-normal">
+                          {poolEntryLabel(entry)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <Pager page={pickerPage} pageCount={pageCount} onChange={setPickerPage} />
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0"
+              disabled={group.pool.length === 0}
+            >
+              <Eye className="h-3.5 w-3.5 mr-1.5" />
+              <span className="tabular-nums">{group.pool.length}</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {t("studyRoutine.selectedItems")} ({group.pool.length})
+              </DialogTitle>
+            </DialogHeader>
+            {group.pool.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4">
+                {t("studyRoutine.noItemsAssigned")}
+              </p>
+            ) : (
+              <ul className="divide-y divide-border max-h-[420px] overflow-y-auto">
+                {group.pool.map((entry) => (
+                  <li
+                    key={poolEntryKey(entry)}
+                    className="flex items-start gap-2 py-2 text-sm"
+                  >
+                    <span className="flex-1 break-words whitespace-normal">
+                      {poolEntryLabel(entry)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupEntry(group.id, entry)}
+                      className="p-1 text-muted-foreground hover:text-destructive shrink-0"
+                      aria-label={t("common.remove")}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+      {group.pool.length === 0 && (
+        <p className="text-xs text-muted-foreground italic">
+          {t("studyRoutine.noItemsAssigned")}
+        </p>
+      )}
+    </>
+  );
+}
+
 const DAYS: { index: number; tKey: string }[] = [
   { index: 1, tKey: "weekday.1" },
   { index: 2, tKey: "weekday.2" },
