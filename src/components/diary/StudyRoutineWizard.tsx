@@ -24,9 +24,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, ChevronLeft } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, ChevronLeft, Eye } from "lucide-react";
 
 interface PagerProps {
   page: number;
@@ -65,6 +72,146 @@ function Pager({ page, pageCount, onChange }: PagerProps) {
 
 function genId(): string {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+}
+
+interface GroupItemsEditorProps {
+  group: StudyGroup;
+  masterPool: StudyPoolEntry[];
+  poolEntryLabel: (entry: StudyPoolEntry) => string;
+  groupHasEntry: (groupId: string, entry: StudyPoolEntry) => boolean;
+  toggleGroupEntry: (groupId: string, entry: StudyPoolEntry) => void;
+}
+
+function GroupItemsEditor({
+  group,
+  masterPool,
+  poolEntryLabel,
+  groupHasEntry,
+  toggleGroupEntry,
+}: GroupItemsEditorProps) {
+  const { t } = useI18n();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [pickerPage, setPickerPage] = useState(1);
+  const PICKER_PAGE_SIZE = 8;
+
+  useEffect(() => {
+    if (pickerOpen) setPickerPage(1);
+  }, [pickerOpen]);
+
+  const pageCount = Math.max(1, Math.ceil(masterPool.length / PICKER_PAGE_SIZE));
+  const pagedPool = masterPool.slice(
+    (pickerPage - 1) * PICKER_PAGE_SIZE,
+    pickerPage * PICKER_PAGE_SIZE,
+  );
+
+  return (
+    <>
+      <div className="flex gap-2">
+        <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex-1 justify-start h-8"
+              disabled={masterPool.length === 0}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              {t("studyRoutine.addItems")}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("studyRoutine.addItems")}</DialogTitle>
+            </DialogHeader>
+            {masterPool.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4">
+                {t("studyRoutine.poolEmpty")}
+              </p>
+            ) : (
+              <>
+                <div className="divide-y divide-border max-h-[420px] overflow-y-auto">
+                  {pagedPool.map((entry) => {
+                    const checked = groupHasEntry(group.id, entry);
+                    return (
+                      <label
+                        key={poolEntryKey(entry)}
+                        className="flex items-start gap-2 text-sm cursor-pointer px-1 py-2 hover:bg-accent/50 rounded"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleGroupEntry(group.id, entry)}
+                          className="mt-0.5 shrink-0"
+                        />
+                        <span className="flex-1 break-words whitespace-normal">
+                          {poolEntryLabel(entry)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <Pager page={pickerPage} pageCount={pageCount} onChange={setPickerPage} />
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0"
+              disabled={group.pool.length === 0}
+            >
+              <Eye className="h-3.5 w-3.5 mr-1.5" />
+              <span className="tabular-nums">{group.pool.length}</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {t("studyRoutine.selectedItems")} ({group.pool.length})
+              </DialogTitle>
+            </DialogHeader>
+            {group.pool.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4">
+                {t("studyRoutine.noItemsAssigned")}
+              </p>
+            ) : (
+              <ul className="divide-y divide-border max-h-[420px] overflow-y-auto">
+                {group.pool.map((entry) => (
+                  <li
+                    key={poolEntryKey(entry)}
+                    className="flex items-start gap-2 py-2 text-sm"
+                  >
+                    <span className="flex-1 break-words whitespace-normal">
+                      {poolEntryLabel(entry)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupEntry(group.id, entry)}
+                      className="p-1 text-muted-foreground hover:text-destructive shrink-0"
+                      aria-label={t("common.remove")}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+      {group.pool.length === 0 && (
+        <p className="text-xs text-muted-foreground italic">
+          {t("studyRoutine.noItemsAssigned")}
+        </p>
+      )}
+    </>
+  );
 }
 
 const DAYS: { index: number; tKey: string }[] = [
@@ -680,70 +827,13 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                     </button>
                   </div>
                   <AccordionContent className="pb-3 space-y-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start h-8"
-                          disabled={masterPool.length === 0}
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1.5" />
-                          {t("studyRoutine.addItems")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[280px] p-0 max-h-[280px] overflow-y-auto" align="start">
-                        {masterPool.length === 0 ? (
-                          <p className="text-xs text-muted-foreground p-3">
-                            {t("studyRoutine.poolEmpty")}
-                          </p>
-                        ) : (
-                          <div className="p-1">
-                            {masterPool.map((entry) => {
-                              const checked = groupHasEntry(group.id, entry);
-                              return (
-                                <label
-                                  key={poolEntryKey(entry)}
-                                  className="flex items-center gap-2 text-sm cursor-pointer rounded px-2 py-1.5 hover:bg-accent"
-                                >
-                                  <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={() => toggleGroupEntry(group.id, entry)}
-                                  />
-                                  <span className="truncate">{poolEntryLabel(entry)}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </PopoverContent>
-                    </Popover>
-
-                    {group.pool.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">
-                        {t("studyRoutine.noItemsAssigned")}
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {group.pool.map((entry) => (
-                          <span
-                            key={poolEntryKey(entry)}
-                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-accent/60 max-w-full"
-                          >
-                            <span className="truncate max-w-[160px]">{poolEntryLabel(entry)}</span>
-                            <button
-                              type="button"
-                              onClick={() => toggleGroupEntry(group.id, entry)}
-                              className="ml-0.5 opacity-60 hover:opacity-100 shrink-0"
-                              aria-label={t("common.remove")}
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <GroupItemsEditor
+                      group={group}
+                      masterPool={masterPool}
+                      poolEntryLabel={poolEntryLabel}
+                      groupHasEntry={groupHasEntry}
+                      toggleGroupEntry={toggleGroupEntry}
+                    />
                   </AccordionContent>
                 </AccordionItem>
               ))}

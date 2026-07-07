@@ -704,6 +704,7 @@
   "studyRoutine.searchPlaceholder": "Search items, segments, collections…",
   "studyRoutine.noResults": "No results",
   "studyRoutine.addItems": "Add items from pool",
+  "studyRoutine.selectedItems": "Selected items",
   "studyRoutine.noItemsAssigned": "No items assigned yet",
   "studyRoutine.advanced": "Advanced settings",
   "studyRoutine.toggleSegments": "Toggle segments",
