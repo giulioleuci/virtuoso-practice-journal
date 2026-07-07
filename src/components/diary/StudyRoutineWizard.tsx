@@ -144,9 +144,9 @@ function GroupItemsEditor({
                           onCheckedChange={() => toggleGroupEntry(group.id, entry)}
                           className="mt-0.5 shrink-0"
                         />
-                        <span className="flex-1 break-words whitespace-normal">
+                        <div className="flex-1 break-words whitespace-normal">
                           {poolEntryLabel(entry)}
-                        </span>
+                        </div>
                       </label>
                     );
                   })}
