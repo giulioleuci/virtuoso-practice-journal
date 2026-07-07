@@ -680,70 +680,13 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                     </button>
                   </div>
                   <AccordionContent className="pb-3 space-y-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start h-8"
-                          disabled={masterPool.length === 0}
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1.5" />
-                          {t("studyRoutine.addItems")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[280px] p-0 max-h-[280px] overflow-y-auto" align="start">
-                        {masterPool.length === 0 ? (
-                          <p className="text-xs text-muted-foreground p-3">
-                            {t("studyRoutine.poolEmpty")}
-                          </p>
-                        ) : (
-                          <div className="p-1">
-                            {masterPool.map((entry) => {
-                              const checked = groupHasEntry(group.id, entry);
-                              return (
-                                <label
-                                  key={poolEntryKey(entry)}
-                                  className="flex items-center gap-2 text-sm cursor-pointer rounded px-2 py-1.5 hover:bg-accent"
-                                >
-                                  <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={() => toggleGroupEntry(group.id, entry)}
-                                  />
-                                  <span className="truncate">{poolEntryLabel(entry)}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </PopoverContent>
-                    </Popover>
-
-                    {group.pool.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">
-                        {t("studyRoutine.noItemsAssigned")}
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {group.pool.map((entry) => (
-                          <span
-                            key={poolEntryKey(entry)}
-                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-accent/60 max-w-full"
-                          >
-                            <span className="truncate max-w-[160px]">{poolEntryLabel(entry)}</span>
-                            <button
-                              type="button"
-                              onClick={() => toggleGroupEntry(group.id, entry)}
-                              className="ml-0.5 opacity-60 hover:opacity-100 shrink-0"
-                              aria-label={t("common.remove")}
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <GroupItemsEditor
+                      group={group}
+                      masterPool={masterPool}
+                      poolEntryLabel={poolEntryLabel}
+                      groupHasEntry={groupHasEntry}
+                      toggleGroupEntry={toggleGroupEntry}
+                    />
                   </AccordionContent>
                 </AccordionItem>
               ))}
