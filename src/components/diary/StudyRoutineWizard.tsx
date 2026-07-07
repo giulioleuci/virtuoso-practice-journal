@@ -77,7 +77,7 @@ function genId(): string {
 interface GroupItemsEditorProps {
   group: StudyGroup;
   masterPool: StudyPoolEntry[];
-  poolEntryLabel: (entry: StudyPoolEntry) => string;
+  poolEntryLabel: (entry: StudyPoolEntry) => ReactNode;
   groupHasEntry: (groupId: string, entry: StudyPoolEntry) => boolean;
   toggleGroupEntry: (groupId: string, entry: StudyPoolEntry) => void;
 }
