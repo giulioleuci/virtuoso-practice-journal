@@ -187,9 +187,9 @@ function GroupItemsEditor({
                     key={poolEntryKey(entry)}
                     className="flex items-start gap-2 py-2 text-sm"
                   >
-                    <span className="flex-1 break-words whitespace-normal">
+                    <div className="flex-1 break-words whitespace-normal">
                       {poolEntryLabel(entry)}
-                    </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => toggleGroupEntry(group.id, entry)}
