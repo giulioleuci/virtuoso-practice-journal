@@ -24,9 +24,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, ChevronLeft } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, ChevronLeft, Eye } from "lucide-react";
 
 interface PagerProps {
   page: number;
