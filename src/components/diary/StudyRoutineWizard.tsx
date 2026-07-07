@@ -408,19 +408,45 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
 
   // --- Pool entry label ---
 
-  const poolEntryLabel = (entry: StudyPoolEntry): string => {
+  const poolEntryLabel = (entry: StudyPoolEntry): ReactNode => {
     if (entry.type === "item") {
       const item = (library ?? []).find((i) => i.id === entry.id);
-      return item?.title ?? String(entry.id);
+      if (!item) return String(entry.id);
+      return (
+        <div className="leading-tight">
+          <span className="text-sm">{item.title}</span>
+          {item.composer && (
+            <span className="text-[10px] text-muted-foreground"> - {item.composer}</span>
+          )}
+        </div>
+      );
     }
     if (entry.type === "segment") {
       const seg = (allSegments ?? []).find((s) => s.id === entry.id);
       if (!seg) return String(entry.id);
       const item = (library ?? []).find((i) => i.id === seg.itemId);
-      return `${item?.title ?? "—"} — ${seg.label}`;
+      return (
+        <div className="leading-tight">
+          <div className="text-sm">
+            <span>{item?.title ?? "—"}</span>
+            {item?.composer && (
+              <span className="text-[10px] text-muted-foreground"> - {item.composer}</span>
+            )}
+          </div>
+          <div className="text-sm">{seg.label}</div>
+        </div>
+      );
     }
     const col = (allCollections ?? []).find((c) => c.id === entry.id);
-    return col?.name ?? String(entry.id);
+    if (!col) return String(entry.id);
+    return (
+      <div className="leading-tight">
+        <span className="text-sm">{col.name}</span>
+        {col.composer && (
+          <span className="text-[10px] text-muted-foreground"> - {col.composer}</span>
+        )}
+      </div>
+    );
   };
 
   // --- Submit ---
