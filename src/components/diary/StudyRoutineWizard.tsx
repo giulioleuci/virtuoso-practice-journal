@@ -751,9 +751,11 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                         {masterPool.map((entry) => (
                           <span
                             key={poolEntryKey(entry)}
-                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-accent/60 max-w-full"
+                            className="inline-flex items-start gap-1 px-2 py-1 rounded-full bg-accent/60 max-w-full"
                           >
-                            <span className="truncate max-w-[180px]">{poolEntryLabel(entry)}</span>
+                            <div className="break-words whitespace-normal max-w-[180px] text-left leading-tight">
+                              {poolEntryLabel(entry)}
+                            </div>
                             <button
                               type="button"
                               onClick={() => removeFromPool(entry)}
