@@ -704,6 +704,7 @@
   "studyRoutine.searchPlaceholder": "Stücke, Abschnitte, Sammlungen suchen…",
   "studyRoutine.noResults": "Keine Ergebnisse",
   "studyRoutine.addItems": "Elemente aus dem Pool hinzufügen",
+  "studyRoutine.selectedItems": "Ausgewählte Elemente",
   "studyRoutine.noItemsAssigned": "Noch keine Elemente zugewiesen",
   "studyRoutine.advanced": "Erweiterte Einstellungen",
   "studyRoutine.toggleSegments": "Segmente umschalten",
