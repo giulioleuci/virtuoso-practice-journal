@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
@@ -77,7 +77,7 @@ function genId(): string {
 interface GroupItemsEditorProps {
   group: StudyGroup;
   masterPool: StudyPoolEntry[];
-  poolEntryLabel: (entry: StudyPoolEntry) => string;
+  poolEntryLabel: (entry: StudyPoolEntry) => ReactNode;
   groupHasEntry: (groupId: string, entry: StudyPoolEntry) => boolean;
   toggleGroupEntry: (groupId: string, entry: StudyPoolEntry) => void;
 }
@@ -144,9 +144,9 @@ function GroupItemsEditor({
                           onCheckedChange={() => toggleGroupEntry(group.id, entry)}
                           className="mt-0.5 shrink-0"
                         />
-                        <span className="flex-1 break-words whitespace-normal">
+                        <div className="flex-1 break-words whitespace-normal">
                           {poolEntryLabel(entry)}
-                        </span>
+                        </div>
                       </label>
                     );
                   })}
@@ -187,9 +187,9 @@ function GroupItemsEditor({
                     key={poolEntryKey(entry)}
                     className="flex items-start gap-2 py-2 text-sm"
                   >
-                    <span className="flex-1 break-words whitespace-normal">
+                    <div className="flex-1 break-words whitespace-normal">
                       {poolEntryLabel(entry)}
-                    </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => toggleGroupEntry(group.id, entry)}
@@ -408,19 +408,45 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
 
   // --- Pool entry label ---
 
-  const poolEntryLabel = (entry: StudyPoolEntry): string => {
+  const poolEntryLabel = (entry: StudyPoolEntry): ReactNode => {
     if (entry.type === "item") {
       const item = (library ?? []).find((i) => i.id === entry.id);
-      return item?.title ?? String(entry.id);
+      if (!item) return String(entry.id);
+      return (
+        <div className="leading-tight">
+          <span className="text-sm">{item.title}</span>
+          {item.composer && (
+            <span className="text-[10px] text-muted-foreground"> - {item.composer}</span>
+          )}
+        </div>
+      );
     }
     if (entry.type === "segment") {
       const seg = (allSegments ?? []).find((s) => s.id === entry.id);
       if (!seg) return String(entry.id);
       const item = (library ?? []).find((i) => i.id === seg.itemId);
-      return `${item?.title ?? "—"} — ${seg.label}`;
+      return (
+        <div className="leading-tight">
+          <div className="text-sm">
+            <span>{item?.title ?? "—"}</span>
+            {item?.composer && (
+              <span className="text-[10px] text-muted-foreground"> - {item.composer}</span>
+            )}
+          </div>
+          <div className="text-sm">{seg.label}</div>
+        </div>
+      );
     }
     const col = (allCollections ?? []).find((c) => c.id === entry.id);
-    return col?.name ?? String(entry.id);
+    if (!col) return String(entry.id);
+    return (
+      <div className="leading-tight">
+        <span className="text-sm">{col.name}</span>
+        {col.composer && (
+          <span className="text-[10px] text-muted-foreground"> - {col.composer}</span>
+        )}
+      </div>
+    );
   };
 
   // --- Submit ---
@@ -751,9 +777,11 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                         {masterPool.map((entry) => (
                           <span
                             key={poolEntryKey(entry)}
-                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-accent/60 max-w-full"
+                            className="inline-flex items-start gap-1 px-2 py-1 rounded-full bg-accent/60 max-w-full"
                           >
-                            <span className="truncate max-w-[180px]">{poolEntryLabel(entry)}</span>
+                            <div className="break-words whitespace-normal max-w-[180px] text-left leading-tight">
+                              {poolEntryLabel(entry)}
+                            </div>
                             <button
                               type="button"
                               onClick={() => removeFromPool(entry)}
