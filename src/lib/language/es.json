@@ -704,6 +704,7 @@
   "studyRoutine.searchPlaceholder": "Buscar piezas, segmentos, colecciones…",
   "studyRoutine.noResults": "Sin resultados",
   "studyRoutine.addItems": "Añadir elementos del pool",
+  "studyRoutine.selectedItems": "Elementos seleccionados",
   "studyRoutine.noItemsAssigned": "Aún no hay elementos asignados",
   "studyRoutine.advanced": "Ajustes avanzados",
   "studyRoutine.toggleSegments": "Mostrar/ocultar segmentos",
