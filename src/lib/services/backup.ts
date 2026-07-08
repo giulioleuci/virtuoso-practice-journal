@@ -2,6 +2,9 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 
+const EXPORT_VERSION = 2;
+const SUPPORTED_VERSIONS = new Set([1, 2]);
+
 const importDataSchema = z.object({
   version: z.number().optional(),
   exportedAt: z.number().optional(),
@@ -12,12 +15,15 @@ export const backupService = {
   async exportAll(): Promise<string> {
     const dump: Record<string, unknown> = {};
     for (const tbl of db.tables) dump[tbl.name] = await tbl.toArray();
-    return JSON.stringify({ version: 1, exportedAt: Date.now(), data: dump }, null, 2);
+    return JSON.stringify({ version: EXPORT_VERSION, exportedAt: Date.now(), data: dump }, null, 2);
   },
 
   async importAll(json: string): Promise<void> {
     const raw = JSON.parse(json);
     const parsed = importDataSchema.parse(raw);
+    if (parsed.version != null && !SUPPORTED_VERSIONS.has(parsed.version)) {
+      throw new Error(`Unsupported backup version: ${parsed.version}`);
+    }
     await db.transaction("rw", db.tables, async () => {
       for (const tbl of db.tables) {
         await tbl.clear();

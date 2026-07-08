@@ -777,5 +777,19 @@
   "routine.previewTitle": "Tasks for the first week",
   "routine.previewEmpty": "Adjust the schedule above to see a preview.",
   "subjects.customColor": "Custom color",
-  "common.reset": "Reset"
+  "common.reset": "Reset",
+  "session.segmentHistory": "Segment history",
+  "session.noSegmentHistory": "No prior sessions recorded for this segment.",
+  "session.viewFullSession": "View full session",
+  "homework.title": "Add homework",
+  "homework.subtitle": "Capture assignments the teacher gives you during the lesson — they'll be attached when you record it.",
+  "homework.subject": "Subject",
+  "homework.recurrence": "Teacher",
+  "homework.text": "Homework",
+  "homework.textPlaceholder": "Practice this passage at 80 BPM…",
+  "homework.add": "Add homework",
+  "homework.pendingFor": "Pending for {{subject}}",
+  "homework.pendingMerged": "{{count}} pending",
+  "homework.pendingMerged_plural": "{{count}} pending",
+  "toast.homeworkAdded": "Homework saved"
 }

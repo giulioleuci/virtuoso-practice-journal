@@ -251,6 +251,15 @@ export interface Assignment {
   createdAt: number;
 }
 
+/** Draft homework captured live during a lesson, before the lesson is recorded. */
+export interface PendingAssignment {
+  id?: number;
+  subjectId: number;
+  recurrenceId?: number;
+  text: string;
+  createdAt: number;
+}
+
 export interface Collection {
   id?: number;
   /** Library kind this collection groups. Each collection is kind-specific. */
@@ -319,6 +328,7 @@ class VirtuosoDB extends Dexie {
   declare collections: Table<Collection, number, Draft<Collection>>;
   declare collectionItems: Table<CollectionItem, number, Draft<CollectionItem>>;
   declare studyRoutines: Table<StudyRoutine, number, Draft<StudyRoutine>>;
+  declare pendingAssignments: Table<PendingAssignment, number, Draft<PendingAssignment>>;
 
   constructor() {
     super("virtuoso");
@@ -398,6 +408,10 @@ class VirtuosoDB extends Dexie {
         delete r.endTime;
         delete r.frequency;
       });
+    });
+    // v11: pending (draft) homework assignments captured before a lesson is logged
+    this.version(11).stores({
+      pendingAssignments: "++id, subjectId, recurrenceId, createdAt",
     });
   }
 }

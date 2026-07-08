@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, THEORY_LAYERS, type Session, type Task } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
 import { today } from "@/lib/date";
 import { cn } from "@/lib/utils";
+import { SegmentHistorySheet } from "./SegmentHistorySheet";
+import { SessionDetailSheet } from "./SessionDetailSheet";
 
 
 interface Props {
@@ -112,6 +114,8 @@ export function LastSessionStrip({ task, compact = false }: Props) {
     return rows.length ? rows : null;
   }, [lastSession]);
 
+  const [historyFor, setHistoryFor] = useState<{ id: number | string; label: string } | null>(null);
+  const [detailSession, setDetailSession] = useState<Session | null>(null);
 
   if (!lastSession) return null;
 
@@ -207,37 +211,64 @@ export function LastSessionStrip({ task, compact = false }: Props) {
               const avg = scores.length
                 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
                 : null;
+              const numericId = typeof id === "string" ? Number(id) : id;
+              const canDrill = !!task.itemId && Number.isFinite(numericId);
               return (
-                <li key={id} className="flex items-center gap-2 text-[11px]">
-                  <span className="truncate flex-1 text-foreground/80">{label}</span>
-                  <span className="flex items-center gap-1.5 tabular-nums text-muted-foreground shrink-0">
-                    {m!.quality && (
-                      <span className="font-serif text-sm leading-none text-foreground">
-                        {QUALITY_SYMBOL[m!.quality]}
+                <li key={id}>
+                  <button
+                    type="button"
+                    disabled={!canDrill}
+                    onClick={() => canDrill && setHistoryFor({ id: numericId, label })}
+                    className={cn(
+                      "w-full flex items-center gap-2 text-[11px] rounded-md px-1 py-1 -mx-1 text-left",
+                      canDrill && "hover:bg-muted/50 transition-colors",
+                    )}
+                    aria-label={canDrill ? t("session.segmentHistory") : undefined}
+                  >
+                    <span className="truncate flex-1 text-foreground/80">{label}</span>
+                    <span className="flex items-center gap-1.5 tabular-nums text-muted-foreground shrink-0">
+                      {m!.quality && (
+                        <span className="font-serif text-sm leading-none text-foreground">
+                          {QUALITY_SYMBOL[m!.quality]}
+                        </span>
+                      )}
+                      {m!.bpmReached != null && (
+                        <span>{NOTE_GLYPH[lastSession.noteVal ?? "quarter"]}={m!.bpmReached}</span>
+                      )}
+                      {m!.confidence != null && <span>★{m!.confidence}</span>}
+                    </span>
+                    {avg != null && (
+                      <span className="w-10 h-1.5 rounded-full bg-muted-foreground/20 overflow-hidden shrink-0">
+                        <span
+                          className={cn(
+                            "block h-full rounded-full",
+                            avg >= 70 ? "bg-primary" : avg >= 40 ? "bg-primary/50" : "bg-muted-foreground/40"
+                          )}
+                          style={{ width: `${Math.max(4, avg)}%` }}
+                        />
                       </span>
                     )}
-                    {m!.bpmReached != null && (
-                      <span>{NOTE_GLYPH[lastSession.noteVal ?? "quarter"]}={m!.bpmReached}</span>
-                    )}
-                    {m!.confidence != null && <span>★{m!.confidence}</span>}
-                  </span>
-                  {avg != null && (
-                    <span className="w-10 h-1.5 rounded-full bg-muted-foreground/20 overflow-hidden shrink-0">
-                      <span
-                        className={cn(
-                          "block h-full rounded-full",
-                          avg >= 70 ? "bg-primary" : avg >= 40 ? "bg-primary/50" : "bg-muted-foreground/40"
-                        )}
-                        style={{ width: `${Math.max(4, avg)}%` }}
-                      />
-                    </span>
-                  )}
+                  </button>
                 </li>
               );
             })}
           </ul>
         </div>
       )}
+
+      <SegmentHistorySheet
+        open={historyFor !== null}
+        onOpenChange={(o) => { if (!o) setHistoryFor(null); }}
+        itemId={task.itemId}
+        segmentId={historyFor ? Number(historyFor.id) : undefined}
+        segmentLabel={historyFor?.label}
+        onOpenSession={(s) => setDetailSession(s)}
+      />
+      <SessionDetailSheet
+        open={detailSession !== null}
+        onOpenChange={(o) => { if (!o) setDetailSession(null); }}
+        session={detailSession}
+      />
     </div>
   );
 }

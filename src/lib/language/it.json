@@ -777,5 +777,19 @@
   "routine.previewTitle": "Esercizi per la prima settimana",
   "routine.previewEmpty": "Modifica il programma sopra per vedere un'anteprima.",
   "subjects.customColor": "Colore personalizzato",
-  "common.reset": "Reimposta"
+  "common.reset": "Reimposta",
+  "session.segmentHistory": "Storico della sezione",
+  "session.noSegmentHistory": "Nessuna sessione registrata per questa sezione.",
+  "session.viewFullSession": "Vedi sessione completa",
+  "homework.title": "Aggiungi compiti",
+  "homework.subtitle": "Registra i compiti che l'insegnante assegna durante la lezione — saranno allegati alla registrazione.",
+  "homework.subject": "Materia",
+  "homework.recurrence": "Insegnante",
+  "homework.text": "Compito",
+  "homework.textPlaceholder": "Studia questo passaggio a 80 BPM…",
+  "homework.add": "Aggiungi compito",
+  "homework.pendingFor": "In attesa per {{subject}}",
+  "homework.pendingMerged": "{{count}} in attesa",
+  "homework.pendingMerged_plural": "{{count}} in attesa",
+  "toast.homeworkAdded": "Compito salvato"
 }

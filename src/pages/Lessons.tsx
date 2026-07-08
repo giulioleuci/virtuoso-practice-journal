@@ -30,10 +30,12 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  ClipboardPlus,
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
+import { AddHomeworkSheet } from "@/components/lessons/AddHomeworkSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { upcomingLessonDates, slotForDate } from "@/lib/recurrence";
 import { dayKey, today } from "@/lib/date";
@@ -68,6 +70,7 @@ export default function Lessons() {
   const [pageAssign, setPageAssign] = useState(0);
   const [pageUpcoming, setPageUpcoming] = useState(0);
   const [pageRecent, setPageRecent] = useState(0);
+  const [homeworkOpen, setHomeworkOpen] = useState(false);
 
   const openNew = () => {
     setEditingRec(null);
@@ -139,15 +142,22 @@ export default function Lessons() {
             <Plus className="h-4 w-4 mr-1" /> {t("lessons.addRecurrence")}
           </Button>
         </div>
-        <Button size="sm" variant="ghost" className="px-2 -ml-2" onClick={() => setRecapOpen(true)}>
-          <HelpCircle className="h-4 w-4 mr-1" /> {t("lessons.recap")}
-          {openHelpCount ? (
-            <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
-              {openHelpCount}
-            </span>
-          ) : null}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="ghost" className="px-2 -ml-2" onClick={() => setRecapOpen(true)}>
+            <HelpCircle className="h-4 w-4 mr-1" /> {t("lessons.recap")}
+            {openHelpCount ? (
+              <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                {openHelpCount}
+              </span>
+            ) : null}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setHomeworkOpen(true)}>
+            <ClipboardPlus className="h-4 w-4 mr-1" /> {t("homework.add")}
+          </Button>
+        </div>
       </div>
+
+      <AddHomeworkSheet open={homeworkOpen} onOpenChange={setHomeworkOpen} />
 
       {/* Recurrences */}
       <section className="space-y-2">

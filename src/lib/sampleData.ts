@@ -624,6 +624,99 @@ targetBpm: 84, noteVal: "quarter",
     });
   }
 
+  // ---------- Extra multi-segment histories (Bach P&F, Hanon 18, Cortot Ch.1) ----------
+  // Populates segmentMetrics on more items so the LastSessionStrip + SegmentHistorySheet
+  // have data across easy/medium/hard cases.
+  const extraMultiSeg: Array<{
+    itemId: number; segmentIds: number[]; title: string;
+    targetBpm: number; noteVal: "quarter" | "eighth" | "sixteenth";
+    layers: string[]; techniques: number[]; count: number; step: number;
+  }> = [
+    {
+      itemId: bachWtcCsh, segmentIds: [wtcPrelude, wtcFugue],
+      title: "Bach C# minor P&F — full run",
+      targetBpm: 60, noteVal: "quarter",
+      layers: ["RH", "LH", "Both", "Memorized"],
+      techniques: [tVoicing, tLegato],
+      count: 6, step: 4,
+    },
+    {
+      itemId: hanon, segmentIds: [hanonEx18],
+      title: "Hanon 18 — HS then HT",
+      targetBpm: 104, noteVal: "sixteenth",
+      layers: ["RH", "LH", "Both"],
+      techniques: [tLegato],
+      count: 5, step: 2,
+    },
+    {
+      itemId: cortot, segmentIds: [cortotCh1],
+      title: "Cortot Ch. 1 — finger equality drill",
+      targetBpm: 80, noteVal: "eighth",
+      layers: ["RH", "LH"],
+      techniques: [tLegato],
+      count: 4, step: 5,
+    },
+  ];
+
+  let extraSeed = 1000;
+  for (const scenario of extraMultiSeg) {
+    for (let k = 0; k < scenario.count; k++) {
+      const ageDays = 3 + k * scenario.step;
+      const dateObj = addDays(todayDate, -ageDays);
+      const d = dayKey(dateObj);
+      const taskId = (await db.tasks.add({
+        date: d, subjectId: pianoId, linkType: "item",
+        itemId: scenario.itemId, segmentIds: scenario.segmentIds,
+        title: scenario.title, targetBpm: scenario.targetBpm, noteVal: scenario.noteVal,
+        layers: scenario.layers, techniqueIds: scenario.techniques,
+        done: true, createdAt: now - ageDays * D,
+      })) as number;
+      const fullTask = await db.tasks.get(taskId);
+      if (!fullTask) continue;
+      const snapshot = await buildSessionSnapshot(fullTask);
+
+      const trend = clamp(60 + (30 - ageDays) * 0.9, 40, 92);
+      const segmentMetrics: Record<string, import("./db").SegmentMetric> = {};
+      const allScores: number[] = [];
+      scenario.segmentIds.forEach((sid, si) => {
+        const bias = si === 0 ? 4 : -3;
+        const layerScores: Record<string, number> = {};
+        scenario.layers.forEach((l, i) => {
+          const v = clamp(Math.round(trend + bias - 5 + rand(extraSeed + k * 41 + si * 13 + i) * 14), 0, 100);
+          layerScores[l] = v; allScores.push(v);
+        });
+        const techniqueScores: Record<number, number> = {};
+        scenario.techniques.forEach((tid, i) => {
+          const v = clamp(Math.round(trend + bias - 8 + rand(extraSeed + k * 71 + si * 17 + i) * 18), 0, 100);
+          techniqueScores[tid] = v; allScores.push(v);
+        });
+        const segMean = (Object.values(layerScores).concat(Object.values(techniqueScores)))
+          .reduce((a, b) => a + b, 0) / (scenario.layers.length + scenario.techniques.length);
+        segmentMetrics[String(sid)] = {
+          confidence: clamp(Math.round(segMean / 20), 1, 5),
+          quality: pickQuality(segMean),
+          bpmReached: clamp(Math.round(scenario.targetBpm - 6 + bias / 2 + rand(extraSeed + k * 29 + si) * 10), 20, 400),
+          reps: 2 + Math.round(rand(extraSeed + k * 23 + si) * 6),
+          layersUsed: scenario.layers,
+          techniquesUsed: scenario.techniques,
+          layerScores, techniqueScores,
+        };
+      });
+      const overallMean = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+
+      await db.sessions.add({
+        taskId, date: d,
+        quality: pickQuality(overallMean),
+        layersUsed: scenario.layers,
+        techniquesUsed: scenario.techniques,
+        segmentMetrics,
+        snapshot,
+        createdAt: now - ageDays * D + 7200000,
+      });
+      extraSeed += 7;
+    }
+  }
+
   // ---------- Today + upcoming ----------
   const upcoming: TaskRow[] = [];
 
