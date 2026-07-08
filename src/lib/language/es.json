@@ -777,5 +777,19 @@
   "routine.previewTitle": "Tareas para la primera semana",
   "routine.previewEmpty": "Ajusta el horario de arriba para ver una vista previa.",
   "subjects.customColor": "Color personalizado",
-  "common.reset": "Restablecer"
+  "common.reset": "Restablecer",
+  "session.segmentHistory": "Historial del segmento",
+  "session.noSegmentHistory": "No hay sesiones registradas para este segmento.",
+  "session.viewFullSession": "Ver sesión completa",
+  "homework.title": "Añadir tarea",
+  "homework.subtitle": "Registra las tareas que el profesor te asigne durante la clase — se adjuntarán al registrarla.",
+  "homework.subject": "Materia",
+  "homework.recurrence": "Profesor",
+  "homework.text": "Tarea",
+  "homework.textPlaceholder": "Practica este pasaje a 80 BPM…",
+  "homework.add": "Añadir tarea",
+  "homework.pendingFor": "Pendientes para {{subject}}",
+  "homework.pendingMerged": "{{count}} pendiente",
+  "homework.pendingMerged_plural": "{{count}} pendientes",
+  "toast.homeworkAdded": "Tarea guardada"
 }

@@ -777,5 +777,19 @@
   "routine.previewTitle": "Aufgaben für die erste Woche",
   "routine.previewEmpty": "Passe den Zeitplan oben an, um eine Vorschau zu sehen.",
   "subjects.customColor": "Eigene Farbe",
-  "common.reset": "Zurücksetzen"
+  "common.reset": "Zurücksetzen",
+  "session.segmentHistory": "Verlauf des Abschnitts",
+  "session.noSegmentHistory": "Keine früheren Sitzungen für diesen Abschnitt.",
+  "session.viewFullSession": "Ganze Sitzung ansehen",
+  "homework.title": "Hausaufgabe hinzufügen",
+  "homework.subtitle": "Halte Aufgaben fest, die dir während des Unterrichts gegeben werden — sie werden beim Protokollieren angehängt.",
+  "homework.subject": "Fach",
+  "homework.recurrence": "Lehrer",
+  "homework.text": "Aufgabe",
+  "homework.textPlaceholder": "Diese Passage bei 80 BPM üben…",
+  "homework.add": "Aufgabe hinzufügen",
+  "homework.pendingFor": "Ausstehend für {{subject}}",
+  "homework.pendingMerged": "{{count}} ausstehend",
+  "homework.pendingMerged_plural": "{{count}} ausstehend",
+  "toast.homeworkAdded": "Aufgabe gespeichert"
 }

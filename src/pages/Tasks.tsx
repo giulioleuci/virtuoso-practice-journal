@@ -17,7 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, Pencil, Trash2, RefreshCw, CalendarRange, MoreVertical } from "lucide-react";
+import { ChevronLeft, Pencil, Trash2, RefreshCw, CalendarRange, MoreVertical, Plus } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -172,7 +172,14 @@ export default function Tasks() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
+      <button
+        onClick={() => navigate("/tasks/new")}
+        className="fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        aria-label={t("tasks.newTask")}
+      >
+        <Plus className="h-6 w-6" />
+      </button>
       <div className="flex items-center gap-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></Link>
         <h2 className="font-serif text-3xl flex-1">{t("tasks.allTasks")}</h2>
