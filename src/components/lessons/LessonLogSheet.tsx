@@ -55,6 +55,19 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
   const [notes, setNotes] = useState("");
   const [assignments, setAssignments] = useState<AssignmentDraft[]>([]);
   const [draft, setDraft] = useState("");
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState("");
+
+  const startEdit = (i: number) => { setEditingIdx(i); setEditingText(assignments[i]?.text ?? ""); };
+  const cancelEdit = () => { setEditingIdx(null); setEditingText(""); };
+  const commitEdit = () => {
+    if (editingIdx == null) return;
+    const trimmed = editingText.trim();
+    if (!trimmed) { cancelEdit(); return; }
+    setAssignments((arr) => arr.map((a, j) => (j === editingIdx ? { ...a, text: trimmed } : a)));
+    cancelEdit();
+  };
+
   /** Pending IDs the user explicitly dismissed while the sheet is open — don't re-add. */
   const [dismissedPendingIds, setDismissedPendingIds] = useState<Set<number>>(new Set());
 
