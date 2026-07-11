@@ -8,7 +8,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Trash2, Plus, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
