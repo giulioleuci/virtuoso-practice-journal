@@ -151,13 +151,9 @@ export default function Lessons() {
               </span>
             ) : null}
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => setHomeworkOpen(true)}>
-            <ClipboardPlus className="h-4 w-4 mr-1" /> {t("homework.add")}
-          </Button>
         </div>
       </div>
 
-      <AddHomeworkSheet open={homeworkOpen} onOpenChange={setHomeworkOpen} />
 
       {/* Recurrences */}
       <section className="space-y-2">
