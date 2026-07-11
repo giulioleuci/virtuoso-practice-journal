@@ -213,13 +213,21 @@ export default function Lessons() {
                   </div>
 
 
-                  {/* Footer: full-width log action */}
-                  <button
-                    onClick={() => openLog(r)}
-                    className="w-full h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary border-t border-border/40 bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors"
-                  >
-                    <NotebookPen className="h-4 w-4" /> {t("lessons.log")}
-                  </button>
+                  {/* Footer: log + add-homework */}
+                  <div className="grid grid-cols-2 border-t border-border/40">
+                    <button
+                      onClick={() => setHomeworkForRec(r)}
+                      className="h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors border-r border-border/40"
+                    >
+                      <ClipboardPlus className="h-4 w-4" /> {t("homework.add")}
+                    </button>
+                    <button
+                      onClick={() => openLog(r)}
+                      className="h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors"
+                    >
+                      <NotebookPen className="h-4 w-4" /> {t("lessons.log")}
+                    </button>
+                  </div>
                 </li>
               );
             })}
