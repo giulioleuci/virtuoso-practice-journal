@@ -70,7 +70,7 @@ export default function Lessons() {
   const [pageAssign, setPageAssign] = useState(0);
   const [pageUpcoming, setPageUpcoming] = useState(0);
   const [pageRecent, setPageRecent] = useState(0);
-  const [homeworkOpen, setHomeworkOpen] = useState(false);
+  const [homeworkForRec, setHomeworkForRec] = useState<LessonRecurrence | null>(null);
 
   const openNew = () => {
     setEditingRec(null);
