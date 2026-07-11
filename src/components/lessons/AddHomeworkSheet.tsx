@@ -8,7 +8,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Trash2, Plus, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -31,6 +32,16 @@ export function AddHomeworkSheet({ open, onOpenChange, subjectId, recurrenceId, 
   const { t } = useI18n();
   const subjects = useSubjects();
   const [draft, setDraft] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState("");
+
+  const startEdit = (id: number, text: string) => { setEditingId(id); setEditingText(text); };
+  const cancelEdit = () => { setEditingId(null); setEditingText(""); };
+  const commitEdit = async () => {
+    if (editingId == null) return;
+    await pendingAssignmentsService.update(editingId, editingText);
+    cancelEdit();
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -82,14 +93,52 @@ export function AddHomeworkSheet({ open, onOpenChange, subjectId, recurrenceId, 
               <ul className="space-y-1.5">
                 {currentPending.map((p) => (
                   <li key={p.id} className="paper-card px-3 py-2 flex items-start gap-2 text-sm">
-                    <span className="flex-1 break-words">{p.text}</span>
-                    <button
-                      className="text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={() => p.id && pendingAssignmentsService.remove(p.id)}
-                      aria-label={t("common.remove")}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {editingId === p.id ? (
+                      <>
+                        <Input
+                          autoFocus
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
+                            if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+                          }}
+                          className="h-8 flex-1"
+                        />
+                        <button
+                          className="text-primary shrink-0"
+                          onClick={commitEdit}
+                          aria-label={t("common.save")}
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="text-muted-foreground shrink-0"
+                          onClick={cancelEdit}
+                          aria-label={t("common.cancel")}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex-1 break-words">{p.text}</span>
+                        <button
+                          className="text-muted-foreground hover:text-foreground shrink-0"
+                          onClick={() => p.id && startEdit(p.id, p.text)}
+                          aria-label={t("common.edit")}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={() => p.id && pendingAssignmentsService.remove(p.id)}
+                          aria-label={t("common.remove")}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>

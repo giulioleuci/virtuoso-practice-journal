@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-import { Plus, X, Check, Inbox } from "lucide-react";
+import { Plus, X, Check, Inbox, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 export interface LessonLogContext {
@@ -55,6 +55,19 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
   const [notes, setNotes] = useState("");
   const [assignments, setAssignments] = useState<AssignmentDraft[]>([]);
   const [draft, setDraft] = useState("");
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState("");
+
+  const startEdit = (i: number) => { setEditingIdx(i); setEditingText(assignments[i]?.text ?? ""); };
+  const cancelEdit = () => { setEditingIdx(null); setEditingText(""); };
+  const commitEdit = () => {
+    if (editingIdx == null) return;
+    const trimmed = editingText.trim();
+    if (!trimmed) { cancelEdit(); return; }
+    setAssignments((arr) => arr.map((a, j) => (j === editingIdx ? { ...a, text: trimmed } : a)));
+    cancelEdit();
+  };
+
   /** Pending IDs the user explicitly dismissed while the sheet is open — don't re-add. */
   const [dismissedPendingIds, setDismissedPendingIds] = useState<Set<number>>(new Set());
 
@@ -174,10 +187,32 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
                     ) : (
                       <Check className="h-4 w-4 text-primary shrink-0" />
                     )}
-                    <span className="flex-1 break-words">{a.text}</span>
+                    {editingIdx === i ? (
+                      <Input
+                        autoFocus
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
+                          if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+                        }}
+                        onBlur={commitEdit}
+                        className="h-8 flex-1"
+                      />
+                    ) : (
+                      <span className="flex-1 break-words">{a.text}</span>
+                    )}
+                    <button
+                      onClick={() => startEdit(i)}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={t("common.edit")}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={() => removeAssignment(i)}
                       className="text-muted-foreground hover:text-destructive"
+                      aria-label={t("common.remove")}
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -186,6 +221,7 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
               </ul>
             )}
           </div>
+
 
           {errors.length > 0 && (
             <ul className="text-xs text-destructive space-y-0.5">
