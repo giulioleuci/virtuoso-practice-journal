@@ -193,19 +193,10 @@ export default function Diary() {
   const heroQuote = useMemo(() => pickQuote(undefined, lang, todayKey), [lang, todayKey]);
   const showHeroQuote = profile?.hideHeroQuote !== true;
 
-  const [homeworkOpen, setHomeworkOpen] = useState(false);
-
   return (
     <div className="space-y-6 pb-24">
       <SessionFAB />
-      <button
-        onClick={() => setHomeworkOpen(true)}
-        className="fixed bottom-40 right-4 z-40 h-12 w-12 rounded-full shadow-lg bg-accent text-accent-foreground border border-border flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
-        aria-label={t("homework.add")}
-      >
-        <ClipboardPlus className="h-5 w-5" />
-      </button>
-      <AddHomeworkSheet open={homeworkOpen} onOpenChange={setHomeworkOpen} />
+
       {/* Hero card */}
       <section className="paper-card p-6">
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{t("diary.today")}</p>
@@ -698,34 +689,55 @@ function LessonTodayBanner({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const subject = subjects.find((s) => s.id === rec.subjectId);
+  const [homeworkOpen, setHomeworkOpen] = useState(false);
+  const lessonLabel = `${rec.teacher ?? ""}${subject ? ` · ${subject.name}` : ""}`.trim();
   return (
-    <div className="paper-card p-3 flex items-center gap-3 border-l-4 border-l-primary/60 bg-primary/5">
-      <LessonIcon className="h-4 w-4 text-primary shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-primary">
-          {rec.teacher ? t("diary.lessonTodayWith", { teacher: rec.teacher }) : t("diary.lessonToday")}
-        </p>
-        {subject && (
-          <p className="text-xs text-muted-foreground">
-            {subject.name}{slot ? ` · ${slot.startTime}` : ""}
+    <div
+      className="paper-card overflow-hidden border-l-4 p-0"
+      style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
+    >
+      <div className="p-3.5 pb-2 flex items-start gap-2">
+        <LessonIcon className="h-4 w-4 text-primary shrink-0 mt-1" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs uppercase tracking-wider text-primary/80">
+            {rec.teacher ? t("diary.lessonTodayWith", { teacher: rec.teacher }) : t("diary.lessonToday")}
           </p>
-        )}
+          {(subject || slot) && (
+            <p className="text-sm text-muted-foreground mt-0.5 break-words">
+              {subject?.name}{subject && slot ? " · " : ""}{slot ? slot.startTime : ""}
+            </p>
+          )}
+        </div>
       </div>
-      <Button
-        size="sm"
-        variant="ghost"
-        className="shrink-0 text-primary"
-        onClick={() =>
-          navigate("/lessons", {
-            state: { openLogForRecurrenceId: rec.id, date: today() },
-          })
-        }
-      >
-        {t("diary.logLesson")} <ArrowRightIcon className="h-3.5 w-3.5 ml-1" />
-      </Button>
+      <div className="grid grid-cols-2 border-t border-border/40">
+        <button
+          onClick={() => setHomeworkOpen(true)}
+          className="h-11 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors border-r border-border/40"
+        >
+          <ClipboardPlus className="h-3.5 w-3.5" /> {t("homework.add")}
+        </button>
+        <button
+          onClick={() =>
+            navigate("/lessons", {
+              state: { openLogForRecurrenceId: rec.id, date: today() },
+            })
+          }
+          className="h-11 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors"
+        >
+          {t("diary.logLesson")} <ArrowRightIcon className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <AddHomeworkSheet
+        open={homeworkOpen}
+        onOpenChange={setHomeworkOpen}
+        subjectId={rec.subjectId}
+        recurrenceId={rec.id}
+        lessonLabel={lessonLabel}
+      />
     </div>
   );
 }
+
 
 
 function EndOfDaySummary({

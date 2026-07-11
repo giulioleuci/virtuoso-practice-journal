@@ -70,7 +70,7 @@ export default function Lessons() {
   const [pageAssign, setPageAssign] = useState(0);
   const [pageUpcoming, setPageUpcoming] = useState(0);
   const [pageRecent, setPageRecent] = useState(0);
-  const [homeworkOpen, setHomeworkOpen] = useState(false);
+  const [homeworkForRec, setHomeworkForRec] = useState<LessonRecurrence | null>(null);
 
   const openNew = () => {
     setEditingRec(null);
@@ -151,13 +151,9 @@ export default function Lessons() {
               </span>
             ) : null}
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => setHomeworkOpen(true)}>
-            <ClipboardPlus className="h-4 w-4 mr-1" /> {t("homework.add")}
-          </Button>
         </div>
       </div>
 
-      <AddHomeworkSheet open={homeworkOpen} onOpenChange={setHomeworkOpen} />
 
       {/* Recurrences */}
       <section className="space-y-2">
@@ -217,13 +213,21 @@ export default function Lessons() {
                   </div>
 
 
-                  {/* Footer: full-width log action */}
-                  <button
-                    onClick={() => openLog(r)}
-                    className="w-full h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary border-t border-border/40 bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors"
-                  >
-                    <NotebookPen className="h-4 w-4" /> {t("lessons.log")}
-                  </button>
+                  {/* Footer: log + add-homework */}
+                  <div className="grid grid-cols-2 border-t border-border/40">
+                    <button
+                      onClick={() => setHomeworkForRec(r)}
+                      className="h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors border-r border-border/40"
+                    >
+                      <ClipboardPlus className="h-4 w-4" /> {t("homework.add")}
+                    </button>
+                    <button
+                      onClick={() => openLog(r)}
+                      className="h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors"
+                    >
+                      <NotebookPen className="h-4 w-4" /> {t("lessons.log")}
+                    </button>
+                  </div>
                 </li>
               );
             })}
@@ -440,6 +444,16 @@ export default function Lessons() {
       />
 
       <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />
+
+      {homeworkForRec && (
+        <AddHomeworkSheet
+          open={!!homeworkForRec}
+          onOpenChange={(o) => !o && setHomeworkForRec(null)}
+          subjectId={homeworkForRec.subjectId}
+          recurrenceId={homeworkForRec.id}
+          lessonLabel={`${homeworkForRec.teacher ?? ""} · ${subjectName(homeworkForRec.subjectId)}`}
+        />
+      )}
 
       <AlertDialog open={delRecId !== null} onOpenChange={(o) => !o && setDelRecId(null)}>
         <AlertDialogContent>
