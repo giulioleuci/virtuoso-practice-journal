@@ -32,6 +32,16 @@ export function AddHomeworkSheet({ open, onOpenChange, subjectId, recurrenceId, 
   const { t } = useI18n();
   const subjects = useSubjects();
   const [draft, setDraft] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState("");
+
+  const startEdit = (id: number, text: string) => { setEditingId(id); setEditingText(text); };
+  const cancelEdit = () => { setEditingId(null); setEditingText(""); };
+  const commitEdit = async () => {
+    if (editingId == null) return;
+    await pendingAssignmentsService.update(editingId, editingText);
+    cancelEdit();
+  };
 
   useEffect(() => {
     if (!open) return;
