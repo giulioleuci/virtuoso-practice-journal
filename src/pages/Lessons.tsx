@@ -445,6 +445,16 @@ export default function Lessons() {
 
       <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />
 
+      {homeworkForRec && (
+        <AddHomeworkSheet
+          open={!!homeworkForRec}
+          onOpenChange={(o) => !o && setHomeworkForRec(null)}
+          subjectId={homeworkForRec.subjectId}
+          recurrenceId={homeworkForRec.id}
+          lessonLabel={`${homeworkForRec.teacher ?? ""} · ${subjectName(homeworkForRec.subjectId)}`}
+        />
+      )}
+
       <AlertDialog open={delRecId !== null} onOpenChange={(o) => !o && setDelRecId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
