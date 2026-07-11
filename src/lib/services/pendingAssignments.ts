@@ -17,6 +17,13 @@ export const pendingAssignmentsService = {
     await db.pendingAssignments.delete(id);
   },
 
+  async update(id: number, text: string): Promise<void> {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    await db.pendingAssignments.update(id, { text: trimmed });
+  },
+
+
   async removeMany(ids: number[]): Promise<void> {
     if (!ids.length) return;
     await db.pendingAssignments.bulkDelete(ids);
