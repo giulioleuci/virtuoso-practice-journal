@@ -193,19 +193,10 @@ export default function Diary() {
   const heroQuote = useMemo(() => pickQuote(undefined, lang, todayKey), [lang, todayKey]);
   const showHeroQuote = profile?.hideHeroQuote !== true;
 
-  const [homeworkOpen, setHomeworkOpen] = useState(false);
-
   return (
     <div className="space-y-6 pb-24">
       <SessionFAB />
-      <button
-        onClick={() => setHomeworkOpen(true)}
-        className="fixed bottom-40 right-4 z-40 h-12 w-12 rounded-full shadow-lg bg-accent text-accent-foreground border border-border flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
-        aria-label={t("homework.add")}
-      >
-        <ClipboardPlus className="h-5 w-5" />
-      </button>
-      <AddHomeworkSheet open={homeworkOpen} onOpenChange={setHomeworkOpen} />
+
       {/* Hero card */}
       <section className="paper-card p-6">
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{t("diary.today")}</p>
