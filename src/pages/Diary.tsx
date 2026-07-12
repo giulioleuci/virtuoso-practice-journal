@@ -170,8 +170,6 @@ export default function Diary() {
     [carryoverFrom, todayKey],
   );
 
-  const dateLabel = formatDate(new Date(now()), lang, "long", true);
-
   const doneCount = tasks?.filter((x) => x.done).length ?? 0;
   const totalCount = tasks?.length ?? 0;
   const allDone = totalCount > 0 && doneCount === totalCount;
@@ -200,7 +198,6 @@ export default function Diary() {
       {/* Hero card */}
       <section className="paper-card p-6">
         <h2 className="font-serif text-3xl">{t("diary.hello", { name: profile?.name ?? "Musician" })}</h2>
-        <p className="text-muted-foreground italic mt-1">{dateLabel}</p>
         <div className="flex items-center justify-between mt-3">
           <p className="text-sm text-muted-foreground tabular-nums">
             {t("diary.doneSummary", { done: doneCount, total: totalCount })}
