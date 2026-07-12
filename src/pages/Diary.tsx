@@ -170,8 +170,6 @@ export default function Diary() {
     [carryoverFrom, todayKey],
   );
 
-  const dateLabel = formatDate(new Date(now()), lang, "long", true);
-
   const doneCount = tasks?.filter((x) => x.done).length ?? 0;
   const totalCount = tasks?.length ?? 0;
   const allDone = totalCount > 0 && doneCount === totalCount;
