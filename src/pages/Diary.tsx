@@ -199,7 +199,6 @@ export default function Diary() {
 
       {/* Hero card */}
       <section className="paper-card p-6">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{t("diary.today")}</p>
         <h2 className="font-serif text-3xl">{t("diary.hello", { name: profile?.name ?? "Musician" })}</h2>
         <p className="text-muted-foreground italic mt-1">{dateLabel}</p>
         <div className="flex items-center justify-between mt-3">
