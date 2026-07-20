@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSubjects, useTechniques } from "@/hooks/useEntities";
-import { THEORY_LAYERS, type LibraryKind, type NoteVal, type Task, type TaskRecurrence, type TaskLinkType } from "@/lib/db";
+import { THEORY_LAYERS, type LibraryKind, type NoteVal, type Task, type TaskRecurrence, type TaskLinkType } from "@/lib/presentationQueries";
 import { getSubjectLayers } from "@/lib/domain/subjectLayers";
 import { useI18n } from "@/lib/i18n";
 import { collectionsService, tasksService } from "@/lib/services";

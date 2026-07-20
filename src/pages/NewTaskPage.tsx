@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLessons, useRecurrences, useSubjects, useTechniques, useItem } from "@/hooks/useEntities";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/presentationQueries";
 import { getSubjectLayers } from "@/lib/domain/subjectLayers";
 import { nextLessonDate } from "@/lib/domain/lessonSchedule";
 import { useI18n } from "@/lib/i18n";

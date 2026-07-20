@@ -6,7 +6,7 @@ import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Profile } from "@/lib/db";
+import type { Profile } from "@/lib/presentationQueries";
 
 export default function AppShell({ profile }: { profile: Profile }) {
   const { t } = useI18n();

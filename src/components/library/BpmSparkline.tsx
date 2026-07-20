@@ -1,6 +1,6 @@
-import { useLiveQuery } from "dexie-react-hooks";
+import { useLiveQuery } from "@/lib/subscriptions";
 import { useTasksByItem } from "@/hooks/useEntities";
-import { db } from "@/lib/db";
+import { db } from "@/lib/presentationQueries";
 import { useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 

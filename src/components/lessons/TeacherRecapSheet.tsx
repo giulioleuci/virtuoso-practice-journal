@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/hooks/useEntities";
-import { type HelpRequest, type ColorKey, type SubjectType } from "@/lib/db";
+import { type HelpRequest, type ColorKey, type SubjectType } from "@/lib/presentationQueries";
 import { helpRequestsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";

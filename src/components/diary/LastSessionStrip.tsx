@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type Session, type Task } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, THEORY_LAYERS, type Session, type Task } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
 import { today } from "@/lib/date";

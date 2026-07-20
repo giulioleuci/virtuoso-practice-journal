@@ -1,5 +1,5 @@
 import { useI18n } from "@/lib/i18n";
-import { THEORY_LAYERS } from "@/lib/db";
+import { THEORY_LAYERS } from "@/lib/presentationQueries";
 
 export interface MasteryState {
   conceptual: number;

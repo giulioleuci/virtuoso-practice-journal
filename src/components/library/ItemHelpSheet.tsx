@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db"; // db used for useLiveQuery reads only
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
 import { helpRequestsService } from "@/lib/services";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";

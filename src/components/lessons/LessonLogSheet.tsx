@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type Lesson, type LessonRecurrence } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
 import { lessonsService, pendingAssignmentsService } from "@/lib/services";
 import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";

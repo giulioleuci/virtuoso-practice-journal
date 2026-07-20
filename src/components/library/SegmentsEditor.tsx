@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus, X, ArrowUp, ArrowDown } from "lucide-react";
-import type { NoteVal } from "@/lib/db";
+import type { NoteVal } from "@/lib/presentationQueries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

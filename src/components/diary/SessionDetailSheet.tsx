@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTechniques } from "@/hooks/useEntities";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/db"; // db used for useLiveQuery reads only
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
 import { sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useActiveTasks, useAssignments, useLessons, useRecurrences, useSubjects } from "@/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type Lesson, type LessonRecurrence } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
 import { lessonsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";

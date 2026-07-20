@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Collection, type LibraryItem } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type Collection, type LibraryItem } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { useCollectionItems } from "@/hooks/useEntities";
 import {

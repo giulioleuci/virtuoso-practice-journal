@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Session } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type Session } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { dayKey } from "@/lib/date";
 

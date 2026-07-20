@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type NoteVal, type Task } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type NoteVal, type Task } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";

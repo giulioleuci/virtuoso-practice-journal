@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Piano, BookOpen, Check, X, Plus, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { type Lang, type SubjectType } from "@/lib/db";
+import { type Lang, type SubjectType } from "@/lib/presentationQueries";
 import { profileService } from "@/lib/services";
 import { SUPPORTED_LANGS, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";

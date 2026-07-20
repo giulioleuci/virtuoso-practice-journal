@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTechniques } from "@/hooks/useEntities";
-import { db, THEORY_LAYERS, type NoteVal, type SessionQuality, type Task, type SegmentMetric } from "@/lib/db"; // db used for useLiveQuery reads only
+import { db, THEORY_LAYERS, type NoteVal, type SessionQuality, type Task, type SegmentMetric } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
-import { useLiveQuery } from "dexie-react-hooks";
+import { useLiveQuery } from "@/lib/subscriptions";
 import { toast } from "sonner";
 import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
 import { studyRoutinesService, sessionsService } from "@/lib/services";

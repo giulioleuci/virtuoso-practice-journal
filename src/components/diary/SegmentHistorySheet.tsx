@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Session } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type Session } from "@/lib/presentationQueries";
 import { useTechniques } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";

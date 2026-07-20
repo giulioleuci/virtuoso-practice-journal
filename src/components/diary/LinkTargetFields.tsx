@@ -3,8 +3,8 @@
  */
 import { useMemo } from "react";
 import { useCollectionLinks, useLibrary } from "@/hooks/useEntities";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type LibraryKind, type TaskLinkType } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type LibraryKind, type TaskLinkType } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { collectionsService } from "@/lib/services";
 import { Label } from "@/components/ui/label";
@@ -122,7 +122,7 @@ export function LinkTargetFields({
 }
 
 import { useState } from "react";
-import type { LibraryItem, Collection, CollectionItem } from "@/lib/db";
+import type { LibraryItem, Collection, CollectionItem } from "@/lib/presentationQueries";
 
 function ItemPicker({
   subjectId, library, allCollections, allCollectionItems, itemId, setItemId,

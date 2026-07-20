@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSubjects } from "@/hooks/useEntities";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type SessionQuality, type NoteVal } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type SessionQuality, type NoteVal } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { sessionsService, tasksService } from "@/lib/services";
 import { today } from "@/lib/date";

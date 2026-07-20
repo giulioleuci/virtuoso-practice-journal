@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { subjectBorderStyle } from "@/lib/subjectColors";
-import type { Task, Subject } from "@/lib/db";
+import type { Task, Subject } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { useTasksInRange } from "@/hooks/useEntities";
 function utcDateStr(year: number, month: number, day: number): string {

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, type ReactNode } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { studyRoutinesService } from "@/lib/services";
 import { poolEntryKey } from "@/lib/domain/studyRoutineGenerator";

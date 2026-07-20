@@ -1,14 +1,14 @@
 import { useMemo } from "react";
 import { useTechniques, useItem, useTasksByItem } from "@/hooks/useEntities";
 import { useParams, useNavigate } from "react-router-dom";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, THEORY_LAYERS, type Session } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, THEORY_LAYERS, type Session } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
 import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
 import { weeklySessionCounts } from "@/lib/domain/analytics";
 import { formatDate, getDefaultWeekStartsOn } from "@/lib/date";
-import type { Lang } from "@/lib/db";
+import type { Lang } from "@/lib/presentationQueries";
 import { Button } from "@/components/ui/button";
 
 

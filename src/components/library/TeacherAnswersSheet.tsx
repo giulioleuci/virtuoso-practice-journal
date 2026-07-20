@@ -1,5 +1,5 @@
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db } from "@/lib/presentationQueries";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { MessageSquareQuote, BookOpen } from "lucide-react";
 import { EmptyState } from "@/components/shared/EmptyState";

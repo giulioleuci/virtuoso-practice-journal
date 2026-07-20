@@ -1,5 +1,5 @@
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type TheoryLayer } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type TheoryLayer } from "@/lib/presentationQueries";
 import { useMemo } from "react";
 
 interface Props {

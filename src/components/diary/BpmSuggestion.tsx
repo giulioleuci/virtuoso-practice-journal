@@ -1,5 +1,5 @@
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Task } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type Task } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { today } from "@/lib/date";
 import { SuggestionIcon } from "@/lib/icons";

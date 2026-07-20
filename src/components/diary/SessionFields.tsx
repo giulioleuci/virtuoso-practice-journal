@@ -8,7 +8,7 @@ import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { StarRating } from "@/components/shared/StarRating";
 import { cn } from "@/lib/utils";
-import type { NoteVal, SessionQuality } from "@/lib/db";
+import type { NoteVal, SessionQuality } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { QUALITY_VALS } from "@/lib/constants";
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db } from "@/lib/presentationQueries";
 import { useSubjects } from "@/hooks/useEntities";
 import { pendingAssignmentsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";

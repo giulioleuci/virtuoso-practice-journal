@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
-import { db, type StudyRoutine } from "@/lib/db";
+import { db, type StudyRoutine } from "@/lib/presentationQueries";
 import { useI18n } from "@/lib/i18n";
 import { StudyRoutineWizard } from "@/components/diary/StudyRoutineWizard";
 

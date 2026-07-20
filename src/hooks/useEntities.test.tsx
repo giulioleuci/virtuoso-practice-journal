@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import "fake-indexeddb/auto";
-import { db } from "@/lib/db";
+import { db } from "@/lib/presentationQueries";
 import {
   useSubjects,
   useLibrary,

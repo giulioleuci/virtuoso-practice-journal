@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSessions, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/db";
+import { useLiveQuery } from "@/lib/subscriptions";
+import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/presentationQueries";
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { today, dayKey, formatDate, now } from "@/lib/date";
@@ -140,7 +140,7 @@ export default function Diary() {
 
   const [logTask, setLogTask] = useState<Task | null>(null);
   const [logPrefill, setLogPrefill] = useState<
-    { bpm?: number; noteVal?: import("@/lib/db").NoteVal; notes?: string } | undefined
+    { bpm?: number; noteVal?: import("@/lib/presentationQueries").NoteVal; notes?: string } | undefined
   >();
   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
   const [detailSession, setDetailSession] = useState<Session | null>(null);
