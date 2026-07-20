@@ -9,6 +9,7 @@ import { collectionRepository } from "./collectionRepository";
 import { lessonRepository } from "./lessonRepository";
 import { profileRepository } from "./profileRepository";
 import { studyRoutineRepository } from "./studyRoutineRepository";
+import { LogSessionUseCase } from "@/application/useCases/logSession";
 
 beforeEach(async () => {
   await db.delete();
@@ -61,7 +62,7 @@ describe("Dexie repositories", () => {
     const subject = await subjectId();
     const taskId = await taskRepository.create({ title: "Scales", date: "2026-01-01", subjectId: subject });
     const task = (await db.tasks.get(taskId))!;
-    const id = await sessionRepository.logWithCompletion(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [] });
+    const id = await new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [] });
     expect((await db.sessions.get(id))?.snapshot?.taskTitle).toBe("Scales");
     expect((await db.tasks.get(taskId))?.done).toBe(true);
   });
@@ -72,22 +73,26 @@ describe("Dexie repositories", () => {
     const task = (await db.tasks.get(taskId))!;
     const original = db.helpRequests.add;
     db.helpRequests.add = (() => Promise.reject(new Error("help fails"))) as typeof db.helpRequests.add;
-    await expect(sessionRepository.logWithCompletion(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [], helpText: "help" })).rejects.toThrow("help fails");
+    await expect(new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [], helpText: "help" })).rejects.toThrow("help fails");
     db.helpRequests.add = original;
     expect(await db.sessions.count()).toBe(0);
     expect((await db.tasks.get(taskId))?.done).toBe(false);
   });
 
-  it("rolls back backup import when a later table write fails", async () => {
-    await db.subjects.add({ name: "old", type: "instrument", createdAt: 1 });
+  it("rolls back backup import when a later bulk add fails", async () => {
+    const originalSubjectId = await db.subjects.add({ name: "old subject", type: "instrument", createdAt: 1 });
+    await db.library.add({ subjectId: originalSubjectId, kind: "repertoire", title: "old item", createdAt: 1 });
+    const libraryTable = db.tables.find((table) => table.name === "library");
+    if (!libraryTable) throw new Error("library table missing");
+    vi.spyOn(libraryTable, "bulkAdd").mockRejectedValueOnce(new Error("library import fails"));
+
     await expect(backupRepository.importAll({
-      subjects: [{ name: "new", type: "instrument", createdAt: 2 }],
-      library: [
-        { id: 1, subjectId: 1, kind: "repertoire", title: "first", createdAt: 2 },
-        { id: 1, subjectId: 1, kind: "repertoire", title: "duplicate", createdAt: 2 },
-      ],
-    })).rejects.toThrow();
-    expect((await db.subjects.toArray()).map((subject) => subject.name)).toEqual(["old"]);
+      subjects: [{ name: "new subject", type: "instrument", createdAt: 2 }],
+      library: [{ subjectId: originalSubjectId, kind: "repertoire", title: "new item", createdAt: 2 }],
+    })).rejects.toThrow("library import fails");
+
+    expect((await db.subjects.toArray()).map((subject) => subject.name)).toEqual(["old subject"]);
+    expect((await db.library.toArray()).map((item) => item.title)).toEqual(["old item"]);
   });
 
   it("implements collection links port and excludes deleted library items", async () => {
