@@ -1,5 +1,6 @@
 import { useSubjects } from "@/hooks/useEntities";
-import { type Collection, type ColorKey, type LibraryKind } from "@/lib/presentationQueries";
+import type { Collection } from "@/domain/entities/collection";
+import type { ColorKey, LibraryKind } from "@/domain/entities/common";
 import { useI18n } from "@/lib/i18n";
 import { useSheetForm } from "@/hooks/useSheetForm";
 import {

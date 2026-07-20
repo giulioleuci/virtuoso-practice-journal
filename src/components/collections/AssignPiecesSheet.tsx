@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type Collection, type LibraryItem } from "@/lib/presentationQueries";
+import type { Collection } from "@/domain/entities/collection";
+import type { LibraryItem } from "@/domain/entities/library";
 import { useI18n } from "@/lib/i18n";
-import { useCollectionItems } from "@/hooks/useEntities";
+import { useCollectionItems, useLibraryByKind } from "@/hooks/useEntities";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
@@ -23,10 +23,7 @@ export function AssignPiecesSheet({ open, onOpenChange, collection }: Props) {
   const { t } = useI18n();
   const kind = collection?.kind ?? "repertoire";
   const showComposer = kind === "repertoire" || kind === "manual";
-  const library = useLiveQuery(
-    () => db.library.where("kind").equals(kind).filter((i) => !i.deletedAt).toArray(),
-    [kind]
-  ) as LibraryItem[] | undefined;
+  const library = useLibraryByKind(kind) as LibraryItem[] | undefined;
   const links = useCollectionItems(collection?.id);
 
   const [pickerOpen, setPickerOpen] = useState(false);
