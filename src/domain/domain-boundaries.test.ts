@@ -55,4 +55,19 @@ describe("domain boundaries", () => {
 
     expect(violations).toEqual([]);
   });
+
+  it("models completed session logging as one persisted-task workflow", async () => {
+    const source = await readFile(path.join(domainRoot, "ports/session.ts"), "utf8");
+
+    expect(source).toContain("export type PersistedTask = Task & { id: number };");
+    expect(source).toContain("date: string;");
+    expect(source).toContain("helpText?: string;");
+    expect(source).toContain("logWithCompletion(task: PersistedTask, input: SessionLogInput): Promise<number>;");
+  });
+
+  it("preserves library removal outcome", async () => {
+    const source = await readFile(path.join(domainRoot, "ports/library.ts"), "utf8");
+
+    expect(source).toContain('remove(id: number): Promise<"soft" | "hard">;');
+  });
 });
