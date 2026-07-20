@@ -1,189 +1,23 @@
 import Dexie, { type Table } from "dexie";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { TheoryLayer } from "@/domain/constants/theoryLayers";
+import type { ColorKey, Draft, Lang, LibraryKind, NoteVal, ReminderFreq, SegmentMetric, SessionQuality, Subject, SubjectType, Technique } from "@/domain/entities/common";
+import type { Collection, CollectionItem } from "@/domain/entities/collection";
+import type { Assignment, Lesson, LessonFrequency, LessonRecurrence, LessonScheduleSlot, LessonSnapshot } from "@/domain/entities/lesson";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
+import type { Profile } from "@/domain/entities/profile";
+import type { Session, SessionSnapshot } from "@/domain/entities/session";
+import type { Task, TaskLinkType, TaskRecurrence } from "@/domain/entities/task";
 
-export type Lang = "en" | "it" | "es" | "de";
-export type SubjectType = "instrument" | "theory" | "composition" | "other";
-
-export const THEORY_LAYERS = ["conceptual", "analytical", "aural", "compositional", "reading"] as const;
-export type TheoryLayer = typeof THEORY_LAYERS[number];
-export type LibraryKind = "repertoire" | "manual" | "technique" | "theory";
-export type NoteVal = "half" | "quarter" | "eighth" | "sixteenth";
-
-export type SessionQuality = "hard" | "improve" | "well" | "great";
-
-export interface SegmentMetric {
-  confidence?: number;
-  quality?: SessionQuality;
-  bpmReached?: number;
-  reps?: number;
-  /** Per-segment overrides of task-level layers/techniques.
-   *  When present, replace the task-level selection for that segment. */
-  layersUsed?: string[];
-  techniquesUsed?: number[];
-  layerScores?: Record<string, number>;
-  techniqueScores?: Record<number, number>;
-}
-export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum" | "coral" | "amber" | "teal" | "indigo" | "slate";
-export type ReminderFreq = "daily" | "weekdays" | "custom";
-
-export interface Profile {
-  id: "me";
-  name: string;
-  lang: Lang;
-  reminderTime: string;          // "HH:MM"
-  reminderFreq: ReminderFreq;
-  reminderDays: number[];        // 0-6 if custom
-  reminderEnabled?: boolean;     // undefined = enabled (back-compat)
-  /** Notification message preset. "custom" uses user-provided title/body. */
-  reminderPreset?: "gentle" | "motivational" | "playful" | "minimal" | "custom";
-  /** Optional custom notification title (used when reminderPreset === "custom"). */
-  reminderCustomTitle?: string;
-  /** Optional custom notification body (used when reminderPreset === "custom"). */
-  reminderCustomBody?: string;
-  /** When true, append today's task count and current streak to the notification body. */
-  reminderIncludeContext?: boolean;
-  lateRecoveryDays: number;
-  carryoverDays?: number;        // how many past days to surface uncompleted tasks from
-  graceDay: boolean;
-  groupByPhase: boolean;
-  /** When true, the inspirational quote on the diary hero card is hidden. */
-  hideHeroQuote?: boolean;
-  weekStartsOn?: number;         // 0=Sun, 1=Mon, etc.
-  onboarded: boolean;
-  introSeen?: boolean;
-  createdAt: number;
-}
-
-export interface Subject {
-  id?: number;
-  name: string;
-  type: SubjectType;
-  layers?: string[];
-  color?: ColorKey;
-  /** Optional custom color (hex like "#aabbcc"), overrides preset `color` when set. */
-  customColor?: string;
-  createdAt: number;
-  deletedAt?: number;
-}
-
-export interface Technique {
-  id: number;
-  subjectId: number;
-  name: string;
-  createdAt: number;
-  deletedAt?: number;
-}
-
-export interface LibraryItem {
-  id?: number;
-  subjectId: number;
-  kind: LibraryKind;
-  title: string;
-  composer?: string;
-  
-  startBpm?: number;
-  targetBpm?: number;
-  noteVal?: NoteVal;
-  techniqueIds?: number[];
-  totalExercises?: number;
-  currentExercise?: number;
-  mastery?: { conceptual: number; analytical: number; aural: number; compositional: number; reading?: number };
-  tags?: string[];
-  createdAt: number;
-  deletedAt?: number;
-}
-
-export interface Segment {
-  id: number;
-  itemId: number;
-  label: string;
-  targetBpm?: number;
-  noteVal?: NoteVal;
-  layers: string[];
-  techniqueIds?: number[];
-  createdAt: number;
-  deletedAt?: number;
-}
-
-export interface TaskRecurrence {
-  kind: "weekdays" | "interval";
-  days?: number[];
-  everyXDays?: number;
-  startDate: string;
-  endDate?: string;
-  occurrences?: number;
-}
-
-/**
- * A task is mutually-exclusively linked to ONE of:
- *  - "free":       no library link
- *  - "item":       a single LibraryItem (optionally narrowed to one or more segments)
- *  - "collection": a whole Collection (label/grouping; no per-item iteration)
- */
-export type TaskLinkType = "free" | "item" | "collection";
-
-export interface Task {
-  id?: number;
-  date: string;
-  subjectId: number;
-  linkType?: TaskLinkType;        // optional for legacy rows; treat missing as inferred
-  itemId?: number;
-  /** Multi-segment scope when linkType==="item". */
-  segmentIds?: number[];
-  /** Set only when linkType==="collection". */
-  collectionId?: number;
-  title: string;
-  targetBpm?: number;
-  noteVal?: NoteVal;
-  layers?: string[];
-  techniqueIds?: number[];
-  done: boolean;
-  skipped?: boolean;
-  executionNotes?: string;
-  recurrenceTaskId?: number;
-  recurrence?: TaskRecurrence;
-  studyRoutineId?: number;
-  createdAt: number;
-  deletedAt?: number;
-}
-
-/** Immutable copy of context at the moment a Session was saved. */
-export interface SessionSnapshot {
-  taskTitle: string;
-  subjectName: string;
-  itemTitle?: string;
-  itemComposer?: string;
-  /** Segments included in the task scope (id + label for historical rendering). */
-  segments?: { id: string; label: string }[];
-  /** Name of the collection if the task was collection-linked. */
-  collectionName?: string;
-  targetBpm?: number;
-  noteVal?: NoteVal;
-  layers?: string[];
-  techniqueNames?: string[];
-}
-
-export interface Session {
-  id: number;
-  taskId: number;
-  date: string;
-  bpmReached?: number;
-  noteVal?: NoteVal;
-  reps?: number;
-  quality?: SessionQuality;
-  confidence?: number;
-  notes?: string;
-  layersUsed?: string[];
-  techniquesUsed?: number[];
-  /** Per-layer scores 0-100 for theory sessions. */
-  layerScores?: Record<string, number>;
-  /** Per-technique scores 0-100. */
-  techniqueScores?: Record<number, number>;
-  /** Per-segment metrics when session was logged in granular mode. */
-  segmentMetrics?: Record<string, SegmentMetric>;
-  /** Denormalized snapshot — the source of truth for historical display. */
-  snapshot?: SessionSnapshot;
-  createdAt: number;
-}
+export { THEORY_LAYERS };
+export type { TheoryLayer } from "@/domain/constants/theoryLayers";
+export type { ColorKey, Draft, Lang, LibraryKind, NoteVal, ReminderFreq, SegmentMetric, SessionQuality, Subject, SubjectType, Technique } from "@/domain/entities/common";
+export type { Collection, CollectionItem } from "@/domain/entities/collection";
+export type { Assignment, Lesson, LessonFrequency, LessonRecurrence, LessonScheduleSlot, LessonSnapshot } from "@/domain/entities/lesson";
+export type { LibraryItem, Segment } from "@/domain/entities/library";
+export type { Profile } from "@/domain/entities/profile";
+export type { Session, SessionSnapshot } from "@/domain/entities/session";
+export type { Task, TaskLinkType, TaskRecurrence } from "@/domain/entities/task";
 
 export interface HelpRequest {
   id: number;
@@ -197,89 +31,12 @@ export interface HelpRequest {
   createdAt: number;
 }
 
-export type LessonFrequency = "weekly" | "biweekly" | "monthly";
-
-/** One weekday slot in a multi-day lesson schedule. */
-export interface LessonScheduleSlot {
-  dayOfWeek: number;          // 0=Sun…6=Sat
-  startTime: string;          // "HH:MM"
-  endTime: string;            // "HH:MM"
-  frequency: LessonFrequency; // per-slot frequency
-}
-
-export interface LessonRecurrence {
-  id?: number;
-  subjectId: number;
-  teacher: string;
-  /** One or more weekly slots; each can have its own frequency. */
-  schedules: LessonScheduleSlot[];
-  startDate: string;
-  endDate?: string;
-  color: ColorKey;
-  createdAt: number;
-  deletedAt?: number;
-}
-
-/** Immutable copy of lesson context. */
-export interface LessonSnapshot {
-  subjectName: string;
-  teacher?: string;
-  frequency?: LessonFrequency;
-}
-
-
-export interface Lesson {
-  id?: number;
-  recurrenceId?: number;
-  subjectId: number;
-  date: string;
-  notes?: string;
-  piecesPlayed?: number[];
-  /** Titles of pieces played, snapshot at save time. */
-  piecesPlayedTitles?: string[];
-  snapshot?: LessonSnapshot;
-  createdAt: number;
-}
-
-export interface Assignment {
-  id: number;
-  lessonId: number;
-  text: string;
-  transformed: boolean;
-  ignored?: boolean;
-  taskId?: number;
-  createdAt: number;
-}
-
 /** Draft homework captured live during a lesson, before the lesson is recorded. */
 export interface PendingAssignment {
   id?: number;
   subjectId: number;
   recurrenceId?: number;
   text: string;
-  createdAt: number;
-}
-
-export interface Collection {
-  id?: number;
-  /** Library kind this collection groups. Each collection is kind-specific. */
-  kind: LibraryKind;
-  name: string;
-  composer?: string;
-  catalog?: string;
-  notes?: string;
-  color?: ColorKey;
-  defaultSubjectId?: number;
-  createdAt: number;
-  updatedAt: number;
-  deletedAt?: number;
-}
-
-export interface CollectionItem {
-  id: number;
-  collectionId: number;
-  itemId: number;
-  position?: number;
   createdAt: number;
 }
 
