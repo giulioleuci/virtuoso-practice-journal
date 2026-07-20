@@ -10,7 +10,9 @@ export const profileRepository = {
     const ts = now();
     const row: Profile = { ...profile, id: "me", createdAt: ts };
     await db.transaction("rw", db.subjects, db.profile, async () => {
-      await db.subjects.bulkAdd(subjects.map((subject) => ({ ...subject, createdAt: ts })));
+      for (const subject of subjects) {
+        await db.subjects.add({ ...subject, createdAt: ts });
+      }
       await db.profile.put(row);
     });
     return row;

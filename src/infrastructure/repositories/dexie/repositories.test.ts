@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/infrastructure/dexie/db";
 import { taskRepository } from "./taskRepository";
 import { sessionRepository } from "./sessionRepository";
@@ -8,6 +8,7 @@ import { libraryRepository } from "./libraryRepository";
 import { collectionRepository } from "./collectionRepository";
 import { lessonRepository } from "./lessonRepository";
 import { profileRepository } from "./profileRepository";
+import { studyRoutineRepository } from "./studyRoutineRepository";
 
 beforeEach(async () => {
   await db.delete();
@@ -118,5 +119,33 @@ describe("Dexie repositories", () => {
     const profile = await profileRepository.initialize({ subjects: [{ name: "Piano", type: "instrument" }], name: "Alice", lang: "en", reminderTime: "09:00", reminderFreq: "daily", reminderDays: [], lateRecoveryDays: 1, graceDay: false, groupByPhase: false, onboarded: true });
     expect(profile.id).toBe("me");
     expect(await db.subjects.count()).toBe(1);
+  });
+
+  it("rolls back earlier subjects when the second onboarding subject write fails", async () => {
+    const add = vi.spyOn(db.subjects, "add");
+    add.mockImplementationOnce(add.getMockImplementation()!).mockRejectedValueOnce(new Error("subject write failed"));
+
+    await expect(profileRepository.initialize({ subjects: [{ name: "Piano", type: "instrument" }, { name: "Theory", type: "theory" }], name: "Alice", lang: "en", reminderTime: "09:00", reminderFreq: "daily", reminderDays: [], lateRecoveryDays: 1, graceDay: false, groupByPhase: false, onboarded: true })).rejects.toThrow("subject write failed");
+
+    expect(await db.subjects.count()).toBe(0);
+    expect(await db.profile.get("me")).toBeUndefined();
+  });
+
+  it("creates a study routine and generates its planned tasks", async () => {
+    const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: Date.now() });
+    const itemId = await db.library.add({ subjectId, kind: "repertoire", title: "Sonata", createdAt: Date.now() });
+
+    const id = await studyRoutineRepository.create({
+      subjectId,
+      groups: [{ id: "pieces", name: "Pieces", pool: [{ type: "item", id: itemId }] }],
+      matrix: { "1": { pieces: 1 } },
+      weeksAhead: 1,
+      repetitionCap: 1,
+      useSpacedRepetition: false,
+      startDate: "2026-05-18",
+    });
+
+    expect(await db.studyRoutines.get(id)).toMatchObject({ id, subjectId });
+    expect(await db.tasks.where("studyRoutineId").equals(id).count()).toBe(1);
   });
 });

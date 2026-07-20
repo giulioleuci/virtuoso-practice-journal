@@ -1,10 +1,10 @@
 import { db } from "@/infrastructure/dexie/db";
 import type { Task, TaskRecurrence } from "@/domain/entities/task";
-import type { TaskPort } from "@/domain/ports/task";
+import type { NewTaskInput, TaskPort } from "@/domain/ports/task";
 import { now } from "@/lib/date";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 
-export type NewTaskInput = Omit<Task, "id" | "done" | "createdAt" | "date"> & { date: string; recurrence?: TaskRecurrence };
+export type { NewTaskInput } from "@/domain/ports/task";
 const active = <T extends { deletedAt?: number }>(row: T) => !row.deletedAt;
 async function removeMany(ids: number[]) {
   if (!ids.length) return { soft: 0, hard: 0 };
@@ -41,4 +41,4 @@ export const taskRepository = {
   hasSessions: async (id: number) => (await db.sessions.where("taskId").equals(id).count()) > 0,
   hardDelete: async (id: number) => { await db.tasks.delete(id); },
   restore: async (task: Task) => { await db.tasks.add(task); },
-} satisfies TaskPort & Record<string, unknown>;
+} satisfies TaskPort;

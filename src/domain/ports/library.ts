@@ -7,4 +7,6 @@ export interface LibraryPort {
   upsert(item: Draft<LibraryItem>, segments?: Omit<Segment, "id" | "itemId" | "createdAt">[]): Promise<number>;
   remove(id: number): Promise<"soft" | "hard">;
   restore(item: LibraryItem, segments: Segment[]): Promise<number>;
+  hasSessions(itemId: number): Promise<boolean>;
+  hardDelete(itemId: number): Promise<void>;
 }

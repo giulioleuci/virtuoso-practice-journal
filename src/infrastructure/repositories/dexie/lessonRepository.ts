@@ -13,4 +13,4 @@ export const lessonRepository = {
   remove: async (id: number) => { await db.transaction("rw", db.lessons, db.assignments, async () => { await db.assignments.where("lessonId").equals(id).delete(); await db.lessons.delete(id); }); },
   assignmentsForLesson: (lessonId: number) => db.assignments.where("lessonId").equals(lessonId).toArray(),
   ignoreAssignment: async (id: number) => { await db.assignments.update(id, { ignored: true }); }, restoreAssignment: async (id: number) => { await db.assignments.update(id, { ignored: false }); }, transformAssignment: async (id: number, taskId: number) => { await db.assignments.update(id, { transformed: true, taskId }); },
-} satisfies LessonPort & Record<string, unknown>;
+} satisfies LessonPort;
