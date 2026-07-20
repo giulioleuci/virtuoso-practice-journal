@@ -17,6 +17,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { useSessionSubmission } from "@/presentation/hooks/usePresentationControllers";
 import { presentationQueries } from "@/application/queries/presentationQueryService";
 import { toast } from "sonner";
 import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
@@ -85,6 +86,13 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   const libraryItem = usePresentationRead<LibraryItem | undefined>("library.item", [task?.itemId]);
   const allTechniques = useTechniques();
   const taskSegments = usePresentationRead<Segment[]>("segments.ids", [task?.segmentIds ?? []]);
+  const submission = useSessionSubmission(async ({
+    task,
+    input,
+  }: {
+    task: NonNullable<Props["task"]>;
+    input: Parameters<typeof sessionsService.logWithCompletion>[1];
+  }) => sessionsService.logWithCompletion(task, input));
 
   const isTheory = subject?.type === "theory";
   const showGranularToggle = (taskSegments?.length ?? 0) >= 2;
@@ -239,7 +247,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       ? Object.fromEntries(techniquesUsed.map((id) => [id, v.techniqueScores[id] ?? 0]))
       : undefined;
 
-    await sessionsService.logWithCompletion(task, {
+    const logged = await submission.submit({ task, input: {
       date: task.date,
       bpmReached: granular ? undefined : (isTheory ? undefined : v.bpm),
       noteVal: granular ? undefined : (isTheory ? undefined : v.noteVal),
@@ -253,7 +261,11 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
       techniqueScores,
       segmentMetrics: granular ? buildSegmentMetrics() : undefined,
       helpText: needHelp ? helpText.trim() : undefined,
-    });
+    }});
+    if (!logged) {
+      toast.error(submission.error ?? t("errors.couldNotSave"));
+      return;
+    }
 
     if (task.studyRoutineId) {
       const routine = await presentationQueries().execute<import("@/domain/ports/studyRoutine").StudyRoutine | undefined>("routines.one", task.studyRoutineId);
@@ -626,7 +638,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               {t("common.cancel")}
             </Button>
-            <Button className="flex-1" disabled={errors.length > 0} onClick={save}>
+            <Button className="flex-1" disabled={errors.length > 0 || submission.submitting} onClick={save}>
               {t("session.saveSession")}
             </Button>
           </div>

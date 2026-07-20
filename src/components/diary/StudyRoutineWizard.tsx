@@ -33,43 +33,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { Pager } from "@/components/shared/Pager";
 import { toast } from "sonner";
-import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, ChevronLeft, Eye } from "lucide-react";
-
-interface PagerProps {
-  page: number;
-  pageCount: number;
-  onChange: (p: number) => void;
-}
-function Pager({ page, pageCount, onChange }: PagerProps) {
-  const { t } = useI18n();
-  if (pageCount <= 1) return null;
-  return (
-    <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-border">
-      <button
-        type="button"
-        onClick={() => onChange(Math.max(1, page - 1))}
-        disabled={page <= 1}
-        className="p-1 text-muted-foreground disabled:opacity-30"
-        aria-label={t("pagination.prevPage")}
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-      </button>
-      <span className="text-[10px] text-muted-foreground tabular-nums">
-        {page} / {pageCount}
-      </span>
-      <button
-        type="button"
-        onClick={() => onChange(Math.min(pageCount, page + 1))}
-        disabled={page >= pageCount}
-        className="p-1 text-muted-foreground disabled:opacity-30"
-        aria-label={t("pagination.nextPage")}
-      >
-        <ChevronRight className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
-}
+import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, Eye } from "lucide-react";
 
 function genId(): string {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
@@ -152,7 +118,7 @@ function GroupItemsEditor({
                     );
                   })}
                 </div>
-                <Pager page={pickerPage} pageCount={pageCount} onChange={setPickerPage} />
+                <Pager page={pickerPage - 1} totalPages={pageCount} onChange={(page) => setPickerPage(page + 1)} />
               </>
             )}
           </DialogContent>
@@ -696,18 +662,14 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                                       </div>
                                     );
                                   })}
-                                  <Pager
-                                    page={segPage}
-                                    pageCount={segPageCount}
-                                    onChange={(p) => setSegPage(item.id, p)}
-                                  />
+                                  <Pager page={segPage - 1} totalPages={segPageCount} onChange={(page) => setSegPage(item.id, page + 1)} />
                                 </div>
                               )}
                             </div>
                           );
                         })}
                       </div>
-                      <Pager page={libraryPage} pageCount={libraryPageCount} onChange={setLibraryPage} />
+                      <Pager page={libraryPage - 1} totalPages={libraryPageCount} onChange={(page) => setLibraryPage(page + 1)} />
                     </div>
                   )}
                 </TabsContent>
@@ -751,7 +713,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                           );
                         })}
                       </div>
-                      <Pager page={collectionsPage} pageCount={collectionsPageCount} onChange={setCollectionsPage} />
+                      <Pager page={collectionsPage - 1} totalPages={collectionsPageCount} onChange={(page) => setCollectionsPage(page + 1)} />
                     </div>
                   )}
                 </TabsContent>

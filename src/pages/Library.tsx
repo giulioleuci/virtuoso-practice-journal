@@ -24,6 +24,7 @@ import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { BpmSparkline } from "@/components/library/BpmSparkline";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { FeatureEmptyState } from "@/components/shared/FeatureEmptyState";
 import { Pager } from "@/components/shared/Pager";
 import { useCollectionLinks, useCollections, useHelpRequests, useLibraryByKind, useSegments, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
@@ -41,7 +42,8 @@ import {
 import { toast } from "sonner";
 
 export default function Library() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const libraryQuote = useMemo(() => pickQuote(LIBRARY_QUOTES, lang), [lang]);
   const navigate = useNavigate();
   const [active, setActive] = useState<LibraryKind>("repertoire");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -357,7 +359,7 @@ export default function Library() {
         if (items === undefined) return <ListSkeleton />;
         if (!filteredItems.length) {
           return items.length === 0
-            ? <EmptyLibrary onAdd={openCreate} hint={t("library.empty")} />
+            ? <FeatureEmptyState description={t("library.empty")} quote={libraryQuote} action={{ label: t("library.addToLibrary"), onClick: openCreate }} />
             : <EmptyState title={t("library.noItemsMatch")} />;
         }
 
@@ -534,17 +536,5 @@ function TheoryMasterySection({ itemId }: { itemId: number }) {
         ))}
       </div>
     </div>
-  );
-}
-
-function EmptyLibrary({ onAdd, hint }: { onAdd: () => void; hint: string }) {
-  const { t, lang } = useI18n();
-  const quote = useMemo(() => pickQuote(LIBRARY_QUOTES, lang), [lang]);
-  return (
-    <EmptyState
-      hint={hint}
-      quote={quote}
-      cta={{ label: t("library.addToLibrary"), onClick: onAdd }}
-    />
   );
 }

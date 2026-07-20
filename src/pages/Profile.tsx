@@ -4,6 +4,7 @@ import { scheduleReminders, ensureNotificationPermission } from "@/lib/platform"
 import { getDefaultWeekStartsOn } from "@/lib/date";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
 import { useProfile } from "@/presentation/hooks/useEntities";
+import { useBackupCommands } from "@/presentation/hooks/usePresentationControllers";
 import { REMINDER_PRESETS, resolveReminderText, getReminderBodies, type ReminderPreset } from "@/lib/reminderPresets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,10 @@ export default function Profile() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [backupProgress, setBackupProgress] = useState<"idle" | "exporting" | "importing">("idle");
+  const backup = useBackupCommands({
+    exportBackup: async () => { await backupService.exportBackup(); return true; },
+    importBackup: backupService.importBackup,
+  });
 
   // Reflect reminder preferences in scheduled OS-level notifications when running natively.
   const reminderDaysKey = profile?.reminderDays?.join(",") ?? "";
@@ -63,26 +67,15 @@ export default function Profile() {
   };
 
   const onExport = async () => {
-    setBackupProgress("exporting");
-    try {
-      await backupService.exportBackup();
-      toast.success(t("toast.exported"));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("errors.couldNotSave"));
-    } finally {
-      setBackupProgress("idle");
-    }
+    const result = await backup.exportBackup();
+    if (result.ok) toast.success(t("toast.exported"));
+    else toast.error(result.error || t("errors.couldNotSave"));
   };
 
   const onImport = async () => {
-    setBackupProgress("importing");
-    try {
-      if (await backupService.importBackup()) toast.success(t("toast.imported"));
-    } catch {
-      toast.error(t("errors.invalidFile"));
-    } finally {
-      setBackupProgress("idle");
-    }
+    const result = await backup.importBackup();
+    if (result.ok && result.value) toast.success(t("toast.imported"));
+    else if (!result.ok) toast.error(t("errors.invalidFile"));
   };
 
   const remindersOn = profile.reminderEnabled !== false;
@@ -389,10 +382,10 @@ export default function Profile() {
           </AccordionTrigger>
           <AccordionContent className="pb-4">
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={onExport} disabled={backupProgress !== "idle"} className="w-full">
+              <Button variant="outline" onClick={onExport} disabled={backup.progress !== "idle"} className="w-full">
                 <Download className="h-4 w-4 mr-2" />{t("profile.export")}
               </Button>
-              <Button variant="outline" onClick={onImport} disabled={backupProgress !== "idle"} className="w-full">
+              <Button variant="outline" onClick={onImport} disabled={backup.progress !== "idle"} className="w-full">
                 <Upload className="h-4 w-4 mr-2" />{t("profile.import")}
               </Button>
             </div>

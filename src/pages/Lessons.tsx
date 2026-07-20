@@ -41,12 +41,14 @@ import { dayKey, today } from "@/lib/date";
 import { toast } from "sonner";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { FeatureEmptyState } from "@/components/shared/FeatureEmptyState";
 import { Pager } from "@/components/shared/Pager";
 
 const PAGE_SIZE = 5;
 
 export default function Lessons() {
   const { t, lang } = useI18n();
+  const lessonQuote = useMemo(() => pickQuote(LESSON_QUOTES, lang), [lang]);
   const navigate = useNavigate();
   const location = useLocation();
   const recurrences = useRecurrences();
@@ -158,7 +160,7 @@ export default function Lessons() {
       <section className="space-y-2">
         <h3 className="text-xs uppercase tracking-wider text-muted-foreground">{t("lessons.teachers")}</h3>
         {!recurrences?.length ? (
-          <EmptyLessons onAdd={openNew} />
+          <FeatureEmptyState description={t("lessons.empty")} quote={lessonQuote} action={{ label: t("lessons.addRecurrence"), onClick: openNew }} />
         ) : (
           <ul className="space-y-2">
             {recurrences.map((r) => {
@@ -490,13 +492,5 @@ export default function Lessons() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
-}
-
-function EmptyLessons({ onAdd }: { onAdd: () => void }) {
-  const { t, lang } = useI18n();
-  const quote = useMemo(() => pickQuote(LESSON_QUOTES, lang), [lang]);
-  return (
-    <EmptyState hint={t("lessons.empty")} quote={quote} cta={{ label: t("lessons.addRecurrence"), onClick: onAdd }} />
   );
 }
