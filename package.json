@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "i18n:validate": "node scripts/validate-i18n.mjs --allow-unused",
+    "i18n:validate": "npm run i18n:check",
     "i18n:check": "node scripts/validate-i18n.mjs",
     "ci": "npm run lint && npm run i18n:validate && npm run test && npm run build",
     "generate:icons": "node scripts/generate-icons.mjs",

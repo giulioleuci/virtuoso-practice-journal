@@ -9,7 +9,7 @@ This report's original audit follows as historical context. The Clean Architectu
 - Safe removals: deleted uncalled `useFormDraft` (its `saveDraft` had no caller and its sole consumer only cleared a key that no code writes), unused `Tasks.totalPerWeek`, and legacy `_shared.ts`. The one live UI-only `deleteWithUndo` behavior moved to `src/presentation/utils/deleteWithUndo.ts` with a focused test proving delete-before-toast and undo restoration.
 - Intentional retentions: `src/lib/services/*` and `src/lib/db.ts` remain compatibility facades. TypeScript import audit found production callers (including presentation command adapters and domain compatibility type imports) and legacy integration tests, so deleting them is not safe until those callers are independently migrated. They no longer give presentation direct access to Dexie; the permanent boundary test enforces that.
 - Candidate decisions: inline `toast` callbacks in Tasks and Library remain because they are required arguments to the undo helper; JSX `onClick` handlers remain framework callbacks. Distinct shadcn ellipsis primitives remain intentionally separate.
-- Certification gate: `npm run ci` runs lint, i18n parity/reference validation (unused historical keys reported as warnings), all tests, and production build. The final recorded run passes.
+- Certification gate: `npm run ci` runs lint, strict i18n parity/reference/unused-key validation, all tests, and production build. The final recorded run passes.
 
 **Scope:** read-only architectural analysis of the indexed code graph, performed 2026-07-20. No application source was changed.
 
