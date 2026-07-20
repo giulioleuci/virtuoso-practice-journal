@@ -30,6 +30,21 @@ describe("task and session use cases", () => {
     expect(id).toBe(1);
     expect(tasks.created.map((task) => task.date)).toEqual(["2026-07-20", "2026-07-22"]);
     expect(tasks.created[1].recurrenceTaskId).toBe(1);
+    expect(tasks.createRecurringCalls).toBe(1);
+  });
+
+  it("clamps invalid interval steps and caps an unbounded recurrence", async () => {
+    const tasks = new FakeTaskRepository();
+    const useCase = new CreateTaskUseCase(tasks, () => 10);
+
+    await useCase.execute({
+      ...baseTask,
+      recurrence: { kind: "interval", everyXDays: 0, startDate: "2026-07-20" },
+    });
+
+    expect(tasks.created).toHaveLength(200);
+    expect(tasks.created[1].date).toBe("2026-07-21");
+    expect(tasks.createRecurringCalls).toBe(1);
   });
 
   it("rejects a recurrence that yields no dates", async () => {
@@ -74,6 +89,21 @@ describe("task and session use cases", () => {
     expect(sessions.sessions).toHaveLength(1);
     expect(sessions.sessions[0].snapshot?.taskTitle).toBe("Scales");
     expect(sessions.helpRequests[0]).toMatchObject({ taskId: 1, question: "How to relax?" });
+    expect(tasks.updated.get(1)).toEqual({ done: true });
+    expect(sessions.sessions[0]).toMatchObject({ createdAt: 88, snapshot: { targetBpm: undefined } });
+  });
+
+  it("assembles an effective snapshot and rolls back when help persistence fails", async () => {
+    const tasks = new FakeTaskRepository([baseTask]);
+    const sessions = new FakeSessionRepository(tasks);
+    const useCase = new LogSessionUseCase(sessions, () => 88);
+
+    await useCase.execute(baseTask, { date: "2026-07-20", confidence: 3, bpmReached: 120, layersUsed: ["hands"], techniquesUsed: [4] });
+    expect(sessions.sessions[0].snapshot).toMatchObject({ targetBpm: 120, layers: ["hands"], techniqueNames: ["technique 4"] });
+
+    sessions.failHelpRequest = true;
+    await expect(useCase.execute(baseTask, { date: "2026-07-20", confidence: 3, helpText: "Need help" })).rejects.toThrow("help persistence failed");
+    expect(sessions.sessions).toHaveLength(1);
     expect(tasks.updated.get(1)).toEqual({ done: true });
   });
 

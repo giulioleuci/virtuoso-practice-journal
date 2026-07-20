@@ -61,6 +61,19 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
 }
 
 export const studyRoutineRepository = {
+  async createRoutine(input: StudyRoutineInput, createdAt: number) {
+    const id = await db.studyRoutines.add({ ...input, createdAt }) as number;
+    return { ...input, id, createdAt };
+  },
+  resolvePool: resolvePoolEntries,
+  weights: computeWeights,
+  async weekStartsOn() {
+    const profile = await db.profile.get("me");
+    return profile?.weekStartsOn ?? (profile ? getDefaultWeekStartsOn(profile.lang) : 1);
+  },
+  async persistTasks(tasks: Omit<import("@/domain/entities/task").Task, "id">[]) {
+    if (tasks.length) await db.tasks.bulkAdd(tasks);
+  },
   async create(input: StudyRoutineInput) { const id = await db.studyRoutines.add({ ...input, createdAt: now() }) as number; const routine = await db.studyRoutines.get(id); if (routine) await generate(routine, input.startDate); return id; },
   async regenerateFromDate(routine: StudyRoutine, fromDate: string) {
     const future = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.done && task.date >= fromDate).toArray();

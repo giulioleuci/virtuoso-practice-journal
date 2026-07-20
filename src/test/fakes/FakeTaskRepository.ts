@@ -3,6 +3,7 @@ import type { NewTaskInput, TaskPort } from "@/domain/ports/task";
 
 export class FakeTaskRepository implements TaskPort {
   created: Omit<Task, "id">[] = [];
+  createRecurringCalls = 0;
   updated = new Map<number, Partial<Task>>();
   deleted: number[] = [];
   sessionTaskIds = new Set<number>();
@@ -10,7 +11,12 @@ export class FakeTaskRepository implements TaskPort {
   async list() { return this.rows.filter((task) => !task.deletedAt); }
   async byDate(date: string) { return (await this.list()).filter((task) => task.date === date); }
   async create(task: NewTaskInput) { const id = this.rows.length + this.created.length + 1; this.created.push({ ...task, done: false, createdAt: task.createdAt ?? 0 }); return id; }
-  async createBatch(tasks: Omit<Task, "id">[]) { const first = this.rows.length + this.created.length + 1; this.created.push(...tasks); return tasks.map((_, i) => first + i); }
+  async createRecurring(first: Omit<Task, "id">, followUps: Omit<Task, "id">[]) {
+    this.createRecurringCalls++;
+    const id = this.rows.length + this.created.length + 1;
+    this.created.push(first, ...followUps.map((task) => ({ ...task, recurrenceTaskId: id })));
+    return id;
+  }
   async update(id: number, patch: Partial<Task>) { this.updated.set(id, patch); }
   async remove(id: number) { return this.sessionTaskIds.has(id) ? "soft" as const : "hard" as const; }
   async carryOver(task: Task, toDate: string) { const id = await this.create({ ...task, date: toDate }); if (task.id) await this.skip(task.id); return id; }

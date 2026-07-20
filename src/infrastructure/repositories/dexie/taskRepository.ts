@@ -28,9 +28,13 @@ export const taskRepository = {
     await db.transaction("rw", db.tasks, async () => { firstId = await db.tasks.add({ ...rest, date: dates[0], recurrence, done: false, createdAt: ts }) as number; if (dates.length > 1) await db.tasks.bulkAdd(dates.slice(1).map((date) => ({ ...rest, date, done: false, recurrenceTaskId: firstId, createdAt: ts }))); });
     return firstId;
   },
-  async createBatch(tasks: Omit<Task, "id">[]) {
-    if (!tasks.length) return [];
-    return db.transaction("rw", db.tasks, () => db.tasks.bulkAdd(tasks, { allKeys: true }) as Promise<number[]>);
+  async createRecurring(first: Omit<Task, "id">, followUps: Omit<Task, "id">[]) {
+    let id = 0;
+    await db.transaction("rw", db.tasks, async () => {
+      id = await db.tasks.add(first) as number;
+      if (followUps.length) await db.tasks.bulkAdd(followUps.map((task) => ({ ...task, recurrenceTaskId: id })));
+    });
+    return id;
   },
   update: async (id: number, patch: Partial<Task>) => { await db.tasks.update(id, patch); },
   toggleDone: async (id: number, done: boolean) => { await db.tasks.update(id, { done }); },
