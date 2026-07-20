@@ -8,8 +8,12 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useLessons, useRecurrences, useSubjects, useTechniques } from "@/hooks/useEntities";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { NoteVal } from "@/domain/entities/common";
+import type { Collection } from "@/domain/entities/collection";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
+import type { TaskLinkType } from "@/domain/entities/task";
 import { getSubjectLayers } from "@/lib/domain/subjectLayers";
 import { nextLessonDate } from "@/lib/domain/lessonSchedule";
 import { useI18n } from "@/lib/i18n";
@@ -86,18 +90,9 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
   });
   const setRec = (patch: Partial<RecurrenceState>) => setRecState((s) => ({ ...s, ...patch }));
 
-  const selectedItem = useLiveQuery(
-    () => (itemId ? db.library.get(itemId) : Promise.resolve(undefined)),
-    [itemId]
-  );
-  const selectedSegments = useLiveQuery(
-    () => (segmentIds.length ? db.segments.where("id").anyOf(segmentIds).toArray() : Promise.resolve([])),
-    [segmentIds.join(",")]
-  );
-  const selectedCollection = useLiveQuery(
-    () => (collectionId ? db.collections.get(collectionId) : Promise.resolve(undefined)),
-    [collectionId]
-  );
+  const selectedItem = usePresentationRead<LibraryItem | undefined>("library.item", [itemId]);
+  const selectedSegments = usePresentationRead<Segment[]>("segments.ids", [segmentIds]);
+  const selectedCollection = usePresentationRead<Collection | undefined>("collections.one", [collectionId]);
 
   const selectedSubject = useMemo(
     () => subjects?.find((s) => s.id === subjectId),

@@ -29,6 +29,7 @@ describe("presentation query adapter", () => {
   });
 
   it.each([
+    ["tasks.diaryDate", { tasks: [{ id: 1 }], sessionsByTask: {} }, { tasks: [{ id: 2 }], sessionsByTask: { 2: [{ id: 3 }] } }],
     ["library.item", { id: 1, title: "Prelude" }, { id: 1, title: "Fugue" }],
     ["library.segments", [{ id: 1, label: "A" }], [{ id: 1, label: "B" }]],
     ["collections.items", [{ id: 1, itemId: 4 }], [{ id: 2, itemId: 5 }]],

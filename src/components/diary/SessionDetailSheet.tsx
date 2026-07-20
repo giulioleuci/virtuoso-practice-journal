@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTechniques } from "@/hooks/useEntities";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { NoteVal, SessionQuality, Subject } from "@/domain/entities/common";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
+import type { Session } from "@/domain/entities/session";
+import type { Task } from "@/domain/entities/task";
 import { sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
@@ -39,30 +43,16 @@ const initial = (s?: Session | null): SessionFieldsValue => ({
 
 export function SessionDetailSheet({ open, onOpenChange, session }: Props) {
   const { t, lang } = useI18n();
-  const task = useLiveQuery(
-    () => (session?.taskId ? db.tasks.get(session.taskId) : Promise.resolve(undefined)),
-    [session?.taskId]
-  );
-  const item = useLiveQuery(
-    () => (task?.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
-    [task?.itemId]
-  );
-  const segments = useLiveQuery(
-    () => (task?.segmentIds?.length
-      ? db.segments.where("id").anyOf(task.segmentIds).toArray()
-      : Promise.resolve([])),
-    [task?.segmentIds?.join(",")]
-  );
+  const task = usePresentationRead<Task | undefined>("tasks.one", [session?.taskId]);
+  const item = usePresentationRead<LibraryItem | undefined>("library.item", [task?.itemId]);
+  const segments = usePresentationRead<Segment[]>("segments.ids", [task?.segmentIds ?? []]);
 
   const [editing, setEditing] = useState(false);
   const [date, setDate] = useState("");
   const [v, setV] = useState<SessionFieldsValue>(() => initial(session));
   const [confirmDel, setConfirmDel] = useState(false);
 
-  const subject = useLiveQuery(
-    () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
-    [task?.subjectId]
-  );
+  const subject = usePresentationRead<Subject | undefined>("subjects.one", [task?.subjectId]);
   const allTechniques = useTechniques();
   const isTheory = subject?.type === "theory";
   const layerOptions = isTheory

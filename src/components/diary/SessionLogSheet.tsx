@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTechniques } from "@/hooks/useEntities";
-import { db, THEORY_LAYERS, type NoteVal, type SessionQuality, type Task, type SegmentMetric } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { NoteVal, SessionQuality, Subject } from "@/domain/entities/common";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
+import type { Task } from "@/domain/entities/task";
+import type { SegmentMetric } from "@/domain/entities/session";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -12,7 +16,8 @@ import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
-import { useLiveQuery } from "@/lib/subscriptions";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { presentationQueries } from "@/application/queries/presentationQueryService";
 import { toast } from "sonner";
 import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
 import { studyRoutinesService, sessionsService } from "@/lib/services";
@@ -75,30 +80,11 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
 
   const [showAnswers, setShowAnswers] = useState(false);
 
-  const answeredCount = useLiveQuery(
-    () =>
-      task?.itemId
-        ? db.helpRequests.where("itemId").equals(task.itemId).filter((r) => !!r.answer).count()
-        : Promise.resolve(0),
-    [task?.itemId]
-  ) ?? 0;
-
-  const subject = useLiveQuery(
-    () => (task?.subjectId ? db.subjects.get(task.subjectId) : Promise.resolve(undefined)),
-    [task?.subjectId]
-  );
-  const libraryItem = useLiveQuery(
-    () => (task?.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
-    [task?.itemId]
-  );
+  const answeredCount = usePresentationRead<number>("helpRequests.answeredCount", [task?.itemId]) ?? 0;
+  const subject = usePresentationRead<Subject | undefined>("subjects.one", [task?.subjectId]);
+  const libraryItem = usePresentationRead<LibraryItem | undefined>("library.item", [task?.itemId]);
   const allTechniques = useTechniques();
-  const taskSegments = useLiveQuery(
-    () =>
-      task?.segmentIds?.length
-        ? db.segments.where("id").anyOf(task.segmentIds).filter((s) => !s.deletedAt).toArray()
-        : Promise.resolve([]),
-    [task?.segmentIds?.join(",")]
-  );
+  const taskSegments = usePresentationRead<Segment[]>("segments.ids", [task?.segmentIds ?? []]);
 
   const isTheory = subject?.type === "theory";
   const showGranularToggle = (taskSegments?.length ?? 0) >= 2;
@@ -270,7 +256,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     });
 
     if (task.studyRoutineId) {
-      const routine = await db.studyRoutines.get(task.studyRoutineId);
+      const routine = await presentationQueries().execute<import("@/domain/ports/studyRoutine").StudyRoutine | undefined>("routines.one", task.studyRoutineId);
       if (routine && routine.useSpacedRepetition) {
         studyRoutinesService.regenerateFromDate(routine, task.date).catch(() => {});
       }

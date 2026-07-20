@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, THEORY_LAYERS, type Session, type Task } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { Session } from "@/domain/entities/session";
+import type { Task } from "@/domain/entities/task";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
 import { today } from "@/lib/date";
@@ -33,52 +35,9 @@ export function LastSessionStrip({ task, compact = false }: Props) {
   const { t } = useI18n();
   const todayKey = today();
 
-  const lastSession = useLiveQuery(async (): Promise<Session | null> => {
-    // For item-linked tasks, find sessions across all tasks for the same item
-    if (task.itemId) {
-      const relatedTasks = await db.tasks.where("itemId").equals(task.itemId).toArray();
-      const ids = relatedTasks.map((x) => x.id).filter(Boolean);
-      if (!ids.length) return null;
-      const sessions = await db.sessions
-        .where("taskId")
-        .anyOf(ids)
-        .and((s) => s.date < todayKey)
-        .sortBy("date");
-      return sessions.length > 0 ? sessions[sessions.length - 1] : null;
-    }
-    // For free-form tasks, find previous sessions for this specific task
-    if (task.id) {
-      const sessions = await db.sessions
-        .where("taskId")
-        .equals(task.id)
-        .and((s) => s.date < todayKey)
-        .sortBy("date");
-      return sessions.length > 0 ? sessions[sessions.length - 1] : null;
-    }
-    return null;
-  }, [task.id, task.itemId, todayKey]);
-
-  const isTheory = useLiveQuery(async () => {
-    if (!task.subjectId) return false;
-    const subject = await db.subjects.get(task.subjectId);
-    return subject?.type === "theory";
-  }, [task.subjectId]);
-
-  const recentBpms = useLiveQuery(async (): Promise<number[]> => {
-    if (!task.itemId || isTheory) return [];
-    const relatedTasks = await db.tasks.where("itemId").equals(task.itemId).toArray();
-    const ids = relatedTasks.map((x) => x.id).filter(Boolean);
-    if (!ids.length) return [];
-    const sessions = await db.sessions
-      .where("taskId")
-      .anyOf(ids)
-      .and((s) => s.date < todayKey && s.bpmReached !== undefined)
-      .sortBy("date");
-    return sessions
-      .slice(-3)
-      .map((s) => s.bpmReached)
-      .filter((bpm): bpm is number => bpm !== undefined);
-  }, [task.itemId, isTheory, todayKey]);
+  const lastSession = usePresentationRead<Session | null>("sessions.lastForTask", [task.id, task.itemId, todayKey]);
+  const isTheory = usePresentationRead<boolean>("subjects.isTheory", [task.subjectId]) ?? false;
+  const recentBpms = usePresentationRead<number[]>("sessions.recentBpms", [isTheory ? undefined : task.itemId, todayKey]);
 
   const sparklinePath = useMemo(() => {
     if (!recentBpms || recentBpms.length < 2) return null;

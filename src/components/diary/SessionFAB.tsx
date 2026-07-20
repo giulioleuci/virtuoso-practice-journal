@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useSubjects } from "@/hooks/useEntities";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type SessionQuality, type NoteVal } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { NoteVal, SessionQuality } from "@/domain/entities/common";
+import type { LibraryItem } from "@/domain/entities/library";
 import { useI18n } from "@/lib/i18n";
 import { sessionsService, tasksService } from "@/lib/services";
 import { today } from "@/lib/date";
@@ -37,12 +38,7 @@ export function SessionFAB({ className }: Props) {
   const [date, setDate] = useState(todayKey);
 
   const subjects = useSubjects();
-  const libraryItems = useLiveQuery(
-    () => subjectId
-      ? db.library.where("subjectId").equals(subjectId).filter((i) => !i.deletedAt).toArray()
-      : Promise.resolve([]),
-    [subjectId]
-  );
+  const libraryItems = usePresentationRead<LibraryItem[]>("library.subject", [subjectId]);
 
   const reset = () => {
     setSubjectId(undefined);

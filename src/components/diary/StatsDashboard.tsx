@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type Session } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { Session } from "@/domain/entities/session";
 import { useI18n } from "@/lib/i18n";
 import { dayKey } from "@/lib/date";
 
@@ -19,10 +19,7 @@ interface Props {
 export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {}) {
   const { t } = useI18n();
   // Only hit the DB when no pre-filtered sessions are provided.
-  const liveSessions = useLiveQuery(
-    () => (sessionsProp ? Promise.resolve(undefined) : db.sessions.toArray()),
-    [sessionsProp],
-  );
+  const liveSessions = usePresentationRead<Session[]>("sessions.all");
   const sessions = sessionsProp ?? liveSessions;
 
   const hasRange = !!(from || to);

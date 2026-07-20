@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, type ReactNode } from "react";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { LibraryItem } from "@/domain/entities/library";
+import type { StudyPoolEntry, StudyGroup, StudyRoutine } from "@/domain/ports/studyRoutine";
 import { useI18n } from "@/lib/i18n";
 import { studyRoutinesService } from "@/lib/services";
 import { poolEntryKey } from "@/lib/domain/studyRoutineGenerator";
@@ -278,13 +279,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   const [saving, setSaving] = useState(false);
 
   // DB queries
-  const library = useLiveQuery(
-    () =>
-      subjectId
-        ? db.library.where("subjectId").equals(subjectId).filter((i) => !i.deletedAt).toArray()
-        : Promise.resolve([]),
-    [subjectId]
-  );
+  const library = usePresentationRead<LibraryItem[]>("library.subject", [subjectId]);
   const allSegments = useSegments();
   const allCollections = useCollections();
 

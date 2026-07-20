@@ -1,5 +1,5 @@
 import { schoolYearEnd } from "@/lib/recurrence";
-import type { TaskRecurrence } from "@/lib/presentationQueries";
+import type { TaskRecurrence } from "@/domain/entities/task";
 
 export type EndMode = "never" | "nextLesson" | "date" | "count";
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { PresentationQueryService } from "@/application/queries/presentationQueryService";
+import { presentationQueries, type PresentationQueryService } from "@/application/queries/presentationQueryService";
 
 /** React adapter for application query DTOs. It has no persistence dependency. */
 export function usePresentationQuery<T>(
@@ -22,4 +22,9 @@ export function usePresentationQuery<T>(
   }, [load, queries]);
 
   return value;
+}
+
+/** Named presentation read adapter; components never access persistence directly. */
+export function usePresentationRead<T>(operation: string, parameters: readonly unknown[] = []): T | undefined {
+  return usePresentationQuery<T>(presentationQueries(), operation, parameters);
 }

@@ -3,10 +3,12 @@
  */
 import { useMemo } from "react";
 import { useCollectionLinks, useLibrary } from "@/hooks/useEntities";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type LibraryKind, type TaskLinkType } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { LibraryKind } from "@/domain/entities/common";
+import type { Collection, CollectionItem } from "@/domain/entities/collection";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
+import type { TaskLinkType } from "@/domain/entities/task";
 import { useI18n } from "@/lib/i18n";
-import { collectionsService } from "@/lib/services";
 import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -39,12 +41,9 @@ export function LinkTargetFields({
 }: Props) {
   const { t } = useI18n();
   const library = useLibrary();
-  const allCollections = useLiveQuery(() => collectionsService.list(), []);
+  const allCollections = usePresentationRead<Collection[]>("collections.active");
   const allCollectionItems = useCollectionLinks();
-  const segments = useLiveQuery(
-    () => (itemId ? db.segments.where("itemId").equals(itemId).filter((s) => !s.deletedAt).toArray() : Promise.resolve([])),
-    [itemId]
-  );
+  const segments = usePresentationRead<Segment[]>("library.segments", [itemId]);
 
   // Filter state local to "item" mode
   const kindFilterKey = `kindFilter:${subjectId ?? 0}`;
@@ -122,7 +121,6 @@ export function LinkTargetFields({
 }
 
 import { useState } from "react";
-import type { LibraryItem, Collection, CollectionItem } from "@/lib/presentationQueries";
 
 function ItemPicker({
   subjectId, library, allCollections, allCollectionItems, itemId, setItemId,

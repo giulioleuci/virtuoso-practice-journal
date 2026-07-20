@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
 import { useSessions, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { Task } from "@/domain/entities/task";
+import type { Session } from "@/domain/entities/session";
+import type { Profile } from "@/domain/entities/profile";
+import type { LessonRecurrence } from "@/domain/entities/lesson";
+import type { NoteVal, Subject } from "@/domain/entities/common";
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { today, dayKey, formatDate, now } from "@/lib/date";
@@ -63,28 +67,9 @@ export default function Diary() {
   const { profile } = useOutletContext<{ profile: Profile }>();
   const todayKey = today();
 
-  const { tasks, sessionsByTask } = useLiveQuery(async () => {
-    const fetchedTasks = await db.tasks
-      .where("date")
-      .equals(todayKey)
-      .filter((t) => !t.deletedAt)
-      .toArray();
-
-    const taskIds = fetchedTasks.map((t) => t.id).filter(Boolean);
-    const relevantSessions = taskIds.length > 0 ? await db.sessions.where("taskId").anyOf(taskIds).toArray() : [];
-
-    const groupedSessions = relevantSessions.reduce<Record<number, typeof relevantSessions>>((acc, s) => {
-      (acc[s.taskId] ||= [] as never).push(s as never);
-      return acc;
-    }, {});
-
-    return { tasks: fetchedTasks, sessionsByTask: groupedSessions };
-  }, [todayKey]) ?? { tasks: undefined, sessionsByTask: {} };
-
-  const pendingAssignments = useLiveQuery(
-    () => db.assignments.filter((a) => !a.transformed && !a.ignored).toArray(),
-    [],
-  );
+  const diary = usePresentationRead<{ tasks: Task[]; sessionsByTask: Record<number, Session[]> }>("tasks.diaryDate", [todayKey]);
+  const { tasks, sessionsByTask } = diary ?? { tasks: undefined, sessionsByTask: {} };
+  const pendingAssignments = usePresentationRead<unknown[]>("assignments.pending");
   const pendingCount = pendingAssignments?.length ?? 0;
 
   const studyRoutines = useStudyRoutines();
@@ -106,15 +91,15 @@ export default function Diary() {
   }, [studyRoutines]);
 
   // Today's lessons from recurrences (with the matching slot for the day)
-  const todayLessons = useLiveQuery(async () => {
-    const recs = await db.recurrences.filter((r) => !r.deletedAt).toArray();
+  const recurrences = usePresentationRead<LessonRecurrence[]>("recurrences.active");
+  const todayLessons = useMemo(() => {
     const out: { rec: LessonRecurrence; slot: ReturnType<typeof slotForDate> }[] = [];
-    for (const r of recs) {
+    for (const r of recurrences ?? []) {
       const slot = slotForDate(r, todayKey);
       if (slot) out.push({ rec: r, slot });
     }
     return out;
-  }, [todayKey]);
+  }, [recurrences, todayKey]);
 
 
   // All-time sessions for streak calculation
@@ -128,31 +113,16 @@ export default function Diary() {
     return dayKey(d);
   }, [carryoverDays]);
 
-  const carryoverTasks = useLiveQuery(
-    () =>
-      db.tasks
-        .where("date")
-        .between(carryoverFrom, todayKey, true, false)
-        .filter((t) => !t.done && !t.skipped)
-        .toArray(),
-    [carryoverFrom, todayKey],
-  );
+  const carryoverTasks = usePresentationRead<Task[]>("tasks.carryover", [carryoverFrom, todayKey]);
 
   const [logTask, setLogTask] = useState<Task | null>(null);
   const [logPrefill, setLogPrefill] = useState<
-    { bpm?: number; noteVal?: import("@/lib/presentationQueries").NoteVal; notes?: string } | undefined
+    { bpm?: number; noteVal?: NoteVal; notes?: string } | undefined
   >();
   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
   const [detailSession, setDetailSession] = useState<Session | null>(null);
   const [answersFor, setAnswersFor] = useState<{ itemId: number; title: string } | null>(null);
-  const answeredItemIds = useLiveQuery(
-    async () => {
-      const rs = await db.helpRequests.filter((r) => !!r.answer && !!r.itemId).toArray();
-      return new Set(rs.map((r) => r.itemId as number));
-    },
-    [],
-    new Set<number>(),
-  );
+  const answeredItemIds = usePresentationRead<Set<number>>("helpRequests.answeredItemIds") ?? new Set<number>();
   const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
   const [carryPage, setCarryPage] = useState(0);
   const [ignoredPage, setIgnoredPage] = useState(0);
@@ -160,15 +130,7 @@ export default function Diary() {
   const CARRY_PAGE_SIZE = 4;
   const IGNORED_PAGE_SIZE = 5;
 
-  const ignoredTasks = useLiveQuery(
-    () =>
-      db.tasks
-        .where("date")
-        .between(carryoverFrom, todayKey, true, false)
-        .filter((t) => !!t.skipped && !t.done && !t.deletedAt)
-        .toArray(),
-    [carryoverFrom, todayKey],
-  );
+  const ignoredTasks = usePresentationRead<Task[]>("tasks.ignored", [carryoverFrom, todayKey]);
 
   const doneCount = tasks?.filter((x) => x.done).length ?? 0;
   const totalCount = tasks?.length ?? 0;

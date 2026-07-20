@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type Session } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { Session } from "@/domain/entities/session";
 import { useTechniques } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
@@ -26,17 +26,8 @@ export function SegmentHistorySheet({ open, onOpenChange, itemId, segmentId, seg
   const { t, lang } = useI18n();
   const allTechniques = useTechniques();
 
-  const sessions = useLiveQuery(async (): Promise<Session[]> => {
-    if (!itemId || segmentId == null) return [];
-    const tasks = await db.tasks.where("itemId").equals(itemId).toArray();
-    const ids = tasks.map((x) => x.id).filter((n): n is number => n != null);
-    if (!ids.length) return [];
-    const key = String(segmentId);
-    const rows = await db.sessions.where("taskId").anyOf(ids).toArray();
-    return rows
-      .filter((s) => s.segmentMetrics && s.segmentMetrics[key])
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [itemId, segmentId]);
+  const allSessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
+  const sessions = useMemo(() => allSessions?.filter((session) => segmentId != null && !!session.segmentMetrics?.[String(segmentId)]).sort((a, b) => b.date.localeCompare(a.date)) ?? [], [allSessions, segmentId]);
 
   const trend = useMemo(() => {
     if (!sessions?.length) return null;

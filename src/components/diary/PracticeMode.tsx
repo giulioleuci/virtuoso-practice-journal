@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type NoteVal, type Task } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { NoteVal } from "@/domain/entities/common";
+import type { Collection } from "@/domain/entities/collection";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
+import type { Task } from "@/domain/entities/task";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -18,20 +21,9 @@ interface Props {
 
 export function PracticeMode({ task, onClose, onFinish, onShowAnswers }: Props) {
   const { t } = useI18n();
-  const item = useLiveQuery(
-    () => (task.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined)),
-    [task.itemId]
-  );
-  const segments = useLiveQuery(
-    () => (task.segmentIds?.length
-      ? db.segments.where("id").anyOf(task.segmentIds).toArray()
-      : Promise.resolve([])),
-    [task.segmentIds?.join(",")]
-  );
-  const collection = useLiveQuery(
-    () => (task.collectionId ? db.collections.get(task.collectionId) : Promise.resolve(undefined)),
-    [task.collectionId]
-  );
+  const item = usePresentationRead<LibraryItem | undefined>("library.item", [task.itemId]);
+  const segments = usePresentationRead<Segment[]>("segments.ids", [task.segmentIds ?? []]);
+  const collection = usePresentationRead<Collection | undefined>("collections.one", [task.collectionId]);
 
 
   // Screen wake lock so the device doesn't sleep mid-practice
