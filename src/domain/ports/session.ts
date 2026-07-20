@@ -24,5 +24,4 @@ export interface SessionPort {
   remove(id: number): Promise<void>;
   deleteWithTaskReset(sessionId: number, taskId?: number): Promise<void>;
   deleteByTaskAndDate(taskId: number, date: string): Promise<void>;
-  deleteByTaskAndDate(taskId: number, date: string): Promise<void>;
 }

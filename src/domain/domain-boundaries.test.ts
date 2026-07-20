@@ -62,7 +62,9 @@ describe("domain boundaries", () => {
     expect(source).toContain("export type PersistedTask = Task & { id: number };");
     expect(source).toContain("date: string;");
     expect(source).toContain("helpText?: string;");
-    expect(source).toContain("logWithCompletion(task: PersistedTask, input: SessionLogInput): Promise<number>;");
+    expect(source).toContain("transaction<T>(operation: (transaction: SessionLogTransaction) => Promise<T>): Promise<T>;");
+    expect(source).toContain("createSession(session: Omit<Session, \"id\">): Promise<number>;");
+    expect(source).toContain("completeTask(taskId: number): Promise<void>;");
   });
 
   it("preserves library removal outcome", async () => {

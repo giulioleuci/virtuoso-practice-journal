@@ -10,4 +10,3 @@ export { lessonsService } from "./lessons";
 export { pendingAssignmentsService } from "./pendingAssignments";
 export { helpRequestsService } from "./helpRequests";
 export { backupService } from "./backup";
-export { deleteWithUndo } from "./_shared";

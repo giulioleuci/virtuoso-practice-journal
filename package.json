@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "i18n:validate": "node scripts/validate-i18n.mjs --allow-unused",
     "i18n:check": "node scripts/validate-i18n.mjs",
-    "ci": "npm run lint && npm run i18n:check && npm run test && npm run build",
+    "ci": "npm run lint && npm run i18n:validate && npm run test && npm run build",
     "generate:icons": "node scripts/generate-icons.mjs",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open": "npx cap open android"

@@ -5,7 +5,8 @@ import { useActiveTasks, useStudyRoutines, useSubjects } from "@/presentation/ho
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
 import type { Lang } from "@/domain/entities/common";
-import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/services";
+import { studyRoutinesService, tasksService } from "@/lib/services";
+import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { subjectBorderStyle } from "@/lib/subjectColors";
 
@@ -148,12 +149,6 @@ export default function Tasks() {
       .sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
     return days.map((d) => DAY_SHORT[d]).join(", ") || "—";
   };
-  const totalPerWeek = (matrix: StudyRoutine["matrix"]) =>
-    Object.values(matrix).reduce(
-      (sum, day) => sum + Object.values(day).reduce((a, b) => a + b, 0),
-      0,
-    );
-
   const confirmDeleteRoutine = async () => {
     if (delRoutineId == null) return;
     await studyRoutinesService.remove(delRoutineId);

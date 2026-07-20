@@ -28,7 +28,6 @@ import { LinkTargetFields } from "./LinkTargetFields";
 import { RecurrenceFields } from "./RecurrenceFields";
 import { buildRecurrence, type RecurrenceState } from "./recurrence-state";
 import { tasksService, lessonsService } from "@/lib/services";
-import { useFormDraft } from "@/hooks/useFormDraft";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { CompleteIcon } from "@/lib/icons";
@@ -55,7 +54,6 @@ interface Props {
 export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
   const { t } = useI18n();
   const [step, setStep] = useState<Step>(1);
-  const draft = useFormDraft(`task-wizard-${date}`, {});
 
   const subjects = useSubjects();
   const allTechniques = useTechniques();
@@ -206,7 +204,6 @@ export function TaskWizard({ date, prefill, onCreated, onCancel }: Props) {
       if (prefill?.assignmentId) {
         await lessonsService.transformAssignment(prefill.assignmentId, firstId);
       }
-      draft.clearDraft();
       toast.success(recurrence ? t("toast.recurringTaskCreated") : t("toast.taskAdded"));
       onCreated?.(firstId);
     } catch (err) {

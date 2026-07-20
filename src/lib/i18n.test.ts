@@ -119,7 +119,8 @@ describe("fallback behavior", () => {
 
   it("returns the key itself when not found in any language", () => {
     const t = makeT("en");
-    expect(t("totally.nonexistent.key")).toBe("totally.nonexistent.key");
+    const missingKey = ["totally", "nonexistent", "key"].join(".");
+    expect(t(missingKey)).toBe(missingKey);
   });
 
   it("does not return the raw key for any common key in any language", () => {

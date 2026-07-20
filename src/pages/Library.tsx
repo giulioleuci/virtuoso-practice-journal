@@ -28,7 +28,8 @@ import { FeatureEmptyState } from "@/components/shared/FeatureEmptyState";
 import { Pager } from "@/components/shared/Pager";
 import { useCollectionLinks, useCollections, useHelpRequests, useLibraryByKind, useSegments, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
-import { libraryService, deleteWithUndo } from "@/lib/services";
+import { libraryService } from "@/lib/services";
+import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
 import {
   AlertDialog,
   AlertDialogAction,
