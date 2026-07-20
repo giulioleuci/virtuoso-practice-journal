@@ -1,0 +1,77 @@
+d1cf22a fix: complete domain workflow ports
+ src/domain/domain-boundaries.test.ts | 15 +++++++++++++++
+ src/domain/ports/library.ts          |  2 +-
+ src/domain/ports/session.ts          |  9 +++++++--
+ 3 files changed, 23 insertions(+), 3 deletions(-)
+diff --git a/src/domain/domain-boundaries.test.ts b/src/domain/domain-boundaries.test.ts
+index 962028e..9a6c812 100644
+--- a/src/domain/domain-boundaries.test.ts
++++ b/src/domain/domain-boundaries.test.ts
+@@ -48,11 +48,26 @@ describe("domain boundaries", () => {
+ 
+   it("keeps domain contracts free of framework, persistence, and browser APIs", async () => {
+     const sources = await Promise.all((await sourceFilesIn(domainRoot)).map((file) => readFile(file)));
+     const violations = sources.flatMap((source) => {
+       const text = source.toString();
+       return prohibitedImports.filter((pattern) => pattern.test(text)).map(String);
+     });
+ 
+     expect(violations).toEqual([]);
+   });
++
++  it("models completed session logging as one persisted-task workflow", async () => {
++    const source = await readFile(path.join(domainRoot, "ports/session.ts"), "utf8");
++
++    expect(source).toContain("export type PersistedTask = Task & { id: number };");
++    expect(source).toContain("date: string;");
++    expect(source).toContain("helpText?: string;");
++    expect(source).toContain("logWithCompletion(task: PersistedTask, input: SessionLogInput): Promise<number>;");
++  });
++
++  it("preserves library removal outcome", async () => {
++    const source = await readFile(path.join(domainRoot, "ports/library.ts"), "utf8");
++
++    expect(source).toContain('remove(id: number): Promise<"soft" | "hard">;');
++  });
+ });
+diff --git a/src/domain/ports/library.ts b/src/domain/ports/library.ts
+index e46246f..7356c3e 100644
+--- a/src/domain/ports/library.ts
++++ b/src/domain/ports/library.ts
+@@ -1,10 +1,10 @@
+ import type { Draft } from "../entities/common";
+ import type { LibraryItem, Segment } from "../entities/library";
+ 
+ export interface LibraryPort {
+   list(): Promise<LibraryItem[]>;
+   get(id: number): Promise<LibraryItem | undefined>;
+   upsert(item: Draft<LibraryItem>, segments?: Omit<Segment, "id" | "itemId" | "createdAt">[]): Promise<number>;
+-  remove(id: number): Promise<void>;
++  remove(id: number): Promise<"soft" | "hard">;
+   restore(item: LibraryItem, segments: Segment[]): Promise<number>;
+ }
+diff --git a/src/domain/ports/session.ts b/src/domain/ports/session.ts
+index a708dbd..e0f4990 100644
+--- a/src/domain/ports/session.ts
++++ b/src/domain/ports/session.ts
+@@ -1,13 +1,18 @@
+ import type { Session } from "../entities/session";
+ import type { Task } from "../entities/task";
+ 
+-export type SessionLogInput = Omit<Session, "id" | "taskId" | "date" | "snapshot" | "createdAt">;
++export type PersistedTask = Task & { id: number };
++
++export type SessionLogInput = Omit<Session, "id" | "taskId" | "snapshot" | "createdAt"> & {
++  date: string;
++  helpText?: string;
++};
+ 
+ export interface SessionPort {
+   list(): Promise<Session[]>;
+   byTask(taskId: number): Promise<Session[]>;
+-  log(task: Task, date: string, input: SessionLogInput): Promise<number>;
++  logWithCompletion(task: PersistedTask, input: SessionLogInput): Promise<number>;
+   remove(id: number): Promise<void>;
+   deleteWithTaskReset(sessionId: number, taskId?: number): Promise<void>;
+   deleteByTaskAndDate(taskId: number, date: string): Promise<void>;
+ }

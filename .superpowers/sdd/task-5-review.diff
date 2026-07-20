@@ -1,0 +1,790 @@
+2354091 refactor: isolate backup file handling
+ .superpowers/sdd/task-5-report.md                  |  15 +++
+ src/application/useCases/backup.test.ts            |  65 +++++++++++++
+ src/application/useCases/exportBackup.ts           |  21 ++++
+ src/application/useCases/importBackup.ts           |  28 ++++++
+ src/domain/ports/BackupFileGateway.ts              |   4 +
+ src/domain/ports/backup.ts                         |   4 +-
+ .../gateways/BrowserBackupFileGateway.test.ts      |  30 ++++++
+ .../gateways/BrowserBackupFileGateway.ts           |  40 ++++++++
+ .../gateways/CapacitorBackupFileGateway.ts         |  22 +++++
+ .../repositories/dexie/backupRepository.ts         |  25 ++++-
+ .../repositories/dexie/repositories.test.ts        |   4 +-
+ src/lib/platform.test.ts                           | 108 +--------------------
+ src/lib/platform.ts                                |  74 --------------
+ src/lib/services/backup.ts                         |  14 ++-
+ src/pages/Profile.tsx                              |  49 +++-------
+ src/test/architecture/import-boundaries.test.ts    |   1 -
+ 16 files changed, 280 insertions(+), 224 deletions(-)
+diff --git a/.superpowers/sdd/task-5-report.md b/.superpowers/sdd/task-5-report.md
+new file mode 100644
+index 0000000..19bbc69
+--- /dev/null
++++ b/.superpowers/sdd/task-5-report.md
+@@ -0,0 +1,15 @@
++# Task 5 Report: Isolate backup file handling
++
++## Delivered
++
++- Added application export/import use cases and domain file gateway port.
++- Moved browser and Capacitor file interactions into infrastructure gateways.
++- Migrated Profile backup controls to presentation commands with progress state.
++- Kept legacy `backupService.exportAll`, `importAll`, and `wipeAll` as adapters over the new boundary.
++- Changed the Dexie backup repository to typed data transfer and retained transactional import rollback.
++
++## Verification
++
++- Focused backup, repository, gateway, and platform tests: 31 passing.
++- Architecture boundary test, TypeScript check, lint, and production build pass.
++- Full suite has two unrelated existing failures in i18n interpolation and SessionPort boundary expectations.
+diff --git a/src/application/useCases/backup.test.ts b/src/application/useCases/backup.test.ts
+new file mode 100644
+index 0000000..6515d01
+--- /dev/null
++++ b/src/application/useCases/backup.test.ts
+@@ -0,0 +1,65 @@
++import { describe, expect, it } from "vitest";
++import { ExportBackupUseCase } from "./exportBackup";
++import { ImportBackupUseCase } from "./importBackup";
++import type { BackupData, BackupPort } from "@/domain/ports/backup";
++import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
++
++class FakeBackupRepository implements BackupPort {
++  imported?: BackupData;
++  constructor(private readonly data: BackupData = {}) {}
++  async exportAll() { return this.data; }
++  async importAll(data: BackupData) { this.imported = data; }
++  async wipeAll() {}
++}
++
++class FakeFiles implements BackupFileGateway {
++  saved?: { filename: string; content: string };
++  constructor(private readonly picked: string | null = null) {}
++  async save(filename: string, content: string) { this.saved = { filename, content }; }
++  async pick() { return this.picked; }
++}
++
++describe("backup use cases", () => {
++  it("exports current data in version 2 backup format", async () => {
++    const files = new FakeFiles();
++    let calls = 0;
++    await new ExportBackupUseCase(new FakeBackupRepository({ tasks: [{ id: 1 }] }), files, () => {
++      calls += 1;
++      return calls === 1 ? 123 : 86_400_000;
++    }).execute();
++    expect(files.saved).toEqual({
++      filename: "virtuoso-backup-1970-01-01.json",
++      content: JSON.stringify({ version: 2, exportedAt: 123, data: { tasks: [{ id: 1 }] } }, null, 2),
++    });
++  });
++
++  it("imports supported backup data selected by gateway", async () => {
++    const repository = new FakeBackupRepository();
++    const files = new FakeFiles(JSON.stringify({ version: 2, data: { tasks: [{ id: 1 }] } }));
++    await expect(new ImportBackupUseCase(repository, files).execute()).resolves.toBe(true);
++    expect(repository.imported).toEqual({ tasks: [{ id: 1 }] });
++  });
++
++  it("rejects malformed backup input before replacing data", async () => {
++    const repository = new FakeBackupRepository();
++    await expect(new ImportBackupUseCase(repository, new FakeFiles("not json")).execute()).rejects.toThrow();
++    expect(repository.imported).toBeUndefined();
++  });
++
++  it("rejects unsupported backup versions before replacing data", async () => {
++    const repository = new FakeBackupRepository();
++    const files = new FakeFiles(JSON.stringify({ version: 3, data: {} }));
++    await expect(new ImportBackupUseCase(repository, files).execute()).rejects.toThrow("Unsupported backup version: 3");
++    expect(repository.imported).toBeUndefined();
++  });
++
++  it("does not commit data when repository transaction rolls back", async () => {
++    const files = new FakeFiles(JSON.stringify({ version: 2, data: { tasks: [{ id: 1 }] } }));
++    const repository: BackupPort = {
++      exportAll: async () => ({}),
++      importAll: async () => { throw new Error("transaction rolled back"); },
++      wipeAll: async () => {},
++    };
++    await expect(new ImportBackupUseCase(repository, files).execute()).rejects.toThrow("transaction rolled back");
++  });
++});
+diff --git a/src/application/useCases/exportBackup.ts b/src/application/useCases/exportBackup.ts
+new file mode 100644
+index 0000000..62ec5c1
+--- /dev/null
++++ b/src/application/useCases/exportBackup.ts
+@@ -0,0 +1,21 @@
++import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
++import type { BackupPort } from "@/domain/ports/backup";
++
++export class ExportBackupUseCase {
++  constructor(
++    private readonly backups: BackupPort,
++    private readonly files: BackupFileGateway,
++    private readonly clock: () => number = Date.now,
++  ) {}
++
++  async createContent(exportedAt = this.clock()): Promise<string> {
++    return JSON.stringify({ version: 2, exportedAt, data: await this.backups.exportAll() }, null, 2);
++  }
++
++  async execute(): Promise<void> {
++    const exportedAt = this.clock();
++    const content = await this.createContent(exportedAt);
++    const filename = `virtuoso-backup-${new Date(exportedAt).toISOString().slice(0, 10)}.json`;
++    await this.files.save(filename, content);
++  }
++}
+diff --git a/src/application/useCases/importBackup.ts b/src/application/useCases/importBackup.ts
+new file mode 100644
+index 0000000..a4f868f
+--- /dev/null
++++ b/src/application/useCases/importBackup.ts
+@@ -0,0 +1,28 @@
++import { z } from "zod";
++import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
++import type { BackupData, BackupPort } from "@/domain/ports/backup";
++
++const backupSchema = z.object({
++  version: z.number().optional(),
++  exportedAt: z.number().optional(),
++  data: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))).optional(),
++});
++
++export class ImportBackupUseCase {
++  constructor(private readonly backups: BackupPort, private readonly files: BackupFileGateway) {}
++
++  async importContent(text: string): Promise<void> {
++    const parsed = backupSchema.parse(JSON.parse(text));
++    if (parsed.version != null && ![1, 2].includes(parsed.version)) {
++      throw new Error(`Unsupported backup version: ${parsed.version}`);
++    }
++    await this.backups.importAll((parsed.data ?? {}) as BackupData);
++  }
++
++  async execute(): Promise<boolean> {
++    const text = await this.files.pick();
++    if (text === null) return false;
++    await this.importContent(text);
++    return true;
++  }
++}
+diff --git a/src/domain/ports/BackupFileGateway.ts b/src/domain/ports/BackupFileGateway.ts
+new file mode 100644
+index 0000000..8cdc45f
+--- /dev/null
++++ b/src/domain/ports/BackupFileGateway.ts
+@@ -0,0 +1,4 @@
++export interface BackupFileGateway {
++  save(filename: string, content: string): Promise<void>;
++  pick(): Promise<string | null>;
++}
+diff --git a/src/domain/ports/backup.ts b/src/domain/ports/backup.ts
+index 8d8de19..61ee848 100644
+--- a/src/domain/ports/backup.ts
++++ b/src/domain/ports/backup.ts
+@@ -1,7 +1,7 @@
+ export type BackupData = Record<string, unknown[]>;
+ 
+ export interface BackupPort {
+-  exportAll(): Promise<string>;
+-  importAll(json: string): Promise<void>;
++  exportAll(): Promise<BackupData>;
++  importAll(data: BackupData): Promise<void>;
+   wipeAll(): Promise<void>;
+ }
+diff --git a/src/infrastructure/gateways/BrowserBackupFileGateway.test.ts b/src/infrastructure/gateways/BrowserBackupFileGateway.test.ts
+new file mode 100644
+index 0000000..468dfd4
+--- /dev/null
++++ b/src/infrastructure/gateways/BrowserBackupFileGateway.test.ts
+@@ -0,0 +1,30 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++import { BrowserBackupFileGateway } from "./BrowserBackupFileGateway";
++
++describe("BrowserBackupFileGateway", () => {
++  afterEach(() => vi.restoreAllMocks());
++
++  it("downloads backup content through a temporary object URL", async () => {
++    const createObjectURL = vi.fn(() => "blob:backup");
++    const revokeObjectURL = vi.fn();
++    Object.defineProperty(URL, "createObjectURL", { value: createObjectURL, configurable: true });
++    Object.defineProperty(URL, "revokeObjectURL", { value: revokeObjectURL, configurable: true });
++    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
++
++    await new BrowserBackupFileGateway().save("backup.json", "{\"version\":2}");
++
++    expect(createObjectURL).toHaveBeenCalledOnce();
++    expect(click).toHaveBeenCalledOnce();
++    expect(revokeObjectURL).toHaveBeenCalledWith("blob:backup");
++  });
++
++  it("reads selected backup text and returns null when picker is cancelled", async () => {
++    const gateway = new BrowserBackupFileGateway();
++    const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(function () {
++      Object.defineProperty(this, "files", { value: [new File(["backup text"], "backup.json")], configurable: true });
++      this.onchange?.(new Event("change"));
++    });
++    await expect(gateway.pick()).resolves.toBe("backup text");
++    expect(click).toHaveBeenCalledOnce();
++  });
++});
+diff --git a/src/infrastructure/gateways/BrowserBackupFileGateway.ts b/src/infrastructure/gateways/BrowserBackupFileGateway.ts
+new file mode 100644
+index 0000000..426ced6
+--- /dev/null
++++ b/src/infrastructure/gateways/BrowserBackupFileGateway.ts
+@@ -0,0 +1,40 @@
++import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
++
++export class BrowserBackupFileGateway implements BackupFileGateway {
++  async save(filename: string, content: string): Promise<void> {
++    const blob = new Blob([content], { type: "application/json" });
++    const url = URL.createObjectURL(blob);
++    const link = document.createElement("a");
++    link.href = url;
++    link.download = filename;
++    link.click();
++    URL.revokeObjectURL(url);
++  }
++
++  pick(): Promise<string | null> {
++    return new Promise((resolve) => {
++      const input = document.createElement("input");
++      input.type = "file";
++      input.accept = "application/json";
++      let settled = false;
++      const settle = (value: string | null) => {
++        if (settled) return;
++        settled = true;
++        window.removeEventListener("focus", onFocus);
++        resolve(value);
++      };
++      const onFocus = () => setTimeout(() => { if (!input.files?.length) settle(null); }, 300);
++      input.onchange = () => {
++        const file = input.files?.[0];
++        if (!file) return settle(null);
++        const reader = new FileReader();
++        reader.onerror = () => settle(null);
++        reader.onload = () => settle(typeof reader.result === "string" ? reader.result : null);
++        reader.readAsText(file);
++      };
++      input.oncancel = () => settle(null);
++      window.addEventListener("focus", onFocus, { once: true });
++      input.click();
++    });
++  }
++}
+diff --git a/src/infrastructure/gateways/CapacitorBackupFileGateway.ts b/src/infrastructure/gateways/CapacitorBackupFileGateway.ts
+new file mode 100644
+index 0000000..3979b4a
+--- /dev/null
++++ b/src/infrastructure/gateways/CapacitorBackupFileGateway.ts
+@@ -0,0 +1,22 @@
++import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
++import { BrowserBackupFileGateway } from "./BrowserBackupFileGateway";
++
++export class CapacitorBackupFileGateway implements BackupFileGateway {
++  constructor(private readonly browser: BackupFileGateway = new BrowserBackupFileGateway()) {}
++
++  async save(filename: string, content: string): Promise<void> {
++    try {
++      const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
++      await Filesystem.writeFile({ path: filename, data: content, directory: Directory.Documents, encoding: Encoding.UTF8, recursive: true });
++      try {
++        const { Share } = await import("@capacitor/share");
++        const uri = await Filesystem.getUri({ path: filename, directory: Directory.Documents });
++        await Share.share({ title: filename, url: uri.uri, dialogTitle: "Save backup" });
++      } catch { /* Backup remains saved even if sharing is unavailable. */ }
++    } catch {
++      await this.browser.save(filename, content);
++    }
++  }
++
++  pick(): Promise<string | null> { return this.browser.pick(); }
++}
+diff --git a/src/infrastructure/repositories/dexie/backupRepository.ts b/src/infrastructure/repositories/dexie/backupRepository.ts
+index 70d9869..e189a79 100644
+--- a/src/infrastructure/repositories/dexie/backupRepository.ts
++++ b/src/infrastructure/repositories/dexie/backupRepository.ts
+@@ -1,5 +1,22 @@
+-import { z } from "zod";
+ import { db } from "@/infrastructure/dexie/db";
+-import type { BackupPort } from "@/domain/ports/backup";
+-const schema = z.object({ version: z.number().optional(), exportedAt: z.number().optional(), data: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))).optional() });
+-export const backupRepository = { async exportAll() { const data: Record<string, unknown> = {}; for (const table of db.tables) data[table.name] = await table.toArray(); return JSON.stringify({ version: 2, exportedAt: Date.now(), data }, null, 2); }, async importAll(json: string) { const parsed = schema.parse(JSON.parse(json)); if (parsed.version != null && ![1, 2].includes(parsed.version)) throw new Error(`Unsupported backup version: ${parsed.version}`); await db.transaction("rw", db.tables, async () => { for (const table of db.tables) { await table.clear(); const rows = parsed.data?.[table.name]; if (rows?.length) await table.bulkAdd(rows); } }); }, async wipeAll() { await db.transaction("rw", db.tables, async () => { for (const table of db.tables) await table.clear(); }); } } satisfies BackupPort;
++import type { BackupData, BackupPort } from "@/domain/ports/backup";
++
++export const backupRepository = {
++  async exportAll() {
++    const data: BackupData = {};
++    for (const table of db.tables) data[table.name] = await table.toArray();
++    return data;
++  },
++  async importAll(data: BackupData) {
++    await db.transaction("rw", db.tables, async () => {
++      for (const table of db.tables) {
++        await table.clear();
++        const rows = data[table.name];
++        if (rows?.length) await table.bulkAdd(rows);
++      }
++    });
++  },
++  async wipeAll() {
++    await db.transaction("rw", db.tables, async () => { for (const table of db.tables) await table.clear(); });
++  },
++} satisfies BackupPort;
+diff --git a/src/infrastructure/repositories/dexie/repositories.test.ts b/src/infrastructure/repositories/dexie/repositories.test.ts
+index d29fc21..5a78900 100644
+--- a/src/infrastructure/repositories/dexie/repositories.test.ts
++++ b/src/infrastructure/repositories/dexie/repositories.test.ts
+@@ -73,27 +73,27 @@ describe("Dexie repositories", () => {
+     const original = db.helpRequests.add;
+     db.helpRequests.add = (() => Promise.reject(new Error("help fails"))) as typeof db.helpRequests.add;
+     await expect(sessionRepository.logWithCompletion(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [], helpText: "help" })).rejects.toThrow("help fails");
+     db.helpRequests.add = original;
+     expect(await db.sessions.count()).toBe(0);
+     expect((await db.tasks.get(taskId))?.done).toBe(false);
+   });
+ 
+   it("rolls back backup import when a later table write fails", async () => {
+     await db.subjects.add({ name: "old", type: "instrument", createdAt: 1 });
+-    await expect(backupRepository.importAll(JSON.stringify({ version: 2, data: {
++    await expect(backupRepository.importAll({
+       subjects: [{ name: "new", type: "instrument", createdAt: 2 }],
+       library: [
+         { id: 1, subjectId: 1, kind: "repertoire", title: "first", createdAt: 2 },
+         { id: 1, subjectId: 1, kind: "repertoire", title: "duplicate", createdAt: 2 },
+       ],
+-    } }))).rejects.toThrow();
++    })).rejects.toThrow();
+     expect((await db.subjects.toArray()).map((subject) => subject.name)).toEqual(["old"]);
+   });
+ 
+   it("implements collection links port and excludes deleted library items", async () => {
+     const subject = await subjectId();
+     const collectionId = await collectionRepository.create({ kind: "repertoire", name: "Set", createdAt: 1, updatedAt: 1 });
+     const activeItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "active", createdAt: 1 });
+     const deletedItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "deleted", deletedAt: 2, createdAt: 1 });
+     await db.collectionItems.bulkAdd([
+       { collectionId, itemId: activeItem, createdAt: 1 },
+diff --git a/src/lib/platform.test.ts b/src/lib/platform.test.ts
+index 7700005..87d40da 100644
+--- a/src/lib/platform.test.ts
++++ b/src/lib/platform.test.ts
+@@ -1,20 +1,16 @@
+-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
++import { describe, it, expect, vi, afterEach } from "vitest";
+ 
+-// platform.ts re-exports Capacitor helpers; in tests Capacitor reports the
+-// "web" platform, so isNative() is false and the helpers exercise the web path.
+ import {
+   isNative,
+   ensureNotificationPermission,
+   scheduleReminders,
+-  saveTextFile,
+-  pickTextFile,
+ } from "./platform";
+ 
+ describe("platform.isNative", () => {
+   it("returns false in the test environment", () => {
+     expect(isNative()).toBe(false);
+   });
+ });
+ 
+ describe("platform.scheduleReminders", () => {
+   it("is a no-op on the web (returns without throwing)", async () => {
+@@ -60,112 +56,10 @@ describe("platform.ensureNotificationPermission", () => {
+   it("requests permission when undecided", async () => {
+     const requestPermission = vi.fn().mockResolvedValue("granted");
+     (globalThis as Record<string, unknown>).Notification = Object.assign(
+       function MockNotification() { /* noop */ } as unknown as typeof Notification,
+       { permission: "default", requestPermission }
+     );
+     expect(await ensureNotificationPermission()).toBe(true);
+     expect(requestPermission).toHaveBeenCalledOnce();
+   });
+ });
+-
+-describe("platform.saveTextFile (web fallback)", () => {
+-  let clickedAnchor: HTMLAnchorElement | null = null;
+-  const originalCreate = URL.createObjectURL;
+-  const originalRevoke = URL.revokeObjectURL;
+-  const originalCreateElement = document.createElement.bind(document);
+-
+-  beforeEach(() => {
+-    clickedAnchor = null;
+-    URL.createObjectURL = vi.fn(() => "blob:test");
+-    URL.revokeObjectURL = vi.fn();
+-    vi.spyOn(document, "createElement").mockImplementation((tag: string, opts?: ElementCreationOptions) => {
+-      const el = originalCreateElement(tag, opts);
+-      if (tag === "a") {
+-        el.click = vi.fn(() => { clickedAnchor = el as HTMLAnchorElement; });
+-      }
+-      return el;
+-    });
+-  });
+-
+-  afterEach(() => {
+-    URL.createObjectURL = originalCreate;
+-    URL.revokeObjectURL = originalRevoke;
+-    vi.restoreAllMocks();
+-  });
+-
+-  it("creates an anchor, triggers download, and revokes the blob URL", async () => {
+-    const result = await saveTextFile("backup.json", '{"a":1}');
+-    expect(result).toBe("download");
+-    expect(URL.createObjectURL).toHaveBeenCalledOnce();
+-    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:test");
+-    expect(clickedAnchor).not.toBeNull();
+-    expect(clickedAnchor!.download).toBe("backup.json");
+-    expect(clickedAnchor!.href).toContain("blob:test");
+-  });
+-});
+-
+-describe("platform.pickTextFile", () => {
+-  const originalCreateElement = document.createElement.bind(document);
+-  let createdInput: HTMLInputElement | null = null;
+-
+-  beforeEach(() => {
+-    createdInput = null;
+-    vi.spyOn(document, "createElement").mockImplementation((tag: string, opts?: ElementCreationOptions) => {
+-      const el = originalCreateElement(tag, opts);
+-      if (tag === "input") {
+-        // Suppress the actual file picker UI in tests
+-        el.click = vi.fn();
+-        createdInput = el as HTMLInputElement;
+-      }
+-      return el;
+-    });
+-  });
+-
+-  afterEach(() => {
+-    vi.restoreAllMocks();
+-  });
+-
+-  it("returns the picked file's contents on selection", async () => {
+-    const promise = pickTextFile();
+-    // jsdom lacks File.prototype.text, so build a stand-in
+-    const file = { text: () => Promise.resolve('{"a":1}') } as unknown as File;
+-    Object.defineProperty(createdInput!, "files", { value: [file], configurable: true });
+-    await createdInput!.onchange?.(new Event("change"));
+-    await expect(promise).resolves.toBe('{"a":1}');
+-  });
+-
+-  it("resolves null when the user cancels (oncancel)", async () => {
+-    const promise = pickTextFile();
+-    createdInput!.oncancel?.(new Event("cancel"));
+-    await expect(promise).resolves.toBeNull();
+-  });
+-
+-  it("resolves null via the focus fallback if no file is chosen", async () => {
+-    vi.useFakeTimers();
+-    try {
+-      const promise = pickTextFile();
+-      // Simulate window regaining focus with no file selected
+-      window.dispatchEvent(new Event("focus"));
+-      await vi.advanceTimersByTimeAsync(350);
+-      await expect(promise).resolves.toBeNull();
+-    } finally {
+-      vi.useRealTimers();
+-    }
+-  });
+-
+-  it("focus fallback does NOT clobber a real selection", async () => {
+-    vi.useFakeTimers();
+-    try {
+-      const promise = pickTextFile();
+-      const file = { text: () => Promise.resolve('{"a":2}') } as unknown as File;
+-      Object.defineProperty(createdInput!, "files", { value: [file], configurable: true });
+-      await createdInput!.onchange?.(new Event("change"));
+-      // Focus fires later after the change handler resolved
+-      window.dispatchEvent(new Event("focus"));
+-      await vi.advanceTimersByTimeAsync(350);
+-      await expect(promise).resolves.toBe('{"a":2}');
+-    } finally {
+-      vi.useRealTimers();
+-    }
+-  });
+-});
+diff --git a/src/lib/platform.ts b/src/lib/platform.ts
+index 6e5ab17..fa7137d 100644
+--- a/src/lib/platform.ts
++++ b/src/lib/platform.ts
+@@ -100,84 +100,10 @@ export async function scheduleReminders(schedule: ReminderSchedule | null): Prom
+     body: schedule.body ?? "Time to practice.",
+     // Capacitor weekdays are 1..7 (Sun = 1)
+     schedule: {
+       on: { weekday: d + 1, hour: hh, minute: mm, second: 0 },
+       allowWhileIdle: true,
+     },
+     smallIcon: "ic_stat_icon",
+   }));
+   await LocalNotifications.schedule({ notifications: items }).catch(() => undefined);
+ }
+-
+-// ---------------------------------------------------------------------------
+-// File save / share (export backup)
+-// ---------------------------------------------------------------------------
+-
+-/** Save text content to a file, returning a user-readable indicator of where. */
+-export async function saveTextFile(filename: string, content: string, mime = "application/json"): Promise<"download" | "shared" | "saved"> {
+-  if (isNative()) {
+-    try {
+-      const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
+-      await Filesystem.writeFile({
+-        path: filename,
+-        data: content,
+-        directory: Directory.Documents,
+-        encoding: Encoding.UTF8,
+-        recursive: true,
+-      });
+-      try {
+-        const { Share } = await import("@capacitor/share");
+-        const uri = await Filesystem.getUri({ path: filename, directory: Directory.Documents });
+-        await Share.share({ title: filename, url: uri.uri, dialogTitle: "Save backup" });
+-        return "shared";
+-      } catch {
+-        return "saved";
+-      }
+-    } catch {
+-      // fall through to web download
+-    }
+-  }
+-  const blob = new Blob([content], { type: mime });
+-  const url = URL.createObjectURL(blob);
+-  const a = document.createElement("a");
+-  a.href = url;
+-  a.download = filename;
+-  a.click();
+-  URL.revokeObjectURL(url);
+-  return "download";
+-}
+-
+-/** Open a file picker and return its text contents. */
+-export async function pickTextFile(accept = "application/json"): Promise<string | null> {
+-  return new Promise((resolve) => {
+-    const input = document.createElement("input");
+-    input.type = "file";
+-    input.accept = accept;
+-    let settled = false;
+-    const settle = (value: string | null) => {
+-      if (settled) return;
+-      settled = true;
+-      window.removeEventListener("focus", onFocus);
+-      resolve(value);
+-    };
+-    // Some browsers (and older Android WebViews) don't fire `oncancel` reliably.
+-    // When the picker closes without a selection, the window regains focus —
+-    // give the change handler a tick to fire, then resolve null if nothing did.
+-    const onFocus = () => {
+-      setTimeout(() => {
+-        if (!input.files?.length) settle(null);
+-      }, 300);
+-    };
+-    input.onchange = async () => {
+-      const file = input.files?.[0];
+-      if (!file) return settle(null);
+-      try {
+-        settle(await file.text());
+-      } catch {
+-        settle(null);
+-      }
+-    };
+-    input.oncancel = () => settle(null);
+-    window.addEventListener("focus", onFocus, { once: true });
+-    input.click();
+-  });
+-}
+diff --git a/src/lib/services/backup.ts b/src/lib/services/backup.ts
+index f8ea3ed..e22629d 100644
+--- a/src/lib/services/backup.ts
++++ b/src/lib/services/backup.ts
+@@ -1,2 +1,14 @@
+ import { backupRepository } from "@/infrastructure/repositories/dexie/backupRepository";
+-export const backupService = backupRepository;
++import { CapacitorBackupFileGateway } from "@/infrastructure/gateways/CapacitorBackupFileGateway";
++import { ExportBackupUseCase } from "@/application/useCases/exportBackup";
++import { ImportBackupUseCase } from "@/application/useCases/importBackup";
++
++const files = new CapacitorBackupFileGateway();
++export const backupService = {
++  exportBackup: () => new ExportBackupUseCase(backupRepository, files).execute(),
++  importBackup: () => new ImportBackupUseCase(backupRepository, files).execute(),
++  // Transitional compatibility API for callers that already supply/consume backup text.
++  exportAll: () => new ExportBackupUseCase(backupRepository, files).createContent(),
++  importAll: (content: string) => new ImportBackupUseCase(backupRepository, files).importContent(content),
++  wipeAll: () => backupRepository.wipeAll(),
++};
+diff --git a/src/pages/Profile.tsx b/src/pages/Profile.tsx
+index 93e04cd..d563f96 100644
+--- a/src/pages/Profile.tsx
++++ b/src/pages/Profile.tsx
+@@ -1,40 +1,40 @@
+-import { useEffect, useRef, useState } from "react";
+-import { useLiveQuery } from "dexie-react-hooks";
++import { useEffect, useState } from "react";
+ import { backupService, profileService } from "@/lib/services";
+-import { saveTextFile, pickTextFile, scheduleReminders, ensureNotificationPermission, isNative } from "@/lib/platform";
++import { scheduleReminders, ensureNotificationPermission } from "@/lib/platform";
+ import { getDefaultWeekStartsOn } from "@/lib/date";
+ import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
++import { useProfile } from "@/hooks/useEntities";
+ import { REMINDER_PRESETS, resolveReminderText, getReminderBodies, type ReminderPreset } from "@/lib/reminderPresets";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Switch } from "@/components/ui/switch";
+ import { toast } from "sonner";
+ import {
+   Download, Upload, Trash2, FlaskConical, Pencil, PlayCircle,
+   Bell, Languages, Settings2, Database, AlertTriangle, BookMarked, User, Info,
+ } from "lucide-react";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+ import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
+ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+ 
+ const APP_VERSION = "0.3alpha";
+ 
+ export default function Profile() {
+   const { t, lang, setLang } = useI18n();
+-  const profile = useLiveQuery(() => profileService.get());
+-  const fileRef = useRef<HTMLInputElement>(null);
++  const profile = useProfile();
+   const [confirmText, setConfirmText] = useState("");
+   const [confirming, setConfirming] = useState(false);
+   const [editingName, setEditingName] = useState(false);
+   const [nameDraft, setNameDraft] = useState("");
+   const [aboutOpen, setAboutOpen] = useState(false);
++  const [backupProgress, setBackupProgress] = useState<"idle" | "exporting" | "importing">("idle");
+ 
+   // Reflect reminder preferences in scheduled OS-level notifications when running natively.
+   const reminderDaysKey = profile?.reminderDays?.join(",") ?? "";
+   useEffect(() => {
+     if (!profile) return;
+     const enabled = profile.reminderEnabled !== false;
+     if (!enabled) {
+       scheduleReminders(null).catch(() => undefined);
+       return;
+     }
+@@ -56,47 +56,39 @@ export default function Profile() {
+     // reminderDaysKey is a stable derivation of profile.reminderDays
+   }, [profile, reminderDaysKey, t, lang]);
+ 
+   if (!profile) return null;
+ 
+   const update = async (patch: Partial<typeof profile>) => {
+     await profileService.update(patch);
+   };
+ 
+   const onExport = async () => {
++    setBackupProgress("exporting");
+     try {
+-      const json = await backupService.exportAll();
+-      await saveTextFile(`virtuoso-backup-${new Date().toISOString().slice(0, 10)}.json`, json);
++      await backupService.exportBackup();
+       toast.success(t("toast.exported"));
+     } catch (e) {
+       toast.error(e instanceof Error ? e.message : t("errors.couldNotSave"));
++    } finally {
++      setBackupProgress("idle");
+     }
+   };
+ 
+-  const onImport = async (file: File) => {
++  const onImport = async () => {
++    setBackupProgress("importing");
+     try {
+-      const text = await file.text();
+-      await backupService.importAll(text);
+-      toast.success(t("toast.imported"));
+-    } catch {
+-      toast.error(t("errors.invalidFile"));
+-    }
+-  };
+-
+-  const onImportNative = async () => {
+-    const text = await pickTextFile();
+-    if (!text) return;
+-    try {
+-      await backupService.importAll(text);
+-      toast.success(t("toast.imported"));
++      if (await backupService.importBackup()) toast.success(t("toast.imported"));
+     } catch {
+       toast.error(t("errors.invalidFile"));
++    } finally {
++      setBackupProgress("idle");
+     }
+   };
+ 
+   const remindersOn = profile.reminderEnabled !== false;
+ 
+   return (
+     <div className="space-y-5 pb-8">
+       {/* Identity hero */}
+       <section className="paper-card p-5">
+         <div className="flex items-center gap-4">
+@@ -390,36 +382,27 @@ export default function Profile() {
+ 
+         <AccordionItem value="data" className="paper-card border-0 px-4">
+           <AccordionTrigger className="hover:no-underline py-3">
+             <span className="flex items-center gap-2 font-serif text-base">
+               <Database className="h-4 w-4 text-muted-foreground" />
+               {t("profile.data")}
+             </span>
+           </AccordionTrigger>
+           <AccordionContent className="pb-4">
+             <div className="grid grid-cols-2 gap-2">
+-              <Button variant="outline" onClick={onExport} className="w-full">
++              <Button variant="outline" onClick={onExport} disabled={backupProgress !== "idle"} className="w-full">
+                 <Download className="h-4 w-4 mr-2" />{t("profile.export")}
+               </Button>
+-              <Button variant="outline" onClick={() => (isNative() ? onImportNative() : fileRef.current?.click())} className="w-full">
++              <Button variant="outline" onClick={onImport} disabled={backupProgress !== "idle"} className="w-full">
+                 <Upload className="h-4 w-4 mr-2" />{t("profile.import")}
+               </Button>
+             </div>
+-            <input
+-              ref={fileRef} type="file" accept="application/json" className="hidden"
+-              onChange={(e) => {
+-                const file = e.target.files?.[0];
+-                // Reset so picking the same file twice still fires onChange
+-                e.target.value = "";
+-                if (file) onImport(file);
+-              }}
+-            />
+           </AccordionContent>
+         </AccordionItem>
+ 
+         <AccordionItem value="dev" className="paper-card border-0 px-4">
+           <AccordionTrigger className="hover:no-underline py-3">
+             <span className="flex items-center gap-2 font-serif text-base">
+               <FlaskConical className="h-4 w-4 text-muted-foreground" />
+               {t("profile.dev")}
+             </span>
+           </AccordionTrigger>
+diff --git a/src/test/architecture/import-boundaries.test.ts b/src/test/architecture/import-boundaries.test.ts
+index a695c47..bc9a08c 100644
+--- a/src/test/architecture/import-boundaries.test.ts
++++ b/src/test/architecture/import-boundaries.test.ts
+@@ -44,21 +44,20 @@ const temporaryBaseline: Record<string, string[]> = {
+   "src/pages/Collections.tsx": ["@/lib/db"],
+   "src/pages/Diary.tsx": ["@/lib/db", "@/lib/db", "dexie-react-hooks"],
+   "src/pages/EditStudyRoutinePage.tsx": ["@/lib/db"],
+   "src/pages/EditTaskPage.tsx": ["@/lib/db"],
+   "src/pages/History.tsx": ["@/lib/db", "dexie-react-hooks"],
+   "src/pages/Index.tsx": ["@/lib/db", "dexie-react-hooks"],
+   "src/pages/ItemAnalysisPage.tsx": ["@/lib/db", "@/lib/db", "dexie-react-hooks"],
+   "src/pages/Lessons.tsx": ["@/lib/db", "dexie-react-hooks"],
+   "src/pages/Library.tsx": ["@/lib/db", "dexie-react-hooks"],
+   "src/pages/NewTaskPage.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/pages/Profile.tsx": ["dexie-react-hooks"],
+   "src/pages/Tasks.tsx": ["@/lib/db", "@/lib/db"],
+ };
+ 
+ const restrictedImports = [
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/lib\/db(?:\/|["'])/g, label: "@/lib/db" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie(?:["']|\/)/g, label: "dexie" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie-react-hooks(?:["']|\/)/g, label: "dexie-react-hooks" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/infrastructure(?:\/|["'])/g, label: "@/infrastructure/" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@capacitor\/filesystem(?:["']|\/)/g, label: "@capacitor/filesystem" },
+ ];

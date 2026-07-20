@@ -1,0 +1,1579 @@
+17d2f43 refactor: complete presentation data boundary
+76c63d8 refactor: migrate lessons presentation boundary
+0b0b0d3 refactor: migrate library presentation boundary
+ .../queries/presentationQueryService.ts            | 14 ++++++++
+ src/application/queries/presentationReadPort.ts    |  9 +++++
+ src/components/AppShell.tsx                        |  2 +-
+ src/components/lessons/AddHomeworkSheet.tsx        |  9 ++---
+ src/components/lessons/LessonLogSheet.tsx          | 15 +++-----
+ src/components/lessons/RecurrenceSheet.tsx         |  3 +-
+ src/components/lessons/TeacherRecapSheet.tsx       |  3 +-
+ src/components/library/BpmCoupler.tsx              |  2 +-
+ src/components/library/BpmSparkline.tsx            | 11 ++----
+ src/components/library/ItemAnalysisSheet.tsx       | 26 ++++++--------
+ src/components/library/ItemHelpSheet.tsx           |  9 ++---
+ src/components/library/LibraryItemKindFields.tsx   |  2 +-
+ src/components/library/MasterySliders.tsx          |  2 +-
+ src/components/library/MasterySparkline.tsx        | 12 +++----
+ src/components/library/NewLibraryItemSheet.tsx     | 21 ++++-------
+ src/components/library/SegmentsEditor.tsx          |  2 +-
+ src/components/library/TeacherAnswersSheet.tsx     | 20 ++++-------
+ src/components/onboarding/Onboarding.tsx           |  2 +-
+ src/components/profile/SubjectsEditor.tsx          |  3 +-
+ src/hooks/useEntities.test.tsx                     |  8 ++++-
+ src/infrastructure/dexie/db.ts                     |  9 +++--
+ .../dexie/presentationReadPort.test.ts             | 42 ++++++++++++++++++++++
+ src/infrastructure/dexie/presentationReadPort.ts   | 27 +++++++++++++-
+ src/lib/presentationQueries.ts                     | 16 ---------
+ src/lib/subscriptions.ts                           |  2 --
+ src/main.tsx                                       |  3 ++
+ src/pages/EditStudyRoutinePage.tsx                 | 14 ++------
+ src/pages/EditTaskPage.tsx                         |  4 ++-
+ src/pages/History.tsx                              | 14 +++-----
+ src/pages/Index.tsx                                |  5 ++-
+ src/pages/ItemAnalysisPage.tsx                     | 19 ++++------
+ src/pages/Lessons.tsx                              |  7 ++--
+ src/pages/Library.tsx                              | 21 +++++------
+ src/pages/NewTaskPage.tsx                          | 17 ++++-----
+ src/pages/Tasks.tsx                                |  5 +--
+ src/presentation/hooks/useEntities.ts              | 19 +++++++++-
+ src/presentation/hooks/usePresentationQuery.ts     | 22 ++++++++++++
+ src/test/architecture/import-boundaries.test.ts    | 20 ++++++++++-
+ 38 files changed, 254 insertions(+), 187 deletions(-)
+diff --git a/src/application/queries/presentationQueryService.ts b/src/application/queries/presentationQueryService.ts
+index fde0f85..bc346ae 100644
+--- a/src/application/queries/presentationQueryService.ts
++++ b/src/application/queries/presentationQueryService.ts
+@@ -1,23 +1,37 @@
+ import type { PresentationReadPort } from "./presentationReadPort";
++import type { Assignment } from "@/domain/entities/lesson";
++import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
+ 
+ /** Typed application query service used by React presentation adapters. */
+ export class PresentationQueryService {
+   constructor(private readonly reads: PresentationReadPort) {}
+ 
+   subscribe(listener: () => void): () => void {
+     return this.reads.subscribe(listener);
+   }
+ 
+   execute<T>(operation: string, ...parameters: readonly unknown[]): Promise<T> {
+     return this.reads.read<T>(operation, parameters);
+   }
++
++  assignmentsForLesson(lessonId?: number): Promise<Assignment[]> {
++    return this.reads.assignmentsForLesson(lessonId);
++  }
++
++  pendingAssignmentsForSubject(subjectId?: number, recurrenceId?: number): Promise<PendingAssignment[]> {
++    return this.reads.pendingAssignmentsForSubject(subjectId, recurrenceId);
++  }
++
++  openHelpRequestCount(): Promise<number> {
++    return this.reads.openHelpRequestCount();
++  }
+ }
+ 
+ let configuredQueries: PresentationQueryService | undefined;
+ 
+ /** Called only by the composition root. Keeps infrastructure out of UI modules. */
+ export function configurePresentationQueries(reads: PresentationReadPort): void {
+   configuredQueries = new PresentationQueryService(reads);
+ }
+ 
+ export function presentationQueries(): PresentationQueryService {
+diff --git a/src/application/queries/presentationReadPort.ts b/src/application/queries/presentationReadPort.ts
+index 2c24c87..726895c 100644
+--- a/src/application/queries/presentationReadPort.ts
++++ b/src/application/queries/presentationReadPort.ts
+@@ -1,9 +1,18 @@
++import type { Assignment } from "@/domain/entities/lesson";
++import type { HelpRequest } from "@/domain/ports/helpRequest";
++import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
++
+ /**
+  * Application-facing read and invalidation boundary for presentation adapters.
+  * Infrastructure may use Dexie to implement this port; callers never receive a
+  * table, collection, or persistence query object.
+  */
+ export interface PresentationReadPort {
+   read<T>(operation: string, parameters?: readonly unknown[]): Promise<T>;
++  assignmentsForLesson(lessonId?: number): Promise<Assignment[]>;
++  pendingAssignmentsForSubject(subjectId?: number, recurrenceId?: number): Promise<PendingAssignment[]>;
++  openHelpRequestCount(): Promise<number>;
+   subscribe(listener: () => void): () => void;
+ }
++
++export type { Assignment, HelpRequest, PendingAssignment };
+diff --git a/src/components/AppShell.tsx b/src/components/AppShell.tsx
+index 8e99e3a..919a4a1 100644
+--- a/src/components/AppShell.tsx
++++ b/src/components/AppShell.tsx
+@@ -1,19 +1,19 @@
+ import { useEffect, useRef, useState } from "react";
+ import { NavLink, Outlet, useLocation } from "react-router-dom";
+ import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound, ListChecks, MoreHorizontal } from "lucide-react";
+ import { useI18n } from "@/lib/i18n";
+ import { useKeyboardInset } from "@/hooks/useKeyboardInset";
+ import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+ import { cn } from "@/lib/utils";
+ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+-import type { Profile } from "@/lib/presentationQueries";
++import type { Profile } from "@/domain/entities/profile";
+ 
+ export default function AppShell({ profile }: { profile: Profile }) {
+   const { t } = useI18n();
+   const location = useLocation();
+   const pageKey = "/" + (location.pathname.split("/")[1] ?? "");
+   const items = [
+     { to: "/", label: t("nav.diary"), icon: CalendarDays, end: true },
+     { to: "/tasks", label: t("nav.tasks"), icon: ListChecks },
+     { to: "/library", label: t("nav.library"), icon: BookMarked },
+     { to: "/lessons", label: t("nav.lessons"), icon: GraduationCap },
+diff --git a/src/components/lessons/AddHomeworkSheet.tsx b/src/components/lessons/AddHomeworkSheet.tsx
+index c75affa..379810d 100644
+--- a/src/components/lessons/AddHomeworkSheet.tsx
++++ b/src/components/lessons/AddHomeworkSheet.tsx
+@@ -1,14 +1,12 @@
+ import { useEffect, useState } from "react";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db } from "@/lib/presentationQueries";
+-import { useSubjects } from "@/hooks/useEntities";
++import { usePendingAssignmentsForSubject, useSubjects } from "@/hooks/useEntities";
+ import { pendingAssignmentsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Input } from "@/components/ui/input";
+ import { Trash2, Plus, Pencil, Check, X } from "lucide-react";
+ import { toast } from "sonner";
+ 
+@@ -41,24 +39,21 @@ export function AddHomeworkSheet({ open, onOpenChange, subjectId, recurrenceId,
+     if (editingId == null) return;
+     await pendingAssignmentsService.update(editingId, editingText);
+     cancelEdit();
+   };
+ 
+   useEffect(() => {
+     if (!open) return;
+     setDraft("");
+   }, [open]);
+ 
+-  const currentPending = useLiveQuery(
+-    () => db.pendingAssignments.where("subjectId").equals(subjectId).toArray(),
+-    [subjectId],
+-  );
++  const currentPending = usePendingAssignmentsForSubject(subjectId);
+ 
+   const add = async () => {
+     if (!draft.trim()) return;
+     await pendingAssignmentsService.add(subjectId, draft, recurrenceId);
+     setDraft("");
+     toast.success(t("toast.homeworkAdded"));
+   };
+ 
+   const subjectName = subjects?.find((s) => s.id === subjectId)?.name ?? "—";
+ 
+diff --git a/src/components/lessons/LessonLogSheet.tsx b/src/components/lessons/LessonLogSheet.tsx
+index 6cbbe01..8a29e14 100644
+--- a/src/components/lessons/LessonLogSheet.tsx
++++ b/src/components/lessons/LessonLogSheet.tsx
+@@ -1,13 +1,13 @@
+ import { useEffect, useMemo, useState } from "react";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db, type Lesson, type LessonRecurrence } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
++import { useAssignmentsForLesson, usePendingAssignmentsForSubject } from "@/hooks/useEntities";
++import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
+ import { lessonsService, pendingAssignmentsService } from "@/lib/services";
+ import { today } from "@/lib/date";
+ import { useI18n } from "@/lib/i18n";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ 
+ import { Plus, X, Check, Inbox, Pencil } from "lucide-react";
+@@ -32,31 +32,24 @@ interface AssignmentDraft {
+   pendingId?: number;
+ }
+ 
+ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
+   const { recurrence, subjectId, lesson, prefilledDate } = context || {};
+   const { t } = useI18n();
+   const isEdit = !!lesson?.id;
+   const subjId = lesson?.subjectId ?? recurrence?.subjectId ?? subjectId;
+   const recId = lesson?.recurrenceId ?? recurrence?.id;
+ 
+-  const existingAssignments = useLiveQuery(
+-    () => (lesson?.id ? db.assignments.where("lessonId").equals(lesson.id).toArray() : Promise.resolve([])),
+-    [lesson?.id]
+-  );
++  const existingAssignments = useAssignmentsForLesson(lesson?.id);
+ 
+   /** Live pending drafts scoped to this subject (any recurrence, or matching one). */
+-  const pendingLive = useLiveQuery(async () => {
+-    if (!subjId) return [];
+-    const rows = await db.pendingAssignments.where("subjectId").equals(subjId).toArray();
+-    return rows.filter((r) => !recId || r.recurrenceId == null || r.recurrenceId === recId);
+-  }, [subjId, recId]);
++  const pendingLive = usePendingAssignmentsForSubject(subjId, recId);
+ 
+   const [date, setDate] = useState("");
+   const [notes, setNotes] = useState("");
+   const [assignments, setAssignments] = useState<AssignmentDraft[]>([]);
+   const [draft, setDraft] = useState("");
+   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+   const [editingText, setEditingText] = useState("");
+ 
+   const startEdit = (i: number) => { setEditingIdx(i); setEditingText(assignments[i]?.text ?? ""); };
+   const cancelEdit = () => { setEditingIdx(null); setEditingText(""); };
+diff --git a/src/components/lessons/RecurrenceSheet.tsx b/src/components/lessons/RecurrenceSheet.tsx
+index 5ccf8dd..dbe43c6 100644
+--- a/src/components/lessons/RecurrenceSheet.tsx
++++ b/src/components/lessons/RecurrenceSheet.tsx
+@@ -1,13 +1,14 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useSubjects } from "@/hooks/useEntities";
+-import { type ColorKey, type LessonRecurrence, type LessonScheduleSlot, type LessonFrequency } from "@/lib/presentationQueries";
++import type { ColorKey } from "@/domain/entities/common";
++import type { LessonRecurrence, LessonScheduleSlot, LessonFrequency } from "@/domain/entities/lesson";
+ import { lessonsService } from "@/lib/services";
+ import { today } from "@/lib/date";
+ import { useI18n } from "@/lib/i18n";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+ } from "@/components/ui/select";
+diff --git a/src/components/lessons/TeacherRecapSheet.tsx b/src/components/lessons/TeacherRecapSheet.tsx
+index 8ed3454..9e1eb1d 100644
+--- a/src/components/lessons/TeacherRecapSheet.tsx
++++ b/src/components/lessons/TeacherRecapSheet.tsx
+@@ -1,13 +1,14 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/hooks/useEntities";
+-import { type HelpRequest, type ColorKey, type SubjectType } from "@/lib/presentationQueries";
++import type { ColorKey, SubjectType } from "@/domain/entities/common";
++import type { HelpRequest } from "@/domain/ports/helpRequest";
+ import { helpRequestsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Textarea } from "@/components/ui/textarea";
+ import { CheckCircle2, HelpCircle, MessageSquareQuote, ChevronRight, History as HistoryIcon } from "lucide-react";
+ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+ import { Link } from "react-router-dom";
+ import { toast } from "sonner";
+diff --git a/src/components/library/BpmCoupler.tsx b/src/components/library/BpmCoupler.tsx
+index 7ffa238..e7acad7 100644
+--- a/src/components/library/BpmCoupler.tsx
++++ b/src/components/library/BpmCoupler.tsx
+@@ -1,11 +1,11 @@
+-import type { NoteVal } from "@/lib/presentationQueries";
++import type { NoteVal } from "@/domain/entities/common";
+ import { cn } from "@/lib/utils";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { useI18n } from "@/lib/i18n";
+ 
+ const NOTE_OPTIONS: { val: NoteVal; glyph: string; label: string }[] = [
+   { val: "half",      glyph: "𝅗𝅥", label: "½" },
+   { val: "quarter",   glyph: "♩",  label: "¼" },
+   { val: "eighth",    glyph: "♪",  label: "⅛" },
+   { val: "sixteenth", glyph: "𝅘𝅥𝅯", label: "1⁄16" },
+diff --git a/src/components/library/BpmSparkline.tsx b/src/components/library/BpmSparkline.tsx
+index 090316e..2442f60 100644
+--- a/src/components/library/BpmSparkline.tsx
++++ b/src/components/library/BpmSparkline.tsx
+@@ -1,34 +1,29 @@
+-import { useLiveQuery } from "@/lib/subscriptions";
+ import { useTasksByItem } from "@/hooks/useEntities";
+-import { db } from "@/lib/presentationQueries";
++import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
++import type { Session } from "@/domain/entities/session";
+ import { useMemo } from "react";
+ import { useI18n } from "@/lib/i18n";
+ 
+ interface Props {
+   itemId: number;
+   weeks?: number;
+ }
+ 
+ /**
+  * Compact sparkline showing best BPM reached per week for sessions linked to
+  * tasks belonging to a given library item.
+  */
+ export function BpmSparkline({ itemId, weeks = 8 }: Props) {
+   const { t } = useI18n();
+   const tasks = useTasksByItem(itemId);
+-  const sessions = useLiveQuery(async () => {
+-    const ts = await db.tasks.where("itemId").equals(itemId).toArray();
+-    const ids = ts.map((t) => t.id).filter(Boolean);
+-    if (!ids.length) return [];
+-    return db.sessions.where("taskId").anyOf(ids).toArray();
+-  }, [itemId]);
++  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
+ 
+   const { points, max, min } = useMemo(() => {
+     const today = new Date();
+     today.setHours(0, 0, 0, 0);
+     const buckets: (number | null)[] = Array(weeks).fill(null);
+ 
+     for (const s of sessions ?? []) {
+       if (!s.bpmReached) continue;
+       const sd = new Date(s.date);
+       const diffDays = Math.floor((today.getTime() - sd.getTime()) / 86400000);
+diff --git a/src/components/library/ItemAnalysisSheet.tsx b/src/components/library/ItemAnalysisSheet.tsx
+index 919972b..9f07879 100644
+--- a/src/components/library/ItemAnalysisSheet.tsx
++++ b/src/components/library/ItemAnalysisSheet.tsx
+@@ -1,42 +1,36 @@
+ import { useMemo } from "react";
+-import { useTechniques } from "@/hooks/useEntities";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer, type Lang } from "@/lib/presentationQueries";
++import { useSegmentsByItem, useTasksByItem, useTechniques } from "@/presentation/hooks/useEntities";
++import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
++import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
++import type { Lang, TheoryLayer } from "@/domain/entities/common";
++import type { LibraryItem, Segment } from "@/domain/entities/library";
++import type { Session } from "@/domain/entities/session";
++import type { Task } from "@/domain/entities/task";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { Activity } from "lucide-react";
+ 
+ interface Props {
+   open: boolean;
+   onOpenChange: (o: boolean) => void;
+   item: LibraryItem;
+ }
+ 
+ /** Tracks sessions for a library item (and per-segment) and shows latest values + sparklines. */
+ export function ItemAnalysisSheet({ open, onOpenChange, item }: Props) {
+   const { t, lang } = useI18n();
+ 
+-  const tasks = useLiveQuery(
+-    () => (item.id ? db.tasks.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
+-    [item.id]
+-  );
+-  const sessions = useLiveQuery(async () => {
+-    const ids = (tasks ?? []).map((tk) => tk.id).filter(Boolean);
+-    if (!ids.length) return [];
+-    return db.sessions.where("taskId").anyOf(ids).toArray();
+-  }, [tasks]);
+-  const segments = useLiveQuery(
+-    () => (item.id ? db.segments.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
+-    [item.id]
+-  );
++  const tasks = useTasksByItem(item.id);
++  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [item.id]);
++  const segments = useSegmentsByItem(item.id);
+   const techniques = useTechniques();
+ 
+   const tasksById = useMemo(() => {
+     const m = new Map<number, Task>();
+     (tasks ?? []).forEach((tk) => tk.id && m.set(tk.id, tk));
+     return m;
+   }, [tasks]);
+ 
+   /** Sessions whose task targets the given segmentId. */
+   const sessionsForSegment = (segId: number): Session[] =>
+diff --git a/src/components/library/ItemHelpSheet.tsx b/src/components/library/ItemHelpSheet.tsx
+index 3b1771f..392dea7 100644
+--- a/src/components/library/ItemHelpSheet.tsx
++++ b/src/components/library/ItemHelpSheet.tsx
+@@ -1,13 +1,13 @@
+ import { useEffect, useState } from "react";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
++import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
++import type { HelpRequest } from "@/domain/ports/helpRequest";
+ import { helpRequestsService } from "@/lib/services";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Input } from "@/components/ui/input";
+ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+ import { HelpCircle, MessageSquareQuote, Plus, X, CheckCircle2 } from "lucide-react";
+ import { toast } from "sonner";
+ import { EmptyState } from "@/components/shared/EmptyState";
+ import { useI18n } from "@/lib/i18n";
+@@ -15,24 +15,21 @@ import { formatDate } from "@/lib/date";
+ 
+ interface Props {
+   open: boolean;
+   onOpenChange: (o: boolean) => void;
+   itemId: number;
+   itemTitle: string;
+ }
+ 
+ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
+   const { t, lang } = useI18n();
+-  const reqs = useLiveQuery(
+-    () => db.helpRequests.where("itemId").equals(itemId).toArray(),
+-    [itemId]
+-  );
++  const reqs = usePresentationRead<HelpRequest[]>("helpRequests.item", [itemId]);
+ 
+   const [draft, setDraft] = useState("");
+   const [answers, setAnswers] = useState<Record<number, string>>({});
+ 
+   useEffect(() => { if (!open) { setDraft(""); setAnswers({}); } }, [open]);
+ 
+   const addQuestion = async () => {
+     if (!draft.trim()) return;
+     await helpRequestsService.add(itemId, draft.trim());
+     setDraft("");
+diff --git a/src/components/library/LibraryItemKindFields.tsx b/src/components/library/LibraryItemKindFields.tsx
+index a064ce5..de0cd2e 100644
+--- a/src/components/library/LibraryItemKindFields.tsx
++++ b/src/components/library/LibraryItemKindFields.tsx
+@@ -1,20 +1,20 @@
+ /** Kind-specific form fields for library items, extracted from NewLibraryItemSheet
+  *  to keep the parent sheet focused on layout & save orchestration. */
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { BpmCoupler } from "./BpmCoupler";
+ import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
+ import { type MasteryState } from "./MasterySliders";
+ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+ import { cn } from "@/lib/utils";
+-import type { LibraryKind, NoteVal } from "@/lib/presentationQueries";
++import type { LibraryKind, NoteVal } from "@/domain/entities/common";
+ import { useI18n } from "@/lib/i18n";
+ 
+ interface Props {
+   kind: LibraryKind;
+   targetBpm?: number; setTargetBpm: (v?: number) => void;
+   startBpm?: number; setStartBpm: (v?: number) => void;
+   noteVal?: NoteVal; setNoteVal: (v?: NoteVal) => void;
+   techniqueIds: number[]; setTechniqueIds: (v: number[]) => void;
+   segments: DraftSegment[]; setSegments: (v: DraftSegment[]) => void;
+   totalExercises?: number; setTotalExercises: (v?: number) => void;
+diff --git a/src/components/library/MasterySliders.tsx b/src/components/library/MasterySliders.tsx
+index e89c35d..a94a480 100644
+--- a/src/components/library/MasterySliders.tsx
++++ b/src/components/library/MasterySliders.tsx
+@@ -1,12 +1,12 @@
+ import { useI18n } from "@/lib/i18n";
+-import { THEORY_LAYERS } from "@/lib/presentationQueries";
++import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+ 
+ export interface MasteryState {
+   conceptual: number;
+   analytical: number;
+   aural: number;
+   compositional: number;
+   reading: number;
+ }
+ 
+ interface Props {
+diff --git a/src/components/library/MasterySparkline.tsx b/src/components/library/MasterySparkline.tsx
+index 65f6f98..31a5e3c 100644
+--- a/src/components/library/MasterySparkline.tsx
++++ b/src/components/library/MasterySparkline.tsx
+@@ -1,31 +1,27 @@
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db, type TheoryLayer } from "@/lib/presentationQueries";
++import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
++import type { TheoryLayer } from "@/domain/constants/theoryLayers";
++import type { Session } from "@/domain/entities/session";
+ import { useMemo } from "react";
+ 
+ interface Props {
+   itemId: number;
+   layer: TheoryLayer;
+   weeks?: number;
+ }
+ 
+ /**
+  * Compact sparkline showing score for a single theory mastery dimension
+  * per week, derived from session layerScores.
+  */
+ export function MasterySparkline({ itemId, layer, weeks = 8 }: Props) {
+-  const sessions = useLiveQuery(async () => {
+-    const tasks = await db.tasks.where("itemId").equals(itemId).toArray();
+-    const ids = tasks.map((t) => t.id).filter(Boolean);
+-    if (!ids.length) return [];
+-    return db.sessions.where("taskId").anyOf(ids).toArray();
+-  }, [itemId]);
++  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
+ 
+   const { points, max } = useMemo(() => {
+     const today = new Date();
+     today.setHours(0, 0, 0, 0);
+     const buckets: (number | null)[] = Array(weeks).fill(null);
+ 
+     for (const s of sessions ?? []) {
+       const score = s.layerScores?.[layer];
+       if (score == null) continue;
+       const sd = new Date(s.date);
+diff --git a/src/components/library/NewLibraryItemSheet.tsx b/src/components/library/NewLibraryItemSheet.tsx
+index 6e4fed7..9262f0e 100644
+--- a/src/components/library/NewLibraryItemSheet.tsx
++++ b/src/components/library/NewLibraryItemSheet.tsx
+@@ -1,14 +1,14 @@
+ import { useEffect, useMemo, useState } from "react";
+-import { useSubjects, useTechniques } from "@/hooks/useEntities";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db, type LibraryKind, type LibraryItem } from "@/lib/presentationQueries";
++import { useCollectionLinksByItem, useCollections, useSegmentsByItem, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
++import type { LibraryKind } from "@/domain/entities/common";
++import type { LibraryItem } from "@/domain/entities/library";
+ import { useI18n } from "@/lib/i18n";
+ import {
+   Sheet,
+   SheetContent,
+   SheetHeader,
+   SheetTitle,
+   SheetDescription,
+   SheetFooter,
+ } from "@/components/ui/sheet";
+ import { Input } from "@/components/ui/input";
+@@ -51,52 +51,43 @@ const BPM_MAX = 400;
+ const isValidBpm = (n: number | undefined) =>
+   n === undefined || (Number.isFinite(n) && n >= BPM_MIN && n <= BPM_MAX);
+ 
+ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
+   const { t } = useI18n();
+   const isEdit = !!item?.id;
+   const editingKind = item?.kind ?? kind;
+ 
+   const subjects = useSubjects();
+   const allTechniques = useTechniques();
+-  const existingSegments = useLiveQuery(
+-    () => (item?.id ? db.segments.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
+-    [item?.id]
+-  );
++  const existingSegments = useSegmentsByItem(item?.id);
+ 
+   const [subjectId, setSubjectId] = useState<number | undefined>();
+   const [title, setTitle] = useState("");
+   const [composer, setComposer] = useState("");
+   
+ 
+   const [targetBpm, setTargetBpm] = useState<number | undefined>();
+   const [startBpm, setStartBpm] = useState<number | undefined>();
+   const [noteVal, setNoteVal] = useState<LibraryItem["noteVal"]>();
+ 
+   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
+   const [segments, setSegments] = useState<DraftSegment[]>([]);
+ 
+   const [totalExercises, setTotalExercises] = useState<number | undefined>();
+   const [currentExercise, setCurrentExercise] = useState<number | undefined>(1);
+ 
+   const [mastery, setMastery] = useState<MasteryState>(emptyMastery);
+   const [collectionIds, setCollectionIds] = useState<number[]>([]);
+   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+ 
+-  const allCollections = useLiveQuery(
+-    () => db.collections.filter((c) => !c.deletedAt).toArray(),
+-    []
+-  );
+-  const existingMemberships = useLiveQuery(
+-    () => item?.id ? db.collectionItems.where("itemId").equals(item.id).toArray() : Promise.resolve([]),
+-    [item?.id]
+-  );
++  const allCollections = useCollections();
++  const existingMemberships = useCollectionLinksByItem(item?.id);
+   const collectionOptions = useMemo(
+     () => (allCollections ?? [])
+       .filter((c) => c.kind === editingKind)
+       .slice()
+       .sort((a, b) => a.name.localeCompare(b.name))
+       .map((c) => ({ value: c.id, label: c.name })),
+     [allCollections, editingKind]
+   );
+ 
+   const subjectTechniqueOptions = useMemo(
+diff --git a/src/components/library/SegmentsEditor.tsx b/src/components/library/SegmentsEditor.tsx
+index 1b40b0e..9548659 100644
+--- a/src/components/library/SegmentsEditor.tsx
++++ b/src/components/library/SegmentsEditor.tsx
+@@ -1,13 +1,13 @@
+ import { useState } from "react";
+ import { Plus, X, ArrowUp, ArrowDown } from "lucide-react";
+-import type { NoteVal } from "@/lib/presentationQueries";
++import type { NoteVal } from "@/domain/entities/common";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { BpmCoupler } from "./BpmCoupler";
+ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+ import { cn } from "@/lib/utils";
+ import { useI18n } from "@/lib/i18n";
+ 
+ export interface DraftSegment {
+   label: string;
+diff --git a/src/components/library/TeacherAnswersSheet.tsx b/src/components/library/TeacherAnswersSheet.tsx
+index 4dd7971..cb22176 100644
+--- a/src/components/library/TeacherAnswersSheet.tsx
++++ b/src/components/library/TeacherAnswersSheet.tsx
+@@ -1,43 +1,37 @@
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db } from "@/lib/presentationQueries";
++import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
++import type { LibraryItem } from "@/domain/entities/library";
++import type { HelpRequest } from "@/domain/ports/helpRequest";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+ import { MessageSquareQuote, BookOpen } from "lucide-react";
+ import { EmptyState } from "@/components/shared/EmptyState";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ 
+ interface Props {
+   open: boolean;
+   onOpenChange: (o: boolean) => void;
+   itemId: number;
+   itemTitle?: string;
+ }
+ 
+ /**
+  * Read-only quick reference of the teacher's recorded answers
+  * for a library item. Designed for one-handed mobile use during practice.
+  */
+ export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
+   const { t, lang } = useI18n();
+-  const item = useLiveQuery(() => db.library.get(itemId), [itemId]);
++  const item = usePresentationRead<LibraryItem | undefined>("library.item", [itemId]);
+   const label = itemTitle ?? item?.title ?? "";
+-  const answered = useLiveQuery(
+-    () =>
+-      db.helpRequests
+-        .where("itemId")
+-        .equals(itemId)
+-        .filter((r) => !!r.answer)
+-        .toArray()
+-        .then((rs) => rs.sort((a, b) => (b.answeredAt ?? 0) - (a.answeredAt ?? 0))),
+-    [itemId]
+-  );
++  const answered = usePresentationRead<HelpRequest[]>("helpRequests.answeredItem", [itemId])
++    ?.slice()
++    .sort((a, b) => (b.answeredAt ?? 0) - (a.answeredAt ?? 0));
+ 
+   return (
+     <Sheet open={open} onOpenChange={onOpenChange}>
+       <SheetContent
+         side="bottom"
+         className="h-[85vh] max-h-[85dvh] rounded-t-3xl bg-background p-0 flex flex-col"
+       >
+         <SheetHeader className="px-4 pt-6 text-left">
+           <div className="text-[11px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+             <BookOpen className="h-3.5 w-3.5" />
+diff --git a/src/components/onboarding/Onboarding.tsx b/src/components/onboarding/Onboarding.tsx
+index 863e47e..554abc9 100644
+--- a/src/components/onboarding/Onboarding.tsx
++++ b/src/components/onboarding/Onboarding.tsx
+@@ -1,15 +1,15 @@
+ import { useMemo, useState } from "react";
+ import { Piano, BookOpen, Check, X, Plus, Bell } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+-import { type Lang, type SubjectType } from "@/lib/presentationQueries";
++import type { Lang, SubjectType } from "@/domain/entities/common";
+ import { profileService } from "@/lib/services";
+ import { SUPPORTED_LANGS, useI18n } from "@/lib/i18n";
+ import { cn } from "@/lib/utils";
+ 
+ interface DraftSubject { name: string; type: SubjectType }
+ 
+ const INSTRUMENT_KEYS = ["piano", "guitar", "flute", "ensemble", "violin", "singing"] as const;
+ const THEORY_KEYS = ["harmony", "earTraining", "solfeggio", "history"] as const;
+ 
+ export default function Onboarding({ onDone }: { onDone: () => void }) {
+diff --git a/src/components/profile/SubjectsEditor.tsx b/src/components/profile/SubjectsEditor.tsx
+index d8306bd..2f0bcec 100644
+--- a/src/components/profile/SubjectsEditor.tsx
++++ b/src/components/profile/SubjectsEditor.tsx
+@@ -1,13 +1,14 @@
+ import { useState } from "react";
+ import { useSubjects, useTechniques } from "@/hooks/useEntities";
+-import { THEORY_LAYERS, type Subject, type SubjectType, type ColorKey } from "@/lib/presentationQueries";
++import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
++import type { ColorKey, Subject, SubjectType } from "@/domain/entities/common";
+ import { subjectsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { COLOR_KEYS, getSubjectColor, subjectColorCss } from "@/lib/subjectColors";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import {
+   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+ } from "@/components/ui/alert-dialog";
+ import { Plus, X, Trash2, Piano, BookOpen, ChevronDown, Layers, Wrench, Pencil, Check } from "lucide-react";
+diff --git a/src/hooks/useEntities.test.tsx b/src/hooks/useEntities.test.tsx
+index 8f9e39e..86db2dc 100644
+--- a/src/hooks/useEntities.test.tsx
++++ b/src/hooks/useEntities.test.tsx
+@@ -1,27 +1,33 @@
+ import { describe, it, expect, beforeEach } from "vitest";
+ import { renderHook, waitFor } from "@testing-library/react";
+ import "fake-indexeddb/auto";
+-import { db } from "@/lib/presentationQueries";
++// Integration fixture: tests configure the infrastructure adapter directly.
++// eslint-disable-next-line no-restricted-imports
++import { db } from "@/lib/db";
++import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
++// eslint-disable-next-line no-restricted-imports
++import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
+ import {
+   useSubjects,
+   useLibrary,
+   useRepertoire,
+   useSegments,
+   useActiveTasks,
+   useTasksInRange,
+   useTechniques,
+   useProfile,
+   useCollectionItems,
+ } from "./useEntities";
+ 
+ beforeEach(async () => {
++  configurePresentationQueries(dexiePresentationReads);
+   await db.delete();
+   await db.open();
+ });
+ 
+ describe("useSubjects", () => {
+   it("returns active subjects only", async () => {
+     const live = (await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 })) as number;
+     await db.subjects.add({ name: "Removed", type: "theory", createdAt: 1, deletedAt: 2 });
+ 
+     const { result } = renderHook(() => useSubjects());
+diff --git a/src/infrastructure/dexie/db.ts b/src/infrastructure/dexie/db.ts
+index d28d977..825887a 100644
+--- a/src/infrastructure/dexie/db.ts
++++ b/src/infrastructure/dexie/db.ts
+@@ -1,25 +1,24 @@
+ import Dexie, { type Table } from "dexie";
+ import type { Draft } from "@/domain/entities/common";
+ import type { Profile } from "@/domain/entities/profile";
+ import type { Subject, Technique } from "@/domain/entities/common";
+ import type { LibraryItem, Segment } from "@/domain/entities/library";
+ import type { Task } from "@/domain/entities/task";
+ import type { Session } from "@/domain/entities/session";
+ import type { Lesson, LessonFrequency, LessonRecurrence } from "@/domain/entities/lesson";
+ import type { Collection, CollectionItem } from "@/domain/entities/collection";
++import type { HelpRequest } from "@/domain/ports/helpRequest";
++import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
++import type { StudyPoolEntry, StudyGroup, StudyRoutine } from "@/domain/ports/studyRoutine";
+ 
+-export interface HelpRequest { id: number; sessionId?: number; taskId?: number; itemId?: number; question: string; answer?: string; answeredAt?: number; resolved: boolean; createdAt: number; }
+-export interface PendingAssignment { id?: number; subjectId: number; recurrenceId?: number; text: string; createdAt: number; }
+-export type StudyPoolEntry = { type: "item"; id: number } | { type: "segment"; id: number } | { type: "collection"; id: number };
+-export interface StudyGroup { id: string; name: string; pool: StudyPoolEntry[]; }
+-export interface StudyRoutine { id: number; name?: string; parentTaskId?: number; subjectId: number; groups: StudyGroup[]; matrix: Record<string, Record<string, number>>; weeksAhead: number; repetitionCap: number; useSpacedRepetition: boolean; startDate: string; createdAt: number; deletedAt?: number; }
++export type { HelpRequest, PendingAssignment, StudyPoolEntry, StudyGroup, StudyRoutine };
+ 
+ export class VirtuosoDB extends Dexie {
+   declare profile: Table<Profile, string>;
+   declare subjects: Table<Subject, number, Draft<Subject>>;
+   declare techniques: Table<Technique, number, Draft<Technique>>;
+   declare library: Table<LibraryItem, number, Draft<LibraryItem>>;
+   declare segments: Table<Segment, number, Draft<Segment>>;
+   declare tasks: Table<Task, number, Draft<Task>>;
+   declare sessions: Table<Session, number, Draft<Session>>;
+   declare helpRequests: Table<HelpRequest, number, Draft<HelpRequest>>;
+diff --git a/src/infrastructure/dexie/presentationReadPort.test.ts b/src/infrastructure/dexie/presentationReadPort.test.ts
+index cbc0318..0de5e41 100644
+--- a/src/infrastructure/dexie/presentationReadPort.test.ts
++++ b/src/infrastructure/dexie/presentationReadPort.test.ts
+@@ -2,21 +2,63 @@ import { beforeEach, describe, expect, it } from "vitest";
+ import "fake-indexeddb/auto";
+ import { db } from "./db";
+ import { dexiePresentationReads } from "./presentationReadPort";
+ 
+ beforeEach(async () => {
+   await db.delete();
+   await db.open();
+ });
+ 
+ describe("dexie presentation reads", () => {
++  it("returns collection links for one library item", async () => {
++    await db.collectionItems.bulkAdd([
++      { collectionId: 1, itemId: 7 },
++      { collectionId: 2, itemId: 7 },
++      { collectionId: 1, itemId: 8 },
++    ]);
++
++    const result = await dexiePresentationReads.read<{ collectionId: number; itemId: number }[]>("collectionLinks.item", [7]);
++
++    expect(result.map(({ collectionId, itemId }) => ({ collectionId, itemId }))).toEqual([
++      { collectionId: 1, itemId: 7 },
++      { collectionId: 2, itemId: 7 },
++    ]);
++  });
++
+   it("returns active diary tasks and their sessions for a date", async () => {
+     const taskId = await db.tasks.add({ subjectId: 1, title: "Scales", date: "2026-07-20", done: false, createdAt: 1 });
+     await db.tasks.add({ subjectId: 1, title: "Deleted", date: "2026-07-20", done: false, createdAt: 1, deletedAt: 2 });
+     await db.sessions.add({ taskId, date: "2026-07-20", duration: 20, quality: "well", createdAt: 1 });
+ 
+     const result = await dexiePresentationReads.read<{ tasks: { id?: number }[]; sessionsByTask: Record<number, { taskId: number }[]> }>("tasks.diaryDate", ["2026-07-20"]);
+ 
+     expect(result.tasks.map((task) => task.id)).toEqual([taskId]);
+     expect(result.sessionsByTask[taskId]).toHaveLength(1);
+   });
++
++  it("returns lesson-scoped assignment reads without exposing tables", async () => {
++    const lessonId = await db.lessons.add({ subjectId: 1, date: "2026-07-20", createdAt: 1 });
++    await db.assignments.bulkAdd([
++      { lessonId, text: "Keep wrist loose", createdAt: 1 },
++      { lessonId: lessonId + 1, text: "Ignore", createdAt: 1 },
++    ]);
++    await db.pendingAssignments.bulkAdd([
++      { subjectId: 1, recurrenceId: 3, text: "Arpeggios", createdAt: 1 },
++      { subjectId: 1, text: "Scales", createdAt: 1 },
++      { subjectId: 1, recurrenceId: 4, text: "Other teacher", createdAt: 1 },
++    ]);
++    await db.helpRequests.bulkAdd([
++      { id: 1, question: "Open", resolved: false, createdAt: 1 },
++      { id: 2, question: "Closed", resolved: true, createdAt: 1 },
++    ]);
++
++    const [assignments, pending, openCount] = await Promise.all([
++      dexiePresentationReads.read<{ text: string }[]>("assignments.lesson", [lessonId]),
++      dexiePresentationReads.read<{ text: string }[]>("pendingAssignments.subject", [1, 3]),
++      dexiePresentationReads.read<number>("helpRequests.openCount"),
++    ]);
++
++    expect(assignments.map((assignment) => assignment.text)).toEqual(["Keep wrist loose"]);
++    expect(pending.map((assignment) => assignment.text)).toEqual(["Arpeggios", "Scales"]);
++    expect(openCount).toBe(1);
++  });
+ });
+diff --git a/src/infrastructure/dexie/presentationReadPort.ts b/src/infrastructure/dexie/presentationReadPort.ts
+index 2dc4b64..c4d533e 100644
+--- a/src/infrastructure/dexie/presentationReadPort.ts
++++ b/src/infrastructure/dexie/presentationReadPort.ts
+@@ -34,20 +34,26 @@ export const dexiePresentationReads: PresentationReadPort = {
+         }, {});
+         return { tasks, sessionsByTask };
+       })() as Promise<T>;
+       case "tasks.carryover": return (typeof first === "string" && typeof second === "string"
+         ? db.tasks.where("date").between(first, second, true, false).filter((task) => active(task) && !task.done && !task.skipped).toArray()
+         : Promise.resolve([])) as Promise<T>;
+       case "tasks.ignored": return (typeof first === "string" && typeof second === "string"
+         ? db.tasks.where("date").between(first, second, true, false).filter((task) => active(task) && !!task.skipped && !task.done).toArray()
+         : Promise.resolve([])) as Promise<T>;
+       case "sessions.all": return db.sessions.toArray() as Promise<T>;
++      case "sessions.range": return (async () => {
++        if (typeof first === "string" && typeof second === "string") return db.sessions.where("date").between(first, second, true, true).toArray();
++        if (typeof first === "string") return db.sessions.where("date").aboveOrEqual(first).toArray();
++        if (typeof second === "string") return db.sessions.where("date").belowOrEqual(second).toArray();
++        return db.sessions.toArray();
++      })() as Promise<T>;
+       case "sessions.lastForTask": return (async () => {
+         const [taskId, itemId, before] = parameters;
+         const ids = typeof itemId === "number" ? (await db.tasks.where("itemId").equals(itemId).toArray()).flatMap((task) => task.id === undefined ? [] : [task.id]) : typeof taskId === "number" ? [taskId] : [];
+         if (!ids.length || typeof before !== "string") return null;
+         const sessions = await db.sessions.where("taskId").anyOf(ids).and((session) => session.date < before).sortBy("date");
+         return sessions.at(-1) ?? null;
+       })() as Promise<T>;
+       case "sessions.recentBpms": return (async () => {
+         const [itemId, before] = parameters;
+         if (typeof itemId !== "number" || typeof before !== "string") return [];
+@@ -72,30 +78,49 @@ export const dexiePresentationReads: PresentationReadPort = {
+         if (next > 400 || (ids.length && await db.sessions.where("taskId").anyOf(ids).and((session) => (session.bpmReached ?? 0) >= next).first())) return null;
+         return { reached: bpm, next };
+       })() as Promise<T>;
+       case "subjects.one": return (typeof first === "number" ? db.subjects.get(first) : Promise.resolve(undefined)) as Promise<T>;
+       case "subjects.isTheory": return (typeof first === "number" ? db.subjects.get(first).then((subject) => subject?.type === "theory") : Promise.resolve(false)) as Promise<T>;
+       case "profile.current": return db.profile.get("me") as Promise<T>;
+       case "routines.active": return db.studyRoutines.filter(active).toArray() as Promise<T>;
+       case "recurrences.active": return db.recurrences.filter(active).toArray() as Promise<T>;
+       case "assignments.pending": return db.assignments.filter((assignment) => !assignment.transformed && !assignment.ignored).toArray() as Promise<T>;
+       case "helpRequests.answeredCount": return (typeof first === "number" ? db.helpRequests.where("itemId").equals(first).filter((request) => !!request.answer).count() : Promise.resolve(0)) as Promise<T>;
++      case "helpRequests.item": return (typeof first === "number" ? db.helpRequests.where("itemId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
++      case "helpRequests.answeredItem": return (typeof first === "number" ? db.helpRequests.where("itemId").equals(first).filter((request) => !!request.answer).toArray() : Promise.resolve([])) as Promise<T>;
+       case "helpRequests.answeredItemIds": return db.helpRequests.filter((request) => !!request.answer && !!request.itemId).toArray().then((requests) => new Set(requests.map((request) => request.itemId!))) as Promise<T>;
+       case "lessons.all": return db.lessons.orderBy("date").reverse().toArray() as Promise<T>;
+       case "assignments.all": return db.assignments.toArray() as Promise<T>;
++      case "assignments.lesson": return (typeof first === "number" ? db.assignments.where("lessonId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
++      case "pendingAssignments.subject": return (async () => {
++        if (typeof first !== "number") return [];
++        const rows = await db.pendingAssignments.where("subjectId").equals(first).toArray();
++        return typeof second === "number" ? rows.filter((row) => row.recurrenceId == null || row.recurrenceId === second) : rows;
++      })() as Promise<T>;
+       case "helpRequests.all": return db.helpRequests.toArray() as Promise<T>;
++      case "helpRequests.openCount": return db.helpRequests.filter((request) => !request.resolved).count() as Promise<T>;
+       case "collections.active": return db.collections.filter((row) => active(row) && (!first || row.kind === first)).toArray() as Promise<T>;
+       case "collections.all": return db.collections.toArray() as Promise<T>;
+       case "collections.items": return (typeof first === "number" ? db.collectionItems.where("collectionId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
+       case "collections.one": return (typeof first === "number" ? db.collections.get(first) : Promise.resolve(undefined)) as Promise<T>;
+       case "collectionLinks.all": return db.collectionItems.toArray() as Promise<T>;
++      case "collectionLinks.item": return (typeof first === "number" ? db.collectionItems.where("itemId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
+       case "segments.ids": return (Array.isArray(first) && first.every((id) => typeof id === "number") ? db.segments.where("id").anyOf(first).toArray() : Promise.resolve([])) as Promise<T>;
+       case "library.subject": return (typeof first === "number" ? db.library.where("subjectId").equals(first).filter(active).toArray() : Promise.resolve([])) as Promise<T>;
+-      case "routines.one": return (typeof first === "number" ? db.studyRoutines.get(first) : Promise.resolve(undefined)) as Promise<T>;
++      case "routines.one": return (typeof first === "number" ? db.studyRoutines.get(first).then((routine) => routine ?? null) : Promise.resolve(null)) as Promise<T>;
+       default: throw new Error(`Unknown presentation read operation: ${operation}`);
+     }
+   },
++  assignmentsForLesson(lessonId) {
++    return this.read("assignments.lesson", [lessonId]);
++  },
++  pendingAssignmentsForSubject(subjectId, recurrenceId) {
++    return this.read("pendingAssignments.subject", [subjectId, recurrenceId]);
++  },
++  openHelpRequestCount() {
++    return this.read("helpRequests.openCount");
++  },
+   subscribe(listener) {
+     const subscription = liveQuery(() => Promise.all(db.tables.map((table) => table.toArray()))).subscribe({ next: listener });
+     return () => subscription.unsubscribe();
+   },
+ };
+diff --git a/src/lib/presentationQueries.ts b/src/lib/presentationQueries.ts
+deleted file mode 100644
+index 61e392a..0000000
+--- a/src/lib/presentationQueries.ts
++++ /dev/null
+@@ -1,16 +0,0 @@
+-/** Composition root for presentation read adapters. */
+-import { db } from "@/infrastructure/dexie/db";
+-export { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+-export type { ColorKey, Lang, LibraryKind, NoteVal, SegmentMetric, SessionQuality, Subject, SubjectType, TheoryLayer } from "@/domain/entities/common";
+-export type { Collection, CollectionItem } from "@/domain/entities/collection";
+-export type { Lesson, LessonFrequency, LessonRecurrence, LessonScheduleSlot } from "@/domain/entities/lesson";
+-export type { LibraryItem, Segment } from "@/domain/entities/library";
+-export type { Profile } from "@/domain/entities/profile";
+-export type { Session } from "@/domain/entities/session";
+-export type { Task, TaskLinkType, TaskRecurrence } from "@/domain/entities/task";
+-export type { HelpRequest } from "@/domain/ports/helpRequest";
+-export type { StudyPoolEntry, StudyGroup, StudyRoutine } from "@/domain/ports/studyRoutine";
+-
+-// Kept outside presentation so no page/component/hook reaches Dexie directly.
+-export const query = db;
+-export { query as db };
+diff --git a/src/lib/subscriptions.ts b/src/lib/subscriptions.ts
+deleted file mode 100644
+index b6588b1..0000000
+--- a/src/lib/subscriptions.ts
++++ /dev/null
+@@ -1,2 +0,0 @@
+-export { useDexieSubscription } from "@/infrastructure/dexie/subscribe";
+-export { useDexieSubscription as useLiveQuery } from "@/infrastructure/dexie/subscribe";
+diff --git a/src/main.tsx b/src/main.tsx
+index 134b8bf..08650e2 100644
+--- a/src/main.tsx
++++ b/src/main.tsx
+@@ -1,10 +1,13 @@
+ import { createRoot } from "react-dom/client";
+ import App from "./App.tsx";
+ import { configurePlatform } from "./lib/platform";
++import { configurePresentationQueries } from "./application/queries/presentationQueryService";
++import { dexiePresentationReads } from "./infrastructure/dexie/presentationReadPort";
+ import "./index.css";
+ 
+ configurePlatform();
++configurePresentationQueries(dexiePresentationReads);
+ 
+ const rootElement = document.getElementById("root");
+ if (!rootElement) throw new Error("Root element #root not found");
+ createRoot(rootElement).render(<App />);
+diff --git a/src/pages/EditStudyRoutinePage.tsx b/src/pages/EditStudyRoutinePage.tsx
+index 731fb29..cd28d43 100644
+--- a/src/pages/EditStudyRoutinePage.tsx
++++ b/src/pages/EditStudyRoutinePage.tsx
+@@ -1,34 +1,24 @@
+-import { useEffect, useState } from "react";
+ import { useNavigate, useParams } from "react-router-dom";
+ import { ChevronLeft } from "lucide-react";
+-import { db, type StudyRoutine } from "@/lib/presentationQueries";
++import { useStudyRoutine } from "@/presentation/hooks/useEntities";
+ import { useI18n } from "@/lib/i18n";
+ import { StudyRoutineWizard } from "@/components/diary/StudyRoutineWizard";
+ 
+ export default function EditStudyRoutinePage() {
+   const { t } = useI18n();
+   const navigate = useNavigate();
+   const { id } = useParams();
+   const routineId = Number(id);
+-  const [routine, setRoutine] = useState<StudyRoutine | null | undefined>(undefined);
++  const routine = useStudyRoutine(Number.isFinite(routineId) ? routineId : undefined);
+   const today = new Date().toISOString().slice(0, 10);
+ 
+-  useEffect(() => {
+-    let cancelled = false;
+-    (async () => {
+-      const r = Number.isFinite(routineId) ? await db.studyRoutines.get(routineId) : undefined;
+-      if (!cancelled) setRoutine(r ?? null);
+-    })();
+-    return () => { cancelled = true; };
+-  }, [routineId]);
+-
+   const goBack = () => {
+     if (window.history.length > 1) navigate(-1);
+     else navigate("/tasks");
+   };
+ 
+   return (
+     <div className="space-y-5">
+       <div className="flex items-center gap-3">
+         <button
+           type="button"
+diff --git a/src/pages/EditTaskPage.tsx b/src/pages/EditTaskPage.tsx
+index 73b2b41..9eded63 100644
+--- a/src/pages/EditTaskPage.tsx
++++ b/src/pages/EditTaskPage.tsx
+@@ -1,14 +1,16 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useSubjects, useTechniques, useTask } from "@/hooks/useEntities";
+ import { useNavigate, useParams } from "react-router-dom";
+-import { THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/presentationQueries";
++import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
++import type { NoteVal } from "@/domain/entities/common";
++import type { TaskLinkType } from "@/domain/entities/task";
+ import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+ import { tasksService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+ } from "@/components/ui/select";
+diff --git a/src/pages/History.tsx b/src/pages/History.tsx
+index 9b725f3..30f1792 100644
+--- a/src/pages/History.tsx
++++ b/src/pages/History.tsx
+@@ -1,15 +1,16 @@
+ import { useEffect, useMemo, useState } from "react";
+-import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSubjects } from "@/hooks/useEntities";
++import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
+ import { useSearchParams } from "react-router-dom";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/presentationQueries";
++import type { LibraryKind, Subject } from "@/domain/entities/common";
++import type { Collection } from "@/domain/entities/collection";
++import type { Session } from "@/domain/entities/session";
+ import { subjectColorCss } from "@/lib/subjectColors";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { NOTE_GLYPH } from "@/lib/constants";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
+ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+@@ -31,26 +32,21 @@ export default function History() {
+   const [groupBy, setGroupBy] = useState<GroupKey>("day");
+   const [sortDir, setSortDir] = useState<SortDir>("newest");
+   const [subjectFilter, setSubjectFilter] = useState<string>("all");
+   const [kindFilter, setKindFilter] = useState<"all" | LibraryKind>("all");
+   const [searchParams, setSearchParams] = useSearchParams();
+   const [from, setFrom] = useState(searchParams.get("from") ?? "");
+   const [to, setTo] = useState(searchParams.get("to") ?? "");
+   const [detail, setDetail] = useState<Session | null>(null);
+ 
+   // Scope session reads by date range when set — avoids loading the entire table
+-  const sessions = useLiveQuery(() => {
+-    if (from && to) return db.sessions.where("date").between(from, to, true, true).toArray();
+-    if (from) return db.sessions.where("date").aboveOrEqual(from).toArray();
+-    if (to) return db.sessions.where("date").belowOrEqual(to).toArray();
+-    return db.sessions.toArray();
+-  }, [from, to]);
++  const sessions = useSessionsInRange(from || undefined, to || undefined);
+   const tasks = useAllTasks();
+   const items = useAllLibrary();
+   const segments = useAllSegments();
+   const subjects = useSubjects();
+   const collections = useAllCollections();
+ 
+   const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id, task])), [tasks]);
+   const itemById = useMemo(() => new Map((items ?? []).map((i) => [i.id, i])), [items]);
+   const segById = useMemo(() => new Map((segments ?? []).map((s) => [s.id, s])), [segments]);
+   const collectionById = useMemo(() => new Map((collections ?? []).map((c) => [c.id, c])), [collections]);
+diff --git a/src/pages/Index.tsx b/src/pages/Index.tsx
+index 2299a4c..f062a07 100644
+--- a/src/pages/Index.tsx
++++ b/src/pages/Index.tsx
+@@ -1,13 +1,12 @@
+ import { lazy, Suspense } from "react";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
++import { useProfile } from "@/presentation/hooks/useEntities";
+ import { profileService } from "@/lib/services";
+ import { I18nProvider } from "@/lib/I18nProvider";
+ import Onboarding from "@/components/onboarding/Onboarding";
+ import IntroSlides from "@/components/onboarding/IntroSlides";
+ import AppShell from "@/components/AppShell";
+ import { Routes, Route } from "react-router-dom";
+ 
+ // Code splitting routes for better initial load performance
+ const Diary = lazy(() => import("./Diary"));
+ const Library = lazy(() => import("./Library"));
+@@ -24,21 +23,21 @@ const ItemAnalysisPage = lazy(() => import("./ItemAnalysisPage"));
+ 
+ const Fallback = () => (
+   <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4" style={{ paddingTop: "calc(2.5rem + env(safe-area-inset-top))" }}>
+     <div className="paper-skeleton h-24 w-full" />
+     <div className="paper-skeleton h-32 w-full" />
+     <div className="paper-skeleton h-20 w-full" />
+   </div>
+ );
+ 
+ const Index = () => {
+-  const profile = useLiveQuery(async () => (await db.profile.get("me")) ?? null);
++  const profile = useProfile();
+   // undefined = loading; null = no profile yet
+   if (profile === undefined) {
+     return (
+       <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4" style={{ paddingTop: "calc(2.5rem + env(safe-area-inset-top))" }}>
+         <div className="paper-skeleton h-24 w-full" />
+         <div className="paper-skeleton h-32 w-full" />
+         <div className="paper-skeleton h-20 w-full" />
+         <div className="paper-skeleton h-20 w-2/3" />
+       </div>
+     );
+diff --git a/src/pages/ItemAnalysisPage.tsx b/src/pages/ItemAnalysisPage.tsx
+index 86bf0f9..c784120 100644
+--- a/src/pages/ItemAnalysisPage.tsx
++++ b/src/pages/ItemAnalysisPage.tsx
+@@ -1,21 +1,22 @@
+ import { useMemo } from "react";
+-import { useTechniques, useItem, useTasksByItem } from "@/hooks/useEntities";
++import { useTechniques, useItem, useProfile } from "@/presentation/hooks/useEntities";
+ import { useParams, useNavigate } from "react-router-dom";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db, THEORY_LAYERS, type Session } from "@/lib/presentationQueries";
++import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
++import type { Lang } from "@/domain/entities/common";
++import type { Session } from "@/domain/entities/session";
++import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+ import { useI18n } from "@/lib/i18n";
+ import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
+ import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
+ import { weeklySessionCounts } from "@/lib/domain/analytics";
+ import { formatDate, getDefaultWeekStartsOn } from "@/lib/date";
+-import type { Lang } from "@/lib/presentationQueries";
+ import { Button } from "@/components/ui/button";
+ 
+ 
+ const QUALITY_ORDER = ["hard", "improve", "well", "great"];
+ 
+ interface ChartPoint { x: number; y: number; label: string }
+ 
+ function formatDay(date: string, lang: Lang): string {
+   return formatDate(date, lang, "dayMonth");
+ }
+@@ -76,28 +77,22 @@ function BarChart({ data }: { data: { label: string; count: number; color: strin
+   );
+ }
+ 
+ export default function ItemAnalysisPage() {
+   const { id } = useParams<{ id: string }>();
+   const navigate = useNavigate();
+   const { t, lang } = useI18n();
+   const itemId = id ? Number(id) : null;
+ 
+   const item = useItem(itemId ?? undefined);
+-  const tasks = useTasksByItem(itemId ?? undefined);
+-  const profile = useLiveQuery(() => db.profile.get("me"));
+-
+-  const sessions = useLiveQuery(async () => {
+-    const ids = (tasks ?? []).map((t) => t.id).filter(Boolean);
+-    if (!ids.length) return [];
+-    return db.sessions.where("taskId").anyOf(ids).sortBy("date");
+-  }, [tasks]);
++  const profile = useProfile();
++  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
+ 
+   const techniques = useTechniques();
+ 
+   const isTheory = item?.kind === "theory";
+ 
+   const bpmPoints = useMemo((): ChartPoint[] => {
+     const points: ChartPoint[] = [];
+     for (const s of sessions ?? []) {
+       if (s.bpmReached == null) continue;
+       points.push({ x: points.length, y: s.bpmReached, label: formatDay(s.date, lang) });
+diff --git a/src/pages/Lessons.tsx b/src/pages/Lessons.tsx
+index 46e140f..01dce90 100644
+--- a/src/pages/Lessons.tsx
++++ b/src/pages/Lessons.tsx
+@@ -1,16 +1,15 @@
+ import { useEffect, useMemo, useState } from "react";
+-import { useActiveTasks, useAssignments, useLessons, useRecurrences, useSubjects } from "@/hooks/useEntities";
++import { useActiveTasks, useAssignments, useLessons, useOpenHelpRequestCount, useRecurrences, useSubjects } from "@/hooks/useEntities";
+ import { subjectBorderStyle } from "@/lib/subjectColors";
+ import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db, type Lesson, type LessonRecurrence } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
++import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
+ import { lessonsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { Button } from "@/components/ui/button";
+ import {
+   AlertDialog,
+   AlertDialogAction,
+   AlertDialogCancel,
+   AlertDialogContent,
+   AlertDialogDescription,
+@@ -48,21 +47,21 @@ const PAGE_SIZE = 5;
+ 
+ export default function Lessons() {
+   const { t, lang } = useI18n();
+   const navigate = useNavigate();
+   const location = useLocation();
+   const recurrences = useRecurrences();
+   const subjects = useSubjects();
+   const lessons = useLessons();
+   const assignments = useAssignments();
+   const tasksAll = useActiveTasks();
+-  const openHelpCount = useLiveQuery(async () => (await db.helpRequests.toArray()).filter((h) => !h.resolved).length);
++  const openHelpCount = useOpenHelpRequestCount();
+ 
+   const [recapOpen, setRecapOpen] = useState(false);
+ 
+   const [recOpen, setRecOpen] = useState(false);
+   const [editingRec, setEditingRec] = useState<LessonRecurrence | null>(null);
+   const [delRecId, setDelRecId] = useState<number | null>(null);
+ 
+   const [logOpen, setLogOpen] = useState(false);
+   const [logContext, setLogContext] = useState<LessonLogContext | null>(null);
+   const [delLessonId, setDelLessonId] = useState<number | null>(null);
+diff --git a/src/pages/Library.tsx b/src/pages/Library.tsx
+index f9e087d..3dce62a 100644
+--- a/src/pages/Library.tsx
++++ b/src/pages/Library.tsx
+@@ -1,35 +1,38 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { Link, useNavigate } from "react-router-dom";
+ import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/presentationQueries";
++import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
++import type { LibraryKind, TheoryLayer } from "@/domain/entities/common";
++import type { LibraryItem, Segment } from "@/domain/entities/library";
++import type { Session } from "@/domain/entities/session";
++import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+ import { useI18n } from "@/lib/i18n";
+ import { cn } from "@/lib/utils";
+ import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
+ import { today } from "@/lib/date";
+ import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
+ 
+ import { MasterySparkline } from "@/components/library/MasterySparkline";
+ import { type MasteryState } from "@/components/library/MasterySliders";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+ import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
+ import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
+ import { BpmSparkline } from "@/components/library/BpmSparkline";
+ import { ListSkeleton } from "@/components/shared/Loading";
+ import { EmptyState } from "@/components/shared/EmptyState";
+ import { Pager } from "@/components/shared/Pager";
+-import { useCollectionLinks, useCollections, useHelpRequests, useSegments, useSubjects, useTechniques } from "@/hooks/useEntities";
++import { useCollectionLinks, useCollections, useHelpRequests, useLibraryByKind, useSegments, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
+ import { subjectBorderStyle } from "@/lib/subjectColors";
+ import { libraryService, deleteWithUndo } from "@/lib/services";
+ import {
+   AlertDialog,
+   AlertDialogAction,
+   AlertDialogCancel,
+   AlertDialogContent,
+   AlertDialogDescription,
+   AlertDialogFooter,
+   AlertDialogHeader,
+@@ -50,24 +53,21 @@ export default function Library() {
+   const [subjectFilter, setSubjectFilter] = useState<string>("all");
+   const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
+   const [groupByCollection, setGroupByCollection] = useState(false);
+   const allHelp = useHelpRequests();
+   const allTechniques = useTechniques();
+   const subjects = useSubjects();
+   const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id, s])), [subjects]);
+   const allCollections = useCollections();
+   const allCollectionLinks = useCollectionLinks();
+ 
+-  const items = useLiveQuery(
+-    () => db.library.where("kind").equals(active).filter((i) => !i.deletedAt).toArray(),
+-    [active]
+-  );
++  const items = useLibraryByKind(active);
+   const allSegments = useSegments();
+   const segmentsByItem = (allSegments ?? []).reduce<Record<number, Segment[]>>((acc, s) => {
+     (acc[s.itemId] ||= []).push(s);
+     return acc;
+   }, {});
+ 
+   const filteredItems = useMemo(() => {
+     let arr = items ?? [];
+     if (subjectFilter !== "all") arr = arr.filter((i) => i.subjectId === Number(subjectFilter));
+     if (search.trim()) {
+@@ -485,26 +485,21 @@ export default function Library() {
+       </AlertDialog>
+ 
+     </div>
+   );
+ }
+ 
+ /** Computes the latest score per theory dimension from sessions and renders radar + sparklines. */
+ function TheoryMasterySection({ itemId }: { itemId: number }) {
+   const { t } = useI18n();
+ 
+-  const sessions = useLiveQuery(async () => {
+-    const tasks = await db.tasks.where("itemId").equals(itemId).toArray();
+-    const ids = tasks.map((t) => t.id).filter(Boolean);
+-    if (!ids.length) return [];
+-    return db.sessions.where("taskId").anyOf(ids).toArray();
+-  }, [itemId]);
++  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
+ 
+   const latestScores = useMemo((): MasteryState => {
+     const result: MasteryState = { conceptual: 0, analytical: 0, aural: 0, compositional: 0, reading: 0 };
+     if (!sessions?.length) return result;
+     // For each layer, find the session with the latest date that has a score for it
+     for (const layer of THEORY_LAYERS) {
+       const scored = sessions
+         .filter((s) => s.layerScores?.[layer] != null)
+         .sort((a, b) => b.date.localeCompare(a.date));
+       const topScore = scored[0]?.layerScores?.[layer];
+diff --git a/src/pages/NewTaskPage.tsx b/src/pages/NewTaskPage.tsx
+index 3ae4c7a..c319eba 100644
+--- a/src/pages/NewTaskPage.tsx
++++ b/src/pages/NewTaskPage.tsx
+@@ -1,15 +1,16 @@
+ import { useEffect, useMemo, useState } from "react";
+-import { useLessons, useRecurrences, useSubjects, useTechniques, useItem } from "@/hooks/useEntities";
++import { useCollection, useItem, useLessons, useRecurrences, useSegmentsByIds, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
+ import { useNavigate, useLocation } from "react-router-dom";
+-import { useLiveQuery } from "@/lib/subscriptions";
+-import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/presentationQueries";
++import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
++import type { NoteVal } from "@/domain/entities/common";
++import type { TaskLinkType } from "@/domain/entities/task";
+ import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+ import { nextLessonDate } from "@/lib/domain/lessonSchedule";
+ import { useI18n } from "@/lib/i18n";
+ import { today } from "@/lib/date";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+@@ -70,28 +71,22 @@ export default function NewTaskPage() {
+     days: [new Date(date).getDay()],
+     everyX: 2,
+     startDate: date,
+     endMode: "never",
+     endDate: "",
+     occurrences: 10,
+   });
+   const setRec = (patch: Partial<RecurrenceState>) => setRecState((s) => ({ ...s, ...patch }));
+ 
+   const selectedItem = useItem(itemId);
+-  const selectedSegments = useLiveQuery(
+-    () => (segmentIds.length ? db.segments.where("id").anyOf(segmentIds).toArray() : Promise.resolve([])),
+-    [segmentIds.join(",")]
+-  );
+-  const selectedCollection = useLiveQuery(
+-    () => (collectionId ? db.collections.get(collectionId) : Promise.resolve(undefined)),
+-    [collectionId]
+-  );
++  const selectedSegments = useSegmentsByIds(segmentIds);
++  const selectedCollection = useCollection(collectionId);
+ 
+   // Auto-fill title/BPM/layers from item or segments selection
+   const segmentIdsKey = segmentIds.join(",");
+   useEffect(() => {
+     if (linkType !== "item" || !selectedItem) return;
+     const segLabel = selectedSegments?.length === 1
+       ? ` — ${selectedSegments[0].label}`
+       : selectedSegments && selectedSegments.length > 1
+         ? ` — ${selectedSegments.length} segments`
+         : "";
+diff --git a/src/pages/Tasks.tsx b/src/pages/Tasks.tsx
+index eafc18c..71397f2 100644
+--- a/src/pages/Tasks.tsx
++++ b/src/pages/Tasks.tsx
+@@ -1,16 +1,17 @@
+ import { useMemo, useState } from "react";
+-import { type Task, type StudyRoutine } from "@/lib/presentationQueries";
++import type { Task } from "@/domain/entities/task";
++import type { StudyRoutine } from "@/domain/ports/studyRoutine";
+ import { useActiveTasks, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+-import type { Lang } from "@/lib/presentationQueries";
++import type { Lang } from "@/domain/entities/common";
+ import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/services";
+ import { NOTE_GLYPH } from "@/lib/constants";
+ import { subjectBorderStyle } from "@/lib/subjectColors";
+ 
+ 
+ import { Input } from "@/components/ui/input";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+ } from "@/components/ui/select";
+ import {
+diff --git a/src/presentation/hooks/useEntities.ts b/src/presentation/hooks/useEntities.ts
+index 8f04648..12712b2 100644
+--- a/src/presentation/hooks/useEntities.ts
++++ b/src/presentation/hooks/useEntities.ts
+@@ -1,39 +1,56 @@
+ /** Named presentation DTO adapters. Persistence stays behind application ports. */
+ import type { LibraryKind } from "@/domain/entities/common";
++import type { Collection } from "@/domain/entities/collection";
++import type { Segment } from "@/domain/entities/library";
++import type { Session } from "@/domain/entities/session";
++import type { StudyRoutine } from "@/domain/ports/studyRoutine";
++import type { Assignment } from "@/domain/entities/lesson";
++import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
+ import { presentationQueries } from "@/application/queries/presentationQueryService";
+-import { usePresentationQuery } from "./usePresentationQuery";
++import { usePresentationQuery, usePresentationReader } from "./usePresentationQuery";
+ 
+ // DTO types are inferred at each feature hook during incremental migration.
+ // eslint-disable-next-line @typescript-eslint/no-explicit-any
+ const useRead = <T = any>(operation: string, parameters: readonly unknown[] = []) =>
+   usePresentationQuery<T>(presentationQueries(), operation, parameters);
+ 
+ export const useSubjects = () => useRead("subjects.active");
+ export const useTechniques = () => useRead("techniques.active");
+ export const useLibrary = () => useRead("library.active");
+ export const useRepertoire = () => useRead("library.repertoire");
+ export const useLibraryByKind = (kind?: LibraryKind) => useRead("library.byKind", [kind]);
+ export const useSegments = () => useRead("segments.active");
+ export const useActiveTasks = () => useRead("tasks.active");
+ export const useSessions = () => useRead("sessions.all");
++export const useSessionsInRange = (from?: string, to?: string) => useRead<Session[]>("sessions.range", [from, to]);
+ export const useProfile = () => useRead("profile.current");
+ export const useStudyRoutines = () => useRead("routines.active");
+ export const useRecurrences = () => useRead("recurrences.active");
+ export const useLessons = () => useRead("lessons.all");
+ export const useAssignments = () => useRead("assignments.all");
+ export const useHelpRequests = () => useRead("helpRequests.all");
+ export const useCollections = (kind?: LibraryKind) => useRead("collections.active", [kind]);
+ export const useCollectionLinks = () => useRead("collectionLinks.all");
++export const useCollectionLinksByItem = (itemId?: number) => useRead("collectionLinks.item", [itemId]);
+ export const useAllTasks = () => useRead("tasks.all");
+ export const useAllLibrary = () => useRead("library.active");
+ export const useAllSegments = () => useRead("segments.active");
+ export const useAllCollections = () => useRead("collections.all");
+ export const useCollectionItems = (collectionId?: number) => useRead("collections.items", [collectionId]);
++export const useCollection = (collectionId?: number) => useRead<Collection | undefined>("collections.one", [collectionId]);
+ export const useItem = (id?: number) => useRead("library.item", [id]);
+ export const useTask = (id?: number) => useRead("tasks.one", [id]);
+ export const useTasksInRange = (from?: string, to?: string) => useRead("tasks.range", [from, to]);
+ export const useTasksByDate = (date?: string) => useRead("tasks.date", [date]);
+ export const useTasksByItem = (itemId?: number) => useRead("tasks.item", [itemId]);
+ export const useTasksBySubjectAndDate = (_subjectId?: number, date?: string) => useRead("tasks.date", [date]);
+ export const useRecurrencesBySubject = (_subjectId?: number) => useRead("recurrences.active");
+ export const useSegmentsByItem = (itemId?: number) => useRead("library.segments", [itemId]);
++export const useSegmentsByIds = (ids: readonly number[]) => useRead<Segment[]>("segments.ids", [ids]);
++export const useStudyRoutine = (id?: number) => useRead<StudyRoutine | null>("routines.one", [id]);
++export const useAssignmentsForLesson = (lessonId?: number) =>
++  usePresentationReader<Assignment[]>((queries) => queries.assignmentsForLesson(lessonId), [lessonId]);
++export const usePendingAssignmentsForSubject = (subjectId?: number, recurrenceId?: number) =>
++  usePresentationReader<PendingAssignment[]>((queries) => queries.pendingAssignmentsForSubject(subjectId, recurrenceId), [subjectId, recurrenceId]);
++export const useOpenHelpRequestCount = () =>
++  usePresentationReader<number>((queries) => queries.openHelpRequestCount());
+diff --git a/src/presentation/hooks/usePresentationQuery.ts b/src/presentation/hooks/usePresentationQuery.ts
+index 1093159..19e061c 100644
+--- a/src/presentation/hooks/usePresentationQuery.ts
++++ b/src/presentation/hooks/usePresentationQuery.ts
+@@ -21,10 +21,32 @@ export function usePresentationQuery<T>(
+     return queries.subscribe(load);
+   }, [load, queries]);
+ 
+   return value;
+ }
+ 
+ /** Named presentation read adapter; components never access persistence directly. */
+ export function usePresentationRead<T>(operation: string, parameters: readonly unknown[] = []): T | undefined {
+   return usePresentationQuery<T>(presentationQueries(), operation, parameters);
+ }
++
++/** Subscribe to a typed application read operation without exposing its persistence key. */
++export function usePresentationReader<T>(
++  reader: (queries: PresentationQueryService) => Promise<T>,
++  dependencies: readonly unknown[] = [],
++): T | undefined {
++  const queries = presentationQueries();
++  const [value, setValue] = useState<T>();
++  const dependencyKey = JSON.stringify(dependencies);
++  const load = useCallback(() => {
++    void reader(queries).then(setValue);
++  // reader captures only dependencies supplied by the feature hook.
++  // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [queries, dependencyKey]);
++
++  useEffect(() => {
++    load();
++    return queries.subscribe(load);
++  }, [load, queries]);
++
++  return value;
++}
+diff --git a/src/test/architecture/import-boundaries.test.ts b/src/test/architecture/import-boundaries.test.ts
+index 4a246c2..07c66d5 100644
+--- a/src/test/architecture/import-boundaries.test.ts
++++ b/src/test/architecture/import-boundaries.test.ts
+@@ -1,19 +1,20 @@
+ import { readdir, readFile } from "node:fs/promises";
+ import { join, relative } from "node:path";
+ import { describe, expect, it } from "vitest";
+ 
+ const sourceRoot = join(process.cwd(), "src");
+-const presentationRoots = ["pages", "components", "hooks"];
++const presentationRoots = ["pages", "components", "hooks", "presentation"];
+ const temporaryBaseline: Record<string, string[]> = {};
+ 
+ const restrictedImports = [
++  { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)?["']@\/lib\/(?:presentationQueries|subscriptions)(?:["']|\/)/g, label: "legacy presentation alias" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/lib\/db(?:\/|["'])/g, label: "@/lib/db" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie(?:["']|\/)/g, label: "dexie" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie-react-hooks(?:["']|\/)/g, label: "dexie-react-hooks" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/infrastructure(?:\/|["'])/g, label: "@/infrastructure/" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@capacitor\/filesystem(?:["']|\/)/g, label: "@capacitor/filesystem" },
+ ];
+ 
+ const restrictedBrowserApis = [
+   { pattern: /\bFileReader\b/g, label: "FileReader" },
+   { pattern: /\bBlob\b/g, label: "Blob" },
+@@ -82,10 +83,27 @@ async function auditPresentationImports(): Promise<Record<string, string[]>> {
+   }
+ 
+   return violations;
+ }
+ 
+ describe("presentation import boundaries", () => {
+   it("allows only documented legacy violations", async () => {
+     expect(await auditPresentationImports()).toEqual(temporaryBaseline);
+   });
+ });
++
++describe("library presentation boundary", () => {
++  it("does not import legacy presentation query aliases", async () => {
++    const files = [
++      ...await filesIn(join(sourceRoot, "components", "library")),
++      join(sourceRoot, "pages", "Library.tsx"),
++      join(sourceRoot, "pages", "ItemAnalysisPage.tsx"),
++    ];
++    const legacyAliases = /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/lib\/(?:presentationQueries|subscriptions)(?:["'])/;
++    const offenders = (await Promise.all(files.map(async (file) => {
++      const source = await readFile(file, "utf8");
++      return legacyAliases.test(source) ? relative(process.cwd(), file) : null;
++    }))).filter((file): file is string => file !== null);
++
++    expect(offenders).toEqual([]);
++  });
++});

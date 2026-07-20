@@ -18,9 +18,13 @@ npm run test:watch   # Run tests in watch mode
 
 # Linting
 npm run lint         # Run ESLint
-```
 
 To run a single test file: `npx vitest run src/lib/services/tasks.test.ts`
+```
+
+## Codebase Analysis via codebase-memory-mcp (MANDATORY)
+
+You have access to the `codebase-memory-mcp` tool, which maintains a compiled Knowledge Graph of this entire ecosystem (powered by tree-sitter and SQLite). **You MUST use this MCP to navigate, query, trace, and review the code** rather than reading raw text files or relying on simple text searches. This prevents context-window bloat, hallucinations, and missed dependencies. Name of project: `home-giulio-Desktop-virtuoso-practice-journal`.
 
 ## Architecture
 

@@ -1,0 +1,90 @@
+c79a28c test: prove backup import rollback
+diff --git a/src/infrastructure/repositories/dexie/repositories.test.ts b/src/infrastructure/repositories/dexie/repositories.test.ts
+index 5a78900..0e7683d 100644
+--- a/src/infrastructure/repositories/dexie/repositories.test.ts
++++ b/src/infrastructure/repositories/dexie/repositories.test.ts
+@@ -2,20 +2,21 @@ import "fake-indexeddb/auto";
+ import { beforeEach, describe, expect, it, vi } from "vitest";
+ import { db } from "@/infrastructure/dexie/db";
+ import { taskRepository } from "./taskRepository";
+ import { sessionRepository } from "./sessionRepository";
+ import { backupRepository } from "./backupRepository";
+ import { libraryRepository } from "./libraryRepository";
+ import { collectionRepository } from "./collectionRepository";
+ import { lessonRepository } from "./lessonRepository";
+ import { profileRepository } from "./profileRepository";
+ import { studyRoutineRepository } from "./studyRoutineRepository";
++import { LogSessionUseCase } from "@/application/useCases/logSession";
+ 
+ beforeEach(async () => {
+   await db.delete();
+   await db.open();
+ });
+ 
+ async function subjectId() {
+   return db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 }) as Promise<number>;
+ }
+ 
+@@ -54,47 +55,51 @@ describe("Dexie repositories", () => {
+     db.tasks.bulkAdd = (() => Promise.reject(new Error("second write fails"))) as typeof db.tasks.bulkAdd;
+     await expect(taskRepository.create({ title: "repeat", date: "2026-01-01", subjectId: subject, recurrence: { kind: "interval", startDate: "2026-01-01", occurrences: 2 } })).rejects.toThrow("second write fails");
+     db.tasks.bulkAdd = original;
+     expect(await db.tasks.count()).toBe(0);
+   });
+ 
+   it("logs immutable session snapshot and completes task", async () => {
+     const subject = await subjectId();
+     const taskId = await taskRepository.create({ title: "Scales", date: "2026-01-01", subjectId: subject });
+     const task = (await db.tasks.get(taskId))!;
+-    const id = await sessionRepository.logWithCompletion(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [] });
++    const id = await new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [] });
+     expect((await db.sessions.get(id))?.snapshot?.taskTitle).toBe("Scales");
+     expect((await db.tasks.get(taskId))?.done).toBe(true);
+   });
+ 
+   it("rolls back session and task completion when help logging fails", async () => {
+     const subject = await subjectId();
+     const taskId = await taskRepository.create({ title: "Scales", date: "2026-01-01", subjectId: subject });
+     const task = (await db.tasks.get(taskId))!;
+     const original = db.helpRequests.add;
+     db.helpRequests.add = (() => Promise.reject(new Error("help fails"))) as typeof db.helpRequests.add;
+-    await expect(sessionRepository.logWithCompletion(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [], helpText: "help" })).rejects.toThrow("help fails");
++    await expect(new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [], helpText: "help" })).rejects.toThrow("help fails");
+     db.helpRequests.add = original;
+     expect(await db.sessions.count()).toBe(0);
+     expect((await db.tasks.get(taskId))?.done).toBe(false);
+   });
+ 
+-  it("rolls back backup import when a later table write fails", async () => {
+-    await db.subjects.add({ name: "old", type: "instrument", createdAt: 1 });
++  it("rolls back backup import when a later bulk add fails", async () => {
++    const originalSubjectId = await db.subjects.add({ name: "old subject", type: "instrument", createdAt: 1 });
++    await db.library.add({ subjectId: originalSubjectId, kind: "repertoire", title: "old item", createdAt: 1 });
++    const libraryTable = db.tables.find((table) => table.name === "library");
++    if (!libraryTable) throw new Error("library table missing");
++    vi.spyOn(libraryTable, "bulkAdd").mockRejectedValueOnce(new Error("library import fails"));
++
+     await expect(backupRepository.importAll({
+-      subjects: [{ name: "new", type: "instrument", createdAt: 2 }],
+-      library: [
+-        { id: 1, subjectId: 1, kind: "repertoire", title: "first", createdAt: 2 },
+-        { id: 1, subjectId: 1, kind: "repertoire", title: "duplicate", createdAt: 2 },
+-      ],
+-    })).rejects.toThrow();
+-    expect((await db.subjects.toArray()).map((subject) => subject.name)).toEqual(["old"]);
++      subjects: [{ name: "new subject", type: "instrument", createdAt: 2 }],
++      library: [{ subjectId: originalSubjectId, kind: "repertoire", title: "new item", createdAt: 2 }],
++    })).rejects.toThrow("library import fails");
++
++    expect((await db.subjects.toArray()).map((subject) => subject.name)).toEqual(["old subject"]);
++    expect((await db.library.toArray()).map((item) => item.title)).toEqual(["old item"]);
+   });
+ 
+   it("implements collection links port and excludes deleted library items", async () => {
+     const subject = await subjectId();
+     const collectionId = await collectionRepository.create({ kind: "repertoire", name: "Set", createdAt: 1, updatedAt: 1 });
+     const activeItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "active", createdAt: 1 });
+     const deletedItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "deleted", deletedAt: 2, createdAt: 1 });
+     await db.collectionItems.bulkAdd([
+       { collectionId, itemId: activeItem, createdAt: 1 },
+       { collectionId, itemId: deletedItem, createdAt: 1 },

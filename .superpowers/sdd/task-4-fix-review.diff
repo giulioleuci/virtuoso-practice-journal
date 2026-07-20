@@ -1,0 +1,548 @@
+5da1b61 fix: complete application workflow orchestration
+ src/application/useCases/createTask.ts             | 44 +++++++++++++++-------
+ .../useCases/generateStudyRoutine.test.ts          | 19 ++++++++--
+ src/application/useCases/generateStudyRoutine.ts   | 16 ++++++--
+ src/application/useCases/logSession.ts             | 37 ++++++++++++++++--
+ src/application/useCases/taskSession.test.ts       | 30 +++++++++++++++
+ src/domain/ports/session.ts                        | 11 +++++-
+ src/domain/ports/studyRoutine.ts                   | 19 ++++++++++
+ src/domain/ports/task.ts                           |  2 +-
+ .../repositories/dexie/sessionRepository.ts        | 11 +++++-
+ .../repositories/dexie/studyRoutineRepository.ts   | 13 +++++++
+ .../repositories/dexie/taskRepository.ts           | 10 +++--
+ src/test/fakes/FakeSessionRepository.ts            | 30 +++++++++++----
+ src/test/fakes/FakeTaskRepository.ts               |  8 +++-
+ 13 files changed, 210 insertions(+), 40 deletions(-)
+diff --git a/src/application/useCases/createTask.ts b/src/application/useCases/createTask.ts
+index b7282e8..c5ae6a6 100644
+--- a/src/application/useCases/createTask.ts
++++ b/src/application/useCases/createTask.ts
+@@ -1,31 +1,47 @@
+-import type { Task } from "@/domain/entities/task";
+ import type { NewTaskInput, TaskPort } from "@/domain/ports/task";
++import { dayKey, parseDayKey } from "@/lib/date";
++
++const MAX_GENERATED = 200;
++const HORIZON_DAYS = 365;
+ 
+ function recurrenceDates(recurrence: NonNullable<NewTaskInput["recurrence"]>): string[] {
+-  if (recurrence.kind === "weekdays" && !recurrence.days?.length) return [];
+-  if (recurrence.kind === "interval" && recurrence.everyXDays !== undefined && recurrence.everyXDays < 1) return [];
+-  const result: string[] = [];
+-  const date = new Date(`${recurrence.startDate}T00:00:00`);
+-  const end = recurrence.endDate ? new Date(`${recurrence.endDate}T00:00:00`) : undefined;
+-  while ((!end || date <= end) && (!recurrence.occurrences || result.length < recurrence.occurrences)) {
+-    if (recurrence.kind === "interval" || recurrence.days!.includes(date.getDay())) {
+-      result.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`);
++  const dates: string[] = [];
++  const start = parseDayKey(recurrence.startDate);
++  const end = recurrence.endDate ? parseDayKey(recurrence.endDate) : null;
++  const horizon = new Date(start);
++  horizon.setDate(horizon.getDate() + HORIZON_DAYS);
++  const cap = recurrence.occurrences ?? MAX_GENERATED;
++  const current = new Date(start);
++  if (recurrence.kind === "weekdays") {
++    const days = recurrence.days ?? [];
++    if (!days.length) return [];
++    while (dates.length < cap && current <= horizon) {
++      if (end && current > end) break;
++      if (days.includes(current.getDay())) dates.push(dayKey(current));
++      current.setDate(current.getDate() + 1);
++    }
++  } else {
++    const step = Math.max(1, recurrence.everyXDays ?? 1);
++    while (dates.length < cap && current <= horizon) {
++      if (end && current > end) break;
++      dates.push(dayKey(current));
++      current.setDate(current.getDate() + step);
+     }
+-    date.setDate(date.getDate() + (recurrence.kind === "interval" ? recurrence.everyXDays ?? 1 : 1));
+   }
+-  return result;
++  return dates;
+ }
+ 
+ export class CreateTaskUseCase {
+   constructor(private readonly tasks: TaskPort, private readonly clock: () => number = Date.now) {}
+   async execute(input: NewTaskInput): Promise<number> {
+     const { recurrence, ...rest } = input;
+     const createdAt = this.clock();
+     if (!recurrence) return this.tasks.create({ ...rest, done: false, createdAt });
+     const dates = recurrenceDates(recurrence);
+     if (!dates.length) throw new Error("Recurrence produced no dates");
+-    const [firstId] = await this.tasks.createBatch([{ ...rest, date: dates[0], recurrence, done: false, createdAt } as Omit<Task, "id">]);
+-    if (dates.length > 1) await this.tasks.createBatch(dates.slice(1).map((date) => ({ ...rest, date, done: false, recurrenceTaskId: firstId, createdAt })));
+-    return firstId;
++    return this.tasks.createRecurring(
++      { ...rest, date: dates[0], recurrence, done: false, createdAt },
++      dates.slice(1).map((date) => ({ ...rest, date, done: false, createdAt })),
++    );
+   }
+ }
+diff --git a/src/application/useCases/generateStudyRoutine.test.ts b/src/application/useCases/generateStudyRoutine.test.ts
+index 130e221..5448504 100644
+--- a/src/application/useCases/generateStudyRoutine.test.ts
++++ b/src/application/useCases/generateStudyRoutine.test.ts
+@@ -1,9 +1,22 @@
+ import { describe, expect, it } from "vitest";
+ import { GenerateStudyRoutineUseCase } from "./generateStudyRoutine";
++import type { Task } from "@/domain/entities/task";
++import type { StudyRoutine, StudyRoutineGenerationPort, StudyRoutineInput } from "@/domain/ports/studyRoutine";
+ 
+-const input = { name: "Week", subjectId: 1, groups: [{ id: "g", name: "Group", pool: [{ type: "item" as const, id: 2 }] }], matrix: { "1": { g: 1 } }, weeksAhead: 1, repetitionCap: 1, useSpacedRepetition: false, startDate: "2026-07-20" };
+-const port = () => ({ create: async () => 3, regenerateFromDate: async () => {}, update: async () => {}, remove: async () => {} });
++const input: StudyRoutineInput = { name: "Week", subjectId: 1, groups: [{ id: "g", name: "Group", pool: [{ type: "item", id: 2 }] }], matrix: { "1": { g: 1 } }, weeksAhead: 1, repetitionCap: 1, useSpacedRepetition: false, startDate: "2026-07-20" };
++const port = (): StudyRoutineGenerationPort => ({
++  createRoutine: async (value, createdAt): Promise<StudyRoutine> => ({ ...value, id: 3, createdAt }),
++  resolvePool: async () => new Map([["item:2", { key: "item:2", type: "item", title: "Prelude", itemId: 2, linkType: "item" }]]),
++  weights: async () => null,
++  weekStartsOn: async () => 1,
++  persistTasks: async (tasks) => { portState.tasks = tasks; },
++});
++const portState: { tasks: Omit<Task, "id">[] } = { tasks: [] };
+ describe("GenerateStudyRoutineUseCase", () => {
+-  it("persists a valid routine", async () => { await expect(new GenerateStudyRoutineUseCase(port()).execute(input)).resolves.toBe(3); });
++  it("resolves pool and persists generated matrix tasks", async () => {
++    portState.tasks = [];
++    await expect(new GenerateStudyRoutineUseCase(port(), () => 7).execute(input)).resolves.toBe(3);
++    expect(portState.tasks).toEqual([expect.objectContaining({ title: "Prelude", studyRoutineId: 3, createdAt: 7 })]);
++  });
+   it("rejects an empty horizon", async () => { await expect(new GenerateStudyRoutineUseCase(port()).execute({ ...input, weeksAhead: 0 })).rejects.toThrow("week"); });
+ });
+diff --git a/src/application/useCases/generateStudyRoutine.ts b/src/application/useCases/generateStudyRoutine.ts
+index 5f9f610..d14a657 100644
+--- a/src/application/useCases/generateStudyRoutine.ts
++++ b/src/application/useCases/generateStudyRoutine.ts
+@@ -1,9 +1,19 @@
+-import type { StudyRoutineInput, StudyRoutinePort } from "@/domain/ports/studyRoutine";
++import type { StudyRoutineGenerationPort, StudyRoutineInput } from "@/domain/ports/studyRoutine";
++import { generateRoutineTasks, poolEntryKey } from "@/lib/domain/studyRoutineGenerator";
+ 
+ export class GenerateStudyRoutineUseCase {
+-  constructor(private readonly routines: StudyRoutinePort) {}
++  constructor(private readonly routines: StudyRoutineGenerationPort, private readonly clock: () => number = Date.now) {}
+   async execute(input: StudyRoutineInput): Promise<number> {
+     if (input.weeksAhead < 1) throw new Error("Study routine requires at least one week");
+-    return this.routines.create(input);
++    if (input.repetitionCap < 1) throw new Error("Study routine requires a positive repetition cap");
++    if (!input.groups.length || input.groups.some((group) => !group.pool.length)) throw new Error("Study routine requires a non-empty pool for every group");
++    const routine = await this.routines.createRoutine(input, this.clock());
++    const entries = routine.groups.flatMap((group) => group.pool);
++    const pool = await this.routines.resolvePool(entries);
++    const groups = new Map(routine.groups.map((group) => [group.id, group.pool.map((entry) => pool.get(poolEntryKey(entry))).filter(Boolean)]));
++    const weights = routine.useSpacedRepetition ? await this.routines.weights(entries) : null;
++    const tasks = generateRoutineTasks(routine, groups, weights, routine.startDate, routine.createdAt, undefined, await this.routines.weekStartsOn());
++    if (tasks.length) await this.routines.persistTasks(tasks);
++    return routine.id;
+   }
+ }
+diff --git a/src/application/useCases/logSession.ts b/src/application/useCases/logSession.ts
+index 5d52b59..609209c 100644
+--- a/src/application/useCases/logSession.ts
++++ b/src/application/useCases/logSession.ts
+@@ -1,7 +1,38 @@
+ import type { PersistedTask, SessionLogInput, SessionPort } from "@/domain/ports/session";
+ export class LogSessionUseCase {
+-  constructor(private readonly sessions: SessionPort, private readonly _clock: () => number = Date.now) {}
+-  execute(task: PersistedTask, input: SessionLogInput): Promise<number> {
+-    return this.sessions.logWithCompletion(task, { ...input, notes: input.notes?.trim() || undefined, helpText: input.helpText?.trim() || undefined });
++  constructor(private readonly sessions: SessionPort, private readonly clock: () => number = Date.now) {}
++  async execute(task: PersistedTask, input: SessionLogInput): Promise<number> {
++    const createdAt = this.clock();
++    const helpText = input.helpText?.trim() || undefined;
++    const effectiveTask = {
++      ...task,
++      layers: input.layersUsed,
++      techniqueIds: input.techniquesUsed,
++      targetBpm: input.bpmReached ?? task.targetBpm,
++      noteVal: input.noteVal ?? task.noteVal,
++    };
++    const snapshot = await this.sessions.buildSnapshot(effectiveTask);
++    return this.sessions.transaction(async (transaction) => {
++      const sessionId = await transaction.createSession({
++        taskId: task.id,
++        date: input.date,
++        bpmReached: input.bpmReached,
++        noteVal: input.noteVal,
++        reps: input.reps,
++        confidence: input.confidence,
++        quality: input.quality,
++        notes: input.notes?.trim() || undefined,
++        layersUsed: input.layersUsed,
++        techniquesUsed: input.techniquesUsed,
++        layerScores: input.layerScores,
++        techniqueScores: input.techniqueScores,
++        segmentMetrics: input.segmentMetrics,
++        snapshot,
++        createdAt,
++      });
++      await transaction.completeTask(task.id);
++      if (helpText) await transaction.createHelpRequest({ sessionId, taskId: task.id, itemId: task.itemId, question: helpText, createdAt });
++      return sessionId;
++    });
+   }
+ }
+diff --git a/src/application/useCases/taskSession.test.ts b/src/application/useCases/taskSession.test.ts
+index 8750d89..f91a099 100644
+--- a/src/application/useCases/taskSession.test.ts
++++ b/src/application/useCases/taskSession.test.ts
+@@ -23,20 +23,35 @@ describe("task and session use cases", () => {
+     const useCase = new CreateTaskUseCase(tasks, () => 10);
+ 
+     const id = await useCase.execute({
+       ...baseTask,
+       recurrence: { kind: "weekdays", days: [1, 3], startDate: "2026-07-20", occurrences: 2 },
+     });
+ 
+     expect(id).toBe(1);
+     expect(tasks.created.map((task) => task.date)).toEqual(["2026-07-20", "2026-07-22"]);
+     expect(tasks.created[1].recurrenceTaskId).toBe(1);
++    expect(tasks.createRecurringCalls).toBe(1);
++  });
++
++  it("clamps invalid interval steps and caps an unbounded recurrence", async () => {
++    const tasks = new FakeTaskRepository();
++    const useCase = new CreateTaskUseCase(tasks, () => 10);
++
++    await useCase.execute({
++      ...baseTask,
++      recurrence: { kind: "interval", everyXDays: 0, startDate: "2026-07-20" },
++    });
++
++    expect(tasks.created).toHaveLength(200);
++    expect(tasks.created[1].date).toBe("2026-07-21");
++    expect(tasks.createRecurringCalls).toBe(1);
+   });
+ 
+   it("rejects a recurrence that yields no dates", async () => {
+     const tasks = new FakeTaskRepository();
+     const useCase = new CreateTaskUseCase(tasks, () => 10);
+ 
+     await expect(useCase.execute({
+       ...baseTask,
+       recurrence: { kind: "weekdays", days: [], startDate: "2026-07-20", occurrences: 2 },
+     })).rejects.toThrow("Recurrence produced no dates");
+@@ -68,20 +83,35 @@ describe("task and session use cases", () => {
+     const tasks = new FakeTaskRepository([baseTask]);
+     const sessions = new FakeSessionRepository(tasks);
+     const useCase = new LogSessionUseCase(sessions, () => 88);
+ 
+     await useCase.execute(baseTask, { date: "2026-07-20", confidence: 3, helpText: "How to relax?" });
+ 
+     expect(sessions.sessions).toHaveLength(1);
+     expect(sessions.sessions[0].snapshot?.taskTitle).toBe("Scales");
+     expect(sessions.helpRequests[0]).toMatchObject({ taskId: 1, question: "How to relax?" });
+     expect(tasks.updated.get(1)).toEqual({ done: true });
++    expect(sessions.sessions[0]).toMatchObject({ createdAt: 88, snapshot: { targetBpm: undefined } });
++  });
++
++  it("assembles an effective snapshot and rolls back when help persistence fails", async () => {
++    const tasks = new FakeTaskRepository([baseTask]);
++    const sessions = new FakeSessionRepository(tasks);
++    const useCase = new LogSessionUseCase(sessions, () => 88);
++
++    await useCase.execute(baseTask, { date: "2026-07-20", confidence: 3, bpmReached: 120, layersUsed: ["hands"], techniquesUsed: [4] });
++    expect(sessions.sessions[0].snapshot).toMatchObject({ targetBpm: 120, layers: ["hands"], techniqueNames: ["technique 4"] });
++
++    sessions.failHelpRequest = true;
++    await expect(useCase.execute(baseTask, { date: "2026-07-20", confidence: 3, helpText: "Need help" })).rejects.toThrow("help persistence failed");
++    expect(sessions.sessions).toHaveLength(1);
++    expect(tasks.updated.get(1)).toEqual({ done: true });
+   });
+ 
+   it("resets a task after its last session is deleted", async () => {
+     const tasks = new FakeTaskRepository([{ ...baseTask, done: true }]);
+     const sessions = new FakeSessionRepository(tasks, [{ id: 4, taskId: 1, date: baseTask.date, createdAt: 1 }]);
+     const useCase = new DeleteSessionUseCase(sessions);
+ 
+     await useCase.execute(4, 1);
+ 
+     expect(tasks.updated.get(1)).toEqual({ done: false });
+diff --git a/src/domain/ports/session.ts b/src/domain/ports/session.ts
+index a8aba43..d296f30 100644
+--- a/src/domain/ports/session.ts
++++ b/src/domain/ports/session.ts
+@@ -1,21 +1,28 @@
+-import type { Session } from "../entities/session";
++import type { Session, SessionSnapshot } from "../entities/session";
+ import type { Task } from "../entities/task";
+ 
+ export type PersistedTask = Task & { id: number };
+ 
+ export type SessionLogInput = Omit<Session, "id" | "taskId" | "snapshot" | "createdAt"> & {
+   date: string;
+   helpText?: string;
+ };
+ 
++export interface SessionLogTransaction {
++  createSession(session: Omit<Session, "id">): Promise<number>;
++  completeTask(taskId: number): Promise<void>;
++  createHelpRequest(request: { sessionId: number; taskId: number; itemId?: number; question: string; createdAt: number }): Promise<void>;
++}
++
+ export interface SessionPort {
+   list(): Promise<Session[]>;
+   byTask(taskId: number): Promise<Session[]>;
+   log(task: Task, date: string, input: Omit<Session, "id" | "taskId" | "snapshot" | "createdAt">): Promise<number>;
+   update(id: number, patch: Partial<Session>): Promise<void>;
+-  logWithCompletion(task: PersistedTask, input: SessionLogInput): Promise<number>;
++  buildSnapshot(task: Task): Promise<SessionSnapshot>;
++  transaction<T>(operation: (transaction: SessionLogTransaction) => Promise<T>): Promise<T>;
+   remove(id: number): Promise<void>;
+   deleteWithTaskReset(sessionId: number, taskId?: number): Promise<void>;
+   deleteByTaskAndDate(taskId: number, date: string): Promise<void>;
+   deleteByTaskAndDate(taskId: number, date: string): Promise<void>;
+ }
+diff --git a/src/domain/ports/studyRoutine.ts b/src/domain/ports/studyRoutine.ts
+index b0ea71e..4b05a8e 100644
+--- a/src/domain/ports/studyRoutine.ts
++++ b/src/domain/ports/studyRoutine.ts
+@@ -19,16 +19,35 @@ export interface StudyRoutine {
+   weeksAhead: number;
+   repetitionCap: number;
+   useSpacedRepetition: boolean;
+   startDate: string;
+   createdAt: number;
+   deletedAt?: number;
+ }
+ 
+ export type StudyRoutineInput = Omit<StudyRoutine, "id" | "createdAt" | "deletedAt">;
+ 
++export interface ResolvedStudyPoolItem {
++  key: string;
++  type: "item" | "segment" | "collection";
++  title: string;
++  parentTitle?: string;
++  itemId?: number;
++  segmentIds?: number[];
++  collectionId?: number;
++  linkType: "item" | "collection";
++}
++
++export interface StudyRoutineGenerationPort {
++  createRoutine(input: StudyRoutineInput, createdAt: number): Promise<StudyRoutine>;
++  resolvePool(entries: StudyPoolEntry[]): Promise<Map<string, ResolvedStudyPoolItem>>;
++  weights(entries: StudyPoolEntry[]): Promise<Map<string, number>>;
++  weekStartsOn(): Promise<number>;
++  persistTasks(tasks: Omit<import("../entities/task").Task, "id">[]): Promise<void>;
++}
++
+ export interface StudyRoutinePort {
+   create(input: StudyRoutineInput): Promise<number>;
+   regenerateFromDate(routine: StudyRoutine, fromDate: string): Promise<void>;
+   update(id: number, patch: Partial<StudyRoutine>): Promise<void>;
+   remove(id: number): Promise<void>;
+ }
+diff --git a/src/domain/ports/task.ts b/src/domain/ports/task.ts
+index 902890f..e7ef5eb 100644
+--- a/src/domain/ports/task.ts
++++ b/src/domain/ports/task.ts
+@@ -2,21 +2,21 @@ import type { Task, TaskRecurrence } from "../entities/task";
+ 
+ export type NewTaskInput = Omit<Task, "id" | "done" | "createdAt" | "date"> & {
+   date: string;
+   recurrence?: TaskRecurrence;
+ };
+ 
+ export interface TaskPort {
+   list(): Promise<Task[]>;
+   byDate(date: string): Promise<Task[]>;
+   create(task: NewTaskInput): Promise<number>;
+-  createBatch(tasks: Omit<Task, "id">[]): Promise<number[]>;
++  createRecurring(first: Omit<Task, "id">, followUps: Omit<Task, "id">[]): Promise<number>;
+   update(id: number, patch: Partial<Task>): Promise<void>;
+   remove(id: number): Promise<"soft" | "hard">;
+   carryOver(task: Task, toDate: string): Promise<number>;
+   toggleDone(id: number, done: boolean): Promise<void>;
+   bulkRemove(ids: number[]): Promise<{ soft: number; hard: number }>;
+   removeSeries(rootId: number): Promise<{ soft: number; hard: number }>;
+   skip(id: number): Promise<void>;
+   unskip(id: number): Promise<void>;
+   bulkSetDone(ids: number[], done: boolean): Promise<void>;
+   findOrCreateForLog(options: { date: string; subjectId: number; itemId?: number; fallbackItemTitle: string; freeTitle: string }): Promise<Task | undefined>;
+diff --git a/src/infrastructure/repositories/dexie/sessionRepository.ts b/src/infrastructure/repositories/dexie/sessionRepository.ts
+index 1c99676..f3d0492 100644
+--- a/src/infrastructure/repositories/dexie/sessionRepository.ts
++++ b/src/infrastructure/repositories/dexie/sessionRepository.ts
+@@ -1,14 +1,21 @@
+ import { db } from "@/infrastructure/dexie/db";
+ import type { Session } from "@/domain/entities/session";
+ import type { Task } from "@/domain/entities/task";
+-import type { PersistedTask, SessionLogInput, SessionPort } from "@/domain/ports/session";
++import type { SessionPort } from "@/domain/ports/session";
+ import { now } from "@/lib/date";
+ export async function buildDexieSessionSnapshot(task: Task) { const [subject, item, segments, techniques, collection] = await Promise.all([db.subjects.get(task.subjectId), task.itemId ? db.library.get(task.itemId) : undefined, task.segmentIds?.length ? db.segments.where("id").anyOf(task.segmentIds).toArray() : [], task.techniqueIds?.length ? db.techniques.where("id").anyOf(task.techniqueIds).toArray() : [], task.collectionId ? db.collections.get(task.collectionId) : undefined]); return { taskTitle: task.title, subjectName: subject?.name ?? "—", itemTitle: item?.title, itemComposer: item?.composer, segments: segments.length ? segments.map((segment) => ({ id: String(segment.id), label: segment.label })) : undefined, collectionName: collection?.name, targetBpm: task.targetBpm, noteVal: task.noteVal, layers: task.layers, techniqueNames: techniques.map((technique) => technique.name) }; }
+ export const sessionRepository = {
+   list: () => db.sessions.toArray(), byTask: (taskId: number) => db.sessions.where("taskId").equals(taskId).toArray(),
+   async log(task: Task, date: string, input: Omit<Session, "id" | "taskId" | "snapshot" | "createdAt">) { return db.sessions.add({ taskId: task.id!, date, ...input, snapshot: await buildDexieSessionSnapshot(task), createdAt: now() }) as Promise<number>; },
+   update: async (id: number, patch: Partial<Session>) => { await db.sessions.update(id, patch); }, remove: async (id: number) => { await db.sessions.delete(id); },
+-  async logWithCompletion(task: PersistedTask, input: SessionLogInput) { const recordSnapshot = await buildDexieSessionSnapshot({ ...task, layers: input.layersUsed, techniqueIds: input.techniquesUsed, targetBpm: input.bpmReached ?? task.targetBpm, noteVal: input.noteVal ?? task.noteVal }); const ts = now(); let id = 0; await db.transaction("rw", db.tasks, db.sessions, db.helpRequests, async () => { id = await db.sessions.add({ taskId: task.id, date: input.date, bpmReached: input.bpmReached, noteVal: input.noteVal, reps: input.reps, confidence: input.confidence, quality: input.quality, notes: input.notes?.trim() || undefined, layersUsed: input.layersUsed, techniquesUsed: input.techniquesUsed, layerScores: input.layerScores, techniqueScores: input.techniqueScores, segmentMetrics: input.segmentMetrics, snapshot: recordSnapshot, createdAt: ts }) as number; await db.tasks.update(task.id, { done: true }); if (input.helpText) await db.helpRequests.add({ sessionId: id, taskId: task.id, itemId: task.itemId, question: input.helpText, resolved: false, createdAt: ts }); }); return id; },
++  buildSnapshot: buildDexieSessionSnapshot,
++  transaction<T>(operation: (transaction: import("@/domain/ports/session").SessionLogTransaction) => Promise<T>) {
++    return db.transaction("rw", db.tasks, db.sessions, db.helpRequests, () => operation({
++      createSession: (session) => db.sessions.add(session) as Promise<number>,
++      completeTask: async (taskId) => { await db.tasks.update(taskId, { done: true }); },
++      createHelpRequest: async (request) => { await db.helpRequests.add({ ...request, resolved: false }); },
++    }));
++  },
+   async deleteWithTaskReset(id: number, taskId?: number) { await db.transaction("rw", db.tasks, db.sessions, async () => { await db.sessions.delete(id); if (taskId && await db.sessions.where("taskId").equals(taskId).count() === 0) await db.tasks.update(taskId, { done: false }); }); },
+   async deleteByTaskAndDate(taskId: number, date: string) { await db.transaction("rw", db.tasks, db.sessions, async () => { const rows = await db.sessions.where("taskId").equals(taskId).and((session) => session.date === date).toArray(); await db.sessions.bulkDelete(rows.map((row) => row.id)); await db.tasks.update(taskId, { done: false }); }); },
+ } satisfies SessionPort;
+diff --git a/src/infrastructure/repositories/dexie/studyRoutineRepository.ts b/src/infrastructure/repositories/dexie/studyRoutineRepository.ts
+index 14ac085..e9b5dea 100644
+--- a/src/infrastructure/repositories/dexie/studyRoutineRepository.ts
++++ b/src/infrastructure/repositories/dexie/studyRoutineRepository.ts
+@@ -54,20 +54,33 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?:
+   const entries = routine.groups.flatMap((group) => group.pool);
+   const pool = await resolvePoolEntries(entries);
+   const groups = new Map(routine.groups.map((group) => [group.id, group.pool.map((entry) => pool.get(poolEntryKey(entry))).filter((item): item is ResolvedPoolItem => Boolean(item))]));
+   const profile = await db.profile.get("me");
+   const weekStartsOn = profile?.weekStartsOn ?? (profile ? getDefaultWeekStartsOn(profile.lang) : 1);
+   const tasks = generateRoutineTasks(routine, groups, routine.useSpacedRepetition ? await computeWeights(entries) : null, fromDate, now(), seedCounters, weekStartsOn);
+   if (tasks.length) await db.tasks.bulkAdd(tasks);
+ }
+ 
+ export const studyRoutineRepository = {
++  async createRoutine(input: StudyRoutineInput, createdAt: number) {
++    const id = await db.studyRoutines.add({ ...input, createdAt }) as number;
++    return { ...input, id, createdAt };
++  },
++  resolvePool: resolvePoolEntries,
++  weights: computeWeights,
++  async weekStartsOn() {
++    const profile = await db.profile.get("me");
++    return profile?.weekStartsOn ?? (profile ? getDefaultWeekStartsOn(profile.lang) : 1);
++  },
++  async persistTasks(tasks: Omit<import("@/domain/entities/task").Task, "id">[]) {
++    if (tasks.length) await db.tasks.bulkAdd(tasks);
++  },
+   async create(input: StudyRoutineInput) { const id = await db.studyRoutines.add({ ...input, createdAt: now() }) as number; const routine = await db.studyRoutines.get(id); if (routine) await generate(routine, input.startDate); return id; },
+   async regenerateFromDate(routine: StudyRoutine, fromDate: string) {
+     const future = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.done && task.date >= fromDate).toArray();
+     if (future.length) await db.tasks.bulkDelete(future.map((task) => task.id));
+     const profile = await db.profile.get("me"); const weekStartsOn = profile?.weekStartsOn ?? (profile ? getDefaultWeekStartsOn(profile.lang) : 1);
+     const first = dayKey(startOfWeek(parseDayKey(fromDate), weekStartsOn)); const last = dayKey(endOfWeek(parseDayKey(fromDate), weekStartsOn));
+     const completed = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => task.done && task.date >= first && task.date <= last).toArray();
+     const counters = new Map<string, number>();
+     for (const task of completed) { const keys = task.collectionId ? [`collection:${task.collectionId}`] : task.segmentIds?.length ? task.segmentIds.map((id) => `segment:${id}`) : task.itemId ? [`item:${task.itemId}`] : []; for (const key of keys) counters.set(key, (counters.get(key) ?? 0) + 1); }
+     await generate(routine, fromDate, counters);
+diff --git a/src/infrastructure/repositories/dexie/taskRepository.ts b/src/infrastructure/repositories/dexie/taskRepository.ts
+index 58cb5f2..e5203b1 100644
+--- a/src/infrastructure/repositories/dexie/taskRepository.ts
++++ b/src/infrastructure/repositories/dexie/taskRepository.ts
+@@ -21,23 +21,27 @@ export const taskRepository = {
+   list: () => db.tasks.filter(active).toArray(),
+   byDate: (date: string) => db.tasks.where("date").equals(date).filter(active).toArray(),
+   async create(input: NewTaskInput) {
+     const ts = now(); const { recurrence, ...rest } = input;
+     if (!recurrence) return db.tasks.add({ ...rest, done: false, createdAt: ts }) as Promise<number>;
+     const dates = expandTaskRecurrence(recurrence); if (!dates.length) throw new Error("Recurrence produced no dates");
+     let firstId = 0;
+     await db.transaction("rw", db.tasks, async () => { firstId = await db.tasks.add({ ...rest, date: dates[0], recurrence, done: false, createdAt: ts }) as number; if (dates.length > 1) await db.tasks.bulkAdd(dates.slice(1).map((date) => ({ ...rest, date, done: false, recurrenceTaskId: firstId, createdAt: ts }))); });
+     return firstId;
+   },
+-  async createBatch(tasks: Omit<Task, "id">[]) {
+-    if (!tasks.length) return [];
+-    return db.transaction("rw", db.tasks, () => db.tasks.bulkAdd(tasks, { allKeys: true }) as Promise<number[]>);
++  async createRecurring(first: Omit<Task, "id">, followUps: Omit<Task, "id">[]) {
++    let id = 0;
++    await db.transaction("rw", db.tasks, async () => {
++      id = await db.tasks.add(first) as number;
++      if (followUps.length) await db.tasks.bulkAdd(followUps.map((task) => ({ ...task, recurrenceTaskId: id })));
++    });
++    return id;
+   },
+   update: async (id: number, patch: Partial<Task>) => { await db.tasks.update(id, patch); },
+   toggleDone: async (id: number, done: boolean) => { await db.tasks.update(id, { done }); },
+   async remove(id: number) { const result = await removeMany([id]); return result.soft ? "soft" as const : "hard" as const; },
+   bulkRemove: removeMany,
+   async removeSeries(rootId: number) { return removeMany([rootId, ...(await db.tasks.where("recurrenceTaskId").equals(rootId).primaryKeys() as number[])]); },
+   skip: async (id: number) => { await db.tasks.update(id, { skipped: true }); },
+   unskip: async (id: number) => { await db.tasks.update(id, { skipped: false }); },
+   async carryOver(task: Task, toDate: string) { const { id: _id, date: _date, done: _done, skipped: _skipped, ...rest } = task; const newId = await db.tasks.add({ ...rest, date: toDate, done: false, createdAt: now() }) as number; await db.tasks.update(task.id!, { skipped: true }); return newId; },
+   bulkSetDone: async (ids: number[], done: boolean) => { await db.tasks.bulkUpdate(ids.map((key) => ({ key, changes: { done } }))); },
+diff --git a/src/test/fakes/FakeSessionRepository.ts b/src/test/fakes/FakeSessionRepository.ts
+index 0aee656..0de32db 100644
+--- a/src/test/fakes/FakeSessionRepository.ts
++++ b/src/test/fakes/FakeSessionRepository.ts
+@@ -1,23 +1,37 @@
+ import type { Session } from "@/domain/entities/session";
+-import type { PersistedTask, SessionLogInput, SessionPort } from "@/domain/ports/session";
++import type { SessionLogTransaction, SessionPort } from "@/domain/ports/session";
+ import { FakeTaskRepository } from "./FakeTaskRepository";
+ 
+ export class FakeSessionRepository implements SessionPort {
+   sessions: Session[];
+   helpRequests: { sessionId: number; taskId: number; question: string }[] = [];
++  failHelpRequest = false;
+   constructor(private readonly tasks: FakeTaskRepository, sessions: Session[] = []) { this.sessions = sessions; }
+   async list() { return this.sessions; }
+   async byTask(taskId: number) { return this.sessions.filter((session) => session.taskId === taskId); }
+-  async log(task: PersistedTask, date: string, input: Omit<Session, "id" | "taskId" | "snapshot" | "createdAt">) { return this.logWithCompletion(task, { ...input, date }); }
++  async log(task: import("@/domain/entities/task").Task, date: string, input: Omit<Session, "id" | "taskId" | "snapshot" | "createdAt">) { const id = this.sessions.length + 1; this.sessions.push({ ...input, id, taskId: task.id!, date, snapshot: await this.buildSnapshot(task), createdAt: 0 }); return id; }
+   async update(id: number, patch: Partial<Session>) { const session = this.sessions.find((row) => row.id === id); if (session) Object.assign(session, patch); }
+-  async logWithCompletion(task: PersistedTask, input: SessionLogInput) {
+-    const id = this.sessions.length + 1;
+-    this.sessions.push({ id, taskId: task.id, date: input.date, confidence: input.confidence, snapshot: { taskTitle: task.title, subjectName: "—" }, createdAt: 0 });
+-    await this.tasks.update(task.id, { done: true });
+-    if (input.helpText) this.helpRequests.push({ sessionId: id, taskId: task.id, question: input.helpText });
+-    return id;
++  async buildSnapshot(task: import("@/domain/entities/task").Task) {
++    return { taskTitle: task.title, subjectName: "—", targetBpm: task.targetBpm, noteVal: task.noteVal, layers: task.layers, techniqueNames: task.techniqueIds?.map((id) => `technique ${id}`) };
++  }
++  async transaction<T>(operation: (transaction: SessionLogTransaction) => Promise<T>) {
++    const sessions = [...this.sessions];
++    const helps = [...this.helpRequests];
++    const updates = new Map(this.tasks.updated);
++    try {
++      return await operation({
++        createSession: async (session) => { const id = this.sessions.length + 1; this.sessions.push({ ...session, id }); return id; },
++        completeTask: (taskId) => this.tasks.update(taskId, { done: true }),
++        createHelpRequest: async (request) => { if (this.failHelpRequest) throw new Error("help persistence failed"); this.helpRequests.push(request); },
++      });
++    } catch (error) {
++      this.sessions = sessions;
++      this.helpRequests = helps;
++      this.tasks.updated = updates;
++      throw error;
++    }
+   }
+   async remove(id: number) { this.sessions = this.sessions.filter((session) => session.id !== id); }
+   async deleteWithTaskReset(id: number, taskId?: number) { await this.remove(id); if (taskId && !(await this.byTask(taskId)).length) await this.tasks.update(taskId, { done: false }); }
+   async deleteByTaskAndDate(taskId: number, date: string) { this.sessions = this.sessions.filter((session) => session.taskId !== taskId || session.date !== date); await this.tasks.update(taskId, { done: false }); }
+ }
+diff --git a/src/test/fakes/FakeTaskRepository.ts b/src/test/fakes/FakeTaskRepository.ts
+index f62aa61..da3bff4 100644
+--- a/src/test/fakes/FakeTaskRepository.ts
++++ b/src/test/fakes/FakeTaskRepository.ts
+@@ -1,23 +1,29 @@
+ import type { Task } from "@/domain/entities/task";
+ import type { NewTaskInput, TaskPort } from "@/domain/ports/task";
+ 
+ export class FakeTaskRepository implements TaskPort {
+   created: Omit<Task, "id">[] = [];
++  createRecurringCalls = 0;
+   updated = new Map<number, Partial<Task>>();
+   deleted: number[] = [];
+   sessionTaskIds = new Set<number>();
+   constructor(private readonly rows: Task[] = []) {}
+   async list() { return this.rows.filter((task) => !task.deletedAt); }
+   async byDate(date: string) { return (await this.list()).filter((task) => task.date === date); }
+   async create(task: NewTaskInput) { const id = this.rows.length + this.created.length + 1; this.created.push({ ...task, done: false, createdAt: task.createdAt ?? 0 }); return id; }
+-  async createBatch(tasks: Omit<Task, "id">[]) { const first = this.rows.length + this.created.length + 1; this.created.push(...tasks); return tasks.map((_, i) => first + i); }
++  async createRecurring(first: Omit<Task, "id">, followUps: Omit<Task, "id">[]) {
++    this.createRecurringCalls++;
++    const id = this.rows.length + this.created.length + 1;
++    this.created.push(first, ...followUps.map((task) => ({ ...task, recurrenceTaskId: id })));
++    return id;
++  }
+   async update(id: number, patch: Partial<Task>) { this.updated.set(id, patch); }
+   async remove(id: number) { return this.sessionTaskIds.has(id) ? "soft" as const : "hard" as const; }
+   async carryOver(task: Task, toDate: string) { const id = await this.create({ ...task, date: toDate }); if (task.id) await this.skip(task.id); return id; }
+   async toggleDone(id: number, done: boolean) { await this.update(id, { done }); }
+   async bulkRemove(ids: number[]) { return { soft: ids.filter((id) => this.sessionTaskIds.has(id)).length, hard: ids.filter((id) => !this.sessionTaskIds.has(id)).length }; }
+   async removeSeries(id: number) { return this.bulkRemove([id]); }
+   async skip(id: number) { await this.update(id, { skipped: true }); }
+   async unskip(id: number) { await this.update(id, { skipped: false }); }
+   async bulkSetDone(ids: number[], done: boolean) { await Promise.all(ids.map((id) => this.toggleDone(id, done))); }
+   async findOrCreateForLog() { return undefined; }

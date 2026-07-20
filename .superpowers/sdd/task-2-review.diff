@@ -1,0 +1,799 @@
+df53696 refactor: extract domain contracts from dexie
+ src/domain/constants/theoryLayers.ts |   3 +
+ src/domain/domain-boundaries.test.ts |  58 ++++++++
+ src/domain/entities/collection.ts    |  23 +++
+ src/domain/entities/common.ts        |  39 +++++
+ src/domain/entities/lesson.ts        |  50 +++++++
+ src/domain/entities/library.ts       |  31 ++++
+ src/domain/entities/profile.ts       |  24 +++
+ src/domain/entities/session.ts       |  33 ++++
+ src/domain/entities/task.ts          |  35 +++++
+ src/domain/ports/backup.ts           |   7 +
+ src/domain/ports/collection.ts       |  11 ++
+ src/domain/ports/lesson.ts           |  11 ++
+ src/domain/ports/library.ts          |  10 ++
+ src/domain/ports/profile.ts          |   7 +
+ src/domain/ports/session.ts          |  13 ++
+ src/domain/ports/task.ts             |  10 ++
+ src/lib/db.ts                        | 281 +++--------------------------------
+ 17 files changed, 384 insertions(+), 262 deletions(-)
+diff --git a/src/domain/constants/theoryLayers.ts b/src/domain/constants/theoryLayers.ts
+new file mode 100644
+index 0000000..a718a9d
+--- /dev/null
++++ b/src/domain/constants/theoryLayers.ts
+@@ -0,0 +1,3 @@
++export const THEORY_LAYERS = ["conceptual", "analytical", "aural", "compositional", "reading"] as const;
++
++export type TheoryLayer = typeof THEORY_LAYERS[number];
+diff --git a/src/domain/domain-boundaries.test.ts b/src/domain/domain-boundaries.test.ts
+new file mode 100644
+index 0000000..962028e
+--- /dev/null
++++ b/src/domain/domain-boundaries.test.ts
+@@ -0,0 +1,58 @@
++import { readdir, readFile } from "node:fs/promises";
++import path from "node:path";
++import { describe, expect, it } from "vitest";
++
++const domainRoot = path.resolve(__dirname);
++const prohibitedImports = [
++  /from\s+["']react["']/,
++  /from\s+["']dexie(?:-[^"']+)?["']/,
++  /from\s+["'][^"']*\/lib\/db["']/,
++  /\bwindow\b/,
++  /\bdocument\b/,
++  /\bnavigator\b/,
++];
++
++async function sourceFilesIn(directory: string): Promise<string[]> {
++  const entries = await readdir(directory, { withFileTypes: true });
++  const files = await Promise.all(entries.map(async (entry) => {
++    const entryPath = path.join(directory, entry.name);
++    if (entry.isDirectory()) return sourceFilesIn(entryPath);
++    return entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts") ? [entryPath] : [];
++  }));
++  return files.flat();
++}
++
++describe("domain boundaries", () => {
++  it("contains extracted contract modules", async () => {
++    const files = await sourceFilesIn(domainRoot);
++    const relativeFiles = files.map((file) => path.relative(domainRoot, file)).sort();
++
++    expect(relativeFiles).toEqual(expect.arrayContaining([
++      "constants/theoryLayers.ts",
++      "entities/common.ts",
++      "entities/task.ts",
++      "entities/session.ts",
++      "entities/library.ts",
++      "entities/lesson.ts",
++      "entities/collection.ts",
++      "entities/profile.ts",
++      "ports/task.ts",
++      "ports/session.ts",
++      "ports/library.ts",
++      "ports/lesson.ts",
++      "ports/collection.ts",
++      "ports/profile.ts",
++      "ports/backup.ts",
++    ]));
++  });
++
++  it("keeps domain contracts free of framework, persistence, and browser APIs", async () => {
++    const sources = await Promise.all((await sourceFilesIn(domainRoot)).map((file) => readFile(file)));
++    const violations = sources.flatMap((source) => {
++      const text = source.toString();
++      return prohibitedImports.filter((pattern) => pattern.test(text)).map(String);
++    });
++
++    expect(violations).toEqual([]);
++  });
++});
+diff --git a/src/domain/entities/collection.ts b/src/domain/entities/collection.ts
+new file mode 100644
+index 0000000..c58071d
+--- /dev/null
++++ b/src/domain/entities/collection.ts
+@@ -0,0 +1,23 @@
++import type { ColorKey, LibraryKind } from "./common";
++
++export interface Collection {
++  id?: number;
++  kind: LibraryKind;
++  name: string;
++  composer?: string;
++  catalog?: string;
++  notes?: string;
++  color?: ColorKey;
++  defaultSubjectId?: number;
++  createdAt: number;
++  updatedAt: number;
++  deletedAt?: number;
++}
++
++export interface CollectionItem {
++  id: number;
++  collectionId: number;
++  itemId: number;
++  position?: number;
++  createdAt: number;
++}
+diff --git a/src/domain/entities/common.ts b/src/domain/entities/common.ts
+new file mode 100644
+index 0000000..37fcbb9
+--- /dev/null
++++ b/src/domain/entities/common.ts
+@@ -0,0 +1,39 @@
++export type Lang = "en" | "it" | "es" | "de";
++export type SubjectType = "instrument" | "theory" | "composition" | "other";
++export type LibraryKind = "repertoire" | "manual" | "technique" | "theory";
++export type NoteVal = "half" | "quarter" | "eighth" | "sixteenth";
++export type SessionQuality = "hard" | "improve" | "well" | "great";
++export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum" | "coral" | "amber" | "teal" | "indigo" | "slate";
++export type ReminderFreq = "daily" | "weekdays" | "custom";
++
++export interface SegmentMetric {
++  confidence?: number;
++  quality?: SessionQuality;
++  bpmReached?: number;
++  reps?: number;
++  layersUsed?: string[];
++  techniquesUsed?: number[];
++  layerScores?: Record<string, number>;
++  techniqueScores?: Record<number, number>;
++}
++
++export interface Subject {
++  id?: number;
++  name: string;
++  type: SubjectType;
++  layers?: string[];
++  color?: ColorKey;
++  customColor?: string;
++  createdAt: number;
++  deletedAt?: number;
++}
++
++export interface Technique {
++  id: number;
++  subjectId: number;
++  name: string;
++  createdAt: number;
++  deletedAt?: number;
++}
++
++export type Draft<T extends { id?: number }> = Omit<T, "id"> & { id?: number };
+diff --git a/src/domain/entities/lesson.ts b/src/domain/entities/lesson.ts
+new file mode 100644
+index 0000000..76dce74
+--- /dev/null
++++ b/src/domain/entities/lesson.ts
+@@ -0,0 +1,50 @@
++import type { ColorKey } from "./common";
++
++export type LessonFrequency = "weekly" | "biweekly" | "monthly";
++
++export interface LessonScheduleSlot {
++  dayOfWeek: number;
++  startTime: string;
++  endTime: string;
++  frequency: LessonFrequency;
++}
++
++export interface LessonRecurrence {
++  id?: number;
++  subjectId: number;
++  teacher: string;
++  schedules: LessonScheduleSlot[];
++  startDate: string;
++  endDate?: string;
++  color: ColorKey;
++  createdAt: number;
++  deletedAt?: number;
++}
++
++export interface LessonSnapshot {
++  subjectName: string;
++  teacher?: string;
++  frequency?: LessonFrequency;
++}
++
++export interface Lesson {
++  id?: number;
++  recurrenceId?: number;
++  subjectId: number;
++  date: string;
++  notes?: string;
++  piecesPlayed?: number[];
++  piecesPlayedTitles?: string[];
++  snapshot?: LessonSnapshot;
++  createdAt: number;
++}
++
++export interface Assignment {
++  id: number;
++  lessonId: number;
++  text: string;
++  transformed: boolean;
++  ignored?: boolean;
++  taskId?: number;
++  createdAt: number;
++}
+diff --git a/src/domain/entities/library.ts b/src/domain/entities/library.ts
+new file mode 100644
+index 0000000..1376ce5
+--- /dev/null
++++ b/src/domain/entities/library.ts
+@@ -0,0 +1,31 @@
++import type { LibraryKind, NoteVal } from "./common";
++
++export interface LibraryItem {
++  id?: number;
++  subjectId: number;
++  kind: LibraryKind;
++  title: string;
++  composer?: string;
++  startBpm?: number;
++  targetBpm?: number;
++  noteVal?: NoteVal;
++  techniqueIds?: number[];
++  totalExercises?: number;
++  currentExercise?: number;
++  mastery?: { conceptual: number; analytical: number; aural: number; compositional: number; reading?: number };
++  tags?: string[];
++  createdAt: number;
++  deletedAt?: number;
++}
++
++export interface Segment {
++  id: number;
++  itemId: number;
++  label: string;
++  targetBpm?: number;
++  noteVal?: NoteVal;
++  layers: string[];
++  techniqueIds?: number[];
++  createdAt: number;
++  deletedAt?: number;
++}
+diff --git a/src/domain/entities/profile.ts b/src/domain/entities/profile.ts
+new file mode 100644
+index 0000000..4f01a66
+--- /dev/null
++++ b/src/domain/entities/profile.ts
+@@ -0,0 +1,24 @@
++import type { Lang, ReminderFreq } from "./common";
++
++export interface Profile {
++  id: "me";
++  name: string;
++  lang: Lang;
++  reminderTime: string;
++  reminderFreq: ReminderFreq;
++  reminderDays: number[];
++  reminderEnabled?: boolean;
++  reminderPreset?: "gentle" | "motivational" | "playful" | "minimal" | "custom";
++  reminderCustomTitle?: string;
++  reminderCustomBody?: string;
++  reminderIncludeContext?: boolean;
++  lateRecoveryDays: number;
++  carryoverDays?: number;
++  graceDay: boolean;
++  groupByPhase: boolean;
++  hideHeroQuote?: boolean;
++  weekStartsOn?: number;
++  onboarded: boolean;
++  introSeen?: boolean;
++  createdAt: number;
++}
+diff --git a/src/domain/entities/session.ts b/src/domain/entities/session.ts
+new file mode 100644
+index 0000000..fe6430b
+--- /dev/null
++++ b/src/domain/entities/session.ts
+@@ -0,0 +1,33 @@
++import type { NoteVal, SegmentMetric, SessionQuality } from "./common";
++
++export interface SessionSnapshot {
++  taskTitle: string;
++  subjectName: string;
++  itemTitle?: string;
++  itemComposer?: string;
++  segments?: { id: string; label: string }[];
++  collectionName?: string;
++  targetBpm?: number;
++  noteVal?: NoteVal;
++  layers?: string[];
++  techniqueNames?: string[];
++}
++
++export interface Session {
++  id: number;
++  taskId: number;
++  date: string;
++  bpmReached?: number;
++  noteVal?: NoteVal;
++  reps?: number;
++  quality?: SessionQuality;
++  confidence?: number;
++  notes?: string;
++  layersUsed?: string[];
++  techniquesUsed?: number[];
++  layerScores?: Record<string, number>;
++  techniqueScores?: Record<number, number>;
++  segmentMetrics?: Record<string, SegmentMetric>;
++  snapshot?: SessionSnapshot;
++  createdAt: number;
++}
+diff --git a/src/domain/entities/task.ts b/src/domain/entities/task.ts
+new file mode 100644
+index 0000000..e72e872
+--- /dev/null
++++ b/src/domain/entities/task.ts
+@@ -0,0 +1,35 @@
++import type { NoteVal } from "./common";
++
++export interface TaskRecurrence {
++  kind: "weekdays" | "interval";
++  days?: number[];
++  everyXDays?: number;
++  startDate: string;
++  endDate?: string;
++  occurrences?: number;
++}
++
++export type TaskLinkType = "free" | "item" | "collection";
++
++export interface Task {
++  id?: number;
++  date: string;
++  subjectId: number;
++  linkType?: TaskLinkType;
++  itemId?: number;
++  segmentIds?: number[];
++  collectionId?: number;
++  title: string;
++  targetBpm?: number;
++  noteVal?: NoteVal;
++  layers?: string[];
++  techniqueIds?: number[];
++  done: boolean;
++  skipped?: boolean;
++  executionNotes?: string;
++  recurrenceTaskId?: number;
++  recurrence?: TaskRecurrence;
++  studyRoutineId?: number;
++  createdAt: number;
++  deletedAt?: number;
++}
+diff --git a/src/domain/ports/backup.ts b/src/domain/ports/backup.ts
+new file mode 100644
+index 0000000..8d8de19
+--- /dev/null
++++ b/src/domain/ports/backup.ts
+@@ -0,0 +1,7 @@
++export type BackupData = Record<string, unknown[]>;
++
++export interface BackupPort {
++  exportAll(): Promise<string>;
++  importAll(json: string): Promise<void>;
++  wipeAll(): Promise<void>;
++}
+diff --git a/src/domain/ports/collection.ts b/src/domain/ports/collection.ts
+new file mode 100644
+index 0000000..f5fdc85
+--- /dev/null
++++ b/src/domain/ports/collection.ts
+@@ -0,0 +1,11 @@
++import type { LibraryKind } from "../entities/common";
++import type { Collection, CollectionItem } from "../entities/collection";
++
++export interface CollectionPort {
++  list(kind?: LibraryKind): Promise<Collection[]>;
++  get(id: number): Promise<Collection | undefined>;
++  items(collectionId: number): Promise<CollectionItem[]>;
++  update(id: number, patch: Partial<Collection>): Promise<void>;
++  remove(id: number): Promise<void>;
++  restore(collection: Collection, links: Pick<CollectionItem, "collectionId" | "itemId" | "position">[]): Promise<void>;
++}
+diff --git a/src/domain/ports/lesson.ts b/src/domain/ports/lesson.ts
+new file mode 100644
+index 0000000..fa5f8b4
+--- /dev/null
++++ b/src/domain/ports/lesson.ts
+@@ -0,0 +1,11 @@
++import type { Assignment, Lesson, LessonRecurrence } from "../entities/lesson";
++
++export interface LessonPort {
++  list(): Promise<Lesson[]>;
++  get(id: number): Promise<Lesson | undefined>;
++  listRecurrences(): Promise<LessonRecurrence[]>;
++  log(subjectId: number, recurrence: LessonRecurrence | null | undefined, date: string, notes: string | undefined, assignmentTexts: string[]): Promise<number>;
++  update(id: number, patch: Partial<Lesson>): Promise<void>;
++  remove(id: number): Promise<void>;
++  assignmentsForLesson(lessonId: number): Promise<Assignment[]>;
++}
+diff --git a/src/domain/ports/library.ts b/src/domain/ports/library.ts
+new file mode 100644
+index 0000000..e46246f
+--- /dev/null
++++ b/src/domain/ports/library.ts
+@@ -0,0 +1,10 @@
++import type { Draft } from "../entities/common";
++import type { LibraryItem, Segment } from "../entities/library";
++
++export interface LibraryPort {
++  list(): Promise<LibraryItem[]>;
++  get(id: number): Promise<LibraryItem | undefined>;
++  upsert(item: Draft<LibraryItem>, segments?: Omit<Segment, "id" | "itemId" | "createdAt">[]): Promise<number>;
++  remove(id: number): Promise<void>;
++  restore(item: LibraryItem, segments: Segment[]): Promise<number>;
++}
+diff --git a/src/domain/ports/profile.ts b/src/domain/ports/profile.ts
+new file mode 100644
+index 0000000..112131b
+--- /dev/null
++++ b/src/domain/ports/profile.ts
+@@ -0,0 +1,7 @@
++import type { Profile } from "../entities/profile";
++
++export interface ProfilePort {
++  get(): Promise<Profile | undefined>;
++  initialize(): Promise<Profile>;
++  update(patch: Partial<Profile>): Promise<void>;
++}
+diff --git a/src/domain/ports/session.ts b/src/domain/ports/session.ts
+new file mode 100644
+index 0000000..a708dbd
+--- /dev/null
++++ b/src/domain/ports/session.ts
+@@ -0,0 +1,13 @@
++import type { Session } from "../entities/session";
++import type { Task } from "../entities/task";
++
++export type SessionLogInput = Omit<Session, "id" | "taskId" | "date" | "snapshot" | "createdAt">;
++
++export interface SessionPort {
++  list(): Promise<Session[]>;
++  byTask(taskId: number): Promise<Session[]>;
++  log(task: Task, date: string, input: SessionLogInput): Promise<number>;
++  remove(id: number): Promise<void>;
++  deleteWithTaskReset(sessionId: number, taskId?: number): Promise<void>;
++  deleteByTaskAndDate(taskId: number, date: string): Promise<void>;
++}
+diff --git a/src/domain/ports/task.ts b/src/domain/ports/task.ts
+new file mode 100644
+index 0000000..3b56d12
+--- /dev/null
++++ b/src/domain/ports/task.ts
+@@ -0,0 +1,10 @@
++import type { Task } from "../entities/task";
++
++export interface TaskPort {
++  list(): Promise<Task[]>;
++  byDate(date: string): Promise<Task[]>;
++  create(task: Omit<Task, "id" | "done" | "createdAt" | "date"> & Pick<Task, "date">): Promise<number>;
++  update(id: number, patch: Partial<Task>): Promise<void>;
++  remove(id: number): Promise<"soft" | "hard">;
++  carryOver(task: Task, toDate: string): Promise<number>;
++}
+diff --git a/src/lib/db.ts b/src/lib/db.ts
+index 19d7f9d..8e50a8d 100644
+--- a/src/lib/db.ts
++++ b/src/lib/db.ts
+@@ -1,295 +1,52 @@
+ import Dexie, { type Table } from "dexie";
+-
+-export type Lang = "en" | "it" | "es" | "de";
+-export type SubjectType = "instrument" | "theory" | "composition" | "other";
+-
+-export const THEORY_LAYERS = ["conceptual", "analytical", "aural", "compositional", "reading"] as const;
+-export type TheoryLayer = typeof THEORY_LAYERS[number];
+-export type LibraryKind = "repertoire" | "manual" | "technique" | "theory";
+-export type NoteVal = "half" | "quarter" | "eighth" | "sixteenth";
+-
+-export type SessionQuality = "hard" | "improve" | "well" | "great";
+-
+-export interface SegmentMetric {
+-  confidence?: number;
+-  quality?: SessionQuality;
+-  bpmReached?: number;
+-  reps?: number;
+-  /** Per-segment overrides of task-level layers/techniques.
+-   *  When present, replace the task-level selection for that segment. */
+-  layersUsed?: string[];
+-  techniquesUsed?: number[];
+-  layerScores?: Record<string, number>;
+-  techniqueScores?: Record<number, number>;
+-}
+-export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum" | "coral" | "amber" | "teal" | "indigo" | "slate";
+-export type ReminderFreq = "daily" | "weekdays" | "custom";
+-
+-export interface Profile {
+-  id: "me";
+-  name: string;
+-  lang: Lang;
+-  reminderTime: string;          // "HH:MM"
+-  reminderFreq: ReminderFreq;
+-  reminderDays: number[];        // 0-6 if custom
+-  reminderEnabled?: boolean;     // undefined = enabled (back-compat)
+-  /** Notification message preset. "custom" uses user-provided title/body. */
+-  reminderPreset?: "gentle" | "motivational" | "playful" | "minimal" | "custom";
+-  /** Optional custom notification title (used when reminderPreset === "custom"). */
+-  reminderCustomTitle?: string;
+-  /** Optional custom notification body (used when reminderPreset === "custom"). */
+-  reminderCustomBody?: string;
+-  /** When true, append today's task count and current streak to the notification body. */
+-  reminderIncludeContext?: boolean;
+-  lateRecoveryDays: number;
+-  carryoverDays?: number;        // how many past days to surface uncompleted tasks from
+-  graceDay: boolean;
+-  groupByPhase: boolean;
+-  /** When true, the inspirational quote on the diary hero card is hidden. */
+-  hideHeroQuote?: boolean;
+-  weekStartsOn?: number;         // 0=Sun, 1=Mon, etc.
+-  onboarded: boolean;
+-  introSeen?: boolean;
+-  createdAt: number;
+-}
+-
+-export interface Subject {
+-  id?: number;
+-  name: string;
+-  type: SubjectType;
+-  layers?: string[];
+-  color?: ColorKey;
+-  /** Optional custom color (hex like "#aabbcc"), overrides preset `color` when set. */
+-  customColor?: string;
+-  createdAt: number;
+-  deletedAt?: number;
+-}
+-
+-export interface Technique {
+-  id: number;
+-  subjectId: number;
+-  name: string;
+-  createdAt: number;
+-  deletedAt?: number;
+-}
+-
+-export interface LibraryItem {
+-  id?: number;
+-  subjectId: number;
+-  kind: LibraryKind;
+-  title: string;
+-  composer?: string;
+-  
+-  startBpm?: number;
+-  targetBpm?: number;
+-  noteVal?: NoteVal;
+-  techniqueIds?: number[];
+-  totalExercises?: number;
+-  currentExercise?: number;
+-  mastery?: { conceptual: number; analytical: number; aural: number; compositional: number; reading?: number };
+-  tags?: string[];
+-  createdAt: number;
+-  deletedAt?: number;
+-}
+-
+-export interface Segment {
+-  id: number;
+-  itemId: number;
+-  label: string;
+-  targetBpm?: number;
+-  noteVal?: NoteVal;
+-  layers: string[];
+-  techniqueIds?: number[];
+-  createdAt: number;
+-  deletedAt?: number;
+-}
+-
+-export interface TaskRecurrence {
+-  kind: "weekdays" | "interval";
+-  days?: number[];
+-  everyXDays?: number;
+-  startDate: string;
+-  endDate?: string;
+-  occurrences?: number;
+-}
+-
+-/**
+- * A task is mutually-exclusively linked to ONE of:
+- *  - "free":       no library link
+- *  - "item":       a single LibraryItem (optionally narrowed to one or more segments)
+- *  - "collection": a whole Collection (label/grouping; no per-item iteration)
+- */
+-export type TaskLinkType = "free" | "item" | "collection";
+-
+-export interface Task {
+-  id?: number;
+-  date: string;
+-  subjectId: number;
+-  linkType?: TaskLinkType;        // optional for legacy rows; treat missing as inferred
+-  itemId?: number;
+-  /** Multi-segment scope when linkType==="item". */
+-  segmentIds?: number[];
+-  /** Set only when linkType==="collection". */
+-  collectionId?: number;
+-  title: string;
+-  targetBpm?: number;
+-  noteVal?: NoteVal;
+-  layers?: string[];
+-  techniqueIds?: number[];
+-  done: boolean;
+-  skipped?: boolean;
+-  executionNotes?: string;
+-  recurrenceTaskId?: number;
+-  recurrence?: TaskRecurrence;
+-  studyRoutineId?: number;
+-  createdAt: number;
+-  deletedAt?: number;
+-}
+-
+-/** Immutable copy of context at the moment a Session was saved. */
+-export interface SessionSnapshot {
+-  taskTitle: string;
+-  subjectName: string;
+-  itemTitle?: string;
+-  itemComposer?: string;
+-  /** Segments included in the task scope (id + label for historical rendering). */
+-  segments?: { id: string; label: string }[];
+-  /** Name of the collection if the task was collection-linked. */
+-  collectionName?: string;
+-  targetBpm?: number;
+-  noteVal?: NoteVal;
+-  layers?: string[];
+-  techniqueNames?: string[];
+-}
+-
+-export interface Session {
+-  id: number;
+-  taskId: number;
+-  date: string;
+-  bpmReached?: number;
+-  noteVal?: NoteVal;
+-  reps?: number;
+-  quality?: SessionQuality;
+-  confidence?: number;
+-  notes?: string;
+-  layersUsed?: string[];
+-  techniquesUsed?: number[];
+-  /** Per-layer scores 0-100 for theory sessions. */
+-  layerScores?: Record<string, number>;
+-  /** Per-technique scores 0-100. */
+-  techniqueScores?: Record<number, number>;
+-  /** Per-segment metrics when session was logged in granular mode. */
+-  segmentMetrics?: Record<string, SegmentMetric>;
+-  /** Denormalized snapshot — the source of truth for historical display. */
+-  snapshot?: SessionSnapshot;
+-  createdAt: number;
+-}
++import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
++import type { TheoryLayer } from "@/domain/constants/theoryLayers";
++import type { ColorKey, Draft, Lang, LibraryKind, NoteVal, ReminderFreq, SegmentMetric, SessionQuality, Subject, SubjectType, Technique } from "@/domain/entities/common";
++import type { Collection, CollectionItem } from "@/domain/entities/collection";
++import type { Assignment, Lesson, LessonFrequency, LessonRecurrence, LessonScheduleSlot, LessonSnapshot } from "@/domain/entities/lesson";
++import type { LibraryItem, Segment } from "@/domain/entities/library";
++import type { Profile } from "@/domain/entities/profile";
++import type { Session, SessionSnapshot } from "@/domain/entities/session";
++import type { Task, TaskLinkType, TaskRecurrence } from "@/domain/entities/task";
++
++export { THEORY_LAYERS };
++export type { TheoryLayer } from "@/domain/constants/theoryLayers";
++export type { ColorKey, Draft, Lang, LibraryKind, NoteVal, ReminderFreq, SegmentMetric, SessionQuality, Subject, SubjectType, Technique } from "@/domain/entities/common";
++export type { Collection, CollectionItem } from "@/domain/entities/collection";
++export type { Assignment, Lesson, LessonFrequency, LessonRecurrence, LessonScheduleSlot, LessonSnapshot } from "@/domain/entities/lesson";
++export type { LibraryItem, Segment } from "@/domain/entities/library";
++export type { Profile } from "@/domain/entities/profile";
++export type { Session, SessionSnapshot } from "@/domain/entities/session";
++export type { Task, TaskLinkType, TaskRecurrence } from "@/domain/entities/task";
+ 
+ export interface HelpRequest {
+   id: number;
+   sessionId?: number;
+   taskId?: number;
+   itemId?: number;
+   question: string;
+   answer?: string;
+   answeredAt?: number;
+   resolved: boolean;
+   createdAt: number;
+ }
+ 
+-export type LessonFrequency = "weekly" | "biweekly" | "monthly";
+-
+-/** One weekday slot in a multi-day lesson schedule. */
+-export interface LessonScheduleSlot {
+-  dayOfWeek: number;          // 0=Sun…6=Sat
+-  startTime: string;          // "HH:MM"
+-  endTime: string;            // "HH:MM"
+-  frequency: LessonFrequency; // per-slot frequency
+-}
+-
+-export interface LessonRecurrence {
+-  id?: number;
+-  subjectId: number;
+-  teacher: string;
+-  /** One or more weekly slots; each can have its own frequency. */
+-  schedules: LessonScheduleSlot[];
+-  startDate: string;
+-  endDate?: string;
+-  color: ColorKey;
+-  createdAt: number;
+-  deletedAt?: number;
+-}
+-
+-/** Immutable copy of lesson context. */
+-export interface LessonSnapshot {
+-  subjectName: string;
+-  teacher?: string;
+-  frequency?: LessonFrequency;
+-}
+-
+-
+-export interface Lesson {
+-  id?: number;
+-  recurrenceId?: number;
+-  subjectId: number;
+-  date: string;
+-  notes?: string;
+-  piecesPlayed?: number[];
+-  /** Titles of pieces played, snapshot at save time. */
+-  piecesPlayedTitles?: string[];
+-  snapshot?: LessonSnapshot;
+-  createdAt: number;
+-}
+-
+-export interface Assignment {
+-  id: number;
+-  lessonId: number;
+-  text: string;
+-  transformed: boolean;
+-  ignored?: boolean;
+-  taskId?: number;
+-  createdAt: number;
+-}
+-
+ /** Draft homework captured live during a lesson, before the lesson is recorded. */
+ export interface PendingAssignment {
+   id?: number;
+   subjectId: number;
+   recurrenceId?: number;
+   text: string;
+   createdAt: number;
+ }
+ 
+-export interface Collection {
+-  id?: number;
+-  /** Library kind this collection groups. Each collection is kind-specific. */
+-  kind: LibraryKind;
+-  name: string;
+-  composer?: string;
+-  catalog?: string;
+-  notes?: string;
+-  color?: ColorKey;
+-  defaultSubjectId?: number;
+-  createdAt: number;
+-  updatedAt: number;
+-  deletedAt?: number;
+-}
+-
+-export interface CollectionItem {
+-  id: number;
+-  collectionId: number;
+-  itemId: number;
+-  position?: number;
+-  createdAt: number;
+-}
+-
+ export type StudyPoolEntry =
+   | { type: "item"; id: number }
+   | { type: "segment"; id: number }
+   | { type: "collection"; id: number };
+ 
+ export interface StudyGroup {
+   id: string;
+   name: string;
+   pool: StudyPoolEntry[];
+ }

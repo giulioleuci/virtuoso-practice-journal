@@ -1,0 +1,1480 @@
+3810378 refactor: migrate presentation data boundary
+ src/application/queries/collectionQueries.ts      |   6 +
+ src/application/queries/lessonQueries.ts          |   6 +
+ src/application/queries/libraryQueries.ts         |   6 +
+ src/application/queries/profileQueries.ts         |   5 +
+ src/application/queries/sessionQueries.ts         |   5 +
+ src/application/queries/taskQueries.ts            |  10 ++
+ src/components/AppShell.tsx                       |   2 +-
+ src/components/collections/AssignPiecesSheet.tsx  |   4 +-
+ src/components/collections/NewCollectionSheet.tsx |   2 +-
+ src/components/diary/BpmSuggestion.tsx            |   4 +-
+ src/components/diary/EditTaskSheet.tsx            |   2 +-
+ src/components/diary/LastSessionStrip.tsx         |   4 +-
+ src/components/diary/LinkTargetFields.tsx         |   6 +-
+ src/components/diary/PracticeMode.tsx             |   4 +-
+ src/components/diary/SegmentHistorySheet.tsx      |   4 +-
+ src/components/diary/SessionDetailSheet.tsx       |   4 +-
+ src/components/diary/SessionFAB.tsx               |   4 +-
+ src/components/diary/SessionFields.tsx            |   2 +-
+ src/components/diary/SessionLogSheet.tsx          |   4 +-
+ src/components/diary/StatsDashboard.tsx           |   4 +-
+ src/components/diary/StudyRoutineWizard.tsx       |   4 +-
+ src/components/diary/TaskCalendarView.tsx         |   2 +-
+ src/components/diary/TaskWizard.tsx               |   4 +-
+ src/components/diary/recurrence-state.ts          |   2 +-
+ src/components/lessons/AddHomeworkSheet.tsx       |   4 +-
+ src/components/lessons/LessonLogSheet.tsx         |   4 +-
+ src/components/lessons/RecurrenceSheet.tsx        |   2 +-
+ src/components/lessons/TeacherRecapSheet.tsx      |   2 +-
+ src/components/library/BpmCoupler.tsx             |   2 +-
+ src/components/library/BpmSparkline.tsx           |   4 +-
+ src/components/library/ItemAnalysisSheet.tsx      |   4 +-
+ src/components/library/ItemHelpSheet.tsx          |   4 +-
+ src/components/library/LibraryItemKindFields.tsx  |   2 +-
+ src/components/library/MasterySliders.tsx         |   2 +-
+ src/components/library/MasterySparkline.tsx       |   4 +-
+ src/components/library/NewLibraryItemSheet.tsx    |   4 +-
+ src/components/library/SegmentsEditor.tsx         |   2 +-
+ src/components/library/TeacherAnswersSheet.tsx    |   4 +-
+ src/components/onboarding/Onboarding.tsx          |   2 +-
+ src/components/profile/SubjectsEditor.tsx         |   2 +-
+ src/hooks/useEntities.test.tsx                    |   2 +-
+ src/hooks/useEntities.ts                          | 140 +---------------------
+ src/infrastructure/dexie/subscribe.ts             |   6 +
+ src/lib/presentationQueries.ts                    |  16 +++
+ src/lib/subscriptions.ts                          |   2 +
+ src/pages/Collections.tsx                         |   2 +-
+ src/pages/Diary.tsx                               |   6 +-
+ src/pages/EditStudyRoutinePage.tsx                |   2 +-
+ src/pages/EditTaskPage.tsx                        |   2 +-
+ src/pages/History.tsx                             |   4 +-
+ src/pages/Index.tsx                               |   4 +-
+ src/pages/ItemAnalysisPage.tsx                    |   6 +-
+ src/pages/Lessons.tsx                             |   4 +-
+ src/pages/Library.tsx                             |   4 +-
+ src/pages/NewTaskPage.tsx                         |   4 +-
+ src/pages/Tasks.tsx                               |   4 +-
+ src/presentation/hooks/useEntities.test.tsx       |  20 ++++
+ src/presentation/hooks/useEntities.ts             |  33 +++++
+ src/test/architecture/import-boundaries.test.ts   |  50 +-------
+ 59 files changed, 195 insertions(+), 264 deletions(-)
+diff --git a/src/application/queries/collectionQueries.ts b/src/application/queries/collectionQueries.ts
+new file mode 100644
+index 0000000..a5b9ca9
+--- /dev/null
++++ b/src/application/queries/collectionQueries.ts
+@@ -0,0 +1,6 @@
++import type { Collection, CollectionItem } from "@/domain/entities/collection";
++import type { CollectionPort } from "@/domain/ports/collection";
++export type CollectionDto = Collection;
++export type CollectionItemDto = CollectionItem;
++export interface CollectionQueries { list(): Promise<CollectionDto[]>; itemsFor(collectionId: number): Promise<CollectionItemDto[]>; }
++export const collectionQueries = (collections: CollectionPort): CollectionQueries => ({ list: () => collections.list(), itemsFor: (id) => collections.items(id) });
+diff --git a/src/application/queries/lessonQueries.ts b/src/application/queries/lessonQueries.ts
+new file mode 100644
+index 0000000..da07b20
+--- /dev/null
++++ b/src/application/queries/lessonQueries.ts
+@@ -0,0 +1,6 @@
++import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
++import type { LessonPort } from "@/domain/ports/lesson";
++export type LessonDto = Lesson;
++export type LessonRecurrenceDto = LessonRecurrence;
++export interface LessonQueries { list(): Promise<LessonDto[]>; recurrences(): Promise<LessonRecurrenceDto[]>; }
++export const lessonQueries = (lessons: LessonPort): LessonQueries => ({ list: () => lessons.list(), recurrences: () => lessons.listRecurrences() });
+diff --git a/src/application/queries/libraryQueries.ts b/src/application/queries/libraryQueries.ts
+new file mode 100644
+index 0000000..edd188d
+--- /dev/null
++++ b/src/application/queries/libraryQueries.ts
+@@ -0,0 +1,6 @@
++import type { LibraryItem, Segment } from "@/domain/entities/library";
++import type { LibraryPort } from "@/domain/ports/library";
++export type LibraryItemDto = LibraryItem;
++export type SegmentDto = Segment;
++export interface LibraryQueries { list(): Promise<LibraryItemDto[]>; segmentsFor(itemId: number): Promise<SegmentDto[]>; }
++export const libraryQueries = (library: LibraryPort): Pick<LibraryQueries, "list"> => ({ list: () => library.list() });
+diff --git a/src/application/queries/profileQueries.ts b/src/application/queries/profileQueries.ts
+new file mode 100644
+index 0000000..b89494e
+--- /dev/null
++++ b/src/application/queries/profileQueries.ts
+@@ -0,0 +1,5 @@
++import type { Profile } from "@/domain/entities/profile";
++import type { ProfilePort } from "@/domain/ports/profile";
++export type ProfileDto = Profile;
++export interface ProfileQueries { current(): Promise<ProfileDto | undefined>; }
++export const profileQueries = (profile: ProfilePort): ProfileQueries => ({ current: () => profile.get() });
+diff --git a/src/application/queries/sessionQueries.ts b/src/application/queries/sessionQueries.ts
+new file mode 100644
+index 0000000..4236deb
+--- /dev/null
++++ b/src/application/queries/sessionQueries.ts
+@@ -0,0 +1,5 @@
++import type { Session } from "@/domain/entities/session";
++import type { SessionPort } from "@/domain/ports/session";
++export type SessionDto = Session;
++export interface SessionQueries { list(): Promise<SessionDto[]>; }
++export const sessionQueries = (sessions: SessionPort): SessionQueries => ({ list: () => sessions.list() });
+diff --git a/src/application/queries/taskQueries.ts b/src/application/queries/taskQueries.ts
+new file mode 100644
+index 0000000..04f94c5
+--- /dev/null
++++ b/src/application/queries/taskQueries.ts
+@@ -0,0 +1,10 @@
++import type { Task } from "@/domain/entities/task";
++import type { TaskPort } from "@/domain/ports/task";
++export type TaskDto = Task;
++export interface TaskQueries { active(): Promise<TaskDto[]>; byDate(date: string): Promise<TaskDto[]>; inRange(from: string, to: string): Promise<TaskDto[]>; byItem(itemId: number): Promise<TaskDto[]>; }
++export const taskQueries = (tasks: TaskPort): TaskQueries => ({
++  active: async () => (await tasks.list()).filter((task) => !task.deletedAt),
++  byDate: async (date) => (await tasks.byDate(date)).filter((task) => !task.deletedAt),
++  inRange: async (from, to) => (await tasks.list()).filter((task) => !task.deletedAt && task.date >= from && task.date <= to),
++  byItem: async (itemId) => (await tasks.list()).filter((task) => task.itemId === itemId),
++});
+diff --git a/src/components/AppShell.tsx b/src/components/AppShell.tsx
+index c3b671a..8e99e3a 100644
+--- a/src/components/AppShell.tsx
++++ b/src/components/AppShell.tsx
+@@ -1,19 +1,19 @@
+ import { useEffect, useRef, useState } from "react";
+ import { NavLink, Outlet, useLocation } from "react-router-dom";
+ import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound, ListChecks, MoreHorizontal } from "lucide-react";
+ import { useI18n } from "@/lib/i18n";
+ import { useKeyboardInset } from "@/hooks/useKeyboardInset";
+ import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+ import { cn } from "@/lib/utils";
+ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+-import type { Profile } from "@/lib/db";
++import type { Profile } from "@/lib/presentationQueries";
+ 
+ export default function AppShell({ profile }: { profile: Profile }) {
+   const { t } = useI18n();
+   const location = useLocation();
+   const pageKey = "/" + (location.pathname.split("/")[1] ?? "");
+   const items = [
+     { to: "/", label: t("nav.diary"), icon: CalendarDays, end: true },
+     { to: "/tasks", label: t("nav.tasks"), icon: ListChecks },
+     { to: "/library", label: t("nav.library"), icon: BookMarked },
+     { to: "/lessons", label: t("nav.lessons"), icon: GraduationCap },
+diff --git a/src/components/collections/AssignPiecesSheet.tsx b/src/components/collections/AssignPiecesSheet.tsx
+index 25f2fef..bb9ddee 100644
+--- a/src/components/collections/AssignPiecesSheet.tsx
++++ b/src/components/collections/AssignPiecesSheet.tsx
+@@ -1,13 +1,13 @@
+ import { useEffect, useMemo, useState } from "react";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type Collection, type LibraryItem } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type Collection, type LibraryItem } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { useCollectionItems } from "@/hooks/useEntities";
+ import {
+   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
+ } from "@/components/ui/sheet";
+ import { Input } from "@/components/ui/input";
+ import { Button } from "@/components/ui/button";
+ import { Plus, Pencil, X, Music2, Search } from "lucide-react";
+ import { collectionsService } from "@/lib/services";
+ import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
+diff --git a/src/components/collections/NewCollectionSheet.tsx b/src/components/collections/NewCollectionSheet.tsx
+index e1313f8..555fad2 100644
+--- a/src/components/collections/NewCollectionSheet.tsx
++++ b/src/components/collections/NewCollectionSheet.tsx
+@@ -1,12 +1,12 @@
+ import { useSubjects } from "@/hooks/useEntities";
+-import { type Collection, type ColorKey, type LibraryKind } from "@/lib/db";
++import { type Collection, type ColorKey, type LibraryKind } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { useSheetForm } from "@/hooks/useSheetForm";
+ import {
+   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
+ } from "@/components/ui/sheet";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Button } from "@/components/ui/button";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+diff --git a/src/components/diary/BpmSuggestion.tsx b/src/components/diary/BpmSuggestion.tsx
+index 64a458a..37bfac2 100644
+--- a/src/components/diary/BpmSuggestion.tsx
++++ b/src/components/diary/BpmSuggestion.tsx
+@@ -1,12 +1,12 @@
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type Task } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type Task } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { today } from "@/lib/date";
+ import { SuggestionIcon } from "@/lib/icons";
+ import { cn } from "@/lib/utils";
+ 
+ interface Props {
+   task: Task;
+   onAccept: (bpm: number) => void;
+   dismissed: boolean;
+   onDismiss: () => void;
+diff --git a/src/components/diary/EditTaskSheet.tsx b/src/components/diary/EditTaskSheet.tsx
+index 57f7eab..2db1931 100644
+--- a/src/components/diary/EditTaskSheet.tsx
++++ b/src/components/diary/EditTaskSheet.tsx
+@@ -1,13 +1,13 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useSubjects, useTechniques } from "@/hooks/useEntities";
+-import { THEORY_LAYERS, type LibraryKind, type NoteVal, type Task, type TaskRecurrence, type TaskLinkType } from "@/lib/db";
++import { THEORY_LAYERS, type LibraryKind, type NoteVal, type Task, type TaskRecurrence, type TaskLinkType } from "@/lib/presentationQueries";
+ import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+ import { useI18n } from "@/lib/i18n";
+ import { collectionsService, tasksService } from "@/lib/services";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+diff --git a/src/components/diary/LastSessionStrip.tsx b/src/components/diary/LastSessionStrip.tsx
+index fa1c616..a82d3fa 100644
+--- a/src/components/diary/LastSessionStrip.tsx
++++ b/src/components/diary/LastSessionStrip.tsx
+@@ -1,13 +1,13 @@
+ import { useMemo, useState } from "react";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, THEORY_LAYERS, type Session, type Task } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, THEORY_LAYERS, type Session, type Task } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
+ import { today } from "@/lib/date";
+ import { cn } from "@/lib/utils";
+ import { SegmentHistorySheet } from "./SegmentHistorySheet";
+ import { SessionDetailSheet } from "./SessionDetailSheet";
+ 
+ 
+ interface Props {
+   task: Task;
+diff --git a/src/components/diary/LinkTargetFields.tsx b/src/components/diary/LinkTargetFields.tsx
+index 182d035..b25d188 100644
+--- a/src/components/diary/LinkTargetFields.tsx
++++ b/src/components/diary/LinkTargetFields.tsx
+@@ -1,17 +1,17 @@
+ /** Shared "Link to" picker used by NewTaskPage, TaskWizard, and task edit flows.
+  *  Enforces mutual exclusivity: free | item (+optional segments) | collection.
+  */
+ import { useMemo } from "react";
+ import { useCollectionLinks, useLibrary } from "@/hooks/useEntities";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type LibraryKind, type TaskLinkType } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type LibraryKind, type TaskLinkType } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { collectionsService } from "@/lib/services";
+ import { Label } from "@/components/ui/label";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+ } from "@/components/ui/select";
+ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+ import { cn } from "@/lib/utils";
+ 
+ interface Props {
+@@ -115,21 +115,21 @@ export function LinkTargetFields({
+               ))}
+             </SelectContent>
+           </Select>
+         </div>
+       )}
+     </div>
+   );
+ }
+ 
+ import { useState } from "react";
+-import type { LibraryItem, Collection, CollectionItem } from "@/lib/db";
++import type { LibraryItem, Collection, CollectionItem } from "@/lib/presentationQueries";
+ 
+ function ItemPicker({
+   subjectId, library, allCollections, allCollectionItems, itemId, setItemId,
+ }: {
+   subjectId: number | undefined;
+   library: LibraryItem[];
+   allCollections: Collection[];
+   allCollectionItems: CollectionItem[];
+   itemId: number | undefined;
+   setItemId: (id: number | undefined) => void;
+diff --git a/src/components/diary/PracticeMode.tsx b/src/components/diary/PracticeMode.tsx
+index e06ed52..56f0ac2 100644
+--- a/src/components/diary/PracticeMode.tsx
++++ b/src/components/diary/PracticeMode.tsx
+@@ -1,14 +1,14 @@
+ import { useEffect, useRef, useState } from "react";
+ import { createPortal } from "react-dom";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type NoteVal, type Task } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type NoteVal, type Task } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { NOTE_GLYPH } from "@/lib/constants";
+ import { Button } from "@/components/ui/button";
+ import { Slider } from "@/components/ui/slider";
+ import { X, Volume2, VolumeX, MessageSquareQuote } from "lucide-react";
+ import { cn } from "@/lib/utils";
+ 
+ interface Props {
+   task: Task;
+   onClose: () => void;
+diff --git a/src/components/diary/SegmentHistorySheet.tsx b/src/components/diary/SegmentHistorySheet.tsx
+index 82b9268..7ab7151 100644
+--- a/src/components/diary/SegmentHistorySheet.tsx
++++ b/src/components/diary/SegmentHistorySheet.tsx
+@@ -1,13 +1,13 @@
+ import { useMemo } from "react";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type Session } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type Session } from "@/lib/presentationQueries";
+ import { useTechniques } from "@/hooks/useEntities";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { cn } from "@/lib/utils";
+ 
+ interface Props {
+   open: boolean;
+diff --git a/src/components/diary/SessionDetailSheet.tsx b/src/components/diary/SessionDetailSheet.tsx
+index 67025d2..2b70542 100644
+--- a/src/components/diary/SessionDetailSheet.tsx
++++ b/src/components/diary/SessionDetailSheet.tsx
+@@ -1,14 +1,14 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useTechniques } from "@/hooks/useEntities";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/db"; // db used for useLiveQuery reads only
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, THEORY_LAYERS, type NoteVal, type Session, type SessionQuality } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+ import { sessionsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Label } from "@/components/ui/label";
+ import { Input } from "@/components/ui/input";
+ import {
+   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+diff --git a/src/components/diary/SessionFAB.tsx b/src/components/diary/SessionFAB.tsx
+index 17b6172..decaecd 100644
+--- a/src/components/diary/SessionFAB.tsx
++++ b/src/components/diary/SessionFAB.tsx
+@@ -1,14 +1,14 @@
+ import { useState } from "react";
+ import { useSubjects } from "@/hooks/useEntities";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type SessionQuality, type NoteVal } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type SessionQuality, type NoteVal } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { sessionsService, tasksService } from "@/lib/services";
+ import { today } from "@/lib/date";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Input } from "@/components/ui/input";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { StarRating } from "@/components/shared/StarRating";
+diff --git a/src/components/diary/SessionFields.tsx b/src/components/diary/SessionFields.tsx
+index 84a254e..7a87690 100644
+--- a/src/components/diary/SessionFields.tsx
++++ b/src/components/diary/SessionFields.tsx
+@@ -1,21 +1,21 @@
+ /** Shared form fields for logging or editing a Session. */
+ import { Label } from "@/components/ui/label";
+ import { Input } from "@/components/ui/input";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Slider } from "@/components/ui/slider";
+ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+ import { BpmCoupler } from "@/components/library/BpmCoupler";
+ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+ import { StarRating } from "@/components/shared/StarRating";
+ import { cn } from "@/lib/utils";
+-import type { NoteVal, SessionQuality } from "@/lib/db";
++import type { NoteVal, SessionQuality } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { QUALITY_VALS } from "@/lib/constants";
+ 
+ export interface SessionFieldsValue {
+   bpm: number | undefined;
+   noteVal: NoteVal | undefined;
+   reps: number | undefined;
+   confidence: number | undefined;
+   quality: SessionQuality;
+   notes: string;
+diff --git a/src/components/diary/SessionLogSheet.tsx b/src/components/diary/SessionLogSheet.tsx
+index 9fdbd13..d261aa1 100644
+--- a/src/components/diary/SessionLogSheet.tsx
++++ b/src/components/diary/SessionLogSheet.tsx
+@@ -1,25 +1,25 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useTechniques } from "@/hooks/useEntities";
+-import { db, THEORY_LAYERS, type NoteVal, type SessionQuality, type Task, type SegmentMetric } from "@/lib/db"; // db used for useLiveQuery reads only
++import { db, THEORY_LAYERS, type NoteVal, type SessionQuality, type Task, type SegmentMetric } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+ import { useI18n } from "@/lib/i18n";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Switch } from "@/components/ui/switch";
+ import { Slider } from "@/components/ui/slider";
+ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+-import { useLiveQuery } from "dexie-react-hooks";
++import { useLiveQuery } from "@/lib/subscriptions";
+ import { toast } from "sonner";
+ import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
+ import { studyRoutinesService, sessionsService } from "@/lib/services";
+ import { QUALITY_VALS } from "@/lib/constants";
+ import { SessionFields, type SessionFieldsValue } from "./SessionFields";
+ import { StarRating } from "@/components/shared/StarRating";
+ import { LastSessionStrip } from "./LastSessionStrip";
+ import { BpmSuggestion } from "./BpmSuggestion";
+ import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
+ import { MessageSquareQuote, ChevronLeft, ChevronRight, Copy } from "lucide-react";
+diff --git a/src/components/diary/StatsDashboard.tsx b/src/components/diary/StatsDashboard.tsx
+index 8f6817f..e1799a7 100644
+--- a/src/components/diary/StatsDashboard.tsx
++++ b/src/components/diary/StatsDashboard.tsx
+@@ -1,14 +1,14 @@
+ import { useMemo } from "react";
+ import { Link } from "react-router-dom";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type Session } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type Session } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { dayKey } from "@/lib/date";
+ 
+ 
+ 
+ interface Props {
+   /** YYYY-MM-DD inclusive lower bound */
+   from?: string;
+   /** YYYY-MM-DD inclusive upper bound */
+   to?: string;
+diff --git a/src/components/diary/StudyRoutineWizard.tsx b/src/components/diary/StudyRoutineWizard.tsx
+index a781d01..ae69cef 100644
+--- a/src/components/diary/StudyRoutineWizard.tsx
++++ b/src/components/diary/StudyRoutineWizard.tsx
+@@ -1,13 +1,13 @@
+ import { useState, useMemo, useEffect, type ReactNode } from "react";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type StudyPoolEntry, type StudyGroup, type StudyRoutine } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { studyRoutinesService } from "@/lib/services";
+ import { poolEntryKey } from "@/lib/domain/studyRoutineGenerator";
+ import { useSegments, useCollections } from "@/hooks/useEntities";
+ import type { StudyRoutineConfig } from "@/lib/schemas";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Switch } from "@/components/ui/switch";
+ import { Slider } from "@/components/ui/slider";
+diff --git a/src/components/diary/TaskCalendarView.tsx b/src/components/diary/TaskCalendarView.tsx
+index 7684ce5..138215e 100644
+--- a/src/components/diary/TaskCalendarView.tsx
++++ b/src/components/diary/TaskCalendarView.tsx
+@@ -1,15 +1,15 @@
+ import { useMemo, useState } from "react";
+ import { ChevronLeft, ChevronRight } from "lucide-react";
+ import { cn } from "@/lib/utils";
+ import { subjectBorderStyle } from "@/lib/subjectColors";
+-import type { Task, Subject } from "@/lib/db";
++import type { Task, Subject } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { useTasksInRange } from "@/hooks/useEntities";
+ function utcDateStr(year: number, month: number, day: number): string {
+   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+ }
+ 
+ interface Props {
+   subjects: Subject[];
+ }
+ 
+diff --git a/src/components/diary/TaskWizard.tsx b/src/components/diary/TaskWizard.tsx
+index d1fabdf..ea5896b 100644
+--- a/src/components/diary/TaskWizard.tsx
++++ b/src/components/diary/TaskWizard.tsx
+@@ -1,22 +1,22 @@
+ /**
+  * 3-step task creation wizard:
+  * Step 1 "What": Subject + link type + item/collection picker
+  * Step 2 "How": Title + BPM + layers + techniques
+  * Step 3 "When": Recurrence
+  *
+  * A persistent summary chip bar shows selections from previous steps.
+  */
+ import { useEffect, useMemo, useState } from "react";
+ import { useLessons, useRecurrences, useSubjects, useTechniques } from "@/hooks/useEntities";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/presentationQueries";
+ import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+ import { nextLessonDate } from "@/lib/domain/lessonSchedule";
+ import { useI18n } from "@/lib/i18n";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { BpmCoupler } from "@/components/library/BpmCoupler";
+ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+diff --git a/src/components/diary/recurrence-state.ts b/src/components/diary/recurrence-state.ts
+index 364481f..b23d645 100644
+--- a/src/components/diary/recurrence-state.ts
++++ b/src/components/diary/recurrence-state.ts
+@@ -1,12 +1,12 @@
+ import { schoolYearEnd } from "@/lib/recurrence";
+-import type { TaskRecurrence } from "@/lib/db";
++import type { TaskRecurrence } from "@/lib/presentationQueries";
+ 
+ export type EndMode = "never" | "nextLesson" | "date" | "count";
+ 
+ export interface RecurrenceState {
+   enabled: boolean;
+   kind: "weekdays" | "interval";
+   days: number[];
+   everyX: number;
+   startDate: string;
+   endMode: EndMode;
+diff --git a/src/components/lessons/AddHomeworkSheet.tsx b/src/components/lessons/AddHomeworkSheet.tsx
+index 1fab512..c75affa 100644
+--- a/src/components/lessons/AddHomeworkSheet.tsx
++++ b/src/components/lessons/AddHomeworkSheet.tsx
+@@ -1,13 +1,13 @@
+ import { useEffect, useState } from "react";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db } from "@/lib/presentationQueries";
+ import { useSubjects } from "@/hooks/useEntities";
+ import { pendingAssignmentsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Input } from "@/components/ui/input";
+ import { Trash2, Plus, Pencil, Check, X } from "lucide-react";
+ import { toast } from "sonner";
+diff --git a/src/components/lessons/LessonLogSheet.tsx b/src/components/lessons/LessonLogSheet.tsx
+index 1e95ef1..6cbbe01 100644
+--- a/src/components/lessons/LessonLogSheet.tsx
++++ b/src/components/lessons/LessonLogSheet.tsx
+@@ -1,13 +1,13 @@
+ import { useEffect, useMemo, useState } from "react";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type Lesson, type LessonRecurrence } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+ import { lessonsService, pendingAssignmentsService } from "@/lib/services";
+ import { today } from "@/lib/date";
+ import { useI18n } from "@/lib/i18n";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ 
+ import { Plus, X, Check, Inbox, Pencil } from "lucide-react";
+diff --git a/src/components/lessons/RecurrenceSheet.tsx b/src/components/lessons/RecurrenceSheet.tsx
+index 3b47793..5ccf8dd 100644
+--- a/src/components/lessons/RecurrenceSheet.tsx
++++ b/src/components/lessons/RecurrenceSheet.tsx
+@@ -1,13 +1,13 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useSubjects } from "@/hooks/useEntities";
+-import { type ColorKey, type LessonRecurrence, type LessonScheduleSlot, type LessonFrequency } from "@/lib/db";
++import { type ColorKey, type LessonRecurrence, type LessonScheduleSlot, type LessonFrequency } from "@/lib/presentationQueries";
+ import { lessonsService } from "@/lib/services";
+ import { today } from "@/lib/date";
+ import { useI18n } from "@/lib/i18n";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+ } from "@/components/ui/select";
+diff --git a/src/components/lessons/TeacherRecapSheet.tsx b/src/components/lessons/TeacherRecapSheet.tsx
+index a2ead17..8ed3454 100644
+--- a/src/components/lessons/TeacherRecapSheet.tsx
++++ b/src/components/lessons/TeacherRecapSheet.tsx
+@@ -1,13 +1,13 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/hooks/useEntities";
+-import { type HelpRequest, type ColorKey, type SubjectType } from "@/lib/db";
++import { type HelpRequest, type ColorKey, type SubjectType } from "@/lib/presentationQueries";
+ import { helpRequestsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Textarea } from "@/components/ui/textarea";
+ import { CheckCircle2, HelpCircle, MessageSquareQuote, ChevronRight, History as HistoryIcon } from "lucide-react";
+ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+ import { Link } from "react-router-dom";
+ import { toast } from "sonner";
+diff --git a/src/components/library/BpmCoupler.tsx b/src/components/library/BpmCoupler.tsx
+index 939e93a..7ffa238 100644
+--- a/src/components/library/BpmCoupler.tsx
++++ b/src/components/library/BpmCoupler.tsx
+@@ -1,11 +1,11 @@
+-import type { NoteVal } from "@/lib/db";
++import type { NoteVal } from "@/lib/presentationQueries";
+ import { cn } from "@/lib/utils";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { useI18n } from "@/lib/i18n";
+ 
+ const NOTE_OPTIONS: { val: NoteVal; glyph: string; label: string }[] = [
+   { val: "half",      glyph: "𝅗𝅥", label: "½" },
+   { val: "quarter",   glyph: "♩",  label: "¼" },
+   { val: "eighth",    glyph: "♪",  label: "⅛" },
+   { val: "sixteenth", glyph: "𝅘𝅥𝅯", label: "1⁄16" },
+diff --git a/src/components/library/BpmSparkline.tsx b/src/components/library/BpmSparkline.tsx
+index 01be702..090316e 100644
+--- a/src/components/library/BpmSparkline.tsx
++++ b/src/components/library/BpmSparkline.tsx
+@@ -1,13 +1,13 @@
+-import { useLiveQuery } from "dexie-react-hooks";
++import { useLiveQuery } from "@/lib/subscriptions";
+ import { useTasksByItem } from "@/hooks/useEntities";
+-import { db } from "@/lib/db";
++import { db } from "@/lib/presentationQueries";
+ import { useMemo } from "react";
+ import { useI18n } from "@/lib/i18n";
+ 
+ interface Props {
+   itemId: number;
+   weeks?: number;
+ }
+ 
+ /**
+  * Compact sparkline showing best BPM reached per week for sessions linked to
+diff --git a/src/components/library/ItemAnalysisSheet.tsx b/src/components/library/ItemAnalysisSheet.tsx
+index f23afd2..919972b 100644
+--- a/src/components/library/ItemAnalysisSheet.tsx
++++ b/src/components/library/ItemAnalysisSheet.tsx
+@@ -1,14 +1,14 @@
+ import { useMemo } from "react";
+ import { useTechniques } from "@/hooks/useEntities";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer, type Lang } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer, type Lang } from "@/lib/presentationQueries";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { Activity } from "lucide-react";
+ 
+ interface Props {
+   open: boolean;
+   onOpenChange: (o: boolean) => void;
+   item: LibraryItem;
+ }
+diff --git a/src/components/library/ItemHelpSheet.tsx b/src/components/library/ItemHelpSheet.tsx
+index 55e046f..3b1771f 100644
+--- a/src/components/library/ItemHelpSheet.tsx
++++ b/src/components/library/ItemHelpSheet.tsx
+@@ -1,13 +1,13 @@
+ import { useEffect, useState } from "react";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db } from "@/lib/db"; // db used for useLiveQuery reads only
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+ import { helpRequestsService } from "@/lib/services";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+ import { Button } from "@/components/ui/button";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Input } from "@/components/ui/input";
+ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+ import { HelpCircle, MessageSquareQuote, Plus, X, CheckCircle2 } from "lucide-react";
+ import { toast } from "sonner";
+ import { EmptyState } from "@/components/shared/EmptyState";
+ import { useI18n } from "@/lib/i18n";
+diff --git a/src/components/library/LibraryItemKindFields.tsx b/src/components/library/LibraryItemKindFields.tsx
+index 831be93..a064ce5 100644
+--- a/src/components/library/LibraryItemKindFields.tsx
++++ b/src/components/library/LibraryItemKindFields.tsx
+@@ -1,20 +1,20 @@
+ /** Kind-specific form fields for library items, extracted from NewLibraryItemSheet
+  *  to keep the parent sheet focused on layout & save orchestration. */
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { BpmCoupler } from "./BpmCoupler";
+ import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
+ import { type MasteryState } from "./MasterySliders";
+ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+ import { cn } from "@/lib/utils";
+-import type { LibraryKind, NoteVal } from "@/lib/db";
++import type { LibraryKind, NoteVal } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ 
+ interface Props {
+   kind: LibraryKind;
+   targetBpm?: number; setTargetBpm: (v?: number) => void;
+   startBpm?: number; setStartBpm: (v?: number) => void;
+   noteVal?: NoteVal; setNoteVal: (v?: NoteVal) => void;
+   techniqueIds: number[]; setTechniqueIds: (v: number[]) => void;
+   segments: DraftSegment[]; setSegments: (v: DraftSegment[]) => void;
+   totalExercises?: number; setTotalExercises: (v?: number) => void;
+diff --git a/src/components/library/MasterySliders.tsx b/src/components/library/MasterySliders.tsx
+index 2ce202a..e89c35d 100644
+--- a/src/components/library/MasterySliders.tsx
++++ b/src/components/library/MasterySliders.tsx
+@@ -1,12 +1,12 @@
+ import { useI18n } from "@/lib/i18n";
+-import { THEORY_LAYERS } from "@/lib/db";
++import { THEORY_LAYERS } from "@/lib/presentationQueries";
+ 
+ export interface MasteryState {
+   conceptual: number;
+   analytical: number;
+   aural: number;
+   compositional: number;
+   reading: number;
+ }
+ 
+ interface Props {
+diff --git a/src/components/library/MasterySparkline.tsx b/src/components/library/MasterySparkline.tsx
+index 295c7f5..65f6f98 100644
+--- a/src/components/library/MasterySparkline.tsx
++++ b/src/components/library/MasterySparkline.tsx
+@@ -1,12 +1,12 @@
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type TheoryLayer } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type TheoryLayer } from "@/lib/presentationQueries";
+ import { useMemo } from "react";
+ 
+ interface Props {
+   itemId: number;
+   layer: TheoryLayer;
+   weeks?: number;
+ }
+ 
+ /**
+  * Compact sparkline showing score for a single theory mastery dimension
+diff --git a/src/components/library/NewLibraryItemSheet.tsx b/src/components/library/NewLibraryItemSheet.tsx
+index 348ed35..6e4fed7 100644
+--- a/src/components/library/NewLibraryItemSheet.tsx
++++ b/src/components/library/NewLibraryItemSheet.tsx
+@@ -1,14 +1,14 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useSubjects, useTechniques } from "@/hooks/useEntities";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type LibraryKind, type LibraryItem } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type LibraryKind, type LibraryItem } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import {
+   Sheet,
+   SheetContent,
+   SheetHeader,
+   SheetTitle,
+   SheetDescription,
+   SheetFooter,
+ } from "@/components/ui/sheet";
+ import { Input } from "@/components/ui/input";
+diff --git a/src/components/library/SegmentsEditor.tsx b/src/components/library/SegmentsEditor.tsx
+index ba8f8ff..1b40b0e 100644
+--- a/src/components/library/SegmentsEditor.tsx
++++ b/src/components/library/SegmentsEditor.tsx
+@@ -1,13 +1,13 @@
+ import { useState } from "react";
+ import { Plus, X, ArrowUp, ArrowDown } from "lucide-react";
+-import type { NoteVal } from "@/lib/db";
++import type { NoteVal } from "@/lib/presentationQueries";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { BpmCoupler } from "./BpmCoupler";
+ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+ import { cn } from "@/lib/utils";
+ import { useI18n } from "@/lib/i18n";
+ 
+ export interface DraftSegment {
+   label: string;
+diff --git a/src/components/library/TeacherAnswersSheet.tsx b/src/components/library/TeacherAnswersSheet.tsx
+index 74c0509..4dd7971 100644
+--- a/src/components/library/TeacherAnswersSheet.tsx
++++ b/src/components/library/TeacherAnswersSheet.tsx
+@@ -1,12 +1,12 @@
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db } from "@/lib/presentationQueries";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+ import { MessageSquareQuote, BookOpen } from "lucide-react";
+ import { EmptyState } from "@/components/shared/EmptyState";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ 
+ interface Props {
+   open: boolean;
+   onOpenChange: (o: boolean) => void;
+   itemId: number;
+diff --git a/src/components/onboarding/Onboarding.tsx b/src/components/onboarding/Onboarding.tsx
+index 0d2c9cc..863e47e 100644
+--- a/src/components/onboarding/Onboarding.tsx
++++ b/src/components/onboarding/Onboarding.tsx
+@@ -1,15 +1,15 @@
+ import { useMemo, useState } from "react";
+ import { Piano, BookOpen, Check, X, Plus, Bell } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+-import { type Lang, type SubjectType } from "@/lib/db";
++import { type Lang, type SubjectType } from "@/lib/presentationQueries";
+ import { profileService } from "@/lib/services";
+ import { SUPPORTED_LANGS, useI18n } from "@/lib/i18n";
+ import { cn } from "@/lib/utils";
+ 
+ interface DraftSubject { name: string; type: SubjectType }
+ 
+ const INSTRUMENT_KEYS = ["piano", "guitar", "flute", "ensemble", "violin", "singing"] as const;
+ const THEORY_KEYS = ["harmony", "earTraining", "solfeggio", "history"] as const;
+ 
+ export default function Onboarding({ onDone }: { onDone: () => void }) {
+diff --git a/src/components/profile/SubjectsEditor.tsx b/src/components/profile/SubjectsEditor.tsx
+index 0c0e3e5..d8306bd 100644
+--- a/src/components/profile/SubjectsEditor.tsx
++++ b/src/components/profile/SubjectsEditor.tsx
+@@ -1,13 +1,13 @@
+ import { useState } from "react";
+ import { useSubjects, useTechniques } from "@/hooks/useEntities";
+-import { THEORY_LAYERS, type Subject, type SubjectType, type ColorKey } from "@/lib/db";
++import { THEORY_LAYERS, type Subject, type SubjectType, type ColorKey } from "@/lib/presentationQueries";
+ import { subjectsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { COLOR_KEYS, getSubjectColor, subjectColorCss } from "@/lib/subjectColors";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import {
+   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+ } from "@/components/ui/alert-dialog";
+ import { Plus, X, Trash2, Piano, BookOpen, ChevronDown, Layers, Wrench, Pencil, Check } from "lucide-react";
+diff --git a/src/hooks/useEntities.test.tsx b/src/hooks/useEntities.test.tsx
+index dc1d98d..8f9e39e 100644
+--- a/src/hooks/useEntities.test.tsx
++++ b/src/hooks/useEntities.test.tsx
+@@ -1,14 +1,14 @@
+ import { describe, it, expect, beforeEach } from "vitest";
+ import { renderHook, waitFor } from "@testing-library/react";
+ import "fake-indexeddb/auto";
+-import { db } from "@/lib/db";
++import { db } from "@/lib/presentationQueries";
+ import {
+   useSubjects,
+   useLibrary,
+   useRepertoire,
+   useSegments,
+   useActiveTasks,
+   useTasksInRange,
+   useTechniques,
+   useProfile,
+   useCollectionItems,
+diff --git a/src/hooks/useEntities.ts b/src/hooks/useEntities.ts
+index 6145e0e..013759d 100644
+--- a/src/hooks/useEntities.ts
++++ b/src/hooks/useEntities.ts
+@@ -1,138 +1,2 @@
+-/** Centralized live-query hooks — the single read surface for the UI.
+- *  Components import these instead of calling `db.<table>` directly.
+- */
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type LibraryKind } from "@/lib/db";
+-import { notDeleted } from "@/lib/services/_shared";
+-
+-// ── Single-table reads (active rows only where soft-delete applies) ──────────
+-
+-export const useSubjects = () =>
+-  useLiveQuery(() => db.subjects.filter(notDeleted).toArray(), []);
+-
+-export const useTechniques = () =>
+-  useLiveQuery(() => db.techniques.filter(notDeleted).toArray(), []);
+-
+-export const useLibrary = () =>
+-  useLiveQuery(() => db.library.filter(notDeleted).toArray(), []);
+-
+-export const useRepertoire = () =>
+-  useLiveQuery(
+-    () => db.library.where("kind").equals("repertoire").filter(notDeleted).toArray(),
+-    []
+-  );
+-
+-export const useSegments = () =>
+-  useLiveQuery(() => db.segments.filter(notDeleted).toArray(), []);
+-
+-export const useActiveTasks = () =>
+-  useLiveQuery(() => db.tasks.filter(notDeleted).toArray(), []);
+-
+-export const useSessions = () =>
+-  useLiveQuery(() => db.sessions.toArray(), []);
+-
+-export const useProfile = () =>
+-  useLiveQuery(() => db.profile.get("me"), []);
+-
+-export const useStudyRoutines = () =>
+-  useLiveQuery(() => db.studyRoutines.filter(notDeleted).toArray(), []);
+-
+-export const useRecurrences = () =>
+-  useLiveQuery(() => db.recurrences.filter(notDeleted).toArray(), []);
+-
+-export const useLessons = () =>
+-  useLiveQuery(() => db.lessons.orderBy("date").reverse().toArray(), []);
+-
+-export const useAssignments = () =>
+-  useLiveQuery(() => db.assignments.toArray(), []);
+-
+-export const useHelpRequests = () =>
+-  useLiveQuery(() => db.helpRequests.toArray(), []);
+-
+-export const useCollections = (kind?: LibraryKind) =>
+-  useLiveQuery(
+-    () => db.collections.filter((c) => notDeleted(c) && (!kind || c.kind === kind)).toArray(),
+-    [kind]
+-  );
+-
+-/** All collection→item link rows (used by grouping/membership views). */
+-export const useCollectionLinks = () =>
+-  useLiveQuery(() => db.collectionItems.toArray(), []);
+-
+-// Historical views need every row (including soft-deleted) so sessions/lessons
+-// still render context for entities the user later deleted.
+-export const useAllTasks = () => useLiveQuery(() => db.tasks.toArray(), []);
+-export const useAllLibrary = () => useLiveQuery(() => db.library.toArray(), []);
+-export const useAllSegments = () => useLiveQuery(() => db.segments.toArray(), []);
+-export const useAllCollections = () => useLiveQuery(() => db.collections.toArray(), []);
+-
+-export const useCollectionItems = (collectionId?: number) =>
+-  useLiveQuery(
+-    () => collectionId ? db.collectionItems.where("collectionId").equals(collectionId).toArray() : Promise.resolve([]),
+-    [collectionId]
+-  );
+-
+-// ── Keyed single-row reads ───────────────────────────────────────────────────
+-
+-export const useItem = (id?: number) =>
+-  useLiveQuery(() => (id ? db.library.get(id) : Promise.resolve(undefined)), [id]);
+-
+-/** Returns undefined while loading, null when not found, else the task. */
+-export const useTask = (id?: number) =>
+-  useLiveQuery(() => (id ? db.tasks.get(id).then((t) => t ?? null) : Promise.resolve(null)), [id]);
+-
+-// ── Composed / scoped reads ──────────────────────────────────────────────────
+-
+-/**
+- * Live-query tasks whose `date` falls within [from, to] (inclusive).
+- * Uses the indexed `date` field to avoid a full-table scan; `deletedAt`
+- * is filtered in memory. Dates are expected as ISO `YYYY-MM-DD` strings.
+- */
+-export const useTasksInRange = (from?: string, to?: string) =>
+-  useLiveQuery(
+-    () => {
+-      if (!from || !to) return Promise.resolve([]);
+-      return db.tasks
+-        .where("date")
+-        .between(from, to, true, true)
+-        .filter(notDeleted)
+-        .toArray();
+-    },
+-    [from, to],
+-  );
+-
+-export const useTasksByDate = (date?: string) =>
+-  useLiveQuery(
+-    () => (date ? db.tasks.where("date").equals(date).filter(notDeleted).toArray() : Promise.resolve([])),
+-    [date],
+-  );
+-
+-export const useTasksByItem = (itemId?: number) =>
+-  useLiveQuery(
+-    () => (itemId ? db.tasks.where("itemId").equals(itemId).toArray() : Promise.resolve([])),
+-    [itemId],
+-  );
+-
+-export const useTasksBySubjectAndDate = (subjectId?: number, date?: string) =>
+-  useLiveQuery(
+-    () =>
+-      subjectId && date
+-        ? db.tasks.where("date").equals(date).filter((t) => notDeleted(t) && t.subjectId === subjectId).toArray()
+-        : Promise.resolve([]),
+-    [subjectId, date],
+-  );
+-
+-export const useRecurrencesBySubject = (subjectId?: number) =>
+-  useLiveQuery(
+-    () =>
+-      subjectId
+-        ? db.recurrences.where("subjectId").equals(subjectId).filter(notDeleted).toArray()
+-        : Promise.resolve([]),
+-    [subjectId],
+-  );
+-
+-export const useSegmentsByItem = (itemId?: number) =>
+-  useLiveQuery(
+-    () => (itemId ? db.segments.where("itemId").equals(itemId).filter(notDeleted).toArray() : Promise.resolve([])),
+-    [itemId],
+-  );
++/** @deprecated Import presentation adapters from @/presentation/hooks/useEntities. */
++export * from "@/presentation/hooks/useEntities";
+diff --git a/src/infrastructure/dexie/subscribe.ts b/src/infrastructure/dexie/subscribe.ts
+new file mode 100644
+index 0000000..216271f
+--- /dev/null
++++ b/src/infrastructure/dexie/subscribe.ts
+@@ -0,0 +1,6 @@
++import { useLiveQuery } from "dexie-react-hooks";
++
++/** Infrastructure-owned bridge between Dexie observability and React. */
++export function useDexieSubscription<T>(query: () => Promise<T>, dependencies: unknown[]): T | undefined {
++  return useLiveQuery(query, dependencies);
++}
+diff --git a/src/lib/presentationQueries.ts b/src/lib/presentationQueries.ts
+new file mode 100644
+index 0000000..61e392a
+--- /dev/null
++++ b/src/lib/presentationQueries.ts
+@@ -0,0 +1,16 @@
++/** Composition root for presentation read adapters. */
++import { db } from "@/infrastructure/dexie/db";
++export { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
++export type { ColorKey, Lang, LibraryKind, NoteVal, SegmentMetric, SessionQuality, Subject, SubjectType, TheoryLayer } from "@/domain/entities/common";
++export type { Collection, CollectionItem } from "@/domain/entities/collection";
++export type { Lesson, LessonFrequency, LessonRecurrence, LessonScheduleSlot } from "@/domain/entities/lesson";
++export type { LibraryItem, Segment } from "@/domain/entities/library";
++export type { Profile } from "@/domain/entities/profile";
++export type { Session } from "@/domain/entities/session";
++export type { Task, TaskLinkType, TaskRecurrence } from "@/domain/entities/task";
++export type { HelpRequest } from "@/domain/ports/helpRequest";
++export type { StudyPoolEntry, StudyGroup, StudyRoutine } from "@/domain/ports/studyRoutine";
++
++// Kept outside presentation so no page/component/hook reaches Dexie directly.
++export const query = db;
++export { query as db };
+diff --git a/src/lib/subscriptions.ts b/src/lib/subscriptions.ts
+new file mode 100644
+index 0000000..b6588b1
+--- /dev/null
++++ b/src/lib/subscriptions.ts
+@@ -0,0 +1,2 @@
++export { useDexieSubscription } from "@/infrastructure/dexie/subscribe";
++export { useDexieSubscription as useLiveQuery } from "@/infrastructure/dexie/subscribe";
+diff --git a/src/pages/Collections.tsx b/src/pages/Collections.tsx
+index fd6f6f5..8a877bf 100644
+--- a/src/pages/Collections.tsx
++++ b/src/pages/Collections.tsx
+@@ -1,14 +1,14 @@
+ import { useMemo, useState, useEffect } from "react";
+ import { useCollectionLinks, useCollections } from "@/hooks/useEntities";
+ import { useNavigate, useSearchParams } from "react-router-dom";
+-import { type Collection, type LibraryKind } from "@/lib/db";
++import { type Collection, type LibraryKind } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { LIBRARY_KINDS } from "@/lib/constants";
+ import { Button } from "@/components/ui/button";
+ import { Plus, Pencil, Trash2, ChevronLeft, FolderOpen, Music2 } from "lucide-react";
+ import { collectionsService, deleteWithUndo } from "@/lib/services";
+ import { EmptyState } from "@/components/shared/EmptyState";
+ import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet";
+ import { AssignPiecesSheet } from "@/components/collections/AssignPiecesSheet";
+ import { cn } from "@/lib/utils";
+ import { toast } from "sonner";
+diff --git a/src/pages/Diary.tsx b/src/pages/Diary.tsx
+index cb7fd94..16f2a93 100644
+--- a/src/pages/Diary.tsx
++++ b/src/pages/Diary.tsx
+@@ -1,14 +1,14 @@
+ import { useMemo, useState } from "react";
+ import { useSessions, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type Task, type Session, type Profile, type LessonRecurrence, type Subject } from "@/lib/presentationQueries";
+ import { tasksService, sessionsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { today, dayKey, formatDate, now } from "@/lib/date";
+ import { slotForDate } from "@/lib/recurrence";
+ import { computeStreakFromSessions } from "@/lib/domain/streak";
+ import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
+ import { subjectBorderStyle, subjectBorderStyleLight, subjectColorCss, COLOR_CLASSES, getSubjectColor } from "@/lib/subjectColors";
+ import {
+   AddIcon,
+   CompleteIcon,
+@@ -133,21 +133,21 @@ export default function Diary() {
+       db.tasks
+         .where("date")
+         .between(carryoverFrom, todayKey, true, false)
+         .filter((t) => !t.done && !t.skipped)
+         .toArray(),
+     [carryoverFrom, todayKey],
+   );
+ 
+   const [logTask, setLogTask] = useState<Task | null>(null);
+   const [logPrefill, setLogPrefill] = useState<
+-    { bpm?: number; noteVal?: import("@/lib/db").NoteVal; notes?: string } | undefined
++    { bpm?: number; noteVal?: import("@/lib/presentationQueries").NoteVal; notes?: string } | undefined
+   >();
+   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
+   const [detailSession, setDetailSession] = useState<Session | null>(null);
+   const [answersFor, setAnswersFor] = useState<{ itemId: number; title: string } | null>(null);
+   const answeredItemIds = useLiveQuery(
+     async () => {
+       const rs = await db.helpRequests.filter((r) => !!r.answer && !!r.itemId).toArray();
+       return new Set(rs.map((r) => r.itemId as number));
+     },
+     [],
+diff --git a/src/pages/EditStudyRoutinePage.tsx b/src/pages/EditStudyRoutinePage.tsx
+index 8c85d1c..731fb29 100644
+--- a/src/pages/EditStudyRoutinePage.tsx
++++ b/src/pages/EditStudyRoutinePage.tsx
+@@ -1,14 +1,14 @@
+ import { useEffect, useState } from "react";
+ import { useNavigate, useParams } from "react-router-dom";
+ import { ChevronLeft } from "lucide-react";
+-import { db, type StudyRoutine } from "@/lib/db";
++import { db, type StudyRoutine } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { StudyRoutineWizard } from "@/components/diary/StudyRoutineWizard";
+ 
+ export default function EditStudyRoutinePage() {
+   const { t } = useI18n();
+   const navigate = useNavigate();
+   const { id } = useParams();
+   const routineId = Number(id);
+   const [routine, setRoutine] = useState<StudyRoutine | null | undefined>(undefined);
+   const today = new Date().toISOString().slice(0, 10);
+diff --git a/src/pages/EditTaskPage.tsx b/src/pages/EditTaskPage.tsx
+index 48ea5a1..73b2b41 100644
+--- a/src/pages/EditTaskPage.tsx
++++ b/src/pages/EditTaskPage.tsx
+@@ -1,14 +1,14 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useSubjects, useTechniques, useTask } from "@/hooks/useEntities";
+ import { useNavigate, useParams } from "react-router-dom";
+-import { THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
++import { THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/presentationQueries";
+ import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+ import { tasksService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+ } from "@/components/ui/select";
+diff --git a/src/pages/History.tsx b/src/pages/History.tsx
+index 8f42d15..9b725f3 100644
+--- a/src/pages/History.tsx
++++ b/src/pages/History.tsx
+@@ -1,15 +1,15 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSubjects } from "@/hooks/useEntities";
+ import { useSearchParams } from "react-router-dom";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/presentationQueries";
+ import { subjectColorCss } from "@/lib/subjectColors";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { NOTE_GLYPH } from "@/lib/constants";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
+ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+diff --git a/src/pages/Index.tsx b/src/pages/Index.tsx
+index 4014406..2299a4c 100644
+--- a/src/pages/Index.tsx
++++ b/src/pages/Index.tsx
+@@ -1,13 +1,13 @@
+ import { lazy, Suspense } from "react";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db } from "@/lib/db"; // db used for useLiveQuery reads only
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+ import { profileService } from "@/lib/services";
+ import { I18nProvider } from "@/lib/I18nProvider";
+ import Onboarding from "@/components/onboarding/Onboarding";
+ import IntroSlides from "@/components/onboarding/IntroSlides";
+ import AppShell from "@/components/AppShell";
+ import { Routes, Route } from "react-router-dom";
+ 
+ // Code splitting routes for better initial load performance
+ const Diary = lazy(() => import("./Diary"));
+ const Library = lazy(() => import("./Library"));
+diff --git a/src/pages/ItemAnalysisPage.tsx b/src/pages/ItemAnalysisPage.tsx
+index 1e89472..86bf0f9 100644
+--- a/src/pages/ItemAnalysisPage.tsx
++++ b/src/pages/ItemAnalysisPage.tsx
+@@ -1,21 +1,21 @@
+ import { useMemo } from "react";
+ import { useTechniques, useItem, useTasksByItem } from "@/hooks/useEntities";
+ import { useParams, useNavigate } from "react-router-dom";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, THEORY_LAYERS, type Session } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, THEORY_LAYERS, type Session } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
+ import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
+ import { weeklySessionCounts } from "@/lib/domain/analytics";
+ import { formatDate, getDefaultWeekStartsOn } from "@/lib/date";
+-import type { Lang } from "@/lib/db";
++import type { Lang } from "@/lib/presentationQueries";
+ import { Button } from "@/components/ui/button";
+ 
+ 
+ const QUALITY_ORDER = ["hard", "improve", "well", "great"];
+ 
+ interface ChartPoint { x: number; y: number; label: string }
+ 
+ function formatDay(date: string, lang: Lang): string {
+   return formatDate(date, lang, "dayMonth");
+ }
+diff --git a/src/pages/Lessons.tsx b/src/pages/Lessons.tsx
+index 39e3cee..46e140f 100644
+--- a/src/pages/Lessons.tsx
++++ b/src/pages/Lessons.tsx
+@@ -1,16 +1,16 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useActiveTasks, useAssignments, useLessons, useRecurrences, useSubjects } from "@/hooks/useEntities";
+ import { subjectBorderStyle } from "@/lib/subjectColors";
+ import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, type Lesson, type LessonRecurrence } from "@/lib/db"; // db used for useLiveQuery reads only
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, type Lesson, type LessonRecurrence } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+ import { lessonsService } from "@/lib/services";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+ import { Button } from "@/components/ui/button";
+ import {
+   AlertDialog,
+   AlertDialogAction,
+   AlertDialogCancel,
+   AlertDialogContent,
+   AlertDialogDescription,
+diff --git a/src/pages/Library.tsx b/src/pages/Library.tsx
+index eaa3e0a..f9e087d 100644
+--- a/src/pages/Library.tsx
++++ b/src/pages/Library.tsx
+@@ -1,15 +1,15 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { Link, useNavigate } from "react-router-dom";
+ import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/presentationQueries";
+ import { useI18n } from "@/lib/i18n";
+ import { cn } from "@/lib/utils";
+ import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
+ import { today } from "@/lib/date";
+ import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
+ 
+ import { MasterySparkline } from "@/components/library/MasterySparkline";
+ import { type MasteryState } from "@/components/library/MasterySliders";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+diff --git a/src/pages/NewTaskPage.tsx b/src/pages/NewTaskPage.tsx
+index adb4905..3ae4c7a 100644
+--- a/src/pages/NewTaskPage.tsx
++++ b/src/pages/NewTaskPage.tsx
+@@ -1,15 +1,15 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useLessons, useRecurrences, useSubjects, useTechniques, useItem } from "@/hooks/useEntities";
+ import { useNavigate, useLocation } from "react-router-dom";
+-import { useLiveQuery } from "dexie-react-hooks";
+-import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/db";
++import { useLiveQuery } from "@/lib/subscriptions";
++import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/presentationQueries";
+ import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+ import { nextLessonDate } from "@/lib/domain/lessonSchedule";
+ import { useI18n } from "@/lib/i18n";
+ import { today } from "@/lib/date";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+diff --git a/src/pages/Tasks.tsx b/src/pages/Tasks.tsx
+index fe9e0a9..eafc18c 100644
+--- a/src/pages/Tasks.tsx
++++ b/src/pages/Tasks.tsx
+@@ -1,16 +1,16 @@
+ import { useMemo, useState } from "react";
+-import { type Task, type StudyRoutine } from "@/lib/db";
++import { type Task, type StudyRoutine } from "@/lib/presentationQueries";
+ import { useActiveTasks, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
+ import { useI18n } from "@/lib/i18n";
+ import { formatDate } from "@/lib/date";
+-import type { Lang } from "@/lib/db";
++import type { Lang } from "@/lib/presentationQueries";
+ import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/services";
+ import { NOTE_GLYPH } from "@/lib/constants";
+ import { subjectBorderStyle } from "@/lib/subjectColors";
+ 
+ 
+ import { Input } from "@/components/ui/input";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+ } from "@/components/ui/select";
+ import {
+diff --git a/src/presentation/hooks/useEntities.test.tsx b/src/presentation/hooks/useEntities.test.tsx
+new file mode 100644
+index 0000000..cb8b8b1
+--- /dev/null
++++ b/src/presentation/hooks/useEntities.test.tsx
+@@ -0,0 +1,20 @@
++import { beforeEach, describe, expect, it } from "vitest";
++import { renderHook, waitFor } from "@testing-library/react";
++import "fake-indexeddb/auto";
++import { db } from "@/lib/db";
++import { useTasksByItem } from "./useEntities";
++
++beforeEach(async () => {
++  await db.delete();
++  await db.open();
++});
++
++describe("presentation task query adapter", () => {
++  it("updates item DTOs after its subscription is notified", async () => {
++    const { result } = renderHook(() => useTasksByItem(7));
++    await waitFor(() => expect(result.current).toEqual([]));
++
++    await db.tasks.add({ subjectId: 1, itemId: 7, title: "Scales", date: "2026-07-20", done: false, createdAt: 1 });
++    await waitFor(() => expect(result.current?.map((task) => task.title)).toEqual(["Scales"]));
++  });
++});
+diff --git a/src/presentation/hooks/useEntities.ts b/src/presentation/hooks/useEntities.ts
+new file mode 100644
+index 0000000..b4fd7d3
+--- /dev/null
++++ b/src/presentation/hooks/useEntities.ts
+@@ -0,0 +1,33 @@
++/** Presentation read adapters. Dexie stays behind the infrastructure bridge. */
++import { useDexieSubscription as useLiveQuery } from "@/lib/subscriptions";
++import { query as db, type LibraryKind } from "@/lib/presentationQueries";
++import { notDeleted } from "@/lib/services/_shared";
++
++export const useSubjects = () => useLiveQuery(() => db.subjects.filter(notDeleted).toArray(), []);
++export const useTechniques = () => useLiveQuery(() => db.techniques.filter(notDeleted).toArray(), []);
++export const useLibrary = () => useLiveQuery(() => db.library.filter(notDeleted).toArray(), []);
++export const useRepertoire = () => useLiveQuery(() => db.library.where("kind").equals("repertoire").filter(notDeleted).toArray(), []);
++export const useSegments = () => useLiveQuery(() => db.segments.filter(notDeleted).toArray(), []);
++export const useActiveTasks = () => useLiveQuery(() => db.tasks.filter(notDeleted).toArray(), []);
++export const useSessions = () => useLiveQuery(() => db.sessions.toArray(), []);
++export const useProfile = () => useLiveQuery(() => db.profile.get("me"), []);
++export const useStudyRoutines = () => useLiveQuery(() => db.studyRoutines.filter(notDeleted).toArray(), []);
++export const useRecurrences = () => useLiveQuery(() => db.recurrences.filter(notDeleted).toArray(), []);
++export const useLessons = () => useLiveQuery(() => db.lessons.orderBy("date").reverse().toArray(), []);
++export const useAssignments = () => useLiveQuery(() => db.assignments.toArray(), []);
++export const useHelpRequests = () => useLiveQuery(() => db.helpRequests.toArray(), []);
++export const useCollections = (kind?: LibraryKind) => useLiveQuery(() => db.collections.filter((c) => notDeleted(c) && (!kind || c.kind === kind)).toArray(), [kind]);
++export const useCollectionLinks = () => useLiveQuery(() => db.collectionItems.toArray(), []);
++export const useAllTasks = () => useLiveQuery(() => db.tasks.toArray(), []);
++export const useAllLibrary = () => useLiveQuery(() => db.library.toArray(), []);
++export const useAllSegments = () => useLiveQuery(() => db.segments.toArray(), []);
++export const useAllCollections = () => useLiveQuery(() => db.collections.toArray(), []);
++export const useCollectionItems = (collectionId?: number) => useLiveQuery(() => collectionId ? db.collectionItems.where("collectionId").equals(collectionId).toArray() : Promise.resolve([]), [collectionId]);
++export const useItem = (id?: number) => useLiveQuery(() => id ? db.library.get(id) : Promise.resolve(undefined), [id]);
++export const useTask = (id?: number) => useLiveQuery(() => id ? db.tasks.get(id).then((task) => task ?? null) : Promise.resolve(null), [id]);
++export const useTasksInRange = (from?: string, to?: string) => useLiveQuery(() => !from || !to ? Promise.resolve([]) : db.tasks.where("date").between(from, to, true, true).filter(notDeleted).toArray(), [from, to]);
++export const useTasksByDate = (date?: string) => useLiveQuery(() => date ? db.tasks.where("date").equals(date).filter(notDeleted).toArray() : Promise.resolve([]), [date]);
++export const useTasksByItem = (itemId?: number) => useLiveQuery(() => itemId ? db.tasks.where("itemId").equals(itemId).toArray() : Promise.resolve([]), [itemId]);
++export const useTasksBySubjectAndDate = (subjectId?: number, date?: string) => useLiveQuery(() => subjectId && date ? db.tasks.where("date").equals(date).filter((task) => notDeleted(task) && task.subjectId === subjectId).toArray() : Promise.resolve([]), [subjectId, date]);
++export const useRecurrencesBySubject = (subjectId?: number) => useLiveQuery(() => subjectId ? db.recurrences.where("subjectId").equals(subjectId).filter(notDeleted).toArray() : Promise.resolve([]), [subjectId]);
++export const useSegmentsByItem = (itemId?: number) => useLiveQuery(() => itemId ? db.segments.where("itemId").equals(itemId).filter(notDeleted).toArray() : Promise.resolve([]), [itemId]);
+diff --git a/src/test/architecture/import-boundaries.test.ts b/src/test/architecture/import-boundaries.test.ts
+index bc9a08c..4a246c2 100644
+--- a/src/test/architecture/import-boundaries.test.ts
++++ b/src/test/architecture/import-boundaries.test.ts
+@@ -1,65 +1,17 @@
+ import { readdir, readFile } from "node:fs/promises";
+ import { join, relative } from "node:path";
+ import { describe, expect, it } from "vitest";
+ 
+ const sourceRoot = join(process.cwd(), "src");
+ const presentationRoots = ["pages", "components", "hooks"];
+-// Temporary migration baseline. Every entry must be removed with its vertical slice.
+-const temporaryBaseline: Record<string, string[]> = {
+-  "src/components/AppShell.tsx": ["@/lib/db"],
+-  "src/components/collections/AssignPiecesSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/collections/NewCollectionSheet.tsx": ["@/lib/db"],
+-  "src/components/diary/BpmSuggestion.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/EditTaskSheet.tsx": ["@/lib/db"],
+-  "src/components/diary/LastSessionStrip.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/LinkTargetFields.tsx": ["@/lib/db", "@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/PracticeMode.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/SegmentHistorySheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/SessionDetailSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/SessionFAB.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/SessionFields.tsx": ["@/lib/db"],
+-  "src/components/diary/SessionLogSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/StatsDashboard.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/StudyRoutineWizard.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/TaskCalendarView.tsx": ["@/lib/db"],
+-  "src/components/diary/TaskWizard.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/diary/recurrence-state.ts": ["@/lib/db"],
+-  "src/components/lessons/AddHomeworkSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/lessons/LessonLogSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/lessons/RecurrenceSheet.tsx": ["@/lib/db"],
+-  "src/components/lessons/TeacherRecapSheet.tsx": ["@/lib/db"],
+-  "src/components/library/BpmCoupler.tsx": ["@/lib/db"],
+-  "src/components/library/BpmSparkline.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/library/ItemAnalysisSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/library/ItemHelpSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/library/LibraryItemKindFields.tsx": ["@/lib/db"],
+-  "src/components/library/MasterySliders.tsx": ["@/lib/db"],
+-  "src/components/library/MasterySparkline.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/library/NewLibraryItemSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/library/SegmentsEditor.tsx": ["@/lib/db"],
+-  "src/components/library/TeacherAnswersSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/components/onboarding/Onboarding.tsx": ["@/lib/db"],
+-  "src/components/profile/SubjectsEditor.tsx": ["@/lib/db"],
+-  "src/hooks/useEntities.ts": ["@/lib/db", "dexie-react-hooks"],
+-  "src/pages/Collections.tsx": ["@/lib/db"],
+-  "src/pages/Diary.tsx": ["@/lib/db", "@/lib/db", "dexie-react-hooks"],
+-  "src/pages/EditStudyRoutinePage.tsx": ["@/lib/db"],
+-  "src/pages/EditTaskPage.tsx": ["@/lib/db"],
+-  "src/pages/History.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/pages/Index.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/pages/ItemAnalysisPage.tsx": ["@/lib/db", "@/lib/db", "dexie-react-hooks"],
+-  "src/pages/Lessons.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/pages/Library.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/pages/NewTaskPage.tsx": ["@/lib/db", "dexie-react-hooks"],
+-  "src/pages/Tasks.tsx": ["@/lib/db", "@/lib/db"],
+-};
++const temporaryBaseline: Record<string, string[]> = {};
+ 
+ const restrictedImports = [
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/lib\/db(?:\/|["'])/g, label: "@/lib/db" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie(?:["']|\/)/g, label: "dexie" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie-react-hooks(?:["']|\/)/g, label: "dexie-react-hooks" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/infrastructure(?:\/|["'])/g, label: "@/infrastructure/" },
+   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@capacitor\/filesystem(?:["']|\/)/g, label: "@capacitor/filesystem" },
+ ];
+ 
+ const restrictedBrowserApis = [

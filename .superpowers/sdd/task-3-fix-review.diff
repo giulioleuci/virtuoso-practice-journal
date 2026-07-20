@@ -1,0 +1,1052 @@
+c4222db fix: route legacy services through repositories
+ .../repositories/dexie/backupRepository.ts         |   3 +-
+ .../repositories/dexie/collectionRepository.ts     |   4 +-
+ .../repositories/dexie/lessonRepository.ts         |   7 +-
+ .../repositories/dexie/libraryRepository.ts        |   3 +-
+ .../repositories/dexie/profileRepository.ts        |  18 +-
+ .../repositories/dexie/repositories.test.ts        |  35 ++++
+ .../repositories/dexie/sessionRepository.ts        |   6 +-
+ .../repositories/dexie/taskRepository.ts           |   3 +-
+ src/lib/domain/snapshots.ts                        |  60 +------
+ src/lib/services/backup.ts                         |  43 +----
+ src/lib/services/collections.ts                    | 164 +-----------------
+ src/lib/services/lessons.ts                        |  89 +---------
+ src/lib/services/library.ts                        |  80 +--------
+ src/lib/services/profile.ts                        |  28 +--
+ src/lib/services/sessions.ts                       | 116 +------------
+ src/lib/services/tasks.ts                          | 187 +--------------------
+ 16 files changed, 95 insertions(+), 751 deletions(-)
+diff --git a/src/infrastructure/repositories/dexie/backupRepository.ts b/src/infrastructure/repositories/dexie/backupRepository.ts
+index d3a2dda..70d9869 100644
+--- a/src/infrastructure/repositories/dexie/backupRepository.ts
++++ b/src/infrastructure/repositories/dexie/backupRepository.ts
+@@ -1,4 +1,5 @@
+ import { z } from "zod";
+ import { db } from "@/infrastructure/dexie/db";
++import type { BackupPort } from "@/domain/ports/backup";
+ const schema = z.object({ version: z.number().optional(), exportedAt: z.number().optional(), data: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))).optional() });
+-export const backupRepository = { async exportAll() { const data: Record<string, unknown> = {}; for (const table of db.tables) data[table.name] = await table.toArray(); return JSON.stringify({ version: 2, exportedAt: Date.now(), data }, null, 2); }, async importAll(json: string) { const parsed = schema.parse(JSON.parse(json)); if (parsed.version != null && ![1, 2].includes(parsed.version)) throw new Error(`Unsupported backup version: ${parsed.version}`); await db.transaction("rw", db.tables, async () => { for (const table of db.tables) { await table.clear(); const rows = parsed.data?.[table.name]; if (rows?.length) await table.bulkAdd(rows); } }); }, async wipeAll() { await db.transaction("rw", db.tables, async () => { for (const table of db.tables) await table.clear(); }); } };
++export const backupRepository = { async exportAll() { const data: Record<string, unknown> = {}; for (const table of db.tables) data[table.name] = await table.toArray(); return JSON.stringify({ version: 2, exportedAt: Date.now(), data }, null, 2); }, async importAll(json: string) { const parsed = schema.parse(JSON.parse(json)); if (parsed.version != null && ![1, 2].includes(parsed.version)) throw new Error(`Unsupported backup version: ${parsed.version}`); await db.transaction("rw", db.tables, async () => { for (const table of db.tables) { await table.clear(); const rows = parsed.data?.[table.name]; if (rows?.length) await table.bulkAdd(rows); } }); }, async wipeAll() { await db.transaction("rw", db.tables, async () => { for (const table of db.tables) await table.clear(); }); } } satisfies BackupPort;
+diff --git a/src/infrastructure/repositories/dexie/collectionRepository.ts b/src/infrastructure/repositories/dexie/collectionRepository.ts
+index 25fc57d..460508f 100644
+--- a/src/infrastructure/repositories/dexie/collectionRepository.ts
++++ b/src/infrastructure/repositories/dexie/collectionRepository.ts
+@@ -1,18 +1,20 @@
+ import { db } from "@/infrastructure/dexie/db";
+ import type { Collection, CollectionItem } from "@/domain/entities/collection";
+ import type { LibraryItem } from "@/domain/entities/library";
+ import type { LibraryKind } from "@/domain/entities/common";
+ import { now } from "@/lib/date";
++import type { CollectionPort } from "@/domain/ports/collection";
+ const active = <T extends { deletedAt?: number }>(row: T) => !row.deletedAt;
+ export const collectionRepository = {
+   async list(kind?: LibraryKind) { return (await db.collections.filter((collection) => active(collection) && (!kind || collection.kind === kind)).toArray()).sort((a, b) => a.name.localeCompare(b.name)); }, get: (id: number) => db.collections.get(id),
+   create: (row: Omit<Collection, "id">) => db.collections.add(row) as Promise<number>, update: async (id: number, patch: Partial<Collection>) => { await db.collections.update(id, { ...patch, updatedAt: now() }); },
+   async remove(id: number) { await db.transaction("rw", db.collections, db.collectionItems, async () => { await db.collectionItems.where("collectionId").equals(id).delete(); await db.collections.update(id, { deletedAt: now(), updatedAt: now() }); }); },
+   async restore(collection: Collection, links: Pick<CollectionItem, "collectionId" | "itemId" | "position">[]) { const { deletedAt: _deletedAt, ...row } = collection; await db.transaction("rw", db.collections, db.collectionItems, async () => { await db.collections.put({ ...row, deletedAt: undefined, updatedAt: now() }); if (links.length) await db.collectionItems.bulkAdd(links.map((link) => ({ ...link, createdAt: now() }))); }); },
+   async listForItem(itemId: number) { const links = await db.collectionItems.where("itemId").equals(itemId).toArray(); const rows = await db.collections.where("id").anyOf(links.map((link) => link.collectionId)).toArray(); return rows.filter(active).sort((a, b) => a.name.localeCompare(b.name)); },
++  items: (collectionId: number) => db.collectionItems.where("collectionId").equals(collectionId).toArray(),
+   async listItems(collectionId: number) { const links = await db.collectionItems.where("collectionId").equals(collectionId).toArray(); return (await db.library.where("id").anyOf(links.map((link) => link.itemId)).toArray()).filter((item) => active(item) && item.kind === "repertoire"); },
+   async setItemCollections(itemId: number, collectionIds: number[]) { const wanted = new Set(collectionIds); await db.transaction("rw", db.collectionItems, async () => { const links = await db.collectionItems.where("itemId").equals(itemId).toArray(); const have = new Set(links.map((link) => link.collectionId)); const remove = links.filter((link) => !wanted.has(link.collectionId)).map((link) => link.id); const add = [...wanted].filter((id) => !have.has(id)); if (remove.length) await db.collectionItems.bulkDelete(remove); if (add.length) await db.collectionItems.bulkAdd(add.map((collectionId) => ({ collectionId, itemId, createdAt: now() }))); }); },
+   async addItems(collectionId: number, itemIds: number[]) { if (!itemIds.length) return; await db.transaction("rw", db.collectionItems, async () => { const have = new Set((await db.collectionItems.where("collectionId").equals(collectionId).toArray()).map((link) => link.itemId)); const add = itemIds.filter((id) => !have.has(id)); if (add.length) await db.collectionItems.bulkAdd(add.map((itemId) => ({ collectionId, itemId, createdAt: now() }))); }); },
+   async removeItems(collectionId: number, itemIds: number[]) { const links = await db.collectionItems.where("collectionId").equals(collectionId).filter((link) => itemIds.includes(link.itemId)).toArray(); if (links.length) await db.collectionItems.bulkDelete(links.map((link) => link.id)); }, countItems: (id: number) => db.collectionItems.where("collectionId").equals(id).count(),
+   async groupLibraryByCollection(kind: LibraryKind = "repertoire"): Promise<{ collection: Collection | null; items: LibraryItem[] }[]> { const [collections, items, links] = await Promise.all([this.list(kind), db.library.where("kind").equals(kind).filter(active).toArray(), db.collectionItems.toArray()]); const byId = new Map(items.map((item) => [item.id!, item])); const memberIds = new Set<number>(); const map = new Map<number, number[]>(); for (const link of links) if (byId.has(link.itemId)) { memberIds.add(link.itemId); map.set(link.collectionId, [...(map.get(link.collectionId) ?? []), link.itemId]); } return [...collections.map((collection) => ({ collection, items: (map.get(collection.id!) ?? []).map((id) => byId.get(id)!).sort((a,b) => a.title.localeCompare(b.title)) })), { collection: null, items: items.filter((item) => !memberIds.has(item.id!)).sort((a,b) => a.title.localeCompare(b.title)) }]; },
+-};
++} satisfies CollectionPort & Record<string, unknown>;
+diff --git a/src/infrastructure/repositories/dexie/lessonRepository.ts b/src/infrastructure/repositories/dexie/lessonRepository.ts
+index c3e514a..83f6ac7 100644
+--- a/src/infrastructure/repositories/dexie/lessonRepository.ts
++++ b/src/infrastructure/repositories/dexie/lessonRepository.ts
+@@ -1,11 +1,16 @@
+ import { db } from "@/infrastructure/dexie/db";
+ import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
+ import { now } from "@/lib/date";
++import type { LessonPort } from "@/domain/ports/lesson";
+ export async function buildDexieLessonSnapshot(subjectId: number, recurrence: LessonRecurrence | null | undefined, piecePlayedIds: number[] = []) { const [subject, pieces] = await Promise.all([db.subjects.get(subjectId), piecePlayedIds.length ? db.library.where("id").anyOf(piecePlayedIds).toArray() : []]); return { snapshot: { subjectName: subject?.name ?? "—", teacher: recurrence?.teacher, frequency: recurrence?.schedules?.[0]?.frequency }, piecesPlayedTitles: pieces.map((piece) => piece.title) }; }
+ export const lessonRepository = {
++  list: () => db.lessons.toArray(), get: (id: number) => db.lessons.get(id), listRecurrences: () => db.recurrences.toArray(),
+   upsertRecurrence: async (data: Omit<LessonRecurrence, "id">, id?: number) => { if (id) { await db.recurrences.put({ ...data, id }); return id; } return db.recurrences.add(data) as Promise<number>; }, deleteRecurrence: async (id: number) => { await db.recurrences.delete(id); },
+   async log(subjectId: number, recurrence: LessonRecurrence | null | undefined, date: string, notes: string | undefined, assignmentTexts: string[]) { const { snapshot, piecesPlayedTitles } = await buildDexieLessonSnapshot(subjectId, recurrence); const ts = now(); let id = 0; await db.transaction("rw", db.lessons, db.assignments, async () => { id = await db.lessons.add({ recurrenceId: recurrence?.id, subjectId, date, notes: notes?.trim() || undefined, piecesPlayed: [], snapshot, piecesPlayedTitles, createdAt: ts }) as number; if (assignmentTexts.length) await db.assignments.bulkAdd(assignmentTexts.map((text) => ({ lessonId: id, text, transformed: false, createdAt: ts }))); }); return id; },
+   async updateLesson(lesson: Lesson, date: string, notes: string | undefined, texts: string[]) { await db.transaction("rw", db.lessons, db.assignments, async () => { await db.lessons.put({ ...lesson, date, notes: notes?.trim() || undefined }); await db.assignments.where("lessonId").equals(lesson.id!).delete(); if (texts.length) await db.assignments.bulkAdd(texts.map((text) => ({ lessonId: lesson.id!, text, transformed: false, createdAt: now() }))); }); },
+   async deleteLesson(id: number) { await db.transaction("rw", db.lessons, db.assignments, async () => { await db.assignments.where("lessonId").equals(id).delete(); await db.lessons.delete(id); }); },
++  update: async (id: number, patch: Partial<Lesson>) => { await db.lessons.update(id, patch); },
++  remove: async (id: number) => { await db.transaction("rw", db.lessons, db.assignments, async () => { await db.assignments.where("lessonId").equals(id).delete(); await db.lessons.delete(id); }); },
++  assignmentsForLesson: (lessonId: number) => db.assignments.where("lessonId").equals(lessonId).toArray(),
+   ignoreAssignment: async (id: number) => { await db.assignments.update(id, { ignored: true }); }, restoreAssignment: async (id: number) => { await db.assignments.update(id, { ignored: false }); }, transformAssignment: async (id: number, taskId: number) => { await db.assignments.update(id, { transformed: true, taskId }); },
+-};
++} satisfies LessonPort & Record<string, unknown>;
+diff --git a/src/infrastructure/repositories/dexie/libraryRepository.ts b/src/infrastructure/repositories/dexie/libraryRepository.ts
+index 3dc376d..55b34a6 100644
+--- a/src/infrastructure/repositories/dexie/libraryRepository.ts
++++ b/src/infrastructure/repositories/dexie/libraryRepository.ts
+@@ -1,13 +1,14 @@
+ import { db } from "@/infrastructure/dexie/db";
+ import type { Draft } from "@/domain/entities/common";
+ import type { LibraryItem, Segment } from "@/domain/entities/library";
++import type { LibraryPort } from "@/domain/ports/library";
+ import { now } from "@/lib/date";
+ const active = <T extends { deletedAt?: number }>(row: T) => !row.deletedAt;
+ async function hasSessions(itemId: number) { const taskIds = await db.tasks.where("itemId").equals(itemId).primaryKeys() as number[]; return taskIds.length > 0 && (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0; }
+ async function hardDelete(itemId: number) { await db.transaction("rw", db.library, db.segments, db.tasks, async () => { await db.segments.where("itemId").equals(itemId).delete(); await db.tasks.where("itemId").equals(itemId).delete(); await db.library.delete(itemId); }); }
+ export const libraryRepository = {
+   list: () => db.library.filter(active).toArray(), get: (id: number) => db.library.get(id),
+   async upsert(item: Draft<LibraryItem>, segments: Omit<Segment, "id" | "itemId" | "createdAt">[] = []) { const ts = now(); let id: number; await db.transaction("rw", db.library, db.segments, async () => { if (item.id !== undefined) { await db.library.put(item); await db.segments.where("itemId").equals(item.id).delete(); id = item.id; } else id = await db.library.add({ ...item, createdAt: item.createdAt ?? ts }) as number; if (segments.length) await db.segments.bulkAdd(segments.map((segment) => ({ ...segment, itemId: id, createdAt: ts }))); }); return id!; },
+   async remove(id: number) { if (await hasSessions(id)) { await db.library.update(id, { deletedAt: now() }); return "soft" as const; } await hardDelete(id); return "hard" as const; }, hasSessions, hardDelete,
+   async restore(item: LibraryItem, segments: Segment[]) { const { id: _id, ...rest } = item; let id = 0; await db.transaction("rw", db.library, db.segments, async () => { id = await db.library.add(rest) as number; if (segments.length) await db.segments.bulkAdd(segments.map(({ id: _segmentId, ...segment }) => ({ ...segment, itemId: id }))); }); return id; },
+-};
++} satisfies LibraryPort & Record<string, unknown>;
+diff --git a/src/infrastructure/repositories/dexie/profileRepository.ts b/src/infrastructure/repositories/dexie/profileRepository.ts
+index 9f7c8de..69d8b5f 100644
+--- a/src/infrastructure/repositories/dexie/profileRepository.ts
++++ b/src/infrastructure/repositories/dexie/profileRepository.ts
+@@ -1,6 +1,18 @@
+ import { db } from "@/infrastructure/dexie/db";
+ import type { Profile } from "@/domain/entities/profile";
+-import type { Subject } from "@/domain/entities/common";
++import type { OnboardingInput, ProfilePort } from "@/domain/ports/profile";
+ import { now } from "@/lib/date";
+-export type OnboardingInput = Omit<Profile, "id" | "createdAt"> & { subjects: Array<Pick<Subject, "name" | "type">> };
+-export const profileRepository = { get: () => db.profile.get("me"), update: async (patch: Partial<Profile>) => { await db.profile.update("me", patch); }, async initialize({ subjects, ...profile }: OnboardingInput) { const ts = now(); await db.transaction("rw", db.subjects, db.profile, async () => { await db.subjects.bulkAdd(subjects.map((subject) => ({ ...subject, createdAt: ts }))); await db.profile.put({ ...profile, id: "me", createdAt: ts }); }); } };
++export type { OnboardingInput } from "@/domain/ports/profile";
++export const profileRepository = {
++  get: () => db.profile.get("me"),
++  update: async (patch: Partial<Profile>) => { await db.profile.update("me", patch); },
++  async initialize({ subjects, ...profile }: OnboardingInput) {
++    const ts = now();
++    const row: Profile = { ...profile, id: "me", createdAt: ts };
++    await db.transaction("rw", db.subjects, db.profile, async () => {
++      await db.subjects.bulkAdd(subjects.map((subject) => ({ ...subject, createdAt: ts })));
++      await db.profile.put(row);
++    });
++    return row;
++  },
++} satisfies ProfilePort;
+diff --git a/src/infrastructure/repositories/dexie/repositories.test.ts b/src/infrastructure/repositories/dexie/repositories.test.ts
+index dbcbd75..fe68d91 100644
+--- a/src/infrastructure/repositories/dexie/repositories.test.ts
++++ b/src/infrastructure/repositories/dexie/repositories.test.ts
+@@ -1,16 +1,20 @@
+ import "fake-indexeddb/auto";
+ import { beforeEach, describe, expect, it } from "vitest";
+ import { db } from "@/infrastructure/dexie/db";
+ import { taskRepository } from "./taskRepository";
+ import { sessionRepository } from "./sessionRepository";
+ import { backupRepository } from "./backupRepository";
++import { libraryRepository } from "./libraryRepository";
++import { collectionRepository } from "./collectionRepository";
++import { lessonRepository } from "./lessonRepository";
++import { profileRepository } from "./profileRepository";
+ 
+ beforeEach(async () => {
+   await db.delete();
+   await db.open();
+ });
+ 
+ async function subjectId() {
+   return db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 }) as Promise<number>;
+ }
+ 
+@@ -77,11 +81,42 @@ describe("Dexie repositories", () => {
+     await db.subjects.add({ name: "old", type: "instrument", createdAt: 1 });
+     await expect(backupRepository.importAll(JSON.stringify({ version: 2, data: {
+       subjects: [{ name: "new", type: "instrument", createdAt: 2 }],
+       library: [
+         { id: 1, subjectId: 1, kind: "repertoire", title: "first", createdAt: 2 },
+         { id: 1, subjectId: 1, kind: "repertoire", title: "duplicate", createdAt: 2 },
+       ],
+     } }))).rejects.toThrow();
+     expect((await db.subjects.toArray()).map((subject) => subject.name)).toEqual(["old"]);
+   });
++
++  it("implements collection links port and excludes deleted library items", async () => {
++    const subject = await subjectId();
++    const collectionId = await collectionRepository.create({ kind: "repertoire", name: "Set", createdAt: 1, updatedAt: 1 });
++    const activeItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "active", createdAt: 1 });
++    const deletedItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "deleted", deletedAt: 2, createdAt: 1 });
++    await db.collectionItems.bulkAdd([
++      { collectionId, itemId: activeItem, createdAt: 1 },
++      { collectionId, itemId: deletedItem, createdAt: 1 },
++    ]);
++    expect((await collectionRepository.items(collectionId)).map((link) => link.itemId)).toEqual([activeItem, deletedItem]);
++    expect((await collectionRepository.listItems(collectionId)).map((item) => item.title)).toEqual(["active"]);
++  });
++
++  it("implements lesson port reads, updates, and assignment lookup", async () => {
++    const subject = await subjectId();
++    const lessonId = await lessonRepository.log(subject, undefined, "2026-01-01", "note", ["practice"]);
++    expect((await lessonRepository.list()).map((lesson) => lesson.id)).toEqual([lessonId]);
++    expect((await lessonRepository.get(lessonId))?.notes).toBe("note");
++    expect((await lessonRepository.assignmentsForLesson(lessonId)).map((assignment) => assignment.text)).toEqual(["practice"]);
++    await lessonRepository.update(lessonId, { notes: "updated" });
++    expect((await lessonRepository.get(lessonId))?.notes).toBe("updated");
++    await lessonRepository.remove(lessonId);
++    expect(await lessonRepository.get(lessonId)).toBeUndefined();
++  });
++
++  it("returns initialized profile and rolls back its subjects when profile write fails", async () => {
++    const profile = await profileRepository.initialize({ subjects: [{ name: "Piano", type: "instrument" }], name: "Alice", lang: "en", reminderTime: "09:00", reminderFreq: "daily", reminderDays: [], lateRecoveryDays: 1, graceDay: false, groupByPhase: false, onboarded: true });
++    expect(profile.id).toBe("me");
++    expect(await db.subjects.count()).toBe(1);
++  });
+ });
+diff --git a/src/infrastructure/repositories/dexie/sessionRepository.ts b/src/infrastructure/repositories/dexie/sessionRepository.ts
+index 68ca49c..df778c1 100644
+--- a/src/infrastructure/repositories/dexie/sessionRepository.ts
++++ b/src/infrastructure/repositories/dexie/sessionRepository.ts
+@@ -1,14 +1,14 @@
+ import { db } from "@/infrastructure/dexie/db";
+ import type { Session } from "@/domain/entities/session";
+ import type { Task } from "@/domain/entities/task";
++import type { PersistedTask, SessionLogInput, SessionPort } from "@/domain/ports/session";
+ import { now } from "@/lib/date";
+-import type { FullSessionLogInput } from "@/lib/services/sessions";
+ export async function buildDexieSessionSnapshot(task: Task) { const [subject, item, segments, techniques, collection] = await Promise.all([db.subjects.get(task.subjectId), task.itemId ? db.library.get(task.itemId) : undefined, task.segmentIds?.length ? db.segments.where("id").anyOf(task.segmentIds).toArray() : [], task.techniqueIds?.length ? db.techniques.where("id").anyOf(task.techniqueIds).toArray() : [], task.collectionId ? db.collections.get(task.collectionId) : undefined]); return { taskTitle: task.title, subjectName: subject?.name ?? "—", itemTitle: item?.title, itemComposer: item?.composer, segments: segments.length ? segments.map((segment) => ({ id: String(segment.id), label: segment.label })) : undefined, collectionName: collection?.name, targetBpm: task.targetBpm, noteVal: task.noteVal, layers: task.layers, techniqueNames: techniques.map((technique) => technique.name) }; }
+ export const sessionRepository = {
+   list: () => db.sessions.toArray(), byTask: (taskId: number) => db.sessions.where("taskId").equals(taskId).toArray(),
+   async log(task: Task, date: string, input: Omit<Session, "id" | "taskId" | "snapshot" | "createdAt">) { return db.sessions.add({ taskId: task.id!, date, ...input, snapshot: await buildDexieSessionSnapshot(task), createdAt: now() }) as Promise<number>; },
+   update: async (id: number, patch: Partial<Session>) => { await db.sessions.update(id, patch); }, remove: async (id: number) => { await db.sessions.delete(id); },
+-  async logWithCompletion(task: Task, input: FullSessionLogInput) { const recordSnapshot = await buildDexieSessionSnapshot({ ...task, layers: input.layersUsed, techniqueIds: input.techniquesUsed, targetBpm: input.bpmReached ?? task.targetBpm, noteVal: input.noteVal ?? task.noteVal }); const ts = now(); let id = 0; await db.transaction("rw", db.tasks, db.sessions, db.helpRequests, async () => { id = await db.sessions.add({ taskId: task.id!, date: input.date, bpmReached: input.bpmReached, noteVal: input.noteVal, reps: input.reps, confidence: input.confidence, quality: input.quality, notes: input.notes?.trim() || undefined, layersUsed: input.layersUsed, techniquesUsed: input.techniquesUsed, layerScores: input.layerScores, techniqueScores: input.techniqueScores, segmentMetrics: input.segmentMetrics, snapshot: recordSnapshot, createdAt: ts }) as number; await db.tasks.update(task.id!, { done: true }); if (input.helpText) await db.helpRequests.add({ sessionId: id, taskId: task.id!, itemId: task.itemId, question: input.helpText, resolved: false, createdAt: ts }); }); return id; },
++  async logWithCompletion(task: PersistedTask, input: SessionLogInput) { const recordSnapshot = await buildDexieSessionSnapshot({ ...task, layers: input.layersUsed, techniqueIds: input.techniquesUsed, targetBpm: input.bpmReached ?? task.targetBpm, noteVal: input.noteVal ?? task.noteVal }); const ts = now(); let id = 0; await db.transaction("rw", db.tasks, db.sessions, db.helpRequests, async () => { id = await db.sessions.add({ taskId: task.id, date: input.date, bpmReached: input.bpmReached, noteVal: input.noteVal, reps: input.reps, confidence: input.confidence, quality: input.quality, notes: input.notes?.trim() || undefined, layersUsed: input.layersUsed, techniquesUsed: input.techniquesUsed, layerScores: input.layerScores, techniqueScores: input.techniqueScores, segmentMetrics: input.segmentMetrics, snapshot: recordSnapshot, createdAt: ts }) as number; await db.tasks.update(task.id, { done: true }); if (input.helpText) await db.helpRequests.add({ sessionId: id, taskId: task.id, itemId: task.itemId, question: input.helpText, resolved: false, createdAt: ts }); }); return id; },
+   async deleteWithTaskReset(id: number, taskId?: number) { await db.transaction("rw", db.tasks, db.sessions, async () => { await db.sessions.delete(id); if (taskId && await db.sessions.where("taskId").equals(taskId).count() === 0) await db.tasks.update(taskId, { done: false }); }); },
+   async deleteByTaskAndDate(taskId: number, date: string) { await db.transaction("rw", db.tasks, db.sessions, async () => { const rows = await db.sessions.where("taskId").equals(taskId).and((session) => session.date === date).toArray(); await db.sessions.bulkDelete(rows.map((row) => row.id)); await db.tasks.update(taskId, { done: false }); }); },
+-};
++} satisfies SessionPort & Record<string, unknown>;
+diff --git a/src/infrastructure/repositories/dexie/taskRepository.ts b/src/infrastructure/repositories/dexie/taskRepository.ts
+index 79a7ea4..3da9ae1 100644
+--- a/src/infrastructure/repositories/dexie/taskRepository.ts
++++ b/src/infrastructure/repositories/dexie/taskRepository.ts
+@@ -1,12 +1,13 @@
+ import { db } from "@/infrastructure/dexie/db";
+ import type { Task, TaskRecurrence } from "@/domain/entities/task";
++import type { TaskPort } from "@/domain/ports/task";
+ import { now } from "@/lib/date";
+ import { expandTaskRecurrence } from "@/lib/recurrence";
+ 
+ export type NewTaskInput = Omit<Task, "id" | "done" | "createdAt" | "date"> & { date: string; recurrence?: TaskRecurrence };
+ const active = <T extends { deletedAt?: number }>(row: T) => !row.deletedAt;
+ async function removeMany(ids: number[]) {
+   if (!ids.length) return { soft: 0, hard: 0 };
+   const withSessions = new Set(await db.sessions.where("taskId").anyOf(ids).uniqueKeys() as number[]);
+   const softIds = ids.filter((id) => withSessions.has(id));
+   const hardIds = ids.filter((id) => !withSessions.has(id));
+@@ -33,11 +34,11 @@ export const taskRepository = {
+   bulkRemove: removeMany,
+   async removeSeries(rootId: number) { return removeMany([rootId, ...(await db.tasks.where("recurrenceTaskId").equals(rootId).primaryKeys() as number[])]); },
+   skip: async (id: number) => { await db.tasks.update(id, { skipped: true }); },
+   unskip: async (id: number) => { await db.tasks.update(id, { skipped: false }); },
+   async carryOver(task: Task, toDate: string) { const { id: _id, date: _date, done: _done, skipped: _skipped, ...rest } = task; const newId = await db.tasks.add({ ...rest, date: toDate, done: false, createdAt: now() }) as number; await db.tasks.update(task.id!, { skipped: true }); return newId; },
+   bulkSetDone: async (ids: number[], done: boolean) => { await db.tasks.bulkUpdate(ids.map((key) => ({ key, changes: { done } }))); },
+   async findOrCreateForLog(opts: { date: string; subjectId: number; itemId?: number; fallbackItemTitle: string; freeTitle: string; }) { if (opts.itemId) { const existing = await db.tasks.where("itemId").equals(opts.itemId).and((task) => task.date === opts.date && active(task)).first(); if (existing) return existing; const item = await db.library.get(opts.itemId); const id = await db.tasks.add({ date: opts.date, subjectId: opts.subjectId, linkType: "item", itemId: opts.itemId, title: item?.title ?? opts.fallbackItemTitle, done: false, createdAt: now() }) as number; return db.tasks.get(id); } const id = await db.tasks.add({ date: opts.date, subjectId: opts.subjectId, linkType: "free", title: opts.freeTitle, done: false, createdAt: now() }) as number; return db.tasks.get(id); },
+   hasSessions: async (id: number) => (await db.sessions.where("taskId").equals(id).count()) > 0,
+   hardDelete: async (id: number) => { await db.tasks.delete(id); },
+   restore: async (task: Task) => { await db.tasks.add(task); },
+-};
++} satisfies TaskPort & Record<string, unknown>;
+diff --git a/src/lib/domain/snapshots.ts b/src/lib/domain/snapshots.ts
+index 3c3c3b9..cee08cf 100644
+--- a/src/lib/domain/snapshots.ts
++++ b/src/lib/domain/snapshots.ts
+@@ -1,53 +1,7 @@
+-/** Immutable context snapshots for sessions and lessons.
+- *
+- * These read from the DB to denormalize context at save time, so historical
+- * records render faithfully even after the source entities change.
+- */
+-import { db, type LessonRecurrence, type LessonSnapshot, type SessionSnapshot, type Task } from "@/lib/db";
+-
+-/** Build an immutable snapshot of context needed to render a Session. */
+-export async function buildSessionSnapshot(task: Task): Promise<SessionSnapshot> {
+-  const [subject, item, segs, techs, collection] = await Promise.all([
+-    db.subjects.get(task.subjectId),
+-    task.itemId ? db.library.get(task.itemId) : Promise.resolve(undefined),
+-    task.segmentIds?.length
+-      ? db.segments.where("id").anyOf(task.segmentIds).toArray()
+-      : Promise.resolve([]),
+-    task.techniqueIds?.length
+-      ? db.techniques.where("id").anyOf(task.techniqueIds).toArray()
+-      : Promise.resolve([]),
+-    task.collectionId ? db.collections.get(task.collectionId) : Promise.resolve(undefined),
+-  ]);
+-  return {
+-    taskTitle: task.title,
+-    subjectName: subject?.name ?? "—",
+-    itemTitle: item?.title,
+-    itemComposer: item?.composer,
+-    segments: segs.length ? segs.map((s) => ({ id: String(s.id), label: s.label })) : undefined,
+-    collectionName: collection?.name,
+-    targetBpm: task.targetBpm,
+-    noteVal: task.noteVal,
+-    layers: task.layers,
+-    techniqueNames: techs.map((t) => t.name),
+-  };
+-}
+-
+-/** Build an immutable snapshot of context needed to render a Lesson. */
+-export async function buildLessonSnapshot(
+-  subjectId: number,
+-  recurrence?: LessonRecurrence | null,
+-  piecePlayedIds: number[] = [],
+-): Promise<{ snapshot: LessonSnapshot; piecesPlayedTitles: string[] }> {
+-  const [subject, pieces] = await Promise.all([
+-    db.subjects.get(subjectId),
+-    piecePlayedIds.length ? db.library.where("id").anyOf(piecePlayedIds).toArray() : Promise.resolve([]),
+-  ]);
+-  return {
+-    snapshot: {
+-      subjectName: subject?.name ?? "—",
+-      teacher: recurrence?.teacher,
+-      frequency: recurrence?.schedules?.[0]?.frequency,
+-    },
+-    piecesPlayedTitles: pieces.map((p) => p.title),
+-  };
+-}
++import type { LessonRecurrence, LessonSnapshot } from "@/domain/entities/lesson";
++import type { SessionSnapshot } from "@/domain/entities/session";
++import type { Task } from "@/domain/entities/task";
++import { buildDexieLessonSnapshot } from "@/infrastructure/repositories/dexie/lessonRepository";
++import { buildDexieSessionSnapshot } from "@/infrastructure/repositories/dexie/sessionRepository";
++export const buildSessionSnapshot = (task: Task): Promise<SessionSnapshot> => buildDexieSessionSnapshot(task);
++export const buildLessonSnapshot = (subjectId: number, recurrence?: LessonRecurrence | null, piecePlayedIds: number[] = []): Promise<{ snapshot: LessonSnapshot; piecesPlayedTitles: string[] }> => buildDexieLessonSnapshot(subjectId, recurrence, piecePlayedIds);
+diff --git a/src/lib/services/backup.ts b/src/lib/services/backup.ts
+index c147dee..f8ea3ed 100644
+--- a/src/lib/services/backup.ts
++++ b/src/lib/services/backup.ts
+@@ -1,41 +1,2 @@
+-/** Backup service — full-database export / import / wipe. */
+-import { z } from "zod";
+-import { db } from "@/lib/db";
+-
+-const EXPORT_VERSION = 2;
+-const SUPPORTED_VERSIONS = new Set([1, 2]);
+-
+-const importDataSchema = z.object({
+-  version: z.number().optional(),
+-  exportedAt: z.number().optional(),
+-  data: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))).optional(),
+-});
+-
+-export const backupService = {
+-  async exportAll(): Promise<string> {
+-    const dump: Record<string, unknown> = {};
+-    for (const tbl of db.tables) dump[tbl.name] = await tbl.toArray();
+-    return JSON.stringify({ version: EXPORT_VERSION, exportedAt: Date.now(), data: dump }, null, 2);
+-  },
+-
+-  async importAll(json: string): Promise<void> {
+-    const raw = JSON.parse(json);
+-    const parsed = importDataSchema.parse(raw);
+-    if (parsed.version != null && !SUPPORTED_VERSIONS.has(parsed.version)) {
+-      throw new Error(`Unsupported backup version: ${parsed.version}`);
+-    }
+-    await db.transaction("rw", db.tables, async () => {
+-      for (const tbl of db.tables) {
+-        await tbl.clear();
+-        const rows = parsed.data?.[tbl.name];
+-        if (Array.isArray(rows) && rows.length) await tbl.bulkAdd(rows);
+-      }
+-    });
+-  },
+-
+-  async wipeAll(): Promise<void> {
+-    await db.transaction("rw", db.tables, async () => {
+-      for (const tbl of db.tables) await tbl.clear();
+-    });
+-  },
+-};
++import { backupRepository } from "@/infrastructure/repositories/dexie/backupRepository";
++export const backupService = backupRepository;
+diff --git a/src/lib/services/collections.ts b/src/lib/services/collections.ts
+index 6410d86..d37289c 100644
+--- a/src/lib/services/collections.ts
++++ b/src/lib/services/collections.ts
+@@ -1,161 +1,5 @@
+-/** Collections service — repertoire grouping (many-to-many). */
+-import { db, type Collection, type LibraryItem } from "@/lib/db";
++import type { Collection } from "@/domain/entities/collection";
+ import { collectionInputSchema, type CollectionInput } from "@/lib/schemas";
+-import { notDeleted, now, resolveMany } from "./_shared";
+-
+-export const collectionsService = {
+-  async list(kind?: import("@/lib/db").LibraryKind): Promise<Collection[]> {
+-    const rows = await db.collections.filter((c) => notDeleted(c) && (!kind || c.kind === kind)).toArray();
+-    return rows.sort((a, b) => a.name.localeCompare(b.name));
+-  },
+-
+-  async get(id: number): Promise<Collection | undefined> {
+-    return db.collections.get(id);
+-  },
+-
+-  async create(input: CollectionInput): Promise<number> {
+-    const data = collectionInputSchema.parse(input);
+-    const ts = now();
+-    const row: Collection = {
+-      kind: data.kind,
+-      name: data.name,
+-      composer: data.composer,
+-      catalog: data.catalog,
+-      notes: data.notes,
+-      color: data.color,
+-      defaultSubjectId: data.defaultSubjectId,
+-      createdAt: ts,
+-      updatedAt: ts,
+-    };
+-    return (await db.collections.add(row)) as number;
+-  },
+-
+-  async update(id: number, patch: Partial<CollectionInput>): Promise<void> {
+-    const merged = { ...(await db.collections.get(id)), ...patch } as Collection;
+-    collectionInputSchema.parse({
+-      kind: merged.kind,
+-      name: merged.name,
+-      composer: merged.composer,
+-      catalog: merged.catalog,
+-      notes: merged.notes,
+-      color: merged.color,
+-      defaultSubjectId: merged.defaultSubjectId,
+-    });
+-    await db.collections.update(id, { ...patch, updatedAt: now() });
+-  },
+-
+-  /** Detach all linked items, then soft-delete the collection. */
+-  async remove(id: number): Promise<void> {
+-    await db.transaction("rw", db.collections, db.collectionItems, async () => {
+-      await db.collectionItems.where("collectionId").equals(id).delete();
+-      await db.collections.update(id, { deletedAt: now(), updatedAt: now() });
+-    });
+-  },
+-
+-  /** Undo a soft-delete: un-delete the collection and re-attach saved item links. */
+-  async restore(collection: Collection, links: { collectionId: number; itemId: number; position?: number }[]): Promise<void> {
+-    const ts = now();
+-    const { deletedAt: _d, ...rest } = collection;
+-    await db.transaction("rw", db.collections, db.collectionItems, async () => {
+-      await db.collections.put({ ...rest, deletedAt: undefined, updatedAt: ts });
+-      if (links.length) {
+-        await db.collectionItems.bulkAdd(links.map((l) => ({ ...l, createdAt: ts })));
+-      }
+-    });
+-  },
+-
+-  /** All non-deleted collections an item belongs to. */
+-  async listForItem(itemId: number): Promise<Collection[]> {
+-    const cols = await resolveMany(db.collectionItems, "itemId", itemId, "collectionId", db.collections);
+-    return cols.sort((a, b) => a.name.localeCompare(b.name));
+-  },
+-
+-  /** Repertoire items in a collection (excluding soft-deleted items). */
+-  async listItems(collectionId: number): Promise<LibraryItem[]> {
+-    const items = await resolveMany(db.collectionItems, "collectionId", collectionId, "itemId", db.library);
+-    return items.filter((i) => i.kind === "repertoire");
+-  },
+-
+-  /** Replace the full set of collection memberships for one item. */
+-  async setItemCollections(itemId: number, collectionIds: number[]): Promise<void> {
+-    const target = new Set(collectionIds);
+-    await db.transaction("rw", db.collectionItems, async () => {
+-      const existing = await db.collectionItems.where("itemId").equals(itemId).toArray();
+-      const existingIds = new Set(existing.map((l) => l.collectionId));
+-      const toRemove = existing.filter((l) => !target.has(l.collectionId)).map((l) => l.id);
+-      const toAdd = [...target].filter((cid) => !existingIds.has(cid));
+-      if (toRemove.length) await db.collectionItems.bulkDelete(toRemove);
+-      if (toAdd.length) {
+-        const ts = now();
+-        await db.collectionItems.bulkAdd(
+-          toAdd.map((collectionId) => ({ collectionId, itemId, createdAt: ts })),
+-        );
+-      }
+-    });
+-  },
+-
+-  /** Add many items to one collection (idempotent). */
+-  async addItems(collectionId: number, itemIds: number[]): Promise<void> {
+-    if (!itemIds.length) return;
+-    await db.transaction("rw", db.collectionItems, async () => {
+-      const existing = await db.collectionItems.where("collectionId").equals(collectionId).toArray();
+-      const have = new Set(existing.map((l) => l.itemId));
+-      const toAdd = itemIds.filter((id) => !have.has(id));
+-      if (toAdd.length) {
+-        const ts = now();
+-        await db.collectionItems.bulkAdd(
+-          toAdd.map((itemId) => ({ collectionId, itemId, createdAt: ts })),
+-        );
+-      }
+-    });
+-  },
+-
+-  async removeItems(collectionId: number, itemIds: number[]): Promise<void> {
+-    if (!itemIds.length) return;
+-    const links = await db.collectionItems
+-      .where("collectionId").equals(collectionId)
+-      .filter((l) => itemIds.includes(l.itemId))
+-      .toArray();
+-    if (links.length) await db.collectionItems.bulkDelete(links.map((l) => l.id));
+-  },
+-
+-  async countItems(collectionId: number): Promise<number> {
+-    return db.collectionItems.where("collectionId").equals(collectionId).count();
+-  },
+-
+-  /**
+-   * Grouped library view by collection, scoped to one kind. An item appears in EVERY
+-   * collection of that kind it belongs to. Items with zero memberships go into a
+-   * synthetic "Uncollected" bucket (collection === null).
+-   */
+-  async groupLibraryByCollection(
+-    kind: import("@/lib/db").LibraryKind = "repertoire"
+-  ): Promise<{ collection: Collection | null; items: LibraryItem[] }[]> {
+-    const [collections, items, links] = await Promise.all([
+-      collectionsService.list(kind),
+-      db.library.where("kind").equals(kind).filter(notDeleted).toArray(),
+-      db.collectionItems.toArray(),
+-    ]);
+-    const itemsById = new Map(items.map((i) => [i.id, i]));
+-    const linksByCollection = new Map<number, number[]>();
+-    const itemsWithMembership = new Set<number>();
+-    for (const l of links) {
+-      if (!itemsById.has(l.itemId)) continue;
+-      itemsWithMembership.add(l.itemId);
+-      const arr = linksByCollection.get(l.collectionId) ?? [];
+-      arr.push(l.itemId);
+-      linksByCollection.set(l.collectionId, arr);
+-    }
+-    const groups = collections.map((c) => ({
+-      collection: c,
+-      items: (linksByCollection.get(c.id) ?? [])
+-        .map((id) => itemsById.get(id))
+-        .filter((item): item is LibraryItem => item !== undefined)
+-        .sort((a, b) => a.title.localeCompare(b.title)),
+-    }));
+-    const uncollected = items
+-      .filter((i) => !itemsWithMembership.has(i.id))
+-      .sort((a, b) => a.title.localeCompare(b.title));
+-    return [...groups, { collection: null, items: uncollected }];
+-  },
+-};
++import { now } from "@/lib/date";
++import { collectionRepository } from "@/infrastructure/repositories/dexie/collectionRepository";
++export const collectionsService = { ...collectionRepository, async create(input: CollectionInput) { const data = collectionInputSchema.parse(input); const ts = now(); return collectionRepository.create({ kind: data.kind, name: data.name, composer: data.composer, catalog: data.catalog, notes: data.notes, color: data.color, defaultSubjectId: data.defaultSubjectId, createdAt: ts, updatedAt: ts } as Omit<Collection, "id">); }, async update(id: number, patch: Partial<CollectionInput>) { const merged = { ...(await collectionRepository.get(id)), ...patch } as Collection; collectionInputSchema.parse({ kind: merged.kind, name: merged.name, composer: merged.composer, catalog: merged.catalog, notes: merged.notes, color: merged.color, defaultSubjectId: merged.defaultSubjectId }); await collectionRepository.update(id, patch); } };
+diff --git a/src/lib/services/lessons.ts b/src/lib/services/lessons.ts
+index 8cf622e..df72066 100644
+--- a/src/lib/services/lessons.ts
++++ b/src/lib/services/lessons.ts
+@@ -1,87 +1,2 @@
+-/** Lessons service — wraps writes for recurrences, lessons, and assignments. */
+-import { db, type Lesson, type LessonRecurrence } from "@/lib/db";
+-import { buildLessonSnapshot } from "@/lib/domain/snapshots";
+-import { cascadeDelete, now } from "./_shared";
+-
+-export const lessonsService = {
+-  async upsertRecurrence(data: Omit<LessonRecurrence, "id">, id?: number): Promise<number> {
+-    if (id) {
+-      await db.recurrences.put({ ...data, id });
+-      return id;
+-    }
+-    return (await db.recurrences.add(data)) as number;
+-  },
+-
+-  async deleteRecurrence(id: number): Promise<void> {
+-    await db.recurrences.delete(id);
+-  },
+-
+-  async log(
+-    subjectId: number,
+-    recurrence: LessonRecurrence | null | undefined,
+-    date: string,
+-    notes: string | undefined,
+-    assignmentTexts: string[],
+-  ): Promise<number> {
+-    const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(subjectId, recurrence ?? null, []);
+-    let lessonId = 0;
+-    const ts = now();
+-    await db.transaction("rw", db.lessons, db.assignments, async () => {
+-      lessonId = (await db.lessons.add({
+-        recurrenceId: recurrence?.id,
+-        subjectId,
+-        date,
+-        notes: notes?.trim() || undefined,
+-        piecesPlayed: [],
+-        snapshot,
+-        piecesPlayedTitles,
+-        createdAt: ts,
+-      })) as number;
+-      if (assignmentTexts.length) {
+-        await db.assignments.bulkAdd(
+-          assignmentTexts.map((text) => ({
+-            lessonId,
+-            text,
+-            transformed: false,
+-            createdAt: ts,
+-          })),
+-        );
+-      }
+-    });
+-    return lessonId;
+-  },
+-
+-  async updateLesson(lesson: Lesson, date: string, notes: string | undefined, assignmentTexts: string[]): Promise<void> {
+-    const ts = now();
+-    await db.transaction("rw", db.lessons, db.assignments, async () => {
+-      await db.lessons.put({ ...lesson, date, notes: notes?.trim() || undefined });
+-      await db.assignments.where("lessonId").equals(lesson.id).delete();
+-      if (assignmentTexts.length) {
+-        await db.assignments.bulkAdd(
+-          assignmentTexts.map((text) => ({
+-            lessonId: lesson.id,
+-            text,
+-            transformed: false,
+-            createdAt: ts,
+-          })),
+-        );
+-      }
+-    });
+-  },
+-
+-  async deleteLesson(lessonId: number): Promise<void> {
+-    await cascadeDelete(db.lessons, lessonId, [{ table: db.assignments, fk: "lessonId" }]);
+-  },
+-
+-  async ignoreAssignment(id: number): Promise<void> {
+-    await db.assignments.update(id, { ignored: true });
+-  },
+-
+-  async restoreAssignment(id: number): Promise<void> {
+-    await db.assignments.update(id, { ignored: false });
+-  },
+-
+-  async transformAssignment(id: number, taskId: number): Promise<void> {
+-    await db.assignments.update(id, { transformed: true, taskId });
+-  },
+-};
++import { lessonRepository } from "@/infrastructure/repositories/dexie/lessonRepository";
++export const lessonsService = lessonRepository;
+diff --git a/src/lib/services/library.ts b/src/lib/services/library.ts
+index 1b9ece4..390256e 100644
+--- a/src/lib/services/library.ts
++++ b/src/lib/services/library.ts
+@@ -1,78 +1,2 @@
+-/** Library service — wraps library + segment operations. */
+-import { db, type Draft, type LibraryItem, type Segment } from "@/lib/db";
+-import { notDeleted, now } from "./_shared";
+-
+-/** Soft-delete a library item if any of its tasks have logged sessions; otherwise hard-delete. */
+-async function deleteLibraryItem(itemId: number): Promise<"soft" | "hard"> {
+-  const taskIds = (await db.tasks.where("itemId").equals(itemId).primaryKeys()) as number[];
+-  const hasSession = taskIds.length
+-    ? (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0
+-    : false;
+-  if (hasSession) {
+-    await db.library.update(itemId, { deletedAt: now() });
+-    return "soft";
+-  }
+-  await db.transaction("rw", db.library, db.segments, db.tasks, async () => {
+-    await db.segments.where("itemId").equals(itemId).delete();
+-    await db.tasks.where("itemId").equals(itemId).delete();
+-    await db.library.delete(itemId);
+-  });
+-  return "hard";
+-}
+-
+-export const libraryService = {
+-  async list(): Promise<LibraryItem[]> {
+-    return db.library.filter(notDeleted).toArray();
+-  },
+-
+-  async get(id: number): Promise<LibraryItem | undefined> {
+-    return db.library.get(id);
+-  },
+-
+-  async upsert(item: Draft<LibraryItem>, segments: Omit<Segment, "id" | "itemId" | "createdAt">[] = []) {
+-    const ts = now();
+-    let id: number;
+-    if (item.id !== undefined) {
+-      await db.library.put(item);
+-      await db.segments.where("itemId").equals(item.id).delete();
+-      id = item.id;
+-    } else {
+-      id = (await db.library.add({ ...item, createdAt: item.createdAt ?? ts })) as number;
+-    }
+-    if (segments.length) {
+-      await db.segments.bulkAdd(
+-        segments.map((s) => ({ ...s, itemId: id, createdAt: ts })),
+-      );
+-    }
+-    return id;
+-  },
+-
+-  async remove(id: number) {
+-    return deleteLibraryItem(id);
+-  },
+-
+-  /** Count tasks with logged sessions for an item (to decide hard vs soft delete in the UI). */
+-  async hasSessions(itemId: number): Promise<boolean> {
+-    const taskIds = (await db.tasks.where("itemId").equals(itemId).primaryKeys()) as number[];
+-    return taskIds.length ? (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0 : false;
+-  },
+-
+-  /** Hard-delete an item along with its segments and tasks (no history to preserve). */
+-  async hardDelete(itemId: number): Promise<void> {
+-    await db.transaction("rw", db.library, db.segments, db.tasks, async () => {
+-      await db.segments.where("itemId").equals(itemId).delete();
+-      await db.tasks.where("itemId").equals(itemId).delete();
+-      await db.library.delete(itemId);
+-    });
+-  },
+-
+-  /** Re-create an item (and its segments) after an undo. Returns the new id. */
+-  async restore(item: LibraryItem, segments: Segment[]): Promise<number> {
+-    const { id: _id, ...itemRest } = item;
+-    const newId = (await db.library.add(itemRest)) as number;
+-    if (segments.length) {
+-      await db.segments.bulkAdd(segments.map(({ id: _sid, ...seg }) => ({ ...seg, itemId: newId })));
+-    }
+-    return newId;
+-  },
+-};
++import { libraryRepository } from "@/infrastructure/repositories/dexie/libraryRepository";
++export const libraryService = libraryRepository;
+diff --git a/src/lib/services/profile.ts b/src/lib/services/profile.ts
+index 91036a3..02d4066 100644
+--- a/src/lib/services/profile.ts
++++ b/src/lib/services/profile.ts
+@@ -1,25 +1,3 @@
+-/** Profile service — wraps all writes to the profile and onboarding tables. */
+-import { db, type Profile, type Subject } from "@/lib/db";
+-import { now } from "./_shared";
+-
+-export type OnboardingInput = Omit<Profile, "id" | "createdAt"> & {
+-  subjects: Array<Pick<Subject, "name" | "type">>;
+-};
+-
+-export const profileService = {
+-  async get(): Promise<Profile | undefined> {
+-    return db.profile.get("me");
+-  },
+-
+-  async update(patch: Partial<Profile>): Promise<void> {
+-    await db.profile.update("me", patch);
+-  },
+-
+-  async initialize({ subjects, ...profileData }: OnboardingInput): Promise<void> {
+-    const ts = now();
+-    await db.transaction("rw", db.subjects, db.profile, async () => {
+-      await db.subjects.bulkAdd(subjects.map((s) => ({ ...s, createdAt: ts })));
+-      await db.profile.put({ ...profileData, id: "me", createdAt: ts });
+-    });
+-  },
+-};
++import { profileRepository } from "@/infrastructure/repositories/dexie/profileRepository";
++export type { OnboardingInput } from "@/infrastructure/repositories/dexie/profileRepository";
++export const profileService = profileRepository;
+diff --git a/src/lib/services/sessions.ts b/src/lib/services/sessions.ts
+index 0a9328a..a8a94df 100644
+--- a/src/lib/services/sessions.ts
++++ b/src/lib/services/sessions.ts
+@@ -1,112 +1,4 @@
+-/** Session service — wraps reads/writes for practice sessions. */
+-import { db, type NoteVal, type SegmentMetric, type Session, type SessionQuality, type Task } from "@/lib/db";
+-import { buildSessionSnapshot } from "@/lib/domain/snapshots";
+-import { now } from "./_shared";
+-import type { SessionInput } from "@/lib/schemas";
+-
+-export interface FullSessionLogInput {
+-  date: string;
+-  bpmReached?: number;
+-  noteVal?: NoteVal;
+-  reps?: number;
+-  confidence?: number;
+-  quality?: SessionQuality;
+-  notes?: string;
+-  layersUsed: string[];
+-  techniquesUsed: number[];
+-  layerScores?: Record<string, number>;
+-  techniqueScores?: Record<number, number>;
+-  segmentMetrics?: Record<string, SegmentMetric>;
+-  helpText?: string;
+-}
+-
+-export const sessionsService = {
+-  async list(): Promise<Session[]> {
+-    return db.sessions.toArray();
+-  },
+-
+-  async byTask(taskId: number): Promise<Session[]> {
+-    return db.sessions.where("taskId").equals(taskId).toArray();
+-  },
+-
+-  async log(task: Task, date: string, input: SessionInput): Promise<number> {
+-    const snapshot = await buildSessionSnapshot(task);
+-    const id = (await db.sessions.add({
+-      taskId: task.id,
+-      date,
+-      ...input,
+-      snapshot,
+-      createdAt: now(),
+-    })) as number;
+-    return id;
+-  },
+-
+-  async update(id: number, patch: Partial<Session>): Promise<void> {
+-    await db.sessions.update(id, patch);
+-  },
+-
+-  async remove(id: number): Promise<void> {
+-    await db.sessions.delete(id);
+-  },
+-
+-  async logWithCompletion(task: Task, input: FullSessionLogInput): Promise<number> {
+-    const snapshot = await buildSessionSnapshot({
+-      ...task,
+-      layers: input.layersUsed,
+-      techniqueIds: input.techniquesUsed,
+-      targetBpm: input.bpmReached ?? task.targetBpm,
+-      noteVal: input.noteVal ?? task.noteVal,
+-    });
+-    const ts = now();
+-    let sessionId = 0;
+-    await db.transaction("rw", db.tasks, db.sessions, db.helpRequests, async () => {
+-      sessionId = (await db.sessions.add({
+-        taskId: task.id,
+-        date: input.date,
+-        bpmReached: input.bpmReached,
+-        noteVal: input.noteVal,
+-        reps: input.reps,
+-        confidence: input.confidence,
+-        quality: input.quality,
+-        notes: input.notes?.trim() || undefined,
+-        layersUsed: input.layersUsed,
+-        techniquesUsed: input.techniquesUsed,
+-        layerScores: input.layerScores,
+-        techniqueScores: input.techniqueScores,
+-        segmentMetrics: input.segmentMetrics,
+-        snapshot,
+-        createdAt: ts,
+-      })) as number;
+-      await db.tasks.update(task.id, { done: true });
+-      if (input.helpText) {
+-        await db.helpRequests.add({
+-          sessionId,
+-          taskId: task.id,
+-          itemId: task.itemId,
+-          question: input.helpText,
+-          resolved: false,
+-          createdAt: ts,
+-        });
+-      }
+-    });
+-    return sessionId;
+-  },
+-
+-  async deleteWithTaskReset(sessionId: number, taskId?: number): Promise<void> {
+-    await db.sessions.delete(sessionId);
+-    if (taskId) {
+-      const remaining = await db.sessions.where("taskId").equals(taskId).count();
+-      if (remaining === 0) await db.tasks.update(taskId, { done: false });
+-    }
+-  },
+-
+-  async deleteByTaskAndDate(taskId: number, date: string): Promise<void> {
+-    const sessions = await db.sessions
+-      .where("taskId")
+-      .equals(taskId)
+-      .and((s) => s.date === date)
+-      .toArray();
+-    await db.sessions.bulkDelete(sessions.map((s) => s.id).filter(Boolean) as number[]);
+-    await db.tasks.update(taskId, { done: false });
+-  },
+-};
++import type { NoteVal, SegmentMetric, SessionQuality } from "@/domain/entities/common";
++import { sessionRepository } from "@/infrastructure/repositories/dexie/sessionRepository";
++export interface FullSessionLogInput { date: string; bpmReached?: number; noteVal?: NoteVal; reps?: number; confidence?: number; quality?: SessionQuality; notes?: string; layersUsed: string[]; techniquesUsed: number[]; layerScores?: Record<string, number>; techniqueScores?: Record<number, number>; segmentMetrics?: Record<string, SegmentMetric>; helpText?: string; }
++export const sessionsService = sessionRepository;
+diff --git a/src/lib/services/tasks.ts b/src/lib/services/tasks.ts
+index 6c7185f..76faabe 100644
+--- a/src/lib/services/tasks.ts
++++ b/src/lib/services/tasks.ts
+@@ -1,184 +1,3 @@
+-/** Task service — repository wrapper around dexie operations.
+- *  Centralizes write paths so UI components don't reach into `db` directly.
+- */
+-import { db, type Task, type TaskRecurrence } from "@/lib/db";
+-import { expandTaskRecurrence } from "@/lib/recurrence";
+-import { notDeleted, now } from "./_shared";
+-
+-export type NewTaskInput = Omit<Task, "id" | "done" | "createdAt" | "date"> & {
+-  date: string;
+-  recurrence?: TaskRecurrence;
+-};
+-
+-/** Soft-delete a task if it has logged sessions; otherwise hard-delete. */
+-async function deleteTaskPreservingHistory(taskId: number): Promise<"soft" | "hard"> {
+-  const hasSession = (await db.sessions.where("taskId").equals(taskId).count()) > 0;
+-  if (hasSession) {
+-    await db.tasks.update(taskId, { deletedAt: now() });
+-    return "soft";
+-  }
+-  await db.tasks.delete(taskId);
+-  return "hard";
+-}
+-
+-/** Bulk soft-delete tasks if they have logged sessions; otherwise hard-delete. */
+-async function deleteTasksPreservingHistory(taskIds: number[]): Promise<{ soft: number; hard: number }> {
+-  if (!taskIds.length) return { soft: 0, hard: 0 };
+-  const tasksWithSessions = new Set(await db.sessions.where("taskId").anyOf(taskIds).uniqueKeys() as number[]);
+-
+-  const softIds: number[] = [];
+-  const hardIds: number[] = [];
+-  for (const id of taskIds) {
+-    if (tasksWithSessions.has(id)) softIds.push(id);
+-    else hardIds.push(id);
+-  }
+-
+-  const ts = now();
+-  await db.transaction("rw", db.tasks, async () => {
+-    if (softIds.length > 0) {
+-      await db.tasks.bulkUpdate(softIds.map((id) => ({ key: id, changes: { deletedAt: ts } })));
+-    }
+-    if (hardIds.length > 0) {
+-      await db.tasks.bulkDelete(hardIds);
+-    }
+-  });
+-
+-  return { soft: softIds.length, hard: hardIds.length };
+-}
+-
+-export const tasksService = {
+-  async list(): Promise<Task[]> {
+-    return db.tasks.filter(notDeleted).toArray();
+-  },
+-
+-  async byDate(date: string): Promise<Task[]> {
+-    return db.tasks.where("date").equals(date).filter(notDeleted).toArray();
+-  },
+-
+-  async create(input: NewTaskInput): Promise<number> {
+-    const ts = now();
+-    const { recurrence, ...rest } = input;
+-    if (!recurrence) {
+-      return (await db.tasks.add({ ...rest, done: false, createdAt: ts })) as number;
+-    }
+-    const dates = expandTaskRecurrence(recurrence);
+-    if (!dates.length) throw new Error("Recurrence produced no dates");
+-    let firstId = 0;
+-    await db.transaction("rw", db.tasks, async () => {
+-      firstId = (await db.tasks.add({
+-        ...rest,
+-        date: dates[0],
+-        recurrence,
+-        done: false,
+-        createdAt: ts,
+-      })) as number;
+-      if (dates.length > 1) {
+-        await db.tasks.bulkAdd(
+-          dates.slice(1).map((d) => ({
+-            ...rest,
+-            date: d,
+-            done: false,
+-            recurrenceTaskId: firstId,
+-            createdAt: ts,
+-          })),
+-        );
+-      }
+-    });
+-    return firstId;
+-  },
+-
+-  async update(id: number, patch: Partial<Task>): Promise<void> {
+-    await db.tasks.update(id, patch);
+-  },
+-
+-  async toggleDone(id: number, done: boolean): Promise<void> {
+-    await db.tasks.update(id, { done });
+-  },
+-
+-  async removeSeries(rootId: number): Promise<{ soft: number; hard: number }> {
+-    const children = (await db.tasks.where("recurrenceTaskId").equals(rootId).primaryKeys()) as number[];
+-    return deleteTasksPreservingHistory([rootId, ...children]);
+-  },
+-
+-  async skip(id: number): Promise<void> {
+-    await db.tasks.update(id, { skipped: true });
+-  },
+-
+-  async unskip(id: number): Promise<void> {
+-    await db.tasks.update(id, { skipped: false });
+-  },
+-
+-  async carryOver(task: Task, toDate: string): Promise<number> {
+-    const { id, date, done, skipped, ...rest } = task;
+-    const newId = (await db.tasks.add({ ...rest, date: toDate, done: false, createdAt: now() })) as number;
+-    await db.tasks.update(id, { skipped: true });
+-    return newId;
+-  },
+-
+-  async bulkSetDone(ids: number[], done: boolean): Promise<void> {
+-    await db.tasks.bulkUpdate(ids.map((id) => ({ key: id, changes: { done } })));
+-  },
+-
+-  /**
+-   * Find an existing task for an item on a date, or create a task (item- or
+-   * free-linked) to attach a session to. Used by the quick-log FAB.
+-   */
+-  async findOrCreateForLog(opts: {
+-    date: string;
+-    subjectId: number;
+-    itemId?: number;
+-    fallbackItemTitle: string;
+-    freeTitle: string;
+-  }): Promise<Task | undefined> {
+-    let taskId: number;
+-    if (opts.itemId) {
+-      const existing = await db.tasks
+-        .where("itemId").equals(opts.itemId)
+-        .and((t) => t.date === opts.date && !t.deletedAt)
+-        .first();
+-      if (existing?.id) return existing;
+-      const item = await db.library.get(opts.itemId);
+-      taskId = (await db.tasks.add({
+-        date: opts.date,
+-        subjectId: opts.subjectId,
+-        linkType: "item",
+-        itemId: opts.itemId,
+-        title: item?.title ?? opts.fallbackItemTitle,
+-        done: false,
+-        createdAt: now(),
+-      })) as number;
+-    } else {
+-      taskId = (await db.tasks.add({
+-        date: opts.date,
+-        subjectId: opts.subjectId,
+-        linkType: "free",
+-        title: opts.freeTitle,
+-        done: false,
+-        createdAt: now(),
+-      })) as number;
+-    }
+-    return db.tasks.get(taskId);
+-  },
+-
+-  async hasSessions(taskId: number): Promise<boolean> {
+-    return (await db.sessions.where("taskId").equals(taskId).count()) > 0;
+-  },
+-
+-  /** Hard-delete a single task (no history to preserve). */
+-  async hardDelete(taskId: number): Promise<void> {
+-    await db.tasks.delete(taskId);
+-  },
+-
+-  /** Re-add a task after an undo (keeps its original id). */
+-  async restore(task: Task): Promise<void> {
+-    await db.tasks.add(task);
+-  },
+-
+-  async remove(id: number): Promise<"soft" | "hard"> {
+-    return deleteTaskPreservingHistory(id);
+-  },
+-
+-  async bulkRemove(ids: number[]): Promise<{ soft: number; hard: number }> {
+-    return deleteTasksPreservingHistory(ids);
+-  },
+-};
++import { taskRepository, type NewTaskInput } from "@/infrastructure/repositories/dexie/taskRepository";
++export type { NewTaskInput } from "@/infrastructure/repositories/dexie/taskRepository";
++export const tasksService = taskRepository;
