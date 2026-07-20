@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { HelpRequest } from "@/domain/ports/helpRequest";
 import { helpRequestsService } from "@/lib/services";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,7 @@ interface Props {
 
 export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
   const { t, lang } = useI18n();
-  const reqs = useLiveQuery(
-    () => db.helpRequests.where("itemId").equals(itemId).toArray(),
-    [itemId]
-  );
+  const reqs = usePresentationRead<HelpRequest[]>("helpRequests.item", [itemId]);
 
   const [draft, setDraft] = useState("");
   const [answers, setAnswers] = useState<Record<number, string>>({});

@@ -1,4 +1,4 @@
-import type { NoteVal } from "@/lib/presentationQueries";
+import type { NoteVal } from "@/domain/entities/common";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

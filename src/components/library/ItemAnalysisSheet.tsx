@@ -1,7 +1,11 @@
 import { useMemo } from "react";
-import { useTechniques } from "@/hooks/useEntities";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, THEORY_LAYERS, type LibraryItem, type Session, type Segment, type Task, type TheoryLayer, type Lang } from "@/lib/presentationQueries";
+import { useSegmentsByItem, useTasksByItem, useTechniques } from "@/presentation/hooks/useEntities";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { Lang, TheoryLayer } from "@/domain/entities/common";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
+import type { Session } from "@/domain/entities/session";
+import type { Task } from "@/domain/entities/task";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
@@ -17,19 +21,9 @@ interface Props {
 export function ItemAnalysisSheet({ open, onOpenChange, item }: Props) {
   const { t, lang } = useI18n();
 
-  const tasks = useLiveQuery(
-    () => (item.id ? db.tasks.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
-    [item.id]
-  );
-  const sessions = useLiveQuery(async () => {
-    const ids = (tasks ?? []).map((tk) => tk.id).filter(Boolean);
-    if (!ids.length) return [];
-    return db.sessions.where("taskId").anyOf(ids).toArray();
-  }, [tasks]);
-  const segments = useLiveQuery(
-    () => (item.id ? db.segments.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
-    [item.id]
-  );
+  const tasks = useTasksByItem(item.id);
+  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [item.id]);
+  const segments = useSegmentsByItem(item.id);
   const techniques = useTechniques();
 
   const tasksById = useMemo(() => {

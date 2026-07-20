@@ -7,7 +7,7 @@ import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
 import { type MasteryState } from "./MasterySliders";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { cn } from "@/lib/utils";
-import type { LibraryKind, NoteVal } from "@/lib/presentationQueries";
+import type { LibraryKind, NoteVal } from "@/domain/entities/common";
 import { useI18n } from "@/lib/i18n";
 
 interface Props {

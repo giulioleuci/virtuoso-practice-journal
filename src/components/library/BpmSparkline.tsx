@@ -1,6 +1,6 @@
-import { useLiveQuery } from "@/lib/subscriptions";
 import { useTasksByItem } from "@/hooks/useEntities";
-import { db } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { Session } from "@/domain/entities/session";
 import { useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 
@@ -16,12 +16,7 @@ interface Props {
 export function BpmSparkline({ itemId, weeks = 8 }: Props) {
   const { t } = useI18n();
   const tasks = useTasksByItem(itemId);
-  const sessions = useLiveQuery(async () => {
-    const ts = await db.tasks.where("itemId").equals(itemId).toArray();
-    const ids = ts.map((t) => t.id).filter(Boolean);
-    if (!ids.length) return [];
-    return db.sessions.where("taskId").anyOf(ids).toArray();
-  }, [itemId]);
+  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
 
   const { points, max, min } = useMemo(() => {
     const today = new Date();

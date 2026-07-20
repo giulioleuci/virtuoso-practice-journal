@@ -1,5 +1,6 @@
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type TheoryLayer } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { TheoryLayer } from "@/domain/constants/theoryLayers";
+import type { Session } from "@/domain/entities/session";
 import { useMemo } from "react";
 
 interface Props {
@@ -13,12 +14,7 @@ interface Props {
  * per week, derived from session layerScores.
  */
 export function MasterySparkline({ itemId, layer, weeks = 8 }: Props) {
-  const sessions = useLiveQuery(async () => {
-    const tasks = await db.tasks.where("itemId").equals(itemId).toArray();
-    const ids = tasks.map((t) => t.id).filter(Boolean);
-    if (!ids.length) return [];
-    return db.sessions.where("taskId").anyOf(ids).toArray();
-  }, [itemId]);
+  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
 
   const { points, max } = useMemo(() => {
     const today = new Date();

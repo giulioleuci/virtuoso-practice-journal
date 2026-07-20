@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSubjects, useTechniques } from "@/hooks/useEntities";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type LibraryKind, type LibraryItem } from "@/lib/presentationQueries";
+import { useCollectionLinksByItem, useCollections, useSegmentsByItem, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
+import type { LibraryKind } from "@/domain/entities/common";
+import type { LibraryItem } from "@/domain/entities/library";
 import { useI18n } from "@/lib/i18n";
 import {
   Sheet,
@@ -58,10 +58,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
 
   const subjects = useSubjects();
   const allTechniques = useTechniques();
-  const existingSegments = useLiveQuery(
-    () => (item?.id ? db.segments.where("itemId").equals(item.id).toArray() : Promise.resolve([])),
-    [item?.id]
-  );
+  const existingSegments = useSegmentsByItem(item?.id);
 
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [title, setTitle] = useState("");
@@ -82,14 +79,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const [collectionIds, setCollectionIds] = useState<number[]>([]);
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
 
-  const allCollections = useLiveQuery(
-    () => db.collections.filter((c) => !c.deletedAt).toArray(),
-    []
-  );
-  const existingMemberships = useLiveQuery(
-    () => item?.id ? db.collectionItems.where("itemId").equals(item.id).toArray() : Promise.resolve([]),
-    [item?.id]
-  );
+  const allCollections = useCollections();
+  const existingMemberships = useCollectionLinksByItem(item?.id);
   const collectionOptions = useMemo(
     () => (allCollections ?? [])
       .filter((c) => c.kind === editingKind)

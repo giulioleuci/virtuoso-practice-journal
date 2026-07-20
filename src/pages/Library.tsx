@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, THEORY_LAYERS, type LibraryKind, type LibraryItem, type Segment, type TheoryLayer } from "@/lib/presentationQueries";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { LibraryKind, TheoryLayer } from "@/domain/entities/common";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
+import type { Session } from "@/domain/entities/session";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
@@ -22,7 +25,7 @@ import { BpmSparkline } from "@/components/library/BpmSparkline";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pager } from "@/components/shared/Pager";
-import { useCollectionLinks, useCollections, useHelpRequests, useSegments, useSubjects, useTechniques } from "@/hooks/useEntities";
+import { useCollectionLinks, useCollections, useHelpRequests, useLibraryByKind, useSegments, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
 import { libraryService, deleteWithUndo } from "@/lib/services";
 import {
@@ -57,10 +60,7 @@ export default function Library() {
   const allCollections = useCollections();
   const allCollectionLinks = useCollectionLinks();
 
-  const items = useLiveQuery(
-    () => db.library.where("kind").equals(active).filter((i) => !i.deletedAt).toArray(),
-    [active]
-  );
+  const items = useLibraryByKind(active);
   const allSegments = useSegments();
   const segmentsByItem = (allSegments ?? []).reduce<Record<number, Segment[]>>((acc, s) => {
     (acc[s.itemId] ||= []).push(s);
@@ -492,12 +492,7 @@ export default function Library() {
 function TheoryMasterySection({ itemId }: { itemId: number }) {
   const { t } = useI18n();
 
-  const sessions = useLiveQuery(async () => {
-    const tasks = await db.tasks.where("itemId").equals(itemId).toArray();
-    const ids = tasks.map((t) => t.id).filter(Boolean);
-    if (!ids.length) return [];
-    return db.sessions.where("taskId").anyOf(ids).toArray();
-  }, [itemId]);
+  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
 
   const latestScores = useMemo((): MasteryState => {
     const result: MasteryState = { conceptual: 0, analytical: 0, aural: 0, compositional: 0, reading: 0 };

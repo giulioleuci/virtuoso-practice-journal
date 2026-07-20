@@ -89,3 +89,20 @@ describe("presentation import boundaries", () => {
     expect(await auditPresentationImports()).toEqual(temporaryBaseline);
   });
 });
+
+describe("library presentation boundary", () => {
+  it("does not import legacy presentation query aliases", async () => {
+    const files = [
+      ...await filesIn(join(sourceRoot, "components", "library")),
+      join(sourceRoot, "pages", "Library.tsx"),
+      join(sourceRoot, "pages", "ItemAnalysisPage.tsx"),
+    ];
+    const legacyAliases = /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/lib\/(?:presentationQueries|subscriptions)(?:["'])/;
+    const offenders = (await Promise.all(files.map(async (file) => {
+      const source = await readFile(file, "utf8");
+      return legacyAliases.test(source) ? relative(process.cwd(), file) : null;
+    }))).filter((file): file is string => file !== null);
+
+    expect(offenders).toEqual([]);
+  });
+});

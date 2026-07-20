@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import "fake-indexeddb/auto";
 import { db } from "@/lib/presentationQueries";
+import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
+import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import {
   useSubjects,
   useLibrary,
@@ -15,6 +17,7 @@ import {
 } from "./useEntities";
 
 beforeEach(async () => {
+  configurePresentationQueries(dexiePresentationReads);
   await db.delete();
   await db.open();
 });

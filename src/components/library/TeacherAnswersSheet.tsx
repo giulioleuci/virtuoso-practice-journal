@@ -1,5 +1,6 @@
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db } from "@/lib/presentationQueries";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import type { LibraryItem } from "@/domain/entities/library";
+import type { HelpRequest } from "@/domain/ports/helpRequest";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { MessageSquareQuote, BookOpen } from "lucide-react";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -19,18 +20,11 @@ interface Props {
  */
 export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
   const { t, lang } = useI18n();
-  const item = useLiveQuery(() => db.library.get(itemId), [itemId]);
+  const item = usePresentationRead<LibraryItem | undefined>("library.item", [itemId]);
   const label = itemTitle ?? item?.title ?? "";
-  const answered = useLiveQuery(
-    () =>
-      db.helpRequests
-        .where("itemId")
-        .equals(itemId)
-        .filter((r) => !!r.answer)
-        .toArray()
-        .then((rs) => rs.sort((a, b) => (b.answeredAt ?? 0) - (a.answeredAt ?? 0))),
-    [itemId]
-  );
+  const answered = usePresentationRead<HelpRequest[]>("helpRequests.answeredItem", [itemId])
+    ?.slice()
+    .sort((a, b) => (b.answeredAt ?? 0) - (a.answeredAt ?? 0));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

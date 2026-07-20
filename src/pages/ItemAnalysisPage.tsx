@@ -1,14 +1,15 @@
 import { useMemo } from "react";
-import { useTechniques, useItem, useTasksByItem } from "@/hooks/useEntities";
+import { useTechniques, useItem, useProfile } from "@/presentation/hooks/useEntities";
 import { useParams, useNavigate } from "react-router-dom";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, THEORY_LAYERS, type Session } from "@/lib/presentationQueries";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { Lang } from "@/domain/entities/common";
+import type { Session } from "@/domain/entities/session";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH, QUALITY_SYMBOL, QUALITY_VALS } from "@/lib/constants";
 import { BackIcon, TrendIcon, ChartIcon } from "@/lib/icons";
 import { weeklySessionCounts } from "@/lib/domain/analytics";
 import { formatDate, getDefaultWeekStartsOn } from "@/lib/date";
-import type { Lang } from "@/lib/presentationQueries";
 import { Button } from "@/components/ui/button";
 
 
@@ -83,14 +84,8 @@ export default function ItemAnalysisPage() {
   const itemId = id ? Number(id) : null;
 
   const item = useItem(itemId ?? undefined);
-  const tasks = useTasksByItem(itemId ?? undefined);
-  const profile = useLiveQuery(() => db.profile.get("me"));
-
-  const sessions = useLiveQuery(async () => {
-    const ids = (tasks ?? []).map((t) => t.id).filter(Boolean);
-    if (!ids.length) return [];
-    return db.sessions.where("taskId").anyOf(ids).sortBy("date");
-  }, [tasks]);
+  const profile = useProfile();
+  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
 
   const techniques = useTechniques();
 

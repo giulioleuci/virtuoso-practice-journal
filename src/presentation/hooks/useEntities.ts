@@ -24,6 +24,7 @@ export const useAssignments = () => useRead("assignments.all");
 export const useHelpRequests = () => useRead("helpRequests.all");
 export const useCollections = (kind?: LibraryKind) => useRead("collections.active", [kind]);
 export const useCollectionLinks = () => useRead("collectionLinks.all");
+export const useCollectionLinksByItem = (itemId?: number) => useRead("collectionLinks.item", [itemId]);
 export const useAllTasks = () => useRead("tasks.all");
 export const useAllLibrary = () => useRead("library.active");
 export const useAllSegments = () => useRead("segments.active");

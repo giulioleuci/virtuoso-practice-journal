@@ -79,6 +79,8 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "recurrences.active": return db.recurrences.filter(active).toArray() as Promise<T>;
       case "assignments.pending": return db.assignments.filter((assignment) => !assignment.transformed && !assignment.ignored).toArray() as Promise<T>;
       case "helpRequests.answeredCount": return (typeof first === "number" ? db.helpRequests.where("itemId").equals(first).filter((request) => !!request.answer).count() : Promise.resolve(0)) as Promise<T>;
+      case "helpRequests.item": return (typeof first === "number" ? db.helpRequests.where("itemId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
+      case "helpRequests.answeredItem": return (typeof first === "number" ? db.helpRequests.where("itemId").equals(first).filter((request) => !!request.answer).toArray() : Promise.resolve([])) as Promise<T>;
       case "helpRequests.answeredItemIds": return db.helpRequests.filter((request) => !!request.answer && !!request.itemId).toArray().then((requests) => new Set(requests.map((request) => request.itemId!))) as Promise<T>;
       case "lessons.all": return db.lessons.orderBy("date").reverse().toArray() as Promise<T>;
       case "assignments.all": return db.assignments.toArray() as Promise<T>;
@@ -88,6 +90,7 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "collections.items": return (typeof first === "number" ? db.collectionItems.where("collectionId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
       case "collections.one": return (typeof first === "number" ? db.collections.get(first) : Promise.resolve(undefined)) as Promise<T>;
       case "collectionLinks.all": return db.collectionItems.toArray() as Promise<T>;
+      case "collectionLinks.item": return (typeof first === "number" ? db.collectionItems.where("itemId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
       case "segments.ids": return (Array.isArray(first) && first.every((id) => typeof id === "number") ? db.segments.where("id").anyOf(first).toArray() : Promise.resolve([])) as Promise<T>;
       case "library.subject": return (typeof first === "number" ? db.library.where("subjectId").equals(first).filter(active).toArray() : Promise.resolve([])) as Promise<T>;
       case "routines.one": return (typeof first === "number" ? db.studyRoutines.get(first) : Promise.resolve(undefined)) as Promise<T>;
