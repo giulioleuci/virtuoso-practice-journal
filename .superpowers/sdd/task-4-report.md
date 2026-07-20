@@ -1,0 +1,26 @@
+# Task 4 report: task, session, and routine application use cases
+
+## Delivery
+
+- Added constructor-injected task/session/routine use cases under `src/application/useCases`.
+- Added fake task/session ports under `src/test/fakes` and focused tests covering recurrence, soft/hard removal, carry-over, completed-session logging with help, final-session reset, and routine validation.
+- Added `src/infrastructure/compositionRoot.ts`; it is the binding point for Dexie repositories and application use cases.
+- Converted task, session, and study-routine legacy services into temporary adapters over that root.
+- Added `TaskPort.createBatch` so recurrence expansion is owned by `CreateTaskUseCase`, while Dexie supplies atomic batch persistence.
+
+## TDD evidence
+
+- RED: `npx vitest run src/application/useCases/taskSession.test.ts` failed because the use-case modules did not exist.
+- GREEN: the same suite passed after the port-injected implementations and fakes were added.
+- Regression: interval recurrences retain the existing `everyXDays` default of one.
+
+## Verification
+
+- `npx vitest run src/application/useCases src/lib/services/tasks.test.ts src/lib/services/sessions.test.ts src/lib/services/studyRoutines.test.ts src/infrastructure/repositories/dexie/repositories.test.ts` — 84 tests passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed with 80 pre-existing presentation-boundary warnings and no errors.
+- `npm run build` — passed.
+
+## Scope
+
+No schema/migration changes. Existing unrelated working-tree changes in `CLAUDE.md`, `GEMINI.md`, and `src/infrastructure/dexie/db.ts` were preserved.

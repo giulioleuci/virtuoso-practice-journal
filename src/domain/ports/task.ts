@@ -9,6 +9,7 @@ export interface TaskPort {
   list(): Promise<Task[]>;
   byDate(date: string): Promise<Task[]>;
   create(task: NewTaskInput): Promise<number>;
+  createBatch(tasks: Omit<Task, "id">[]): Promise<number[]>;
   update(id: number, patch: Partial<Task>): Promise<void>;
   remove(id: number): Promise<"soft" | "hard">;
   carryOver(task: Task, toDate: string): Promise<number>;

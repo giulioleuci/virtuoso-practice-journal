@@ -28,6 +28,10 @@ export const taskRepository = {
     await db.transaction("rw", db.tasks, async () => { firstId = await db.tasks.add({ ...rest, date: dates[0], recurrence, done: false, createdAt: ts }) as number; if (dates.length > 1) await db.tasks.bulkAdd(dates.slice(1).map((date) => ({ ...rest, date, done: false, recurrenceTaskId: firstId, createdAt: ts }))); });
     return firstId;
   },
+  async createBatch(tasks: Omit<Task, "id">[]) {
+    if (!tasks.length) return [];
+    return db.transaction("rw", db.tasks, () => db.tasks.bulkAdd(tasks, { allKeys: true }) as Promise<number[]>);
+  },
   update: async (id: number, patch: Partial<Task>) => { await db.tasks.update(id, patch); },
   toggleDone: async (id: number, done: boolean) => { await db.tasks.update(id, { done }); },
   async remove(id: number) { const result = await removeMany([id]); return result.soft ? "soft" as const : "hard" as const; },
