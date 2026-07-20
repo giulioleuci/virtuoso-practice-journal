@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLessons, useRecurrences, useSubjects, useTechniques, useItem } from "@/hooks/useEntities";
+import { useCollection, useItem, useLessons, useRecurrences, useSegmentsByIds, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, THEORY_LAYERS, type NoteVal, type TaskLinkType } from "@/lib/presentationQueries";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { NoteVal } from "@/domain/entities/common";
+import type { TaskLinkType } from "@/domain/entities/task";
 import { getSubjectLayers } from "@/lib/domain/subjectLayers";
 import { nextLessonDate } from "@/lib/domain/lessonSchedule";
 import { useI18n } from "@/lib/i18n";
@@ -77,14 +78,8 @@ export default function NewTaskPage() {
   const setRec = (patch: Partial<RecurrenceState>) => setRecState((s) => ({ ...s, ...patch }));
 
   const selectedItem = useItem(itemId);
-  const selectedSegments = useLiveQuery(
-    () => (segmentIds.length ? db.segments.where("id").anyOf(segmentIds).toArray() : Promise.resolve([])),
-    [segmentIds.join(",")]
-  );
-  const selectedCollection = useLiveQuery(
-    () => (collectionId ? db.collections.get(collectionId) : Promise.resolve(undefined)),
-    [collectionId]
-  );
+  const selectedSegments = useSegmentsByIds(segmentIds);
+  const selectedCollection = useCollection(collectionId);
 
   // Auto-fill title/BPM/layers from item or segments selection
   const segmentIdsKey = segmentIds.join(",");

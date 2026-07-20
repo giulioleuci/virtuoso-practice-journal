@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
-import { db, type StudyRoutine } from "@/lib/presentationQueries";
+import { useStudyRoutine } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { StudyRoutineWizard } from "@/components/diary/StudyRoutineWizard";
 
@@ -10,17 +9,8 @@ export default function EditStudyRoutinePage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const routineId = Number(id);
-  const [routine, setRoutine] = useState<StudyRoutine | null | undefined>(undefined);
+  const routine = useStudyRoutine(Number.isFinite(routineId) ? routineId : undefined);
   const today = new Date().toISOString().slice(0, 10);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const r = Number.isFinite(routineId) ? await db.studyRoutines.get(routineId) : undefined;
-      if (!cancelled) setRoutine(r ?? null);
-    })();
-    return () => { cancelled = true; };
-  }, [routineId]);
 
   const goBack = () => {
     if (window.history.length > 1) navigate(-1);

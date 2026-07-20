@@ -3,10 +3,11 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const sourceRoot = join(process.cwd(), "src");
-const presentationRoots = ["pages", "components", "hooks"];
+const presentationRoots = ["pages", "components", "hooks", "presentation"];
 const temporaryBaseline: Record<string, string[]> = {};
 
 const restrictedImports = [
+  { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)?["']@\/lib\/(?:presentationQueries|subscriptions)(?:["']|\/)/g, label: "legacy presentation alias" },
   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/lib\/db(?:\/|["'])/g, label: "@/lib/db" },
   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie(?:["']|\/)/g, label: "dexie" },
   { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie-react-hooks(?:["']|\/)/g, label: "dexie-react-hooks" },

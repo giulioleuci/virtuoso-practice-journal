@@ -41,6 +41,12 @@ export const dexiePresentationReads: PresentationReadPort = {
         ? db.tasks.where("date").between(first, second, true, false).filter((task) => active(task) && !!task.skipped && !task.done).toArray()
         : Promise.resolve([])) as Promise<T>;
       case "sessions.all": return db.sessions.toArray() as Promise<T>;
+      case "sessions.range": return (async () => {
+        if (typeof first === "string" && typeof second === "string") return db.sessions.where("date").between(first, second, true, true).toArray();
+        if (typeof first === "string") return db.sessions.where("date").aboveOrEqual(first).toArray();
+        if (typeof second === "string") return db.sessions.where("date").belowOrEqual(second).toArray();
+        return db.sessions.toArray();
+      })() as Promise<T>;
       case "sessions.lastForTask": return (async () => {
         const [taskId, itemId, before] = parameters;
         const ids = typeof itemId === "number" ? (await db.tasks.where("itemId").equals(itemId).toArray()).flatMap((task) => task.id === undefined ? [] : [task.id]) : typeof taskId === "number" ? [taskId] : [];
@@ -100,7 +106,7 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "collectionLinks.item": return (typeof first === "number" ? db.collectionItems.where("itemId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
       case "segments.ids": return (Array.isArray(first) && first.every((id) => typeof id === "number") ? db.segments.where("id").anyOf(first).toArray() : Promise.resolve([])) as Promise<T>;
       case "library.subject": return (typeof first === "number" ? db.library.where("subjectId").equals(first).filter(active).toArray() : Promise.resolve([])) as Promise<T>;
-      case "routines.one": return (typeof first === "number" ? db.studyRoutines.get(first) : Promise.resolve(undefined)) as Promise<T>;
+      case "routines.one": return (typeof first === "number" ? db.studyRoutines.get(first).then((routine) => routine ?? null) : Promise.resolve(null)) as Promise<T>;
       default: throw new Error(`Unknown presentation read operation: ${operation}`);
     }
   },

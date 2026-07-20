@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSubjects } from "@/hooks/useEntities";
+import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
 import { useSearchParams } from "react-router-dom";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type LibraryKind, type Session, type Collection, type Subject } from "@/lib/presentationQueries";
+import type { LibraryKind, Subject } from "@/domain/entities/common";
+import type { Collection } from "@/domain/entities/collection";
+import type { Session } from "@/domain/entities/session";
 import { subjectColorCss } from "@/lib/subjectColors";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
@@ -38,12 +39,7 @@ export default function History() {
   const [detail, setDetail] = useState<Session | null>(null);
 
   // Scope session reads by date range when set — avoids loading the entire table
-  const sessions = useLiveQuery(() => {
-    if (from && to) return db.sessions.where("date").between(from, to, true, true).toArray();
-    if (from) return db.sessions.where("date").aboveOrEqual(from).toArray();
-    if (to) return db.sessions.where("date").belowOrEqual(to).toArray();
-    return db.sessions.toArray();
-  }, [from, to]);
+  const sessions = useSessionsInRange(from || undefined, to || undefined);
   const tasks = useAllTasks();
   const items = useAllLibrary();
   const segments = useAllSegments();

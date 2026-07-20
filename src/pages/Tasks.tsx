@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { type Task, type StudyRoutine } from "@/lib/presentationQueries";
+import type { Task } from "@/domain/entities/task";
+import type { StudyRoutine } from "@/domain/ports/studyRoutine";
 import { useActiveTasks, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
-import type { Lang } from "@/lib/presentationQueries";
+import type { Lang } from "@/domain/entities/common";
 import { studyRoutinesService, tasksService, deleteWithUndo } from "@/lib/services";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { subjectBorderStyle } from "@/lib/subjectColors";

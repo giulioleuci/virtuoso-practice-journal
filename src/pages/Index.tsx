@@ -1,6 +1,5 @@
 import { lazy, Suspense } from "react";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+import { useProfile } from "@/presentation/hooks/useEntities";
 import { profileService } from "@/lib/services";
 import { I18nProvider } from "@/lib/I18nProvider";
 import Onboarding from "@/components/onboarding/Onboarding";
@@ -31,7 +30,7 @@ const Fallback = () => (
 );
 
 const Index = () => {
-  const profile = useLiveQuery(async () => (await db.profile.get("me")) ?? null);
+  const profile = useProfile();
   // undefined = loading; null = no profile yet
   if (profile === undefined) {
     return (

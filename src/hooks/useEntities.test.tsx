@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import "fake-indexeddb/auto";
-import { db } from "@/lib/presentationQueries";
+// Integration fixture: tests configure the infrastructure adapter directly.
+// eslint-disable-next-line no-restricted-imports
+import { db } from "@/lib/db";
 import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
+// eslint-disable-next-line no-restricted-imports
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import {
   useSubjects,

@@ -1,5 +1,9 @@
 /** Named presentation DTO adapters. Persistence stays behind application ports. */
 import type { LibraryKind } from "@/domain/entities/common";
+import type { Collection } from "@/domain/entities/collection";
+import type { Segment } from "@/domain/entities/library";
+import type { Session } from "@/domain/entities/session";
+import type { StudyRoutine } from "@/domain/ports/studyRoutine";
 import type { Assignment } from "@/domain/entities/lesson";
 import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
 import { presentationQueries } from "@/application/queries/presentationQueryService";
@@ -18,6 +22,7 @@ export const useLibraryByKind = (kind?: LibraryKind) => useRead("library.byKind"
 export const useSegments = () => useRead("segments.active");
 export const useActiveTasks = () => useRead("tasks.active");
 export const useSessions = () => useRead("sessions.all");
+export const useSessionsInRange = (from?: string, to?: string) => useRead<Session[]>("sessions.range", [from, to]);
 export const useProfile = () => useRead("profile.current");
 export const useStudyRoutines = () => useRead("routines.active");
 export const useRecurrences = () => useRead("recurrences.active");
@@ -32,6 +37,7 @@ export const useAllLibrary = () => useRead("library.active");
 export const useAllSegments = () => useRead("segments.active");
 export const useAllCollections = () => useRead("collections.all");
 export const useCollectionItems = (collectionId?: number) => useRead("collections.items", [collectionId]);
+export const useCollection = (collectionId?: number) => useRead<Collection | undefined>("collections.one", [collectionId]);
 export const useItem = (id?: number) => useRead("library.item", [id]);
 export const useTask = (id?: number) => useRead("tasks.one", [id]);
 export const useTasksInRange = (from?: string, to?: string) => useRead("tasks.range", [from, to]);
@@ -40,6 +46,8 @@ export const useTasksByItem = (itemId?: number) => useRead("tasks.item", [itemId
 export const useTasksBySubjectAndDate = (_subjectId?: number, date?: string) => useRead("tasks.date", [date]);
 export const useRecurrencesBySubject = (_subjectId?: number) => useRead("recurrences.active");
 export const useSegmentsByItem = (itemId?: number) => useRead("library.segments", [itemId]);
+export const useSegmentsByIds = (ids: readonly number[]) => useRead<Segment[]>("segments.ids", [ids]);
+export const useStudyRoutine = (id?: number) => useRead<StudyRoutine | null>("routines.one", [id]);
 export const useAssignmentsForLesson = (lessonId?: number) =>
   usePresentationReader<Assignment[]>((queries) => queries.assignmentsForLesson(lessonId), [lessonId]);
 export const usePendingAssignmentsForSubject = (subjectId?: number, recurrenceId?: number) =>
