@@ -12,7 +12,7 @@ const temporaryBaseline: Record<string, string[]> = {
   "src/components/diary/BpmSuggestion.tsx": ["@/lib/db", "dexie-react-hooks"],
   "src/components/diary/EditTaskSheet.tsx": ["@/lib/db"],
   "src/components/diary/LastSessionStrip.tsx": ["@/lib/db", "dexie-react-hooks"],
-  "src/components/diary/LinkTargetFields.tsx": ["@/lib/db", "dexie-react-hooks"],
+  "src/components/diary/LinkTargetFields.tsx": ["@/lib/db", "@/lib/db", "dexie-react-hooks"],
   "src/components/diary/PracticeMode.tsx": ["@/lib/db", "dexie-react-hooks"],
   "src/components/diary/SegmentHistorySheet.tsx": ["@/lib/db", "dexie-react-hooks"],
   "src/components/diary/SessionDetailSheet.tsx": ["@/lib/db", "dexie-react-hooks"],
@@ -42,43 +42,82 @@ const temporaryBaseline: Record<string, string[]> = {
   "src/components/profile/SubjectsEditor.tsx": ["@/lib/db"],
   "src/hooks/useEntities.ts": ["@/lib/db", "dexie-react-hooks"],
   "src/pages/Collections.tsx": ["@/lib/db"],
-  "src/pages/Diary.tsx": ["@/lib/db", "dexie-react-hooks"],
+  "src/pages/Diary.tsx": ["@/lib/db", "@/lib/db", "dexie-react-hooks"],
   "src/pages/EditStudyRoutinePage.tsx": ["@/lib/db"],
   "src/pages/EditTaskPage.tsx": ["@/lib/db"],
   "src/pages/History.tsx": ["@/lib/db", "dexie-react-hooks"],
   "src/pages/Index.tsx": ["@/lib/db", "dexie-react-hooks"],
-  "src/pages/ItemAnalysisPage.tsx": ["@/lib/db", "dexie-react-hooks"],
+  "src/pages/ItemAnalysisPage.tsx": ["@/lib/db", "@/lib/db", "dexie-react-hooks"],
   "src/pages/Lessons.tsx": ["@/lib/db", "dexie-react-hooks"],
   "src/pages/Library.tsx": ["@/lib/db", "dexie-react-hooks"],
   "src/pages/NewTaskPage.tsx": ["@/lib/db", "dexie-react-hooks"],
   "src/pages/Profile.tsx": ["dexie-react-hooks"],
-  "src/pages/Tasks.tsx": ["@/lib/db"],
+  "src/pages/Tasks.tsx": ["@/lib/db", "@/lib/db"],
 };
 
 const restrictedImports = [
-  { pattern: /from\s+["']@\/lib\/db(?:\/|["'])/, label: "@/lib/db" },
-  { pattern: /from\s+["']dexie(?:["']|\/)/, label: "dexie" },
-  { pattern: /from\s+["']dexie-react-hooks(?:["']|\/)/, label: "dexie-react-hooks" },
-  { pattern: /from\s+["']@\/infrastructure(?:\/|["'])/, label: "@/infrastructure/" },
-  { pattern: /from\s+["']@capacitor\/filesystem(?:["']|\/)/, label: "@capacitor/filesystem" },
+  { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/lib\/db(?:\/|["'])/g, label: "@/lib/db" },
+  { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie(?:["']|\/)/g, label: "dexie" },
+  { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']dexie-react-hooks(?:["']|\/)/g, label: "dexie-react-hooks" },
+  { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/infrastructure(?:\/|["'])/g, label: "@/infrastructure/" },
+  { pattern: /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@capacitor\/filesystem(?:["']|\/)/g, label: "@capacitor/filesystem" },
 ];
 
 const restrictedBrowserApis = [
-  { pattern: /\bFileReader\b/, label: "FileReader" },
-  { pattern: /\bBlob\b/, label: "Blob" },
-  { pattern: /\bURL\.createObjectURL\b/, label: "URL.createObjectURL" },
+  { pattern: /\bFileReader\b/g, label: "FileReader" },
+  { pattern: /\bBlob\b/g, label: "Blob" },
+  { pattern: /\bURL\.createObjectURL\b/g, label: "URL.createObjectURL" },
 ];
+
+describe("presentation import audit helpers", () => {
+  it("detects side-effect, dynamic, and CommonJS restricted imports", () => {
+    const source = [
+      'import "@/lib/db";',
+      'await import("dexie");',
+      'require("@/infrastructure/dexie");',
+    ].join("\n");
+
+    expect(restrictedLabelsIn(source)).toEqual([
+      "@/lib/db",
+      "dexie",
+      "@/infrastructure/",
+    ]);
+  });
+
+  it("keeps repeated forbidden imports so a baseline cannot hide a new occurrence", () => {
+    const source = [
+      'import { db } from "@/lib/db";',
+      'import { database } from "@/lib/db";',
+    ].join("\n");
+
+    expect(restrictedLabelsIn(source)).toEqual(["@/lib/db", "@/lib/db"]);
+  });
+
+  it("excludes spec files from production presentation audit", () => {
+    expect(isProductionSourceFile("Widget.spec.tsx")).toBe(false);
+  });
+});
 
 async function filesIn(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = await Promise.all(entries.map(async (entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) return filesIn(path);
-    return /\.[cm]?[jt]sx?$/.test(entry.name) && !/\.test\.[cm]?[jt]sx?$/.test(entry.name)
+    return isProductionSourceFile(entry.name)
       ? [path]
       : [];
   }));
   return files.flat();
+}
+
+function isProductionSourceFile(filename: string): boolean {
+  return /\.[cm]?[jt]sx?$/.test(filename) && !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(filename);
+}
+
+function restrictedLabelsIn(source: string): string[] {
+  return [...restrictedImports, ...restrictedBrowserApis].flatMap(({ pattern, label }) =>
+    Array.from(source.matchAll(pattern), () => label),
+  );
 }
 
 async function auditPresentationImports(): Promise<Record<string, string[]>> {
@@ -87,9 +126,7 @@ async function auditPresentationImports(): Promise<Record<string, string[]>> {
 
   for (const file of files) {
     const source = await readFile(file, "utf8");
-    const labels = [...restrictedImports, ...restrictedBrowserApis]
-      .filter(({ pattern }) => pattern.test(source))
-      .map(({ label }) => label);
+    const labels = restrictedLabelsIn(source);
     if (labels.length) violations[relative(process.cwd(), file)] = labels;
   }
 
