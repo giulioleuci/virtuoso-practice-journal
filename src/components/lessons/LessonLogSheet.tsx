@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type Lesson, type LessonRecurrence } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+import { useAssignmentsForLesson, usePendingAssignmentsForSubject } from "@/hooks/useEntities";
+import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
 import { lessonsService, pendingAssignmentsService } from "@/lib/services";
 import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
@@ -39,17 +39,10 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
   const subjId = lesson?.subjectId ?? recurrence?.subjectId ?? subjectId;
   const recId = lesson?.recurrenceId ?? recurrence?.id;
 
-  const existingAssignments = useLiveQuery(
-    () => (lesson?.id ? db.assignments.where("lessonId").equals(lesson.id).toArray() : Promise.resolve([])),
-    [lesson?.id]
-  );
+  const existingAssignments = useAssignmentsForLesson(lesson?.id);
 
   /** Live pending drafts scoped to this subject (any recurrence, or matching one). */
-  const pendingLive = useLiveQuery(async () => {
-    if (!subjId) return [];
-    const rows = await db.pendingAssignments.where("subjectId").equals(subjId).toArray();
-    return rows.filter((r) => !recId || r.recurrenceId == null || r.recurrenceId === recId);
-  }, [subjId, recId]);
+  const pendingLive = usePendingAssignmentsForSubject(subjId, recId);
 
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");

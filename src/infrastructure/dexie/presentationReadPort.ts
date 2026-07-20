@@ -84,7 +84,14 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "helpRequests.answeredItemIds": return db.helpRequests.filter((request) => !!request.answer && !!request.itemId).toArray().then((requests) => new Set(requests.map((request) => request.itemId!))) as Promise<T>;
       case "lessons.all": return db.lessons.orderBy("date").reverse().toArray() as Promise<T>;
       case "assignments.all": return db.assignments.toArray() as Promise<T>;
+      case "assignments.lesson": return (typeof first === "number" ? db.assignments.where("lessonId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
+      case "pendingAssignments.subject": return (async () => {
+        if (typeof first !== "number") return [];
+        const rows = await db.pendingAssignments.where("subjectId").equals(first).toArray();
+        return typeof second === "number" ? rows.filter((row) => row.recurrenceId == null || row.recurrenceId === second) : rows;
+      })() as Promise<T>;
       case "helpRequests.all": return db.helpRequests.toArray() as Promise<T>;
+      case "helpRequests.openCount": return db.helpRequests.filter((request) => !request.resolved).count() as Promise<T>;
       case "collections.active": return db.collections.filter((row) => active(row) && (!first || row.kind === first)).toArray() as Promise<T>;
       case "collections.all": return db.collections.toArray() as Promise<T>;
       case "collections.items": return (typeof first === "number" ? db.collectionItems.where("collectionId").equals(first).toArray() : Promise.resolve([])) as Promise<T>;
@@ -96,6 +103,15 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "routines.one": return (typeof first === "number" ? db.studyRoutines.get(first) : Promise.resolve(undefined)) as Promise<T>;
       default: throw new Error(`Unknown presentation read operation: ${operation}`);
     }
+  },
+  assignmentsForLesson(lessonId) {
+    return this.read("assignments.lesson", [lessonId]);
+  },
+  pendingAssignmentsForSubject(subjectId, recurrenceId) {
+    return this.read("pendingAssignments.subject", [subjectId, recurrenceId]);
+  },
+  openHelpRequestCount() {
+    return this.read("helpRequests.openCount");
   },
   subscribe(listener) {
     const subscription = liveQuery(() => Promise.all(db.tables.map((table) => table.toArray()))).subscribe({ next: listener });

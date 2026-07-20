@@ -1,7 +1,9 @@
 /** Named presentation DTO adapters. Persistence stays behind application ports. */
 import type { LibraryKind } from "@/domain/entities/common";
+import type { Assignment } from "@/domain/entities/lesson";
+import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
 import { presentationQueries } from "@/application/queries/presentationQueryService";
-import { usePresentationQuery } from "./usePresentationQuery";
+import { usePresentationQuery, usePresentationReader } from "./usePresentationQuery";
 
 // DTO types are inferred at each feature hook during incremental migration.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,3 +40,9 @@ export const useTasksByItem = (itemId?: number) => useRead("tasks.item", [itemId
 export const useTasksBySubjectAndDate = (_subjectId?: number, date?: string) => useRead("tasks.date", [date]);
 export const useRecurrencesBySubject = (_subjectId?: number) => useRead("recurrences.active");
 export const useSegmentsByItem = (itemId?: number) => useRead("library.segments", [itemId]);
+export const useAssignmentsForLesson = (lessonId?: number) =>
+  usePresentationReader<Assignment[]>((queries) => queries.assignmentsForLesson(lessonId), [lessonId]);
+export const usePendingAssignmentsForSubject = (subjectId?: number, recurrenceId?: number) =>
+  usePresentationReader<PendingAssignment[]>((queries) => queries.pendingAssignmentsForSubject(subjectId, recurrenceId), [subjectId, recurrenceId]);
+export const useOpenHelpRequestCount = () =>
+  usePresentationReader<number>((queries) => queries.openHelpRequestCount());

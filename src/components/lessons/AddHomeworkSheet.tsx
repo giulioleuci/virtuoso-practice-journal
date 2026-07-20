@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db } from "@/lib/presentationQueries";
-import { useSubjects } from "@/hooks/useEntities";
+import { usePendingAssignmentsForSubject, useSubjects } from "@/hooks/useEntities";
 import { pendingAssignmentsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -48,10 +46,7 @@ export function AddHomeworkSheet({ open, onOpenChange, subjectId, recurrenceId, 
     setDraft("");
   }, [open]);
 
-  const currentPending = useLiveQuery(
-    () => db.pendingAssignments.where("subjectId").equals(subjectId).toArray(),
-    [subjectId],
-  );
+  const currentPending = usePendingAssignmentsForSubject(subjectId);
 
   const add = async () => {
     if (!draft.trim()) return;

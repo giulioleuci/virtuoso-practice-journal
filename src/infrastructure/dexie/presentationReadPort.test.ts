@@ -34,4 +34,31 @@ describe("dexie presentation reads", () => {
     expect(result.tasks.map((task) => task.id)).toEqual([taskId]);
     expect(result.sessionsByTask[taskId]).toHaveLength(1);
   });
+
+  it("returns lesson-scoped assignment reads without exposing tables", async () => {
+    const lessonId = await db.lessons.add({ subjectId: 1, date: "2026-07-20", createdAt: 1 });
+    await db.assignments.bulkAdd([
+      { lessonId, text: "Keep wrist loose", createdAt: 1 },
+      { lessonId: lessonId + 1, text: "Ignore", createdAt: 1 },
+    ]);
+    await db.pendingAssignments.bulkAdd([
+      { subjectId: 1, recurrenceId: 3, text: "Arpeggios", createdAt: 1 },
+      { subjectId: 1, text: "Scales", createdAt: 1 },
+      { subjectId: 1, recurrenceId: 4, text: "Other teacher", createdAt: 1 },
+    ]);
+    await db.helpRequests.bulkAdd([
+      { id: 1, question: "Open", resolved: false, createdAt: 1 },
+      { id: 2, question: "Closed", resolved: true, createdAt: 1 },
+    ]);
+
+    const [assignments, pending, openCount] = await Promise.all([
+      dexiePresentationReads.read<{ text: string }[]>("assignments.lesson", [lessonId]),
+      dexiePresentationReads.read<{ text: string }[]>("pendingAssignments.subject", [1, 3]),
+      dexiePresentationReads.read<number>("helpRequests.openCount"),
+    ]);
+
+    expect(assignments.map((assignment) => assignment.text)).toEqual(["Keep wrist loose"]);
+    expect(pending.map((assignment) => assignment.text)).toEqual(["Arpeggios", "Scales"]);
+    expect(openCount).toBe(1);
+  });
 });

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useActiveTasks, useAssignments, useLessons, useRecurrences, useSubjects } from "@/hooks/useEntities";
+import { useActiveTasks, useAssignments, useLessons, useOpenHelpRequestCount, useRecurrences, useSubjects } from "@/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
-import { useLiveQuery } from "@/lib/subscriptions";
-import { db, type Lesson, type LessonRecurrence } from "@/lib/presentationQueries"; // db used for useLiveQuery reads only
+import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
 import { lessonsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
@@ -55,7 +54,7 @@ export default function Lessons() {
   const lessons = useLessons();
   const assignments = useAssignments();
   const tasksAll = useActiveTasks();
-  const openHelpCount = useLiveQuery(async () => (await db.helpRequests.toArray()).filter((h) => !h.resolved).length);
+  const openHelpCount = useOpenHelpRequestCount();
 
   const [recapOpen, setRecapOpen] = useState(false);
 
