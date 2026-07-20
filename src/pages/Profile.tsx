@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
+import { useEffect, useState } from "react";
 import { backupService, profileService } from "@/lib/services";
-import { saveTextFile, pickTextFile, scheduleReminders, ensureNotificationPermission, isNative } from "@/lib/platform";
+import { scheduleReminders, ensureNotificationPermission } from "@/lib/platform";
 import { getDefaultWeekStartsOn } from "@/lib/date";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
+import { useProfile } from "@/hooks/useEntities";
 import { REMINDER_PRESETS, resolveReminderText, getReminderBodies, type ReminderPreset } from "@/lib/reminderPresets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +21,13 @@ const APP_VERSION = "0.3alpha";
 
 export default function Profile() {
   const { t, lang, setLang } = useI18n();
-  const profile = useLiveQuery(() => profileService.get());
-  const fileRef = useRef<HTMLInputElement>(null);
+  const profile = useProfile();
   const [confirmText, setConfirmText] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [backupProgress, setBackupProgress] = useState<"idle" | "exporting" | "importing">("idle");
 
   // Reflect reminder preferences in scheduled OS-level notifications when running natively.
   const reminderDaysKey = profile?.reminderDays?.join(",") ?? "";
@@ -63,33 +63,25 @@ export default function Profile() {
   };
 
   const onExport = async () => {
+    setBackupProgress("exporting");
     try {
-      const json = await backupService.exportAll();
-      await saveTextFile(`virtuoso-backup-${new Date().toISOString().slice(0, 10)}.json`, json);
+      await backupService.exportBackup();
       toast.success(t("toast.exported"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("errors.couldNotSave"));
+    } finally {
+      setBackupProgress("idle");
     }
   };
 
-  const onImport = async (file: File) => {
+  const onImport = async () => {
+    setBackupProgress("importing");
     try {
-      const text = await file.text();
-      await backupService.importAll(text);
-      toast.success(t("toast.imported"));
+      if (await backupService.importBackup()) toast.success(t("toast.imported"));
     } catch {
       toast.error(t("errors.invalidFile"));
-    }
-  };
-
-  const onImportNative = async () => {
-    const text = await pickTextFile();
-    if (!text) return;
-    try {
-      await backupService.importAll(text);
-      toast.success(t("toast.imported"));
-    } catch {
-      toast.error(t("errors.invalidFile"));
+    } finally {
+      setBackupProgress("idle");
     }
   };
 
@@ -397,22 +389,13 @@ export default function Profile() {
           </AccordionTrigger>
           <AccordionContent className="pb-4">
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={onExport} className="w-full">
+              <Button variant="outline" onClick={onExport} disabled={backupProgress !== "idle"} className="w-full">
                 <Download className="h-4 w-4 mr-2" />{t("profile.export")}
               </Button>
-              <Button variant="outline" onClick={() => (isNative() ? onImportNative() : fileRef.current?.click())} className="w-full">
+              <Button variant="outline" onClick={onImport} disabled={backupProgress !== "idle"} className="w-full">
                 <Upload className="h-4 w-4 mr-2" />{t("profile.import")}
               </Button>
             </div>
-            <input
-              ref={fileRef} type="file" accept="application/json" className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                // Reset so picking the same file twice still fires onChange
-                e.target.value = "";
-                if (file) onImport(file);
-              }}
-            />
           </AccordionContent>
         </AccordionItem>
 

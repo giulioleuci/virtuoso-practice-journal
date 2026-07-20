@@ -51,7 +51,6 @@ const temporaryBaseline: Record<string, string[]> = {
   "src/pages/Lessons.tsx": ["@/lib/db", "dexie-react-hooks"],
   "src/pages/Library.tsx": ["@/lib/db", "dexie-react-hooks"],
   "src/pages/NewTaskPage.tsx": ["@/lib/db", "dexie-react-hooks"],
-  "src/pages/Profile.tsx": ["dexie-react-hooks"],
   "src/pages/Tasks.tsx": ["@/lib/db", "@/lib/db"],
 };
 

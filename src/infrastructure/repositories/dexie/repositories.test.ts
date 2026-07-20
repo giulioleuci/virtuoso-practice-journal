@@ -80,13 +80,13 @@ describe("Dexie repositories", () => {
 
   it("rolls back backup import when a later table write fails", async () => {
     await db.subjects.add({ name: "old", type: "instrument", createdAt: 1 });
-    await expect(backupRepository.importAll(JSON.stringify({ version: 2, data: {
+    await expect(backupRepository.importAll({
       subjects: [{ name: "new", type: "instrument", createdAt: 2 }],
       library: [
         { id: 1, subjectId: 1, kind: "repertoire", title: "first", createdAt: 2 },
         { id: 1, subjectId: 1, kind: "repertoire", title: "duplicate", createdAt: 2 },
       ],
-    } }))).rejects.toThrow();
+    })).rejects.toThrow();
     expect((await db.subjects.toArray()).map((subject) => subject.name)).toEqual(["old"]);
   });
 
