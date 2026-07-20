@@ -48,4 +48,52 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["src/domain/**/*.{ts,tsx}", "src/application/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            "react",
+            "react-dom",
+            "dexie",
+            "dexie-react-hooks",
+            "@/lib/db",
+            "@capacitor/filesystem",
+          ],
+          patterns: ["@/infrastructure/*", "@capacitor/*"],
+        },
+      ],
+      "no-restricted-globals": ["error", "FileReader", "Blob"],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.object.name='URL'][callee.property.name='createObjectURL']",
+          message: "Browser file APIs belong in infrastructure gateways.",
+        },
+      ],
+    },
+  },
+  {
+    // Existing violations are tracked by import-boundaries.test.ts until their slice moves.
+    files: ["src/pages/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}", "src/hooks/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          paths: ["@/lib/db", "dexie", "dexie-react-hooks", "@capacitor/filesystem"],
+          patterns: ["@/infrastructure/*", "@capacitor/*"],
+        },
+      ],
+      "no-restricted-globals": ["error", "FileReader", "Blob"],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.object.name='URL'][callee.property.name='createObjectURL']",
+          message: "Browser file APIs belong in infrastructure gateways.",
+        },
+      ],
+    },
+  },
 );
