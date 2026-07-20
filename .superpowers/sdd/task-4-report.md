@@ -24,3 +24,20 @@
 ## Scope
 
 No schema/migration changes. Existing unrelated working-tree changes in `CLAUDE.md`, `GEMINI.md`, and `src/infrastructure/dexie/db.ts` were preserved.
+
+## Review corrections
+
+- `CreateTaskUseCase` now matches prior recurrence semantics: interval steps clamp to one, unbounded recurrences stop at the 365-day/200-occurrence safeguards, and a single port operation persists the complete recurrence atomically.
+- `GenerateStudyRoutineUseCase` validates its input, resolves its pool and optional weights through an injected generation port, produces the routine matrix tasks, and persists those tasks. Dexie now supplies only resolution and write mechanics.
+- `LogSessionUseCase` builds the effective snapshot input, uses its injected clock, and coordinates session creation, task completion, and optional help persistence through transaction-level port operations. Fake-port tests prove the effective snapshot and rollback behavior.
+
+## Correction verification
+
+- RED: focused use-case tests failed for zero-day recurrence, split recurrence persistence, routine generation delegation, and session snapshot/rollback before the correction.
+- GREEN: `npx vitest run src/application/useCases src/lib/services/tasks.test.ts src/lib/services/sessions.test.ts src/lib/services/studyRoutines.test.ts src/infrastructure/repositories/dexie/repositories.test.ts` — 86 tests passed.
+- `npx tsc --noEmit`, `npm run lint` (80 pre-existing warnings, no errors), and `npm run build` passed.
+
+## Recurrence-cap follow-up
+
+- RED: `occurrences: 10_000` created 366 interval tasks, exceeding `MAX_GENERATED`.
+- GREEN: `CreateTaskUseCase` now uses `Math.min(recurrence.occurrences ?? MAX_GENERATED, MAX_GENERATED)`; focused test confirms exactly 200 tasks.

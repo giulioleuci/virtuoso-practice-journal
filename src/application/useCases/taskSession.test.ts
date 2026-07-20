@@ -47,6 +47,18 @@ describe("task and session use cases", () => {
     expect(tasks.createRecurringCalls).toBe(1);
   });
 
+  it("caps explicitly requested recurrence occurrences", async () => {
+    const tasks = new FakeTaskRepository();
+    const useCase = new CreateTaskUseCase(tasks, () => 10);
+
+    await useCase.execute({
+      ...baseTask,
+      recurrence: { kind: "interval", everyXDays: 1, startDate: "2026-07-20", occurrences: 10_000 },
+    });
+
+    expect(tasks.created).toHaveLength(200);
+  });
+
   it("rejects a recurrence that yields no dates", async () => {
     const tasks = new FakeTaskRepository();
     const useCase = new CreateTaskUseCase(tasks, () => 10);

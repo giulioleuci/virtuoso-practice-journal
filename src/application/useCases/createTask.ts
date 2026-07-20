@@ -10,7 +10,7 @@ function recurrenceDates(recurrence: NonNullable<NewTaskInput["recurrence"]>): s
   const end = recurrence.endDate ? parseDayKey(recurrence.endDate) : null;
   const horizon = new Date(start);
   horizon.setDate(horizon.getDate() + HORIZON_DAYS);
-  const cap = recurrence.occurrences ?? MAX_GENERATED;
+  const cap = Math.min(recurrence.occurrences ?? MAX_GENERATED, MAX_GENERATED);
   const current = new Date(start);
   if (recurrence.kind === "weekdays") {
     const days = recurrence.days ?? [];
