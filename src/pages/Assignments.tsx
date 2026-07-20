@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAssignments, useLessons, useSubjects } from "@/hooks/useEntities";
+import { useAssignments, useLessons, useSubjects } from "@/presentation/hooks/useEntities";
 import { useNavigate } from "react-router-dom";
 
 import { lessonsService } from "@/lib/services";

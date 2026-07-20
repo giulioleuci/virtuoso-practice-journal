@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useTechniques } from "@/hooks/useEntities";
+import { useTechniques } from "@/presentation/hooks/useEntities";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { NoteVal, SessionQuality, Subject } from "@/domain/entities/common";

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Task } from "@/domain/entities/task";
 import type { StudyRoutine } from "@/domain/ports/studyRoutine";
-import { useActiveTasks, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
+import { useActiveTasks, useStudyRoutines, useSubjects } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
 import type { Lang } from "@/domain/entities/common";

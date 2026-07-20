@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSubjects } from "@/hooks/useEntities";
+import { useSubjects } from "@/presentation/hooks/useEntities";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { NoteVal, SessionQuality } from "@/domain/entities/common";
 import type { LibraryItem } from "@/domain/entities/library";

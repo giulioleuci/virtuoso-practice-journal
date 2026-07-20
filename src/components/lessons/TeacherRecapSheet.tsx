@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/hooks/useEntities";
+import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/presentation/hooks/useEntities";
 import type { ColorKey, SubjectType } from "@/domain/entities/common";
 import type { HelpRequest } from "@/domain/ports/helpRequest";
 import { helpRequestsService } from "@/lib/services";

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { useCollectionLinks, useCollections } from "@/hooks/useEntities";
+import { useCollectionLinks, useCollections } from "@/presentation/hooks/useEntities";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryKind } from "@/domain/entities/common";

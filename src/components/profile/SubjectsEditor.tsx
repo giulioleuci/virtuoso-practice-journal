@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSubjects, useTechniques } from "@/hooks/useEntities";
+import { useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { ColorKey, Subject, SubjectType } from "@/domain/entities/common";
 import { subjectsService } from "@/lib/services";

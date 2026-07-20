@@ -1,4 +1,4 @@
-import { useTasksByItem } from "@/hooks/useEntities";
+import { useTasksByItem } from "@/presentation/hooks/useEntities";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Session } from "@/domain/entities/session";
 import { useMemo } from "react";

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { usePendingAssignmentsForSubject, useSubjects } from "@/hooks/useEntities";
+import { usePendingAssignmentsForSubject, useSubjects } from "@/presentation/hooks/useEntities";
 import { pendingAssignmentsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";

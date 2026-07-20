@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useActiveTasks, useAssignments, useLessons, useOpenHelpRequestCount, useRecurrences, useSubjects } from "@/hooks/useEntities";
+import { useActiveTasks, useAssignments, useLessons, useOpenHelpRequestCount, useRecurrences, useSubjects } from "@/presentation/hooks/useEntities";
 import { subjectBorderStyle } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";

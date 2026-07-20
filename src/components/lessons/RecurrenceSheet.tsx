@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSubjects } from "@/hooks/useEntities";
+import { useSubjects } from "@/presentation/hooks/useEntities";
 import type { ColorKey } from "@/domain/entities/common";
 import type { LessonRecurrence, LessonScheduleSlot, LessonFrequency } from "@/domain/entities/lesson";
 import { lessonsService } from "@/lib/services";

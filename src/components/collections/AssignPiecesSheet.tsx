@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem } from "@/domain/entities/library";
 import { useI18n } from "@/lib/i18n";
-import { useCollectionItems, useLibraryByKind } from "@/hooks/useEntities";
+import { useCollectionItems, useLibraryByKind } from "@/presentation/hooks/useEntities";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";

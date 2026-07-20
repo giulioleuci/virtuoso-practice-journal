@@ -7,7 +7,7 @@
  * A persistent summary chip bar shows selections from previous steps.
  */
 import { useEffect, useMemo, useState } from "react";
-import { useLessons, useRecurrences, useSubjects, useTechniques } from "@/hooks/useEntities";
+import { useLessons, useRecurrences, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { NoteVal } from "@/domain/entities/common";

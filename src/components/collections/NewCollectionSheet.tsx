@@ -1,4 +1,4 @@
-import { useSubjects } from "@/hooks/useEntities";
+import { useSubjects } from "@/presentation/hooks/useEntities";
 import type { Collection } from "@/domain/entities/collection";
 import type { ColorKey, LibraryKind } from "@/domain/entities/common";
 import { useI18n } from "@/lib/i18n";

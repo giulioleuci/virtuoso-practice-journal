@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAssignmentsForLesson, usePendingAssignmentsForSubject } from "@/hooks/useEntities";
+import { useAssignmentsForLesson, usePendingAssignmentsForSubject } from "@/presentation/hooks/useEntities";
 import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
 import { lessonsService, pendingAssignmentsService } from "@/lib/services";
 import { today } from "@/lib/date";

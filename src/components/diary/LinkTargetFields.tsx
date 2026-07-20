@@ -2,7 +2,7 @@
  *  Enforces mutual exclusivity: free | item (+optional segments) | collection.
  */
 import { useMemo } from "react";
-import { useCollectionLinks, useLibrary } from "@/hooks/useEntities";
+import { useCollectionLinks, useLibrary } from "@/presentation/hooks/useEntities";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { LibraryKind } from "@/domain/entities/common";
 import type { Collection, CollectionItem } from "@/domain/entities/collection";

@@ -5,7 +5,7 @@ import type { StudyPoolEntry, StudyGroup, StudyRoutine } from "@/domain/ports/st
 import { useI18n } from "@/lib/i18n";
 import { studyRoutinesService } from "@/lib/services";
 import { poolEntryKey } from "@/lib/domain/studyRoutineGenerator";
-import { useSegments, useCollections } from "@/hooks/useEntities";
+import { useSegments, useCollections } from "@/presentation/hooks/useEntities";
 import type { StudyRoutineConfig } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

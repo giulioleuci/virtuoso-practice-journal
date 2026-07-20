@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSessions, useStudyRoutines, useSubjects } from "@/hooks/useEntities";
+import { useSessions, useStudyRoutines, useSubjects } from "@/presentation/hooks/useEntities";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Task } from "@/domain/entities/task";
 import type { Session } from "@/domain/entities/session";

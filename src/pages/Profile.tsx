@@ -3,7 +3,7 @@ import { backupService, profileService } from "@/lib/services";
 import { scheduleReminders, ensureNotificationPermission } from "@/lib/platform";
 import { getDefaultWeekStartsOn } from "@/lib/date";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
-import { useProfile } from "@/hooks/useEntities";
+import { useProfile } from "@/presentation/hooks/useEntities";
 import { REMINDER_PRESETS, resolveReminderText, getReminderBodies, type ReminderPreset } from "@/lib/reminderPresets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

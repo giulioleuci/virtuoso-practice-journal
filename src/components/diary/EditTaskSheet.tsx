@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSubjects, useTechniques } from "@/hooks/useEntities";
+import { useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { LibraryKind, NoteVal } from "@/domain/entities/common";
 import type { Task, TaskRecurrence, TaskLinkType } from "@/domain/entities/task";

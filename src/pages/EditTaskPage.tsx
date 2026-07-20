@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSubjects, useTechniques, useTask } from "@/hooks/useEntities";
+import { useSubjects, useTechniques, useTask } from "@/presentation/hooks/useEntities";
 import { useNavigate, useParams } from "react-router-dom";
 import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { NoteVal } from "@/domain/entities/common";

@@ -5,7 +5,7 @@ import { subjectBorderStyle } from "@/lib/subjectColors";
 import type { Subject } from "@/domain/entities/common";
 import type { Task } from "@/domain/entities/task";
 import { useI18n } from "@/lib/i18n";
-import { useTasksInRange } from "@/hooks/useEntities";
+import { useTasksInRange } from "@/presentation/hooks/useEntities";
 function utcDateStr(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }

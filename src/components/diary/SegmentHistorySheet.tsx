@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Session } from "@/domain/entities/session";
-import { useTechniques } from "@/hooks/useEntities";
+import { useTechniques } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
 import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";

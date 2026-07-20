@@ -1,23 +1,62 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
-import "fake-indexeddb/auto";
-import { db } from "@/lib/db";
 import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
-import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
-import { useTasksByItem } from "./useEntities";
+import type { PresentationReadPort } from "@/application/queries/presentationReadPort";
+import {
+  useAllTasks,
+  useCollectionItems,
+  useItem,
+  useLessons,
+  useProfile,
+  useSegmentsByItem,
+  useSessionsInRange,
+  useTasksByDate,
+  useTasksInRange,
+} from "./useEntities";
 
-beforeEach(async () => {
-  configurePresentationQueries(dexiePresentationReads);
-  await db.delete();
-  await db.open();
-});
+class FakeReads implements PresentationReadPort {
+  private listener: (() => void) | undefined;
 
-describe("presentation task query adapter", () => {
-  it("updates item DTOs after its subscription is notified", async () => {
-    const { result } = renderHook(() => useTasksByItem(7));
-    await waitFor(() => expect(result.current).toEqual([]));
+  constructor(private readonly values: Map<string, unknown>) {}
 
-    await db.tasks.add({ subjectId: 1, itemId: 7, title: "Scales", date: "2026-07-20", done: false, createdAt: 1 });
-    await waitFor(() => expect(result.current?.map((task) => task.title)).toEqual(["Scales"]));
+  read<T>(operation: string): Promise<T> {
+    return Promise.resolve(this.values.get(operation) as T);
+  }
+
+  assignmentsForLesson() { return Promise.resolve([]); }
+  pendingAssignmentsForSubject() { return Promise.resolve([]); }
+  openHelpRequestCount() { return Promise.resolve(0); }
+
+  subscribe(listener: () => void): () => void {
+    this.listener = listener;
+    return () => { this.listener = undefined; };
+  }
+
+  notify(operation: string, value: unknown): void {
+    this.values.set(operation, value);
+    this.listener?.();
+  }
+}
+
+describe("presentation entity adapters", () => {
+  it.each([
+    ["task date", () => useTasksByDate("2026-07-20"), "tasks.date", [{ id: 1 }], [{ id: 2 }]],
+    ["task range", () => useTasksInRange("2026-07-01", "2026-07-31"), "tasks.range", [{ id: 1 }], [{ id: 2 }]],
+    ["library item", () => useItem(7), "library.item", { id: 7, title: "Prelude" }, { id: 7, title: "Fugue" }],
+    ["item segment", () => useSegmentsByItem(7), "library.segments", [{ id: 1, label: "A" }], [{ id: 2, label: "B" }]],
+    ["collection", () => useCollectionItems(3), "collections.items", [{ id: 1, itemId: 7 }], [{ id: 2, itemId: 8 }]],
+    ["history", () => useAllTasks(), "tasks.all", [{ id: 1, title: "Old" }], [{ id: 2, title: "New" }]],
+    ["session", () => useSessionsInRange("2026-07-01", "2026-07-31"), "sessions.range", [{ id: 1 }], [{ id: 2 }]],
+    ["lesson", () => useLessons(), "lessons.all", [{ id: 1 }], [{ id: 2 }]],
+    ["profile", () => useProfile(), "profile.current", { id: "me", name: "Ada" }, { id: "me", name: "Grace" }],
+  ])("updates %s DTO after fake subscription notification", async (_label, useEntity, operation, initial, updated) => {
+    const reads = new FakeReads(new Map([[operation, initial]]));
+    configurePresentationQueries(reads);
+
+    const { result } = renderHook(useEntity);
+    await waitFor(() => expect(result.current).toEqual(initial));
+
+    reads.notify(operation, updated);
+    await waitFor(() => expect(result.current).toEqual(updated));
   });
 });
