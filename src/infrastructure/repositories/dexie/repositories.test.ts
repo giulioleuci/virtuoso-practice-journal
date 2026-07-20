@@ -4,6 +4,10 @@ import { db } from "@/infrastructure/dexie/db";
 import { taskRepository } from "./taskRepository";
 import { sessionRepository } from "./sessionRepository";
 import { backupRepository } from "./backupRepository";
+import { libraryRepository } from "./libraryRepository";
+import { collectionRepository } from "./collectionRepository";
+import { lessonRepository } from "./lessonRepository";
+import { profileRepository } from "./profileRepository";
 
 beforeEach(async () => {
   await db.delete();
@@ -83,5 +87,36 @@ describe("Dexie repositories", () => {
       ],
     } }))).rejects.toThrow();
     expect((await db.subjects.toArray()).map((subject) => subject.name)).toEqual(["old"]);
+  });
+
+  it("implements collection links port and excludes deleted library items", async () => {
+    const subject = await subjectId();
+    const collectionId = await collectionRepository.create({ kind: "repertoire", name: "Set", createdAt: 1, updatedAt: 1 });
+    const activeItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "active", createdAt: 1 });
+    const deletedItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "deleted", deletedAt: 2, createdAt: 1 });
+    await db.collectionItems.bulkAdd([
+      { collectionId, itemId: activeItem, createdAt: 1 },
+      { collectionId, itemId: deletedItem, createdAt: 1 },
+    ]);
+    expect((await collectionRepository.items(collectionId)).map((link) => link.itemId)).toEqual([activeItem, deletedItem]);
+    expect((await collectionRepository.listItems(collectionId)).map((item) => item.title)).toEqual(["active"]);
+  });
+
+  it("implements lesson port reads, updates, and assignment lookup", async () => {
+    const subject = await subjectId();
+    const lessonId = await lessonRepository.log(subject, undefined, "2026-01-01", "note", ["practice"]);
+    expect((await lessonRepository.list()).map((lesson) => lesson.id)).toEqual([lessonId]);
+    expect((await lessonRepository.get(lessonId))?.notes).toBe("note");
+    expect((await lessonRepository.assignmentsForLesson(lessonId)).map((assignment) => assignment.text)).toEqual(["practice"]);
+    await lessonRepository.update(lessonId, { notes: "updated" });
+    expect((await lessonRepository.get(lessonId))?.notes).toBe("updated");
+    await lessonRepository.remove(lessonId);
+    expect(await lessonRepository.get(lessonId)).toBeUndefined();
+  });
+
+  it("returns initialized profile and rolls back its subjects when profile write fails", async () => {
+    const profile = await profileRepository.initialize({ subjects: [{ name: "Piano", type: "instrument" }], name: "Alice", lang: "en", reminderTime: "09:00", reminderFreq: "daily", reminderDays: [], lateRecoveryDays: 1, graceDay: false, groupByPhase: false, onboarded: true });
+    expect(profile.id).toBe("me");
+    expect(await db.subjects.count()).toBe(1);
   });
 });

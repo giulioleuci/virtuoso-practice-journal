@@ -1,5 +1,6 @@
 import { db } from "@/infrastructure/dexie/db";
 import type { Task, TaskRecurrence } from "@/domain/entities/task";
+import type { TaskPort } from "@/domain/ports/task";
 import { now } from "@/lib/date";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 
@@ -40,4 +41,4 @@ export const taskRepository = {
   hasSessions: async (id: number) => (await db.sessions.where("taskId").equals(id).count()) > 0,
   hardDelete: async (id: number) => { await db.tasks.delete(id); },
   restore: async (task: Task) => { await db.tasks.add(task); },
-};
+} satisfies TaskPort & Record<string, unknown>;
