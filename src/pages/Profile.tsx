@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { backupService, profileService } from "@/lib/services";
+import { profileService } from "@/lib/services";
+import { applicationCommands } from "@/lib/applicationCommands";
 import { scheduleReminders, ensureNotificationPermission } from "@/lib/platform";
 import { getDefaultWeekStartsOn } from "@/lib/date";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
@@ -29,8 +30,8 @@ export default function Profile() {
   const [nameDraft, setNameDraft] = useState("");
   const [aboutOpen, setAboutOpen] = useState(false);
   const backup = useBackupCommands({
-    exportBackup: async () => { await backupService.exportBackup(); return true; },
-    importBackup: backupService.importBackup,
+    exportBackup: () => applicationCommands.backups.export.execute(),
+    importBackup: () => applicationCommands.backups.import.execute(),
   });
 
   // Reflect reminder preferences in scheduled OS-level notifications when running natively.
@@ -451,7 +452,7 @@ export default function Profile() {
                     className="flex-1"
                     disabled={confirmText !== "DELETE"}
                     onClick={async () => {
-                      await backupService.wipeAll();
+                      await applicationCommands.backups.wipe();
                       location.reload();
                     }}
                   >

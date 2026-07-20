@@ -5,6 +5,7 @@ import type { NoteVal, SessionQuality, Subject } from "@/domain/entities/common"
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
 import type { SegmentMetric } from "@/domain/entities/session";
+import type { SessionLogInput } from "@/domain/ports/session";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,9 @@ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useSessionSubmission } from "@/presentation/hooks/usePresentationControllers";
 import { presentationQueries } from "@/application/queries/presentationQueryService";
+import { applicationCommands } from "@/lib/applicationCommands";
 import { toast } from "sonner";
 import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
-import { studyRoutinesService, sessionsService } from "@/lib/services";
 import { QUALITY_VALS } from "@/lib/constants";
 import { SessionFields, type SessionFieldsValue } from "./SessionFields";
 import { StarRating } from "@/components/shared/StarRating";
@@ -91,8 +92,8 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     input,
   }: {
     task: NonNullable<Props["task"]>;
-    input: Parameters<typeof sessionsService.logWithCompletion>[1];
-  }) => sessionsService.logWithCompletion(task, input));
+    input: SessionLogInput;
+  }) => applicationCommands.sessions.log.execute(task, input));
 
   const isTheory = subject?.type === "theory";
   const showGranularToggle = (taskSegments?.length ?? 0) >= 2;
@@ -270,7 +271,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
     if (task.studyRoutineId) {
       const routine = await presentationQueries().execute<import("@/domain/ports/studyRoutine").StudyRoutine | undefined>("routines.one", task.studyRoutineId);
       if (routine && routine.useSpacedRepetition) {
-        studyRoutinesService.regenerateFromDate(routine, task.date).catch(() => {});
+        applicationCommands.routines.regenerate.execute(routine, task.date).catch(() => {});
       }
     }
 

@@ -3,7 +3,8 @@ import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { StudyPoolEntry, StudyGroup, StudyRoutine } from "@/domain/ports/studyRoutine";
 import { useI18n } from "@/lib/i18n";
-import { studyRoutinesService } from "@/lib/services";
+import { applicationCommands } from "@/lib/applicationCommands";
+import { useRoutineWizardController } from "@/presentation/hooks/usePresentationControllers";
 import { poolEntryKey } from "@/lib/domain/studyRoutineGenerator";
 import { useSegments, useCollections } from "@/presentation/hooks/useEntities";
 import type { StudyRoutineConfig } from "@/lib/schemas";
@@ -203,7 +204,17 @@ interface Props {
 export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initial }: Props) {
   const { t } = useI18n();
   const isEdit = !!initial;
-  const [step, setStep] = useState(1);
+  const routine = useRoutineWizardController(async (config: StudyRoutineConfig) => {
+    if (isEdit && initial?.id) {
+      await applicationCommands.routines.update.execute(initial.id, config);
+      return;
+    }
+    await applicationCommands.routines.generate.execute(config);
+  }, () => {
+    toast.success(t(isEdit ? "toast.routineUpdated" : "toast.routineCreated"));
+    onCreated();
+  });
+  const { step, setStep, next, back, submit: submitRoutine, submitting: saving, error: submitError } = routine;
 
   // Build initial master pool from existing groups (union of all entries, deduped).
   const initialMasterPool = useMemo<StudyPoolEntry[]>(() => {
@@ -242,7 +253,6 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   const [useSpacedRepetition, setUseSpacedRepetition] = useState(initial?.useSpacedRepetition ?? false);
   const [startDate, setStartDate] = useState(initial?.startDate ?? date);
 
-  const [saving, setSaving] = useState(false);
 
   // DB queries
   const library = usePresentationRead<LibraryItem[]>("library.subject", [subjectId]);
@@ -414,40 +424,21 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
 
   const submit = async () => {
     if (step3Errors.length || !subjectId) return;
-    setSaving(true);
-    try {
-      if (isEdit && initial?.id) {
-        await studyRoutinesService.update(initial.id, {
-          name: name.trim(),
-          groups,
-          matrix,
-          weeksAhead,
-          repetitionCap,
-          useSpacedRepetition,
-          startDate,
-        });
-        toast.success(t("toast.routineUpdated"));
-      } else {
-        const config: StudyRoutineConfig = {
-          name: name.trim(),
-          subjectId,
-          groups,
-          matrix,
-          weeksAhead,
-          repetitionCap,
-          useSpacedRepetition,
-          startDate,
-        };
-        await studyRoutinesService.create(config);
-        toast.success(t("toast.routineCreated"));
-      }
-      onCreated();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSaving(false);
-    }
+    await submitRoutine({
+      name: name.trim(),
+      subjectId,
+      groups,
+      matrix,
+      weeksAhead,
+      repetitionCap,
+      useSpacedRepetition,
+      startDate,
+    });
   };
+
+  useEffect(() => {
+    if (submitError) toast.error(submitError);
+  }, [submitError]);
 
   // --- Filtered lists ---
 
@@ -1031,7 +1022,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
         <Button
           variant="outline"
           className="flex-1"
-          onClick={step === 1 ? onCancel : () => setStep((s) => s - 1)}
+          onClick={step === 1 ? onCancel : back}
         >
           {step === 1 ? t("common.cancel") : t("common.prev")}
         </Button>
@@ -1040,7 +1031,7 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
           <Button
             className="flex-1"
             disabled={step === 1 ? step1Errors.length > 0 : step2Errors.length > 0}
-            onClick={() => setStep((s) => s + 1)}
+            onClick={next}
           >
             {t("common.next")}
           </Button>
