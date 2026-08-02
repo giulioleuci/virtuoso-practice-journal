@@ -19,8 +19,8 @@ describe("dexie presentation reads", () => {
     const result = await dexiePresentationReads.read<{ collectionId: number; itemId: number }[]>("collectionLinks.item", [7]);
 
     expect(result.map(({ collectionId, itemId }) => ({ collectionId, itemId }))).toEqual([
-      { collectionId: 1, itemId: 7, createdAt: 1 },
-      { collectionId: 2, itemId: 7, createdAt: 1 },
+      { collectionId: 1, itemId: 7 },
+      { collectionId: 2, itemId: 7 },
     ]);
   });
 
