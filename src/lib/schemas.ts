@@ -80,7 +80,16 @@ export const studyRoutineConfigSchema = z.object({
   useSpacedRepetition: z.boolean(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
-export type StudyRoutineConfig = z.infer<typeof studyRoutineConfigSchema>;
+export interface StudyRoutineConfig {
+  name: string;
+  subjectId: number;
+  groups: StudyGroupInput[];
+  matrix: Record<string, Record<string, number>>;
+  weeksAhead: number;
+  repetitionCap: number;
+  useSpacedRepetition: boolean;
+  startDate: string;
+}
 
 /** Tiny helper: returns string[] of error messages (empty = valid). */
 export function flattenErrors<T>(res: z.SafeParseReturnType<unknown, T>): string[] {

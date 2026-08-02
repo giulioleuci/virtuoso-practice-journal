@@ -1,5 +1,5 @@
 import { db } from "@/infrastructure/dexie/db";
-import type { StudyPoolEntry, StudyRoutine, StudyRoutineInput, StudyRoutinePort } from "@/domain/ports/studyRoutine";
+import type { StudyPoolEntry, StudyRoutine, StudyRoutineGenerationPort, StudyRoutineInput, StudyRoutinePort } from "@/domain/ports/studyRoutine";
 import { dayKey, getDefaultWeekStartsOn, now, parseDayKey, startOfWeek, endOfWeek, today } from "@/lib/date";
 import { confidenceToWeight, generateRoutineTasks, poolEntryKey, type ResolvedPoolItem } from "@/lib/domain/studyRoutineGenerator";
 
@@ -87,4 +87,4 @@ export const studyRoutineRepository = {
   },
   async update(id: number, patch: Partial<StudyRoutine>) { await db.studyRoutines.update(id, patch); const routine = await db.studyRoutines.get(id); if (routine) await this.regenerateFromDate(routine, today()); },
   async remove(id: number) { const future = await db.tasks.where("studyRoutineId").equals(id).filter((task) => !task.done && task.date >= today()).toArray(); if (future.length) await db.tasks.bulkDelete(future.map((task) => task.id)); await db.studyRoutines.update(id, { deletedAt: now() }); },
-} satisfies StudyRoutinePort;
+} satisfies StudyRoutinePort & StudyRoutineGenerationPort;

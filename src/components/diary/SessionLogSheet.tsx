@@ -4,7 +4,7 @@ import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { NoteVal, SessionQuality, Subject } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
-import type { SegmentMetric } from "@/domain/entities/session";
+import type { SegmentMetric } from "@/domain/entities/common";
 import type { SessionLogInput } from "@/domain/ports/session";
 import { useI18n } from "@/lib/i18n";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -93,7 +93,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
   }: {
     task: NonNullable<Props["task"]>;
     input: SessionLogInput;
-  }) => applicationCommands.sessions.log.execute(task, input));
+  }) => { await applicationCommands.sessions.log.execute(task, input); });
 
   const isTheory = subject?.type === "theory";
   const showGranularToggle = (taskSegments?.length ?? 0) >= 2;
