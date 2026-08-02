@@ -53,7 +53,7 @@ describe("presentation entity adapters", () => {
     const reads = new FakeReads(new Map([[operation, initial]]));
     configurePresentationQueries(reads);
 
-    const { result } = renderHook(useEntity);
+    const { result } = renderHook(useEntity as () => unknown);
     await waitFor(() => expect(result.current).toEqual(initial));
 
     reads.notify(operation, updated);

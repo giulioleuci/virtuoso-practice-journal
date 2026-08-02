@@ -1,3 +1,4 @@
+import type { StudyGroup } from "@/domain/ports/studyRoutine";
 /** Centralized Zod schemas shared across forms. */
 import { z } from "zod";
 
@@ -68,7 +69,7 @@ export const studyGroupSchema = z.object({
     z.object({ type: z.literal("collection"), id: z.number().int().positive() }),
   ])),
 });
-export type StudyGroupInput = z.infer<typeof studyGroupSchema>;
+export type StudyGroupInput = StudyGroup;
 
 export const studyRoutineConfigSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -80,7 +81,16 @@ export const studyRoutineConfigSchema = z.object({
   useSpacedRepetition: z.boolean(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
-export type StudyRoutineConfig = z.infer<typeof studyRoutineConfigSchema>;
+export interface StudyRoutineConfig {
+  name: string;
+  subjectId: number;
+  groups: StudyGroupInput[];
+  matrix: Record<string, Record<string, number>>;
+  weeksAhead: number;
+  repetitionCap: number;
+  useSpacedRepetition: boolean;
+  startDate: string;
+}
 
 /** Tiny helper: returns string[] of error messages (empty = valid). */
 export function flattenErrors<T>(res: z.SafeParseReturnType<unknown, T>): string[] {

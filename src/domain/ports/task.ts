@@ -2,6 +2,8 @@ import type { Task, TaskRecurrence } from "../entities/task";
 
 export type NewTaskInput = Omit<Task, "id" | "done" | "createdAt" | "date"> & {
   date: string;
+  done?: boolean;
+  createdAt?: number;
   recurrence?: TaskRecurrence;
 };
 

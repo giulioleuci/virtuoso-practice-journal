@@ -14,9 +14,20 @@ export interface LibraryItem {
   currentExercise?: number;
   mastery?: { conceptual: number; analytical: number; aural: number; compositional: number; reading?: number };
   tags?: string[];
+  /** Explicit "to keep" flag: the piece is permanently part of the repertoire. */
+  inRepertoire?: boolean;
+  /** Epoch ms when the item entered the repertoire. */
+  repertoireAddedAt?: number;
+  /** Current spaced-review interval in days (grows as reviews go well). */
+  reviewIntervalDays?: number;
+  /** Local `YYYY-MM-DD` key of the last repertoire review. */
+  lastReviewedAt?: string;
+  /** Local `YYYY-MM-DD` key of the next suggested review. */
+  nextReviewAt?: string;
   createdAt: number;
   deletedAt?: number;
 }
+
 
 export interface Segment {
   id: number;

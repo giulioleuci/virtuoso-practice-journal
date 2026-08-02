@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { profileService } from "@/lib/services";
 import { applicationCommands } from "@/lib/applicationCommands";
-import { scheduleReminders, ensureNotificationPermission } from "@/lib/platform";
+import { scheduleReminders, ensureNotificationPermission, isNative } from "@/lib/platform";
 import { getDefaultWeekStartsOn } from "@/lib/date";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
 import { useProfile } from "@/presentation/hooks/useEntities";

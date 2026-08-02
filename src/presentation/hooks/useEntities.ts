@@ -1,53 +1,60 @@
 /** Named presentation DTO adapters. Persistence stays behind application ports. */
-import type { LibraryKind } from "@/domain/entities/common";
-import type { Collection } from "@/domain/entities/collection";
-import type { Segment } from "@/domain/entities/library";
+import type { LibraryKind, Subject, Technique } from "@/domain/entities/common";
+import type { Collection, CollectionItem } from "@/domain/entities/collection";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Session } from "@/domain/entities/session";
+import type { Task } from "@/domain/entities/task";
+import type { Profile } from "@/domain/entities/profile";
 import type { StudyRoutine } from "@/domain/ports/studyRoutine";
-import type { Assignment } from "@/domain/entities/lesson";
+import type { HelpRequest } from "@/domain/ports/helpRequest";
+import type { Assignment, Lesson, LessonRecurrence } from "@/domain/entities/lesson";
 import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
+import type { PerformanceEvent, PerformanceItem } from "@/domain/entities/performance";
 import { presentationQueries } from "@/application/queries/presentationQueryService";
 import { usePresentationQuery, usePresentationReader } from "./usePresentationQuery";
 
-// DTO types are inferred at each feature hook during incremental migration.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const useRead = <T = any>(operation: string, parameters: readonly unknown[] = []) =>
+const useRead = <T>(operation: string, parameters: readonly unknown[] = []) =>
   usePresentationQuery<T>(presentationQueries(), operation, parameters);
 
-export const useSubjects = () => useRead("subjects.active");
-export const useTechniques = () => useRead("techniques.active");
-export const useLibrary = () => useRead("library.active");
-export const useRepertoire = () => useRead("library.repertoire");
-export const useLibraryByKind = (kind?: LibraryKind) => useRead("library.byKind", [kind]);
-export const useSegments = () => useRead("segments.active");
-export const useActiveTasks = () => useRead("tasks.active");
-export const useSessions = () => useRead("sessions.all");
+export const useSubjects = () => useRead<Subject[]>("subjects.active");
+export const useTechniques = () => useRead<Technique[]>("techniques.active");
+export const useLibrary = () => useRead<LibraryItem[]>("library.active");
+/** Library items whose `kind` is repertoire (sheet music pieces). */
+export const useRepertoireKind = () => useRead<LibraryItem[]>("library.repertoire");
+/** Items the user explicitly flagged as "to keep" in the performing repertoire. */
+export const useRepertoire = () => useRead<LibraryItem[]>("repertoire.active");
+export const useLibraryByKind = (kind?: LibraryKind) => useRead<LibraryItem[]>("library.byKind", [kind]);
+export const useSegments = () => useRead<Segment[]>("segments.active");
+export const useActiveTasks = () => useRead<Task[]>("tasks.active");
+export const useSessions = () => useRead<Session[]>("sessions.all");
 export const useSessionsInRange = (from?: string, to?: string) => useRead<Session[]>("sessions.range", [from, to]);
-export const useProfile = () => useRead("profile.current");
-export const useStudyRoutines = () => useRead("routines.active");
-export const useRecurrences = () => useRead("recurrences.active");
-export const useLessons = () => useRead("lessons.all");
-export const useAssignments = () => useRead("assignments.all");
-export const useHelpRequests = () => useRead("helpRequests.all");
-export const useCollections = (kind?: LibraryKind) => useRead("collections.active", [kind]);
-export const useCollectionLinks = () => useRead("collectionLinks.all");
-export const useCollectionLinksByItem = (itemId?: number) => useRead("collectionLinks.item", [itemId]);
-export const useAllTasks = () => useRead("tasks.all");
-export const useAllLibrary = () => useRead("library.active");
-export const useAllSegments = () => useRead("segments.active");
-export const useAllCollections = () => useRead("collections.all");
-export const useCollectionItems = (collectionId?: number) => useRead("collections.items", [collectionId]);
+export const useProfile = () => useRead<Profile | null>("profile.current");
+export const useStudyRoutines = () => useRead<StudyRoutine[]>("routines.active");
+export const useRecurrences = () => useRead<LessonRecurrence[]>("recurrences.active");
+export const useLessons = () => useRead<Lesson[]>("lessons.all");
+export const useAssignments = () => useRead<Assignment[]>("assignments.all");
+export const useHelpRequests = () => useRead<HelpRequest[]>("helpRequests.all");
+export const useCollections = (kind?: LibraryKind) => useRead<Collection[]>("collections.active", [kind]);
+export const useCollectionLinks = () => useRead<CollectionItem[]>("collectionLinks.all");
+export const useCollectionLinksByItem = (itemId?: number) => useRead<CollectionItem[]>("collectionLinks.item", [itemId]);
+export const useAllTasks = () => useRead<Task[]>("tasks.all");
+export const useAllLibrary = () => useRead<LibraryItem[]>("library.active");
+export const useAllSegments = () => useRead<Segment[]>("segments.active");
+export const useAllCollections = () => useRead<Collection[]>("collections.all");
+export const useCollectionItems = (collectionId?: number) => useRead<CollectionItem[]>("collections.items", [collectionId]);
 export const useCollection = (collectionId?: number) => useRead<Collection | undefined>("collections.one", [collectionId]);
-export const useItem = (id?: number) => useRead("library.item", [id]);
-export const useTask = (id?: number) => useRead("tasks.one", [id]);
-export const useTasksInRange = (from?: string, to?: string) => useRead("tasks.range", [from, to]);
-export const useTasksByDate = (date?: string) => useRead("tasks.date", [date]);
-export const useTasksByItem = (itemId?: number) => useRead("tasks.item", [itemId]);
-export const useTasksBySubjectAndDate = (_subjectId?: number, date?: string) => useRead("tasks.date", [date]);
-export const useRecurrencesBySubject = (_subjectId?: number) => useRead("recurrences.active");
-export const useSegmentsByItem = (itemId?: number) => useRead("library.segments", [itemId]);
+export const useItem = (id?: number) => useRead<LibraryItem | undefined>("library.item", [id]);
+export const useTask = (id?: number) => useRead<Task | null>("tasks.one", [id]);
+export const useTasksInRange = (from?: string, to?: string) => useRead<Task[]>("tasks.range", [from, to]);
+export const useTasksByDate = (date?: string) => useRead<Task[]>("tasks.date", [date]);
+export const useTasksByItem = (itemId?: number) => useRead<Task[]>("tasks.item", [itemId]);
+export const useTasksBySubjectAndDate = (_subjectId?: number, date?: string) => useRead<Task[]>("tasks.date", [date]);
+export const useRecurrencesBySubject = (_subjectId?: number) => useRead<LessonRecurrence[]>("recurrences.active");
+export const useSegmentsByItem = (itemId?: number) => useRead<Segment[]>("library.segments", [itemId]);
 export const useSegmentsByIds = (ids: readonly number[]) => useRead<Segment[]>("segments.ids", [ids]);
 export const useStudyRoutine = (id?: number) => useRead<StudyRoutine | null>("routines.one", [id]);
+export const usePerformanceEvents = () => useRead<PerformanceEvent[]>("performances.active");
+export const usePerformanceLinks = () => useRead<PerformanceItem[]>("performances.links");
 export const useAssignmentsForLesson = (lessonId?: number) =>
   usePresentationReader<Assignment[]>((queries) => queries.assignmentsForLesson(lessonId), [lessonId]);
 export const usePendingAssignmentsForSubject = (subjectId?: number, recurrenceId?: number) =>

@@ -1,7 +1,10 @@
-import type { PersistedTask, SessionLogInput, SessionPort } from "@/domain/ports/session";
+import type { Task } from "@/domain/entities/task";
+import type { SessionLogInput, SessionPort } from "@/domain/ports/session";
 export class LogSessionUseCase {
   constructor(private readonly sessions: SessionPort, private readonly clock: () => number = Date.now) {}
-  async execute(task: PersistedTask, input: SessionLogInput): Promise<number> {
+  async execute(task: Task, input: SessionLogInput): Promise<number> {
+    const taskId = task.id;
+    if (taskId === undefined) throw new Error("Cannot log a session for an unsaved task");
     const createdAt = this.clock();
     const helpText = input.helpText?.trim() || undefined;
     const effectiveTask = {
@@ -14,7 +17,7 @@ export class LogSessionUseCase {
     const snapshot = await this.sessions.buildSnapshot(effectiveTask);
     return this.sessions.transaction(async (transaction) => {
       const sessionId = await transaction.createSession({
-        taskId: task.id,
+        taskId,
         date: input.date,
         bpmReached: input.bpmReached,
         noteVal: input.noteVal,
@@ -30,8 +33,8 @@ export class LogSessionUseCase {
         snapshot,
         createdAt,
       });
-      await transaction.completeTask(task.id);
-      if (helpText) await transaction.createHelpRequest({ sessionId, taskId: task.id, itemId: task.itemId, question: helpText, createdAt });
+      await transaction.completeTask(taskId);
+      if (helpText) await transaction.createHelpRequest({ sessionId, taskId, itemId: task.itemId, question: helpText, createdAt });
       return sessionId;
     });
   }

@@ -8,6 +8,9 @@ class FakeReads implements PresentationReadPort {
   private listener: (() => void) | undefined;
   constructor(private readonly values: Map<string, unknown>) {}
   read<T>(operation: string): Promise<T> { return Promise.resolve(this.values.get(operation) as T); }
+  async assignmentsForLesson() { return []; }
+  async pendingAssignmentsForSubject() { return []; }
+  async openHelpRequestCount() { return 0; }
   subscribe(listener: () => void): () => void { this.listener = listener; return () => { this.listener = undefined; }; }
   notify(updates: Record<string, unknown>): void {
     Object.entries(updates).forEach(([operation, value]) => this.values.set(operation, value));

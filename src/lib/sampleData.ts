@@ -856,6 +856,7 @@ targetBpm: 84, noteVal: "quarter",
     }
     const { studyRoutinesService } = await import("./services");
     await studyRoutinesService.create({
+      name: "Scale routine",
       subjectId: pianoId,
       groups: [majorsGroup, minorsGroup],
       matrix,
