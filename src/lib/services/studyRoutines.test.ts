@@ -286,6 +286,7 @@ describe("studyRoutinesService.create — task generation", () => {
     const item1 = await seedItem(subjectId, "Piece A");
     const item2 = await seedItem(subjectId, "Piece B");
     const routineId = await studyRoutinesService.create({
+      name: "Routine",
       subjectId,
       groups: [
         { id: "g1", name: "Group 1", pool: [{ type: "item", id: item1 }] },
