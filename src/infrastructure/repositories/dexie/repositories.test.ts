@@ -52,7 +52,7 @@ describe("Dexie repositories", () => {
   it("writes recurrence atomically", async () => {
     const subject = await subjectId();
     const original = db.tasks.bulkAdd;
-    db.tasks.bulkAdd = (() => Promise.reject(new Error("second write fails"))) as typeof db.tasks.bulkAdd;
+    db.tasks.bulkAdd = (() => Promise.reject(new Error("second write fails"))) as unknown as typeof db.tasks.bulkAdd;
     await expect(taskRepository.create({ title: "repeat", date: "2026-01-01", subjectId: subject, recurrence: { kind: "interval", startDate: "2026-01-01", occurrences: 2 } })).rejects.toThrow("second write fails");
     db.tasks.bulkAdd = original;
     expect(await db.tasks.count()).toBe(0);
@@ -72,7 +72,7 @@ describe("Dexie repositories", () => {
     const taskId = await taskRepository.create({ title: "Scales", date: "2026-01-01", subjectId: subject });
     const task = (await db.tasks.get(taskId))!;
     const original = db.helpRequests.add;
-    db.helpRequests.add = (() => Promise.reject(new Error("help fails"))) as typeof db.helpRequests.add;
+    db.helpRequests.add = (() => Promise.reject(new Error("help fails"))) as unknown as typeof db.helpRequests.add;
     await expect(new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [], helpText: "help" })).rejects.toThrow("help fails");
     db.helpRequests.add = original;
     expect(await db.sessions.count()).toBe(0);

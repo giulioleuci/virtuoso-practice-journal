@@ -1,3 +1,4 @@
+import type { StudyGroup } from "@/domain/ports/studyRoutine";
 /** Centralized Zod schemas shared across forms. */
 import { z } from "zod";
 
@@ -68,7 +69,7 @@ export const studyGroupSchema = z.object({
     z.object({ type: z.literal("collection"), id: z.number().int().positive() }),
   ])),
 });
-export type StudyGroupInput = z.infer<typeof studyGroupSchema>;
+export type StudyGroupInput = StudyGroup;
 
 export const studyRoutineConfigSchema = z.object({
   name: z.string().trim().min(1).max(100),

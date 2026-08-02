@@ -77,6 +77,7 @@ function makeConfig(
   overrides: Partial<StudyRoutineConfig> = {},
 ): StudyRoutineConfig {
   return {
+    name: "Routine",
     subjectId,
     groups: [{ id: "g1", name: "Group", pool }],
     // Monday (day 1): pick 1 item from g1

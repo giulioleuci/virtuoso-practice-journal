@@ -1,5 +1,6 @@
-import { application, taskRepository, type NewTaskInput } from "@/infrastructure/compositionRoot";
-export type { NewTaskInput } from "@/infrastructure/repositories/dexie/taskRepository";
+import { application, taskRepository } from "@/infrastructure/compositionRoot";
+import type { NewTaskInput } from "@/domain/ports/task";
+export type { NewTaskInput } from "@/domain/ports/task";
 export const tasksService = {
   ...taskRepository,
   create: (input: NewTaskInput) => application.tasks.create.execute(input),
