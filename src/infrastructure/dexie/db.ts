@@ -43,6 +43,11 @@ export class VirtuosoDB extends Dexie {
     this.version(9).stores({});
     this.version(10).stores({}).upgrade(async (tx) => { await tx.table("recurrences").toCollection().modify((r: LessonRecurrence & { dayOfWeek?: number; startTime?: string; endTime?: string; frequency?: LessonFrequency }) => { if (!r.schedules || !r.schedules.length) r.schedules = [{ dayOfWeek: r.dayOfWeek ?? 1, startTime: r.startTime ?? "17:00", endTime: r.endTime ?? "18:00", frequency: r.frequency ?? "weekly" }]; delete r.dayOfWeek; delete r.startTime; delete r.endTime; delete r.frequency; }); });
     this.version(11).stores({ pendingAssignments: "++id, subjectId, recurrenceId, createdAt" });
+    this.version(12).stores({
+      library: "++id, subjectId, kind, title, deletedAt, inRepertoire, nextReviewAt",
+      performances: "++id, date, subjectId, deletedAt",
+      performanceItems: "++id, eventId, itemId, [eventId+itemId]",
+    });
   }
 }
 
