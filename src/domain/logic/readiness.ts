@@ -10,18 +10,18 @@ export interface ReadinessBreakdown {
   bpm: number;
   /** 0-100 average confidence over the piece's segments (or the whole piece). */
   mastery: number;
-  /** 0-100 practice frequency over the recent window. */
+  /** 0-100 practice frequency over the recent span. */
   frequency: number;
-  /** Number of sessions counted in the frequency window. */
+  /** Number of sessions counted in the frequency span. */
   recentSessions: number;
 }
 
 const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 const average = (values: number[]) => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0);
 
-/** Sessions per `FREQUENCY_WINDOW_DAYS` considered "fully prepared". */
+/** Sessions per `FREQUENCY_SPAN_DAYS` considered "fully prepared". */
 export const FREQUENCY_TARGET = 8;
-export const FREQUENCY_WINDOW_DAYS = 21;
+export const FREQUENCY_SPAN_DAYS = 21;
 
 export function calculateReadiness(
   item: Pick<LibraryItem, "targetBpm">,
@@ -29,8 +29,8 @@ export function calculateReadiness(
   sessions: Session[],
   todayKey: string,
 ): ReadinessBreakdown {
-  const windowStart = dayKey(addDays(parseDayKey(todayKey), -FREQUENCY_WINDOW_DAYS));
-  const recent = sessions.filter((session) => session.date > windowStart && session.date <= todayKey);
+  const spanStart = dayKey(addDays(parseDayKey(todayKey), -FREQUENCY_SPAN_DAYS));
+  const recent = sessions.filter((session) => session.date > spanStart && session.date <= todayKey);
 
   const topBpm = Math.max(0, ...sessions.map((session) => session.bpmReached ?? 0));
   const bpm = item.targetBpm && item.targetBpm > 0
