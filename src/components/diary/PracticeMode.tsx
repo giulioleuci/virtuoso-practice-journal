@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import type { NoteVal } from "@/domain/entities/common";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
