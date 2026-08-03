@@ -10,6 +10,7 @@ import type { Collection, CollectionItem } from "@/domain/entities/collection";
 import type { HelpRequest } from "@/domain/ports/helpRequest";
 import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
 import type { StudyPoolEntry, StudyGroup, StudyRoutine } from "@/domain/ports/studyRoutine";
+import type { PerformanceEvent, PerformanceItem } from "@/domain/entities/performance";
 
 export type { HelpRequest, PendingAssignment, StudyPoolEntry, StudyGroup, StudyRoutine };
 
