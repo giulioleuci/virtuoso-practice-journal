@@ -11,7 +11,8 @@ import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
 import { today } from "@/lib/date";
-import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
+import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play, Star } from "lucide-react";
+import { repertoireService } from "@/lib/services/performances";
 
 import { MasterySparkline } from "@/components/library/MasterySparkline";
 import { type MasteryState } from "@/components/library/MasterySliders";
