@@ -132,6 +132,14 @@ export default function Library() {
     setDeletingId(null);
   };
 
+  const toggleRepertoire = async (item: LibraryItem) => {
+    if (item.id === undefined) return;
+    const next = !item.inRepertoire;
+    await repertoireService.setInRepertoire(item.id, next);
+    toast.success(next ? t("repertoire.added") : t("repertoire.removed"));
+  };
+
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-2">
