@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { CalendarDays, CheckCircle2, MoreVertical, Music4, Pencil, Plus, Trash2 } from "lucide-react";
-import { useAllSegments, useAllTasks, useI18nLangSafe, usePerformanceEvents, usePerformanceLinks, useRepertoire, useSessions } from "@/presentation/hooks/useEntities";
+import { useAllSegments, useAllTasks, usePerformanceEvents, usePerformanceLinks, useRepertoire, useSessions } from "@/presentation/hooks/useEntities";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { PerformanceEvent } from "@/domain/entities/performance";
 import { calculateReadiness } from "@/domain/logic/readiness";
@@ -99,7 +99,7 @@ export default function Repertoire() {
 
       {tab === "repertoire" && (
         sortedItems.length === 0 ? (
-          <EmptyState icon={Music4} title={t("repertoire.emptyTitle")} description={t("repertoire.emptyBody")} />
+          <EmptyState icon={Music4} title={t("repertoire.emptyTitle")} hint={t("repertoire.emptyBody")} />
         ) : (
           <ul className="space-y-3">
             {sortedItems.map((item) => {
@@ -158,7 +158,7 @@ export default function Repertoire() {
 
       {tab === "performances" && (
         sortedEvents.length === 0 ? (
-          <EmptyState icon={CalendarDays} title={t("performances.emptyTitle")} description={t("performances.emptyBody")} />
+          <EmptyState icon={CalendarDays} title={t("performances.emptyTitle")} hint={t("performances.emptyBody")} />
         ) : (
           <ul className="space-y-3">
             {sortedEvents.map((event) => {
