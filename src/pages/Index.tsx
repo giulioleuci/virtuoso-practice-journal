@@ -11,6 +11,7 @@ import { Routes, Route } from "react-router-dom";
 const Diary = lazy(() => import("./Diary"));
 const Library = lazy(() => import("./Library"));
 const Collections = lazy(() => import("./Collections"));
+const Repertoire = lazy(() => import("./Repertoire"));
 const Lessons = lazy(() => import("./Lessons"));
 const Assignments = lazy(() => import("./Assignments"));
 const History = lazy(() => import("./History"));
