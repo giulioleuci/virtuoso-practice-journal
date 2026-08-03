@@ -262,6 +262,12 @@ export default function Library() {
                         <DropdownMenuItem onClick={() => it.id && navigate(`/library/item/${it.id}/analysis`)}>
                           <LineChart className="h-4 w-4 mr-2" /> {t("library.analysis.menu")}
                         </DropdownMenuItem>
+                        {it.kind === "repertoire" && (
+                          <DropdownMenuItem onClick={() => toggleRepertoire(it)}>
+                            <Star className={cn("h-4 w-4 mr-2", it.inRepertoire && "fill-current text-primary")} />
+                            {it.inRepertoire ? t("repertoire.remove") : t("repertoire.add")}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => askDeleteItem(it)}
                           className="text-destructive focus:text-destructive"
