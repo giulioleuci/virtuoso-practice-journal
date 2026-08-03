@@ -92,7 +92,7 @@ export default function Repertoire() {
             onClick={() => setTab(key)}
             className={`paper-card py-3 text-sm font-medium min-h-[44px] ${tab === key ? "ring-2 ring-primary/60" : ""}`}
           >
-            {t(key === "repertoire" ? "repertoire.tab" : "performances.tab")}
+            {key === "repertoire" ? t("repertoire.tab") : t("performances.tab")}
           </button>
         ))}
       </div>
