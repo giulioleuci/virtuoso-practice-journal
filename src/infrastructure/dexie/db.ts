@@ -29,6 +29,8 @@ export class VirtuosoDB extends Dexie {
   declare collectionItems: Table<CollectionItem, number, Draft<CollectionItem>>;
   declare studyRoutines: Table<StudyRoutine, number, Draft<StudyRoutine>>;
   declare pendingAssignments: Table<PendingAssignment, number, Draft<PendingAssignment>>;
+  declare performances: Table<PerformanceEvent, number, Draft<PerformanceEvent>>;
+  declare performanceItems: Table<PerformanceItem, number, Draft<PerformanceItem>>;
 
   constructor() {
     super("virtuoso");
