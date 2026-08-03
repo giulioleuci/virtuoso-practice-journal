@@ -192,6 +192,9 @@ export default function Library() {
         <Button asChild size="sm" variant="ghost" className="shrink-0">
           <Link to={`/library/collections?kind=${active}`}><FolderOpen className="h-4 w-4 mr-1" /> {t("library.collections")}</Link>
         </Button>
+        <Button asChild size="sm" variant="ghost" className="shrink-0">
+          <Link to="/library/repertoire"><Star className="h-4 w-4 mr-1" /> {t("repertoire.tab")}</Link>
+        </Button>
       </div>
 
       <div className="flex justify-end">
