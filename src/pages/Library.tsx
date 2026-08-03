@@ -11,7 +11,8 @@ import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
 import { today } from "@/lib/date";
-import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play } from "lucide-react";
+import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play, Star } from "lucide-react";
+import { repertoireService } from "@/lib/services/performances";
 
 import { MasterySparkline } from "@/components/library/MasterySparkline";
 import { type MasteryState } from "@/components/library/MasterySliders";
@@ -131,6 +132,14 @@ export default function Library() {
     setDeletingId(null);
   };
 
+  const toggleRepertoire = async (item: LibraryItem) => {
+    if (item.id === undefined) return;
+    const next = !item.inRepertoire;
+    await repertoireService.setInRepertoire(item.id, next);
+    toast.success(next ? t("repertoire.added") : t("repertoire.removed"));
+  };
+
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-2">
@@ -191,6 +200,9 @@ export default function Library() {
         />
         <Button asChild size="sm" variant="ghost" className="shrink-0">
           <Link to={`/library/collections?kind=${active}`}><FolderOpen className="h-4 w-4 mr-1" /> {t("library.collections")}</Link>
+        </Button>
+        <Button asChild size="sm" variant="ghost" className="shrink-0">
+          <Link to="/library/repertoire"><Star className="h-4 w-4 mr-1" /> {t("repertoire.tab")}</Link>
         </Button>
       </div>
 
@@ -262,6 +274,12 @@ export default function Library() {
                         <DropdownMenuItem onClick={() => it.id && navigate(`/library/item/${it.id}/analysis`)}>
                           <LineChart className="h-4 w-4 mr-2" /> {t("library.analysis.menu")}
                         </DropdownMenuItem>
+                        {it.kind === "repertoire" && (
+                          <DropdownMenuItem onClick={() => toggleRepertoire(it)}>
+                            <Star className={cn("h-4 w-4 mr-2", it.inRepertoire && "fill-current text-primary")} />
+                            {it.inRepertoire ? t("repertoire.remove") : t("repertoire.add")}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => askDeleteItem(it)}
                           className="text-destructive focus:text-destructive"

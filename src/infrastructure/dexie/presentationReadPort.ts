@@ -13,6 +13,9 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "techniques.active": return db.techniques.filter(active).toArray() as unknown as Promise<T>;
       case "library.active": return db.library.filter(active).toArray() as unknown as Promise<T>;
       case "library.repertoire": return db.library.where("kind").equals("repertoire").filter(active).toArray() as unknown as Promise<T>;
+      case "repertoire.active": return db.library.filter((row) => active(row) && !!row.inRepertoire).toArray() as unknown as Promise<T>;
+      case "performances.active": return db.performances.filter(active).toArray() as unknown as Promise<T>;
+      case "performances.links": return db.performanceItems.toArray() as unknown as Promise<T>;
       case "library.byKind": return (typeof first === "string" ? db.library.where("kind").equals(first).filter(active).toArray() : Promise.resolve([])) as unknown as Promise<T>;
       case "library.item": return (typeof first === "number" ? db.library.get(first) : Promise.resolve(undefined)) as unknown as Promise<T>;
       case "library.segments": return (typeof first === "number" ? db.segments.where("itemId").equals(first).filter(active).toArray() : Promise.resolve([])) as unknown as Promise<T>;

@@ -10,6 +10,7 @@ import type { Collection, CollectionItem } from "@/domain/entities/collection";
 import type { HelpRequest } from "@/domain/ports/helpRequest";
 import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
 import type { StudyPoolEntry, StudyGroup, StudyRoutine } from "@/domain/ports/studyRoutine";
+import type { PerformanceEvent, PerformanceItem } from "@/domain/entities/performance";
 
 export type { HelpRequest, PendingAssignment, StudyPoolEntry, StudyGroup, StudyRoutine };
 
@@ -29,6 +30,8 @@ export class VirtuosoDB extends Dexie {
   declare collectionItems: Table<CollectionItem, number, Draft<CollectionItem>>;
   declare studyRoutines: Table<StudyRoutine, number, Draft<StudyRoutine>>;
   declare pendingAssignments: Table<PendingAssignment, number, Draft<PendingAssignment>>;
+  declare performances: Table<PerformanceEvent, number, Draft<PerformanceEvent>>;
+  declare performanceItems: Table<PerformanceItem, number, Draft<PerformanceItem>>;
 
   constructor() {
     super("virtuoso");
@@ -43,6 +46,11 @@ export class VirtuosoDB extends Dexie {
     this.version(9).stores({});
     this.version(10).stores({}).upgrade(async (tx) => { await tx.table("recurrences").toCollection().modify((r: LessonRecurrence & { dayOfWeek?: number; startTime?: string; endTime?: string; frequency?: LessonFrequency }) => { if (!r.schedules || !r.schedules.length) r.schedules = [{ dayOfWeek: r.dayOfWeek ?? 1, startTime: r.startTime ?? "17:00", endTime: r.endTime ?? "18:00", frequency: r.frequency ?? "weekly" }]; delete r.dayOfWeek; delete r.startTime; delete r.endTime; delete r.frequency; }); });
     this.version(11).stores({ pendingAssignments: "++id, subjectId, recurrenceId, createdAt" });
+    this.version(12).stores({
+      library: "++id, subjectId, kind, title, deletedAt, inRepertoire, nextReviewAt",
+      performances: "++id, date, subjectId, deletedAt",
+      performanceItems: "++id, eventId, itemId, [eventId+itemId]",
+    });
   }
 }
 

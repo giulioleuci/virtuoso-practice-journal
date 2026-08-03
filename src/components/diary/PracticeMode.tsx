@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import type { NoteVal } from "@/domain/entities/common";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
@@ -25,22 +26,9 @@ export function PracticeMode({ task, onClose, onFinish, onShowAnswers }: Props) 
   const segments = usePresentationRead<Segment[]>("segments.ids", [task.segmentIds ?? []]);
   const collection = usePresentationRead<Collection | undefined>("collections.one", [task.collectionId]);
 
-
   // Screen wake lock so the device doesn't sleep mid-practice
-  useEffect(() => {
-    let wl: { release: () => Promise<void> } | null = null;
-    const nav = navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> } };
-    const acquire = async () => {
-      try { if (nav.wakeLock) wl = await nav.wakeLock.request("screen"); } catch { /* ignore */ }
-    };
-    acquire();
-    const onVis = () => { if (document.visibilityState === "visible" && !wl) acquire(); };
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      document.removeEventListener("visibilitychange", onVis);
-      wl?.release().catch(() => undefined);
-    };
-  }, []);
+  useWakeLock(true);
+
 
   // Metronome
   const [bpm, setBpm] = useState<number>(task.targetBpm ?? 80);

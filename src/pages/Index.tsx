@@ -11,6 +11,7 @@ import { Routes, Route } from "react-router-dom";
 const Diary = lazy(() => import("./Diary"));
 const Library = lazy(() => import("./Library"));
 const Collections = lazy(() => import("./Collections"));
+const Repertoire = lazy(() => import("./Repertoire"));
 const Lessons = lazy(() => import("./Lessons"));
 const Assignments = lazy(() => import("./Assignments"));
 const History = lazy(() => import("./History"));
@@ -67,6 +68,8 @@ const Index = () => {
           <Route path="library" element={<Suspense fallback={<Fallback />}><Library /></Suspense>} />
           <Route path="library/item/:id/analysis" element={<Suspense fallback={<Fallback />}><ItemAnalysisPage /></Suspense>} />
           <Route path="library/collections" element={<Suspense fallback={<Fallback />}><Collections /></Suspense>} />
+          <Route path="library/repertoire" element={<Suspense fallback={<Fallback />}><Repertoire /></Suspense>} />
+
           <Route path="lessons" element={<Suspense fallback={<Fallback />}><Lessons /></Suspense>} />
           <Route path="lessons/assignments" element={<Suspense fallback={<Fallback />}><Assignments /></Suspense>} />
           <Route path="history" element={<Suspense fallback={<Fallback />}><History /></Suspense>} />
