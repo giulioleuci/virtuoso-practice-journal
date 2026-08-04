@@ -720,5 +720,10 @@
   "performances.mastery": "Padronanza",
   "performances.frequency": "Frequenza",
   "performances.emptyTitle": "Nessuna esibizione",
+  "performances.analysis": "Analisi del programma",
+  "performances.analysisEmpty": "Nessun brano in questo programma.",
+  "performances.analysisCompare": "Preparazione per brano",
+  "performances.analysisPerPiece": "Dettaglio per brano",
+  "performances.recentSessions": "{count} sessioni negli ultimi 21 giorni",
   "performances.emptyBody": "Aggiungi un concerto, un esame o un’audizione per monitorare la preparazione del programma."
 }
