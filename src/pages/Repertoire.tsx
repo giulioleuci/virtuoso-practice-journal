@@ -188,6 +188,9 @@ export default function Repertoire() {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setAnalysis({ open: true, event, entries: scores })}>
+                          <BarChart3 className="h-4 w-4 mr-2" /> {t("performances.analysis")}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setEventSheet({ open: true, event })}>
                           <Pencil className="h-4 w-4 mr-2" /> {t("common.edit")}
                         </DropdownMenuItem>
