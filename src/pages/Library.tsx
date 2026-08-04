@@ -240,7 +240,15 @@ export default function Library() {
                 {/* Header: title + composer, with compact action cluster */}
                 <div className="flex items-start gap-2 p-3.5 pb-2">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-serif text-[1.35rem] leading-tight break-words">{it.title}</h3>
+                    <h3 className="font-serif text-[1.35rem] leading-tight break-words">
+                      {it.title}
+                      {it.inRepertoire && (
+                        <Star
+                          className="inline-block align-middle ml-1.5 h-4 w-4 fill-current text-primary shrink-0"
+                          aria-label={t("repertoire.title")}
+                        />
+                      )}
+                    </h3>
                     {it.composer && (
                       <p className="text-sm text-muted-foreground italic truncate mt-0.5">{it.composer}</p>
                     )}
