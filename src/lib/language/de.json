@@ -720,5 +720,10 @@
   "performances.mastery": "Beherrschung",
   "performances.frequency": "Häufigkeit",
   "performances.emptyTitle": "Noch keine Auftritte",
+  "performances.analysis": "Programmanalyse",
+  "performances.analysisEmpty": "Noch keine Stücke in diesem Programm.",
+  "performances.analysisCompare": "Bereitschaft pro Stück",
+  "performances.analysisPerPiece": "Detail pro Stück",
+  "performances.recentSessions": "{count} Einheiten in den letzten 21 Tagen",
   "performances.emptyBody": "Füge ein Konzert, eine Prüfung oder ein Vorspiel hinzu, um die Programmbereitschaft zu verfolgen."
 }

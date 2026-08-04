@@ -720,5 +720,10 @@
   "performances.mastery": "Mastery",
   "performances.frequency": "Frequency",
   "performances.emptyTitle": "No performances yet",
+  "performances.analysis": "Programme analysis",
+  "performances.analysisEmpty": "No pieces in this programme yet.",
+  "performances.analysisCompare": "Readiness by piece",
+  "performances.analysisPerPiece": "Piece breakdown",
+  "performances.recentSessions": "{count} sessions in the last 21 days",
   "performances.emptyBody": "Add a concert, exam or audition to track how ready your programme is."
 }

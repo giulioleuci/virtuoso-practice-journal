@@ -720,5 +720,10 @@
   "performances.mastery": "Dominio",
   "performances.frequency": "Frecuencia",
   "performances.emptyTitle": "Sin actuaciones",
+  "performances.analysis": "Análisis del programa",
+  "performances.analysisEmpty": "Aún no hay piezas en este programa.",
+  "performances.analysisCompare": "Preparación por pieza",
+  "performances.analysisPerPiece": "Detalle por pieza",
+  "performances.recentSessions": "{count} sesiones en los últimos 21 días",
   "performances.emptyBody": "Añade un concierto, examen o audición para seguir la preparación del programa."
 }
