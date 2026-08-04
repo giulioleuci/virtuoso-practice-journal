@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckCircle2, MoreVertical, Music4, Pencil, Plus, Trash2 } from "lucide-react";
+import { BarChart3, CalendarDays, CheckCircle2, MoreVertical, Music4, Pencil, Plus, Trash2 } from "lucide-react";
 import { useAllSegments, useAllTasks, usePerformanceEvents, usePerformanceLinks, useRepertoire, useSessions } from "@/presentation/hooks/useEntities";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { PerformanceEvent } from "@/domain/entities/performance";
@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PerformanceEventSheet } from "@/components/library/PerformanceEventSheet";
+import { ProgrammeAnalysisSheet, type ProgrammeEntry } from "@/components/library/ProgrammeAnalysisSheet";
 import { performancesService, repertoireService } from "@/lib/services/performances";
 import { toast } from "sonner";
 
@@ -30,6 +31,7 @@ export default function Repertoire() {
 
   const [tab, setTab] = useState<Tab>("repertoire");
   const [eventSheet, setEventSheet] = useState<{ open: boolean; event: PerformanceEvent | null }>({ open: false, event: null });
+  const [analysis, setAnalysis] = useState<{ open: boolean; event: PerformanceEvent | null; entries: ProgrammeEntry[] }>({ open: false, event: null, entries: [] });
 
   const sessionsByItem = useMemo(() => {
     const taskItem = new Map<number, number>();
@@ -247,6 +249,13 @@ export default function Repertoire() {
         onOpenChange={(open) => setEventSheet((current) => ({ ...current, open }))}
         event={eventSheet.event}
         programme={(links ?? []).filter((link) => link.eventId === eventSheet.event?.id).map((link) => link.itemId)}
+      />
+
+      <ProgrammeAnalysisSheet
+        open={analysis.open}
+        onOpenChange={(open) => setAnalysis((current) => ({ ...current, open }))}
+        event={analysis.event}
+        entries={analysis.entries}
       />
     </div>
   );
