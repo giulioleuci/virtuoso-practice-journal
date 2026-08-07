@@ -953,4 +953,12 @@ targetBpm: 84, noteVal: "quarter",
       answeredAt: now - 3 * D, resolved: true, createdAt: now - 5 * D,
     },
   ]);
+
+  // ---------- Pending (async) homework, captured during the current lessons ----------
+  await db.pendingAssignments.bulkAdd([
+    { subjectId: pianoId, recurrenceId: lessonRecId, text: "Ballade — coda octaves at ♩=90, hands separately", createdAt: now - 3600000 },
+    { subjectId: pianoId, recurrenceId: lessonRecId, text: "Record the Nocturne Op. 9 No. 2 and listen back", createdAt: now - 1800000 },
+    { subjectId: harmonyId, recurrenceId: harmonyRecId, text: "Analyse two chorales for augmented sixth chords", createdAt: now - 900000 },
+  ]);
 }
+
