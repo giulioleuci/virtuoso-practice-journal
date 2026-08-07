@@ -23,14 +23,20 @@ export async function seedSampleData() {
     reminderTime: "18:30",
     reminderFreq: "daily",
     reminderDays: [0, 1, 2, 3, 4, 5, 6],
+    reminderEnabled: true,
+    reminderPreset: "motivational",
+    reminderIncludeContext: true,
     lateRecoveryDays: 3,
     carryoverDays: 7,
     graceDay: true,
     groupByPhase: true,
+    hideHeroQuote: false,
+    weekStartsOn: 1,
     onboarded: true,
     introSeen: true,
     createdAt: now - 200 * D,
   });
+
 
   // ---------- Subjects ----------
   const pianoId = (await db.subjects.add({
