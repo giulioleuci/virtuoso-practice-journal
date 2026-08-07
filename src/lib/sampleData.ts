@@ -23,14 +23,20 @@ export async function seedSampleData() {
     reminderTime: "18:30",
     reminderFreq: "daily",
     reminderDays: [0, 1, 2, 3, 4, 5, 6],
+    reminderEnabled: true,
+    reminderPreset: "motivational",
+    reminderIncludeContext: true,
     lateRecoveryDays: 3,
     carryoverDays: 7,
     graceDay: true,
     groupByPhase: true,
+    hideHeroQuote: false,
+    weekStartsOn: 1,
     onboarded: true,
     introSeen: true,
     createdAt: now - 200 * D,
   });
+
 
   // ---------- Subjects ----------
   const pianoId = (await db.subjects.add({
@@ -268,6 +274,67 @@ targetBpm: 84, noteVal: "quarter",
     { collectionId: colBeethovenLate, itemId: beethoven110, position: 2, createdAt: now },
     { collectionId: colCzerny,       itemId: czerny740,   position: 1, createdAt: now },
   ]);
+
+  // ---------- Repertoire ("to keep" pieces with spaced reviews) ----------
+  // Mix of states: overdue, due today, and comfortably scheduled.
+  const repertoirePlan: { itemId: number; addedDaysAgo: number; intervalDays: number; lastReviewedDaysAgo: number }[] = [
+    { itemId: nocturne9_2,   addedDaysAgo: 200, intervalDays: 30, lastReviewedDaysAgo: 40 }, // overdue
+    { itemId: wtcCmaj,       addedDaysAgo: 220, intervalDays: 60, lastReviewedDaysAgo: 60 }, // due today
+    { itemId: beethoven110,  addedDaysAgo: 150, intervalDays: 14, lastReviewedDaysAgo: 9 },  // due in 5 days
+    { itemId: chopinBallade, addedDaysAgo: 80,  intervalDays: 7,  lastReviewedDaysAgo: 2 },  // due in 5 days
+    { itemId: bachWtcCsh,    addedDaysAgo: 55,  intervalDays: 90, lastReviewedDaysAgo: 10 }, // far out
+  ];
+  for (const plan of repertoirePlan) {
+    await db.library.update(plan.itemId, {
+      inRepertoire: true,
+      repertoireAddedAt: now - plan.addedDaysAgo * D,
+      reviewIntervalDays: plan.intervalDays,
+      lastReviewedAt: dayKey(addDays(todayDate, -plan.lastReviewedDaysAgo)),
+      nextReviewAt: dayKey(addDays(todayDate, plan.intervalDays - plan.lastReviewedDaysAgo)),
+    });
+  }
+
+  // ---------- Performance events + programmes ----------
+  const concertId = (await db.performances.add({
+    name: "Autumn recital — Sala Verdi",
+    kind: "concert",
+    date: dayKey(addDays(todayDate, 45)),
+    subjectId: pianoId,
+    venue: "Sala Verdi, Milano",
+    notes: "45-minute programme, no interval.",
+    createdAt: now - 30 * D,
+  })) as number;
+
+  const examId = (await db.performances.add({
+    name: "End-of-year exam",
+    kind: "exam",
+    date: dayKey(addDays(todayDate, 90)),
+    subjectId: pianoId,
+    venue: "Conservatorio — Aula magna",
+    notes: "Bach + a Classical sonata required.",
+    createdAt: now - 20 * D,
+  })) as number;
+
+  const auditionId = (await db.performances.add({
+    name: "Chamber series audition",
+    kind: "audition",
+    date: dayKey(addDays(todayDate, 12)),
+    subjectId: pianoId,
+    venue: "Teatro Comunale",
+    createdAt: now - 10 * D,
+  })) as number;
+
+  await db.performanceItems.bulkAdd([
+    { eventId: concertId,  itemId: chopinBallade, createdAt: now },
+    { eventId: concertId,  itemId: nocturne9_2,   createdAt: now },
+    { eventId: concertId,  itemId: beethoven110,  createdAt: now },
+    { eventId: examId,     itemId: bachWtcCsh,    createdAt: now },
+    { eventId: examId,     itemId: beethoven109,  createdAt: now },
+    { eventId: auditionId, itemId: nocturne9_1,   createdAt: now },
+    { eventId: auditionId, itemId: wtcCmaj,       createdAt: now },
+  ]);
+
+
 
   // ---------- Segments ----------
   const seg = async (
@@ -886,4 +953,12 @@ targetBpm: 84, noteVal: "quarter",
       answeredAt: now - 3 * D, resolved: true, createdAt: now - 5 * D,
     },
   ]);
+
+  // ---------- Pending (async) homework, captured during the current lessons ----------
+  await db.pendingAssignments.bulkAdd([
+    { subjectId: pianoId, recurrenceId: lessonRecId, text: "Ballade — coda octaves at ♩=90, hands separately", createdAt: now - 3600000 },
+    { subjectId: pianoId, recurrenceId: lessonRecId, text: "Record the Nocturne Op. 9 No. 2 and listen back", createdAt: now - 1800000 },
+    { subjectId: harmonyId, recurrenceId: harmonyRecId, text: "Analyse two chorales for augmented sixth chords", createdAt: now - 900000 },
+  ]);
 }
+
