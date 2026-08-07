@@ -275,6 +275,67 @@ targetBpm: 84, noteVal: "quarter",
     { collectionId: colCzerny,       itemId: czerny740,   position: 1, createdAt: now },
   ]);
 
+  // ---------- Repertoire ("to keep" pieces with spaced reviews) ----------
+  // Mix of states: overdue, due today, and comfortably scheduled.
+  const repertoirePlan: { itemId: number; addedDaysAgo: number; intervalDays: number; lastReviewedDaysAgo: number }[] = [
+    { itemId: nocturne9_2,   addedDaysAgo: 200, intervalDays: 30, lastReviewedDaysAgo: 40 }, // overdue
+    { itemId: wtcCmaj,       addedDaysAgo: 220, intervalDays: 60, lastReviewedDaysAgo: 60 }, // due today
+    { itemId: beethoven110,  addedDaysAgo: 150, intervalDays: 14, lastReviewedDaysAgo: 9 },  // due in 5 days
+    { itemId: chopinBallade, addedDaysAgo: 80,  intervalDays: 7,  lastReviewedDaysAgo: 2 },  // due in 5 days
+    { itemId: bachWtcCsh,    addedDaysAgo: 55,  intervalDays: 90, lastReviewedDaysAgo: 10 }, // far out
+  ];
+  for (const plan of repertoirePlan) {
+    await db.library.update(plan.itemId, {
+      inRepertoire: true,
+      repertoireAddedAt: now - plan.addedDaysAgo * D,
+      reviewIntervalDays: plan.intervalDays,
+      lastReviewedAt: dayKey(addDays(todayDate, -plan.lastReviewedDaysAgo)),
+      nextReviewAt: dayKey(addDays(todayDate, plan.intervalDays - plan.lastReviewedDaysAgo)),
+    });
+  }
+
+  // ---------- Performance events + programmes ----------
+  const concertId = (await db.performances.add({
+    name: "Autumn recital — Sala Verdi",
+    kind: "concert",
+    date: dayKey(addDays(todayDate, 45)),
+    subjectId: pianoId,
+    venue: "Sala Verdi, Milano",
+    notes: "45-minute programme, no interval.",
+    createdAt: now - 30 * D,
+  })) as number;
+
+  const examId = (await db.performances.add({
+    name: "End-of-year exam",
+    kind: "exam",
+    date: dayKey(addDays(todayDate, 90)),
+    subjectId: pianoId,
+    venue: "Conservatorio — Aula magna",
+    notes: "Bach + a Classical sonata required.",
+    createdAt: now - 20 * D,
+  })) as number;
+
+  const auditionId = (await db.performances.add({
+    name: "Chamber series audition",
+    kind: "audition",
+    date: dayKey(addDays(todayDate, 12)),
+    subjectId: pianoId,
+    venue: "Teatro Comunale",
+    createdAt: now - 10 * D,
+  })) as number;
+
+  await db.performanceItems.bulkAdd([
+    { eventId: concertId,  itemId: chopinBallade, createdAt: now },
+    { eventId: concertId,  itemId: nocturne9_2,   createdAt: now },
+    { eventId: concertId,  itemId: beethoven110,  createdAt: now },
+    { eventId: examId,     itemId: bachWtcCsh,    createdAt: now },
+    { eventId: examId,     itemId: beethoven109,  createdAt: now },
+    { eventId: auditionId, itemId: nocturne9_1,   createdAt: now },
+    { eventId: auditionId, itemId: wtcCmaj,       createdAt: now },
+  ]);
+
+
+
   // ---------- Segments ----------
   const seg = async (
     itemId: number, label: string, targetBpm: number,
