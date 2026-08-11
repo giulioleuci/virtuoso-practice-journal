@@ -30,6 +30,9 @@ const shorten = (value: string, max = 18) => (value.length > max ? `${value.slic
 /** Read-only analysis of a performance programme: readiness comparison plus per-piece breakdown. */
 export function ProgrammeAnalysisSheet({ open, onOpenChange, event, entries }: Props) {
   const { t } = useI18n();
+  const [drilldown, setDrilldown] = useState<ProgrammeEntry | null>(null);
+
+
 
   const bars = useMemo(
     () =>
