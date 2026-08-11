@@ -84,7 +84,9 @@ const Index = () => {
           <Route path="tasks/routines/edit/:id" element={<Suspense fallback={<Fallback />}><EditStudyRoutinePage /></Suspense>} />
           <Route path="profile" element={<Suspense fallback={<Fallback />}><Profile /></Suspense>} />
         </Route>
+        <Route path="print/weekly" element={<Suspense fallback={<Fallback />}><PrintSummary /></Suspense>} />
       </Routes>
+
     </I18nProvider>
   );
 };
