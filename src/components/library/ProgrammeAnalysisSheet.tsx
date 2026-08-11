@@ -135,6 +135,17 @@ export function ProgrammeAnalysisSheet({ open, onOpenChange, event, entries }: P
           </section>
         </div>
       )}
-    </ResponsiveSheet>
+      </ResponsiveSheet>
+
+      <PieceDrilldownSheet
+        open={drilldown !== null}
+        onOpenChange={(next) => !next && setDrilldown(null)}
+        item={drilldown?.item ?? null}
+        sessions={drilldown?.sessions ?? []}
+        segments={drilldown?.segments ?? []}
+        readiness={drilldown?.readiness ?? null}
+      />
+    </>
   );
 }
+
