@@ -167,8 +167,15 @@ export default function Repertoire() {
               const programme = (links ?? []).filter((link) => link.eventId === event.id);
               const scores = programme.flatMap((link) => {
                 const item = itemsById.get(link.itemId);
-                return item ? [{ item, readiness: readinessFor(item) }] : [];
+                if (!item) return [];
+                return [{
+                  item,
+                  readiness: readinessFor(item),
+                  sessions: (item.id !== undefined ? sessionsByItem.get(item.id) : undefined) ?? [],
+                  segments: (segments ?? []).filter((segment) => segment.itemId === item.id),
+                }];
               });
+
               const overall = scores.length
                 ? Math.round(scores.reduce((sum, entry) => sum + entry.readiness.overall, 0) / scores.length)
                 : 0;
