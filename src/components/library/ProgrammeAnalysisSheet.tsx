@@ -51,7 +51,9 @@ export function ProgrammeAnalysisSheet({ open, onOpenChange, event, entries }: P
     value >= 75 ? "hsl(var(--primary))" : value >= 45 ? "hsl(var(--muted-foreground))" : "hsl(var(--destructive))";
 
   return (
-    <ResponsiveSheet
+    <>
+      <ResponsiveSheet
+
       open={open}
       onOpenChange={onOpenChange}
       title={t("performances.analysis")}
