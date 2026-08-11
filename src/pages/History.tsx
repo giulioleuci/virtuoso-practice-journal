@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+
 import type { LibraryKind, Subject } from "@/domain/entities/common";
 import type { Collection } from "@/domain/entities/collection";
 import type { Session } from "@/domain/entities/session";
