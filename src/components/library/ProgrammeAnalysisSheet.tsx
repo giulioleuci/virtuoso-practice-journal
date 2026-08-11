@@ -1,15 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import type { LibraryItem } from "@/domain/entities/library";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { PerformanceEvent } from "@/domain/entities/performance";
+import type { Session } from "@/domain/entities/session";
 import type { ReadinessBreakdown } from "@/domain/logic/readiness";
 import { useI18n } from "@/lib/i18n";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Progress } from "@/components/ui/progress";
+import { PieceDrilldownSheet } from "./PieceDrilldownSheet";
 
 export interface ProgrammeEntry {
   item: LibraryItem;
   readiness: ReadinessBreakdown;
+  sessions: Session[];
+  segments: Segment[];
 }
 
 interface Props {
@@ -19,11 +24,15 @@ interface Props {
   entries: ProgrammeEntry[];
 }
 
+
 const shorten = (value: string, max = 18) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
 
 /** Read-only analysis of a performance programme: readiness comparison plus per-piece breakdown. */
 export function ProgrammeAnalysisSheet({ open, onOpenChange, event, entries }: Props) {
   const { t } = useI18n();
+  const [drilldown, setDrilldown] = useState<ProgrammeEntry | null>(null);
+
+
 
   const bars = useMemo(
     () =>
@@ -42,7 +51,9 @@ export function ProgrammeAnalysisSheet({ open, onOpenChange, event, entries }: P
     value >= 75 ? "hsl(var(--primary))" : value >= 45 ? "hsl(var(--muted-foreground))" : "hsl(var(--destructive))";
 
   return (
-    <ResponsiveSheet
+    <>
+      <ResponsiveSheet
+
       open={open}
       onOpenChange={onOpenChange}
       title={t("performances.analysis")}
@@ -81,9 +92,11 @@ export function ProgrammeAnalysisSheet({ open, onOpenChange, event, entries }: P
 
           <section className="space-y-4">
             <h4 className="text-sm font-medium">{t("performances.analysisPerPiece")}</h4>
-            {entries.map(({ item, readiness }) => {
+            {entries.map((entry) => {
+              const { item, readiness } = entry;
               const radar = [
                 { axis: t("performances.bpm"), value: readiness.bpm },
+
                 { axis: t("performances.mastery"), value: readiness.mastery },
                 { axis: t("performances.frequency"), value: readiness.frequency },
               ];
@@ -109,12 +122,32 @@ export function ProgrammeAnalysisSheet({ open, onOpenChange, event, entries }: P
                   <p className="text-[11px] text-muted-foreground tabular-nums">
                     {t("performances.recentSessions").replace("{count}", String(readiness.recentSessions))}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => setDrilldown(entry)}
+                    className="w-full inline-flex items-center justify-between gap-2 rounded-md border border-border px-3 min-h-[44px] text-sm text-primary hover:bg-accent/40 active:bg-accent/60"
+                  >
+                    {t("performances.analysisDetails")}
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
+
               );
             })}
           </section>
         </div>
       )}
-    </ResponsiveSheet>
+      </ResponsiveSheet>
+
+      <PieceDrilldownSheet
+        open={drilldown !== null}
+        onOpenChange={(next) => !next && setDrilldown(null)}
+        item={drilldown?.item ?? null}
+        sessions={drilldown?.sessions ?? []}
+        segments={drilldown?.segments ?? []}
+        readiness={drilldown?.readiness ?? null}
+      />
+    </>
   );
 }
+

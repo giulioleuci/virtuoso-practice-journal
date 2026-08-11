@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+
 import type { LibraryKind, Subject } from "@/domain/entities/common";
 import type { Collection } from "@/domain/entities/collection";
 import type { Session } from "@/domain/entities/session";
@@ -12,10 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
+import { ChevronRight, ArrowDownUp, BarChart3 } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
-import { StatsDashboard } from "@/components/diary/StatsDashboard";
+
+
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -204,7 +206,13 @@ export default function History() {
         </button>
       )}
 
-      <StatsDashboard from={from || undefined} to={to || undefined} sessions={filteredSessions} />
+      <Link to="/analytics" className="flex items-center justify-between gap-2 paper-card px-3.5 min-h-[52px] text-sm">
+        <span className="inline-flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-primary" /> {t("analytics.title")}
+        </span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </Link>
+
 
       <div className="flex justify-end">
         <Button size="sm" variant="ghost" onClick={() => setSortDir((d) => d === "newest" ? "oldest" : "newest")}>

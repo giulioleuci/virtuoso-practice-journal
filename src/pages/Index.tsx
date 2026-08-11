@@ -15,6 +15,9 @@ const Repertoire = lazy(() => import("./Repertoire"));
 const Lessons = lazy(() => import("./Lessons"));
 const Assignments = lazy(() => import("./Assignments"));
 const History = lazy(() => import("./History"));
+const Analytics = lazy(() => import("./Analytics"));
+const PrintSummary = lazy(() => import("./PrintSummary"));
+
 const Tasks = lazy(() => import("./Tasks"));
 const Profile = lazy(() => import("./Profile"));
 const NewTaskPage = lazy(() => import("./NewTaskPage"));
@@ -73,13 +76,17 @@ const Index = () => {
           <Route path="lessons" element={<Suspense fallback={<Fallback />}><Lessons /></Suspense>} />
           <Route path="lessons/assignments" element={<Suspense fallback={<Fallback />}><Assignments /></Suspense>} />
           <Route path="history" element={<Suspense fallback={<Fallback />}><History /></Suspense>} />
+          <Route path="analytics" element={<Suspense fallback={<Fallback />}><Analytics /></Suspense>} />
+
           <Route path="tasks" element={<Suspense fallback={<Fallback />}><Tasks /></Suspense>} />
           <Route path="tasks/new" element={<Suspense fallback={<Fallback />}><NewTaskPage /></Suspense>} />
           <Route path="tasks/edit/:id" element={<Suspense fallback={<Fallback />}><EditTaskPage /></Suspense>} />
           <Route path="tasks/routines/edit/:id" element={<Suspense fallback={<Fallback />}><EditStudyRoutinePage /></Suspense>} />
           <Route path="profile" element={<Suspense fallback={<Fallback />}><Profile /></Suspense>} />
         </Route>
+        <Route path="print/weekly" element={<Suspense fallback={<Fallback />}><PrintSummary /></Suspense>} />
       </Routes>
+
     </I18nProvider>
   );
 };
