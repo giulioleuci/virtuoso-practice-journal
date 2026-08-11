@@ -161,3 +161,29 @@
     @apply bg-muted/60 animate-pulse rounded-paper;
   }
 }
+
+/* Print-optimised weekly teacher summary */
+@media print {
+  nav,
+  .no-print {
+    display: none !important;
+  }
+  body,
+  .print-summary {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print-summary {
+    max-width: none;
+    padding: 0;
+    font-size: 11pt;
+  }
+  .print-summary section,
+  .print-summary li,
+  .print-summary tr {
+    break-inside: avoid;
+  }
+  @page {
+    margin: 14mm;
+  }
+}
