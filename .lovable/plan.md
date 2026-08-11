@@ -1,60 +1,59 @@
+# Virtuoso — Improvement Suggestions
 
-## 1. Segment history drill-down in `LastSessionStrip`
+After reviewing the codebase and the existing `IMPROVEMENT_RECOMMENDATIONS.md`, here is a curated, prioritized set of suggestions. Many items from the original report are **already implemented** (wake lock, metronome, repertoire, performance readiness, spaced review, adaptive drawers, multi-day lessons, segment carousel, async homework, i18n validation, centralized date formatting, notification presets, page transitions). The suggestions below focus on what is **genuinely missing** and high-value.
 
-- Make each `segmentBreakdown` row a `<button>` that opens a new **`SegmentHistorySheet`** (`src/components/diary/SegmentHistorySheet.tsx`).
-- The sheet queries all sessions across tasks sharing the same `itemId` where `segmentMetrics[segmentId]` is defined, sorted newest-first, and renders a chronological list: date, quality glyph, BPM (with note glyph), confidence, and mini bars for that segment's `layerScores` / `techniqueScores`.
-- Clicking a row calls the existing `SessionDetailSheet` for the full context (kept behind a "View full session" link).
-- New i18n keys: `session.segmentHistory`, `session.noSegmentHistory`, `session.viewFullSession`.
+---
 
-## 2. Additional seeded segment metrics in `sampleData.ts`
+## Tier 1 — High impact, low effort
 
-- Extend the existing multi-segment seed so **at least 3 different items** (a sonata with 3 movements, a study with 4 phrases, and a concerto excerpt) have several past sessions with populated `segmentMetrics` covering varied quality/BPM/layer scores.
-- Values must be realistic progressions (BPM trending up, quality alternating, layer scores gradually improving) so the strip visualisation and new history sheet are populated across easy/medium/hard cases.
+### A. Tap-tempo & hands-free keyboard shortcuts (Practice Mode)
+The metronome exists in `PracticeMode.tsx`, but tap-tempo was explicitly removed (line 44: `// Tap-tempo removed`). Musicians holding an instrument need to set tempo by tapping a large on-screen zone. Add:
+- A large tap-tempo zone that derives BPM from the last 4–8 taps.
+- Keyboard shortcuts during practice: **Spacebar** = start/pause metronome, **N** = next segment, **Esc** = exit. Useful for Bluetooth page-turner pedals that send space/PageDown.
 
-## 3. Backup export/import coverage for `segmentMetrics`
+### B. Pitch pipe / reference tone
+The Web Audio API is already wired up for the metronome in `PracticeMode.tsx`. A reference tone generator (A440 / A442 Hz selectable) is a natural, ~50-line extension using the same `AudioContext`. Gives musicians a quick tuning reference without leaving the app.
 
-- Current `backupService` dumps all Dexie tables verbatim, which already includes `segmentMetrics` on session rows. I'll:
-  - Add a regression test in `src/lib/services/backup.test.ts` seeding a session with `segmentMetrics` + `snapshot.segments`, round-tripping through export/import, and asserting equality.
-  - Bump the export `version` to `2` and add a lightweight forward-compat guard (accept both `1` and `2`).
-- No schema change needed.
+### C. Offline-first confidence badge
+A small, subtle green indicator in the app header (e.g. a dot + "Saved locally") confirming data is persisted to IndexedDB. Builds trust for a local-first app where users may worry about data loss. ~20 lines in `AppShell.tsx`.
 
-## 4. FAB on `/tasks` → `/tasks/new`
+### D. Interactive sparkline tooltips
+`BpmSparkline.tsx` and `MasterySparkline.tsx` render trend lines but have no tap/hover interaction. Add a lightweight tooltip showing the date and value at each point, plus a delta indicator ("+12 BPM in 14 days"). Recharts (already a dependency) supports this natively.
 
-- Add a small presentational FAB (matching the style of `SessionFAB`: `fixed bottom-24 right-4`, primary circle, `Plus` icon) directly inside `src/pages/Tasks.tsx`.
-- Uses `react-router`'s `useNavigate()` to push `/tasks/new`. Aria label `tasks.new`.
+---
 
-## 5. Async homework capture
+## Tier 2 — Medium impact, medium effort
 
-**Data model.** New Dexie table `pendingAssignments`:
+### E. One-tap quick session log
+Currently logging a session requires opening `SessionLogSheet` and filling fields. Add a "quick log" path: a single tap on a task card that logs a session with sensible defaults (today's date, estimated duration from task, no quality rating) and marks the task done. Full logging remains available via the sheet. Reduces friction for routine daily practice.
+
+### F. Smart BPM auto-increment suggestion
+After a session rated 4–5 stars on a task linked to a repertoire piece or exercise, automatically suggest incrementing the target BPM by +2 to +5. Shows a toast/prompt: "Great session! Bump target from 80 → 84 BPM?" The BPM progression data already exists in sessions; this closes the loop.
+
+### G. Replace edit routes with slide-over drawers
+`/tasks/edit/:id` (`EditTaskPage.tsx`) and `/tasks/routines/edit/:id` (`EditStudyRoutinePage.tsx`) are separate full-page routes. Navigating away from the Diary/Tasks view to edit a detail breaks flow. Replace with bottom-sheet drawers (the `ResponsiveSheet` pattern already exists) that overlay the current page, keeping context.
+
+---
+
+## Tier 3 — High impact, higher effort
+
+### H. Weekly teacher summary export (print-based)
+No PDF library is installed. Instead of adding `jspdf`, use the browser's native print API (`window.print()`) with a dedicated print-optimized route/component that renders a clean one-page summary: total practice time, pieces worked on, tempos, and assignment notes. Works on mobile via "Save as PDF" in the print dialog. Zero new dependencies.
+
+### I. Consolidate Collections into Library
+`/library/collections` (`Collections.tsx`) is a separate page. Collections are essentially playlists/folders of library items. Move collections into the Library view as a tab or filter ("All items" / "Collections"), reducing navigation depth. The data layer already supports it.
+
+### J. Split History into Analytics + Session Log
+`History.tsx` (293 lines) mixes a detailed session audit log with the `StatsDashboard` analytics. Consider promoting the StatsDashboard to its own primary "Analytics" view (accessible from the nav or More menu) and keeping History as a pure chronological session log. Gives analytics more screen real estate for richer charts.
+
+---
+
+## Suggested order if you want me to implement
 
 ```
-id, subjectId, recurrenceId?, text, createdAt
+Phase 1 (quick wins):  A → B → C → D
+Phase 2 (flow):        E → F → G
+Phase 3 (structure):   H → I → J
 ```
 
-Added in a new DB migration version (bump `db.version(N+1)`) with no data backfill.
-
-**Service.** New `pendingAssignmentsService` (`src/lib/services/pendingAssignments.ts`) with `add`, `remove`, `list(subjectId?, recurrenceId?)`, and `consumeFor(subjectId, recurrenceId?)` (returns texts and deletes rows).
-
-**UI entry points.**
-- On `/diary` and `/lessons` pages, add a secondary FAB (below the existing session FAB on Diary; standalone on Lessons) with an `Inbox`/`ClipboardPlus` icon.
-- Tapping opens a lightweight `AddHomeworkSheet` with:
-  - Subject picker (defaults to today's next lesson subject if any)
-  - Optional recurrence picker filtered to that subject
-  - Free-text field + save.
-
-**LessonLogSheet integration.**
-- Replace the `useEffect` that seeds `assignments` from `existingAssignments` with a `useLiveQuery` that also merges `pendingAssignments` scoped to `subjectId` + `recurrenceId`, so newly-captured homework appears in the open sheet without reopening.
-- Local `assignments` state is derived from (existing lesson rows) ∪ (pending rows) ∪ (locally added drafts), de-duplicated by text.
-- On save, `lessonsService.log` / `updateLesson` receives the merged list; after success we call `pendingAssignmentsService.consumeFor(...)` inside the same call so pending rows are deleted only once persisted.
-
-**i18n.** New keys in all four languages: `homework.add`, `homework.title`, `homework.subject`, `homework.recurrence`, `homework.textPlaceholder`, `homework.pendingBadge`, `toast.homeworkAdded`.
-
-## Technical details
-
-- New file: `src/components/diary/SegmentHistorySheet.tsx`.
-- New file: `src/components/lessons/AddHomeworkSheet.tsx`.
-- New file: `src/lib/services/pendingAssignments.ts` + register in `services/index.ts`.
-- Modified: `src/lib/db.ts` (new table + version bump), `src/components/diary/LastSessionStrip.tsx`, `src/lib/sampleData.ts`, `src/lib/services/backup.ts`, `src/lib/services/backup.test.ts`, `src/pages/Tasks.tsx`, `src/pages/Diary.tsx`, `src/pages/Lessons.tsx`, `src/components/lessons/LessonLogSheet.tsx`, and the four `src/lib/language/*.json` files.
-- No changes to task/session schemas, backup file structure, or existing service signatures beyond `lessonsService.log/updateLesson` (unchanged — they already accept an assignments array).
-
-Confirm and I'll implement.
+Tell me which items (by letter) you'd like me to implement, or if you'd like me to refine any of these further.
