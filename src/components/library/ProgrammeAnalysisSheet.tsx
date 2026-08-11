@@ -90,9 +90,11 @@ export function ProgrammeAnalysisSheet({ open, onOpenChange, event, entries }: P
 
           <section className="space-y-4">
             <h4 className="text-sm font-medium">{t("performances.analysisPerPiece")}</h4>
-            {entries.map(({ item, readiness }) => {
+            {entries.map((entry) => {
+              const { item, readiness } = entry;
               const radar = [
                 { axis: t("performances.bpm"), value: readiness.bpm },
+
                 { axis: t("performances.mastery"), value: readiness.mastery },
                 { axis: t("performances.frequency"), value: readiness.frequency },
               ];
