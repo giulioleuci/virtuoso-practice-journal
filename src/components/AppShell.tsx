@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, UserRound, ListChecks, MoreHorizontal } from "lucide-react";
+import { BarChart3, BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, Printer, UserRound, ListChecks, MoreHorizontal } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
