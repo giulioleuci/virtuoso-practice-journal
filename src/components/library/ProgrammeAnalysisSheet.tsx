@@ -120,7 +120,16 @@ export function ProgrammeAnalysisSheet({ open, onOpenChange, event, entries }: P
                   <p className="text-[11px] text-muted-foreground tabular-nums">
                     {t("performances.recentSessions").replace("{count}", String(readiness.recentSessions))}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => setDrilldown(entry)}
+                    className="w-full inline-flex items-center justify-between gap-2 rounded-md border border-border px-3 min-h-[44px] text-sm text-primary hover:bg-accent/40 active:bg-accent/60"
+                  >
+                    {t("performances.analysisDetails")}
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
+
               );
             })}
           </section>
