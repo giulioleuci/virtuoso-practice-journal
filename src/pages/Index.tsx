@@ -15,6 +15,9 @@ const Repertoire = lazy(() => import("./Repertoire"));
 const Lessons = lazy(() => import("./Lessons"));
 const Assignments = lazy(() => import("./Assignments"));
 const History = lazy(() => import("./History"));
+const Analytics = lazy(() => import("./Analytics"));
+const PrintSummary = lazy(() => import("./PrintSummary"));
+
 const Tasks = lazy(() => import("./Tasks"));
 const Profile = lazy(() => import("./Profile"));
 const NewTaskPage = lazy(() => import("./NewTaskPage"));
