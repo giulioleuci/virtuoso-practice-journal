@@ -61,4 +61,14 @@ describe("dexie presentation reads", () => {
     expect(pending.map((assignment) => assignment.text)).toEqual(["Arpeggios", "Scales"]);
     expect(openCount).toBe(1);
   });
+
+  it("returns null for profile.current when profile is not present, and the profile when it is present", async () => {
+    const initialResult = await dexiePresentationReads.read<unknown>("profile.current");
+    expect(initialResult).toBeNull();
+
+    await db.profile.put({ id: "me", name: "Ada", onboarded: true, introSeen: true, lang: "en", createdAt: 1 });
+    const updatedResult = await dexiePresentationReads.read<any>("profile.current");
+    expect(updatedResult).not.toBeNull();
+    expect(updatedResult.name).toBe("Ada");
+  });
 });

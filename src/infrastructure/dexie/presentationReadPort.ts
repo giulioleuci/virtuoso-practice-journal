@@ -83,7 +83,7 @@ export const dexiePresentationReads: PresentationReadPort = {
       })() as unknown as Promise<T>;
       case "subjects.one": return (typeof first === "number" ? db.subjects.get(first) : Promise.resolve(undefined)) as unknown as Promise<T>;
       case "subjects.isTheory": return (typeof first === "number" ? db.subjects.get(first).then((subject) => subject?.type === "theory") : Promise.resolve(false)) as unknown as Promise<T>;
-      case "profile.current": return db.profile.get("me") as unknown as Promise<T>;
+      case "profile.current": return db.profile.get("me").then((profile) => profile ?? null) as unknown as Promise<T>;
       case "routines.active": return db.studyRoutines.filter(active).toArray() as unknown as Promise<T>;
       case "recurrences.active": return db.recurrences.filter(active).toArray() as unknown as Promise<T>;
       case "assignments.pending": return db.assignments.filter((assignment) => !assignment.transformed && !assignment.ignored).toArray() as unknown as Promise<T>;
