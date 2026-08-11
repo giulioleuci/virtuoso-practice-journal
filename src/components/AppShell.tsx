@@ -19,9 +19,12 @@ export default function AppShell({ profile }: { profile: Profile }) {
     { to: "/lessons", label: t("nav.lessons"), icon: GraduationCap },
   ];
   const moreItems = [
+    { to: "/analytics", label: t("nav.analytics"), icon: BarChart3 },
     { to: "/history", label: t("nav.history"), icon: HistoryIcon },
+    { to: "/print/weekly", label: t("nav.weeklySummary"), icon: Printer },
     { to: "/profile", label: t("nav.profile"), icon: UserRound },
   ];
+
   const moreActive = moreItems.some((m) => location.pathname.startsWith(m.to));
 
   const [hidden, setHidden] = useState(false);
