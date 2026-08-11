@@ -1,15 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import type { LibraryItem } from "@/domain/entities/library";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { PerformanceEvent } from "@/domain/entities/performance";
+import type { Session } from "@/domain/entities/session";
 import type { ReadinessBreakdown } from "@/domain/logic/readiness";
 import { useI18n } from "@/lib/i18n";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Progress } from "@/components/ui/progress";
+import { PieceDrilldownSheet } from "./PieceDrilldownSheet";
 
 export interface ProgrammeEntry {
   item: LibraryItem;
   readiness: ReadinessBreakdown;
+  sessions: Session[];
+  segments: Segment[];
 }
 
 interface Props {
@@ -18,6 +23,7 @@ interface Props {
   event: PerformanceEvent | null;
   entries: ProgrammeEntry[];
 }
+
 
 const shorten = (value: string, max = 18) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
 
