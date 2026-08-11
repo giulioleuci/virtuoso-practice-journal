@@ -204,7 +204,13 @@ export default function History() {
         </button>
       )}
 
-      <StatsDashboard from={from || undefined} to={to || undefined} sessions={filteredSessions} />
+      <Link to="/analytics" className="flex items-center justify-between gap-2 paper-card px-3.5 min-h-[52px] text-sm">
+        <span className="inline-flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-primary" /> {t("analytics.title")}
+        </span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </Link>
+
 
       <div className="flex justify-end">
         <Button size="sm" variant="ghost" onClick={() => setSortDir((d) => d === "newest" ? "oldest" : "newest")}>
