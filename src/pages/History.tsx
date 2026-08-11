@@ -13,9 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowDownUp, BarChart3 } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
+
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { ListSkeleton } from "@/components/shared/Loading";
