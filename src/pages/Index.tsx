@@ -76,6 +76,8 @@ const Index = () => {
           <Route path="lessons" element={<Suspense fallback={<Fallback />}><Lessons /></Suspense>} />
           <Route path="lessons/assignments" element={<Suspense fallback={<Fallback />}><Assignments /></Suspense>} />
           <Route path="history" element={<Suspense fallback={<Fallback />}><History /></Suspense>} />
+          <Route path="analytics" element={<Suspense fallback={<Fallback />}><Analytics /></Suspense>} />
+
           <Route path="tasks" element={<Suspense fallback={<Fallback />}><Tasks /></Suspense>} />
           <Route path="tasks/new" element={<Suspense fallback={<Fallback />}><NewTaskPage /></Suspense>} />
           <Route path="tasks/edit/:id" element={<Suspense fallback={<Fallback />}><EditTaskPage /></Suspense>} />
