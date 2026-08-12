@@ -11,6 +11,9 @@ import { NOTE_GLYPH } from "@/lib/constants";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Progress } from "@/components/ui/progress";
 import { BpmTimelineChart } from "./BpmTimelineChart";
+import { SegmentHistorySheet } from "@/components/diary/SegmentHistorySheet";
+import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
+import { TeacherAnswersSheet } from "./TeacherAnswersSheet";
 
 interface Props {
   open: boolean;
