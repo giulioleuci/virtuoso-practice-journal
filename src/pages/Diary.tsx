@@ -672,7 +672,7 @@ function LessonTodayBanner({
           onClick={() => setHomeworkOpen(true)}
           className="h-11 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors border-r border-border/40"
         >
-          <ClipboardPlus className="h-3.5 w-3.5" /> {t("homework.add")}
+          <ClipboardPlus className="h-3.5 w-3.5" /> {t("homework.addShort")}
         </button>
         <button
           onClick={() =>
@@ -682,7 +682,7 @@ function LessonTodayBanner({
           }
           className="h-11 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors"
         >
-          {t("diary.logLesson")} <ArrowRightIcon className="h-3.5 w-3.5" />
+          {t("diary.logLessonShort")} <ArrowRightIcon className="h-3.5 w-3.5" />
         </button>
       </div>
       <AddHomeworkSheet
