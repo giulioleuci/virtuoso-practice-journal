@@ -33,6 +33,9 @@ const qualityKey = (q?: string) => (q ? `session.quality${q.charAt(0).toUpperCas
 export function PieceDrilldownSheet({ open, onOpenChange, item, sessions, segments, readiness }: Props) {
   const { t, lang } = useI18n();
   const helpRequests = useHelpRequests();
+  const [segmentDrill, setSegmentDrill] = useState<{ id: number; label: string } | null>(null);
+  const [sessionDetail, setSessionDetail] = useState<Session | null>(null);
+  const [answersOpen, setAnswersOpen] = useState(false);
   const todayKey = today();
   const spanStart = dayKey(addDays(parseDayKey(todayKey), -FREQUENCY_SPAN_DAYS));
 
