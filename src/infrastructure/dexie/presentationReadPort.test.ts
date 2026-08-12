@@ -66,7 +66,7 @@ describe("dexie presentation reads", () => {
     const initialResult = await dexiePresentationReads.read<unknown>("profile.current");
     expect(initialResult).toBeNull();
 
-    await db.profile.put({ id: "me", name: "Ada", onboarded: true, introSeen: true, lang: "en", createdAt: 1 });
+    await db.profile.put({ id: "me", name: "Ada", onboarded: true, introSeen: true, lang: "en", createdAt: 1, reminderTime: "18:00", reminderFreq: "daily", reminderDays: [], lateRecoveryDays: 2, graceDay: false, groupByPhase: false });
     const updatedResult = await dexiePresentationReads.read<any>("profile.current");
     expect(updatedResult).not.toBeNull();
     expect(updatedResult.name).toBe("Ada");
