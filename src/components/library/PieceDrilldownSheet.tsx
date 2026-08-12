@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { HelpCircle, ListMusic } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronRight, HelpCircle, ListMusic } from "lucide-react";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Session } from "@/domain/entities/session";
 import type { ReadinessBreakdown } from "@/domain/logic/readiness";
