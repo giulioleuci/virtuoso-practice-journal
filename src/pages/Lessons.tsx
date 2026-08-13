@@ -34,6 +34,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
+import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
 import { AddHomeworkSheet } from "@/components/lessons/AddHomeworkSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { upcomingLessonDates, slotForDate } from "@/lib/recurrence";
@@ -229,6 +230,7 @@ export default function Lessons() {
                       <NotebookPen className="h-4 w-4" /> {t("lessons.log")}
                     </button>
                   </div>
+                  <LessonExtraActions subjectId={r.subjectId} />
                 </li>
               );
             })}
