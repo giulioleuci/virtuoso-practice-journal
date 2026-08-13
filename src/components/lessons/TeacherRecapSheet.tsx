@@ -19,11 +19,13 @@ import { subjectBorderStyle, subjectColorCss } from "@/lib/subjectColors";
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  /** Optional filter: only show requests for library items of this subject. */
+  subjectId?: number;
 }
 
 type Tab = "open" | "answered";
 
-export function TeacherRecapSheet({ open, onOpenChange }: Props) {
+export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
   const { t, lang } = useI18n();
   const helpRequests = useHelpRequests();
   const items = useAllLibrary();
@@ -39,9 +41,14 @@ export function TeacherRecapSheet({ open, onOpenChange }: Props) {
 
   const list = useMemo(() => {
     const all = helpRequests ?? [];
-    const filtered = tab === "open" ? all.filter((h) => !h.resolved) : all.filter((h) => h.resolved);
+    const subjectOf = new Map((items ?? []).map((i) => [i.id, i.subjectId]));
+    const scoped =
+      subjectId === undefined
+        ? all
+        : all.filter((h) => h.itemId !== undefined && subjectOf.get(h.itemId) === subjectId);
+    const filtered = tab === "open" ? scoped.filter((h) => !h.resolved) : scoped.filter((h) => h.resolved);
     return filtered.sort((a, b) => b.createdAt - a.createdAt);
-  }, [helpRequests, tab]);
+  }, [helpRequests, tab, items, subjectId]);
 
   const grouped = useMemo(() => {
     const itemsMap = new Map((items ?? []).map((i) => [i.id, i]));

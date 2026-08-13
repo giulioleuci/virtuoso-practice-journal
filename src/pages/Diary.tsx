@@ -42,6 +42,7 @@ import { LastSessionStrip } from "@/components/diary/LastSessionStrip";
 import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
 import { MessageSquareQuote } from "lucide-react";
 import { SessionFAB } from "@/components/diary/SessionFAB";
+import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
 import { AddHomeworkSheet } from "@/components/lessons/AddHomeworkSheet";
 import { ClipboardPlus } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
@@ -685,6 +686,7 @@ function LessonTodayBanner({
           {t("diary.logLessonShort")} <ArrowRightIcon className="h-3.5 w-3.5" />
         </button>
       </div>
+      <LessonExtraActions subjectId={rec.subjectId} />
       <AddHomeworkSheet
         open={homeworkOpen}
         onOpenChange={setHomeworkOpen}

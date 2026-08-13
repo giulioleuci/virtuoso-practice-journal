@@ -757,8 +757,6 @@
   "drilldown.openAnswers": "Antworten der Lehrkraft öffnen",
   "print.title": "Wöchentliche Übungsübersicht",
   "print.print": "Drucken / Als PDF speichern",
-  "print.totalTime": "Übungszeit",
-  "print.minutes": "{count} Min.",
   "print.sessions": "Einheiten",
   "print.practiceDays": "Übungstage",
   "print.pieces": "Bearbeitete Stücke",
@@ -766,5 +764,7 @@
   "print.assignments": "Hausaufgaben-Notizen",
   "print.noAssignments": "Keine Hausaufgaben diese Woche.",
   "print.notes": "Übungsnotizen",
-  "print.generated": "Erstellt am {date}"
+  "print.generated": "Erstellt am {date}",
+  "lessons.questionsShort": "Fragen",
+  "lessons.summaryShort": "Übersicht"
 }

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
-import { useAllLibrary, useAllTasks, useAssignments, useLessons, useProfile, useSessionsInRange } from "@/presentation/hooks/useEntities";
+import { useAllLibrary, useAllTasks, useAssignments, useLessons, useProfile, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { addDays, dayKey, endOfWeek, formatDate, startOfWeek } from "@/lib/date";
 import { NOTE_GLYPH } from "@/lib/constants";
@@ -10,6 +10,11 @@ import { NOTE_GLYPH } from "@/lib/constants";
 export default function PrintSummary() {
   const { t, lang } = useI18n();
   const profile = useProfile();
+  const [searchParams] = useSearchParams();
+  const subjectParam = searchParams.get("subject");
+  const subjectId = subjectParam ? Number(subjectParam) : undefined;
+  const subjects = useSubjects();
+  const subjectName = subjects?.find((s) => s.id === subjectId)?.name;
 
   const now = new Date();
   const from = dayKey(startOfWeek(now));
@@ -24,9 +29,12 @@ export default function PrintSummary() {
   const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id, task])), [tasks]);
   const itemById = useMemo(() => new Map((items ?? []).map((item) => [item.id, item])), [items]);
 
-  const list = sessions ?? [];
+  const list = useMemo(() => {
+    const all = sessions ?? [];
+    if (subjectId === undefined) return all;
+    return all.filter((session) => taskById.get(session.taskId)?.subjectId === subjectId);
+  }, [sessions, subjectId, taskById]);
   const practiceDays = new Set(list.map((session) => session.date)).size;
-  const minutes = list.length * 10;
 
   const pieces = useMemo(() => {
     const map = new Map<string, { title: string; composer?: string; count: number; topBpm: number; noteVal?: string }>();
@@ -51,8 +59,13 @@ export default function PrintSummary() {
     [lessons, from, to],
   );
   const weekAssignments = useMemo(
-    () => (assignments ?? []).filter((assignment) => weekLessonIds.has(assignment.lessonId) && !assignment.ignored),
-    [assignments, weekLessonIds],
+    () =>
+      (assignments ?? []).filter((assignment) => {
+        if (!weekLessonIds.has(assignment.lessonId) || assignment.ignored) return false;
+        if (subjectId === undefined) return true;
+        return (lessons ?? []).find((lesson) => lesson.id === assignment.lessonId)?.subjectId === subjectId;
+      }),
+    [assignments, weekLessonIds, subjectId, lessons],
   );
 
   const notes = useMemo(
@@ -80,14 +93,11 @@ export default function PrintSummary() {
         <p className="text-sm text-muted-foreground">
           {formatDate(from, lang, "medium")} – {formatDate(to, lang, "medium")}
           {profile?.name ? ` · ${profile.name}` : ""}
+          {subjectName ? ` · ${subjectName}` : ""}
         </p>
       </header>
 
-      <section className="grid grid-cols-3 gap-3 mb-5">
-        <div className="rounded-lg border border-border p-3">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("print.totalTime")}</p>
-          <p className="text-xl tabular-nums">{t("print.minutes").replace("{count}", String(minutes))}</p>
-        </div>
+      <section className="grid grid-cols-2 gap-3 mb-5">
         <div className="rounded-lg border border-border p-3">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("print.sessions")}</p>
           <p className="text-xl tabular-nums">{list.length}</p>
