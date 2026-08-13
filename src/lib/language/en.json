@@ -757,8 +757,6 @@
   "drilldown.openAnswers": "Open teacher answers",
   "print.title": "Weekly practice summary",
   "print.print": "Print / Save as PDF",
-  "print.totalTime": "Practice time",
-  "print.minutes": "{count} min",
   "print.sessions": "Sessions",
   "print.practiceDays": "Days practiced",
   "print.pieces": "Pieces worked on",
@@ -766,5 +764,7 @@
   "print.assignments": "Assignment notes",
   "print.noAssignments": "No assignments this week.",
   "print.notes": "Practice notes",
-  "print.generated": "Generated on {date}"
+  "print.generated": "Generated on {date}",
+  "lessons.questionsShort": "Questions",
+  "lessons.summaryShort": "Summary"
 }

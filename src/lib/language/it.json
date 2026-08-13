@@ -757,8 +757,6 @@
   "drilldown.openAnswers": "Apri le risposte del maestro",
   "print.title": "Riepilogo settimanale di studio",
   "print.print": "Stampa / Salva come PDF",
-  "print.totalTime": "Tempo di studio",
-  "print.minutes": "{count} min",
   "print.sessions": "Sessioni",
   "print.practiceDays": "Giorni di studio",
   "print.pieces": "Brani studiati",
@@ -766,5 +764,7 @@
   "print.assignments": "Note sui compiti",
   "print.noAssignments": "Nessun compito questa settimana.",
   "print.notes": "Note di studio",
-  "print.generated": "Generato il {date}"
+  "print.generated": "Generato il {date}",
+  "lessons.questionsShort": "Domande",
+  "lessons.summaryShort": "Riepilogo"
 }

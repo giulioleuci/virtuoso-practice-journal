@@ -757,8 +757,6 @@
   "drilldown.openAnswers": "Abrir las respuestas del profesor",
   "print.title": "Resumen semanal de estudio",
   "print.print": "Imprimir / Guardar como PDF",
-  "print.totalTime": "Tiempo de estudio",
-  "print.minutes": "{count} min",
   "print.sessions": "Sesiones",
   "print.practiceDays": "Días de estudio",
   "print.pieces": "Piezas trabajadas",
@@ -766,5 +764,7 @@
   "print.assignments": "Notas de tareas",
   "print.noAssignments": "Sin tareas esta semana.",
   "print.notes": "Notas de estudio",
-  "print.generated": "Generado el {date}"
+  "print.generated": "Generado el {date}",
+  "lessons.questionsShort": "Preguntas",
+  "lessons.summaryShort": "Resumen"
 }
