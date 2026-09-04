@@ -663,7 +663,6 @@
   "diary.lessonToday": "Stunde",
   "diary.lessonTodayWith": "Stunde · {{teacher}}",
   "diary.logLessonShort": "Erfassen",
-  "diary.logLesson": "Stunde erfassen",
   "diary.bestStreak": "Rekord: {{count}}T",
   "diary.freeSession": "Ad-hoc-Sitzung erfassen",
   "subjects.colorLabel": "Farbe",

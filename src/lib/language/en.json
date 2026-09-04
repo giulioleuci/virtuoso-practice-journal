@@ -663,7 +663,6 @@
   "diary.lessonToday": "Lesson",
   "diary.lessonTodayWith": "Lesson · {{teacher}}",
   "diary.logLessonShort": "Log",
-  "diary.logLesson": "Log lesson",
   "diary.bestStreak": "Best: {{count}}d",
   "diary.freeSession": "Log ad-hoc session",
   "subjects.colorLabel": "Color",
