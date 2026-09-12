@@ -38,6 +38,7 @@ const ALWAYS_USED_PREFIXES = [
   "library.kind.",
   "common.days.",
   "common.months.",
+  "intro.slide",
 ];
 
 const args = new Set(process.argv.slice(2));
