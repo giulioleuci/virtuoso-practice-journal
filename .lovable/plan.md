@@ -1,59 +1,59 @@
-# Virtuoso — Improvement Suggestions
+# Migliorare la costruzione delle routine di studio
 
-After reviewing the codebase and the existing `IMPROVEMENT_RECOMMENDATIONS.md`, here is a curated, prioritized set of suggestions. Many items from the original report are **already implemented** (wake lock, metronome, repertoire, performance readiness, spaced review, adaptive drawers, multi-day lessons, segment carousel, async homework, i18n validation, centralized date formatting, notification presets, page transitions). The suggestions below focus on what is **genuinely missing** and high-value.
+Obiettivo: rendere la creazione di una routine più chiara e veloce, e far sì che la scelta casuale dei brani tenga davvero conto di quanto ti senti sicuro su ciascuno.
 
----
+## Cosa non funziona oggi
 
-## Tier 1 — High impact, low effort
+- La procedura ha tre passaggi (scegli i brani, crea i gruppi, decidi i giorni) ma non mostra mai un'anteprima reale: vedi solo "2× Scale", non quali brani usciranno.
+- L'opzione che adatta la scelta alla tua sicurezza è spenta di default e nascosta sotto "Avanzate", quindi quasi nessuno la usa.
+- Quando è accesa, non vedi da nessuna parte quanto sei sicuro su ogni brano, né perché uno esce più spesso di un altro.
+- Se non hai ancora storico, tutti i brani ricevono lo stesso peso: nessun avviso, sembra solo casuale.
+- Le raccolte non entrano mai nel calcolo della sicurezza: restano sempre a peso neutro.
+- Il limite di ripetizioni settimanali è uno solo per tutta la routine: non puoi dire "le scale ogni giorno, i brani due volte".
+- I gruppi vanno creati a mano da zero, anche nel caso più comune (un solo gruppo con tutto dentro).
 
-### A. Tap-tempo & hands-free keyboard shortcuts (Practice Mode)
-The metronome exists in `PracticeMode.tsx`, but tap-tempo was explicitly removed (line 44: `// Tap-tempo removed`). Musicians holding an instrument need to set tempo by tapping a large on-screen zone. Add:
-- A large tap-tempo zone that derives BPM from the last 4–8 taps.
-- Keyboard shortcuts during practice: **Spacebar** = start/pause metronome, **N** = next segment, **Esc** = exit. Useful for Bluetooth page-turner pedals that send space/PageDown.
+## Cosa propongo
 
-### B. Pitch pipe / reference tone
-The Web Audio API is already wired up for the metronome in `PracticeMode.tsx`. A reference tone generator (A440 / A442 Hz selectable) is a natural, ~50-line extension using the same `AudioContext`. Gives musicians a quick tuning reference without leaving the app.
+### 1. Procedura più diretta
+- Modalità rapida: se scegli dei brani e non crei gruppi, la routine crea da sola un gruppo unico e salta il passaggio dei gruppi.
+- Modelli di partenza: "Riscaldamento + brani", "Solo repertorio", "Preparazione esame" — creano gruppi e giorni già impostati, poi modificabili.
+- Barra di avanzamento con i tre passaggi sempre visibile e riepilogo in fondo ("12 brani · 3 gruppi · 5 giorni · 4 settimane").
+- Ricerca e filtri (per tipo, per sicurezza, "solo repertorio") nella schermata di scelta, con selezione multipla rapida e pulsante "aggiungi tutti i risultati".
 
-### C. Offline-first confidence badge
-A small, subtle green indicator in the app header (e.g. a dot + "Saved locally") confirming data is persisted to IndexedDB. Builds trust for a local-first app where users may worry about data loss. ~20 lines in `AppShell.tsx`.
+### 2. Anteprima vera
+- Anteprima della prima settimana con i titoli effettivamente estratti, non solo i conteggi.
+- Pulsante "rigenera anteprima" per vedere una diversa estrazione prima di confermare.
+- Avvisi in chiaro: "Martedì chiedi 4 brani ma il gruppo ne ha 2", "limite di ripetizioni troppo basso per coprire la settimana".
 
-### D. Interactive sparkline tooltips
-`BpmSparkline.tsx` and `MasterySparkline.tsx` render trend lines but have no tap/hover interaction. Add a lightweight tooltip showing the date and value at each point, plus a delta indicator ("+12 BPM in 14 days"). Recharts (already a dependency) supports this natively.
+### 3. Adattamento alla sicurezza registrata
+- Acceso di default, portato fuori da "Avanzate", con tre livelli invece di un interruttore:
+  - Uniforme (tutto uguale)
+  - Equilibrato (i brani meno sicuri escono un po' di più)
+  - Insistente (forte priorità ai brani deboli)
+- Ogni brano nell'elenco mostra un indicatore di sicurezza (pallini o barra) e la probabilità stimata di uscita nella settimana.
+- Se un brano non ha ancora storico viene marcato "nuovo" e riceve priorità alta, così entra subito in rotazione.
+- Chi non ha storico vede un messaggio esplicito: "ancora poche sessioni, la scelta sarà casuale finché non registri qualche valutazione".
+- Le raccolte ricevono un peso calcolato dalla media dei brani che contengono, invece del peso neutro fisso.
+- Si tiene conto anche di quanto tempo è passato dall'ultima volta: un brano non toccato da settimane risale, anche se la sicurezza era alta.
+- Le valutazioni recenti pesano più di quelle vecchie.
 
----
+### 4. Limiti più flessibili
+- Limite di ripetizioni impostabile per gruppo (oltre a quello generale).
+- Opzione "evita due giorni di fila" per lo stesso brano.
 
-## Tier 2 — Medium impact, medium effort
+## Dettagli tecnici
 
-### E. One-tap quick session log
-Currently logging a session requires opening `SessionLogSheet` and filling fields. Add a "quick log" path: a single tap on a task card that logs a session with sensible defaults (today's date, estimated duration from task, no quality rating) and marks the task done. Full logging remains available via the sheet. Reduces friction for routine daily practice.
+- `src/lib/domain/studyRoutineGenerator.ts`: sostituire `confidenceToWeight` (scala fissa 1–5, fallback 3, 4 per tutti senza storico) con un calcolo che combina sicurezza recente pesata nel tempo, giorni dall'ultima esecuzione e un moltiplicatore di intensità (uniforme/equilibrato/insistente). Aggiungere un seed opzionale al campionamento per rendere l'anteprima riproducibile e testabile.
+- `src/infrastructure/repositories/dexie/studyRoutineRepository.ts`: `computeWeights` va esteso al tipo `collection` (media dei pesi dei brani della raccolta) e deve restituire anche l'ultima data di pratica per entry; sostituire il `db.sessions.toArray()` nel ciclo con una lettura unica fuori dal loop.
+- `src/domain/ports/studyRoutine.ts` + `src/lib/schemas.ts`: `useSpacedRepetition: boolean` diventa `adaptivity: "uniform" | "balanced" | "aggressive"`, con `repetitionCap` opzionale per gruppo. Migrazione Dexie che converte i valori esistenti (`false` → `uniform`, `true` → `balanced`).
+- Nuovo caso d'uso di sola lettura per l'anteprima (genera le attività della prima settimana senza scriverle), usato dalla procedura guidata.
+- `src/components/diary/StudyRoutineWizard.tsx` (1050 righe) va suddiviso in: selezione pool, gruppi, matrice settimanale, anteprima — componenti separati sotto `src/components/diary/studyRoutine/`.
+- Nuove chiavi i18n in EN/IT/ES/DE, validate con `bun i18n:validate`.
+- Test: casi di pesatura in `studyRoutineGenerator.test.ts` (decadimento temporale, brani nuovi, raccolte), più un test sulla riproducibilità dell'anteprima con seed.
 
-### F. Smart BPM auto-increment suggestion
-After a session rated 4–5 stars on a task linked to a repertoire piece or exercise, automatically suggest incrementing the target BPM by +2 to +5. Shows a toast/prompt: "Great session! Bump target from 80 → 84 BPM?" The BPM progression data already exists in sessions; this closes the loop.
+## Ordine di lavoro
 
-### G. Replace edit routes with slide-over drawers
-`/tasks/edit/:id` (`EditTaskPage.tsx`) and `/tasks/routines/edit/:id` (`EditStudyRoutinePage.tsx`) are separate full-page routes. Navigating away from the Diary/Tasks view to edit a detail breaks flow. Replace with bottom-sheet drawers (the `ResponsiveSheet` pattern already exists) that overlay the current page, keeping context.
-
----
-
-## Tier 3 — High impact, higher effort
-
-### H. Weekly teacher summary export (print-based)
-No PDF library is installed. Instead of adding `jspdf`, use the browser's native print API (`window.print()`) with a dedicated print-optimized route/component that renders a clean one-page summary: total practice time, pieces worked on, tempos, and assignment notes. Works on mobile via "Save as PDF" in the print dialog. Zero new dependencies.
-
-### I. Consolidate Collections into Library
-`/library/collections` (`Collections.tsx`) is a separate page. Collections are essentially playlists/folders of library items. Move collections into the Library view as a tab or filter ("All items" / "Collections"), reducing navigation depth. The data layer already supports it.
-
-### J. Split History into Analytics + Session Log
-`History.tsx` (293 lines) mixes a detailed session audit log with the `StatsDashboard` analytics. Consider promoting the StatsDashboard to its own primary "Analytics" view (accessible from the nav or More menu) and keeping History as a pure chronological session log. Gives analytics more screen real estate for richer charts.
-
----
-
-## Suggested order if you want me to implement
-
-```
-Phase 1 (quick wins):  A → B → C → D
-Phase 2 (flow):        E → F → G
-Phase 3 (structure):   H → I → J
-```
-
-Tell me which items (by letter) you'd like me to implement, or if you'd like me to refine any of these further.
+1. Motore di pesatura adattiva + test (nessun cambiamento visibile)
+2. Anteprima reale della settimana nella procedura
+3. Indicatori di sicurezza e selettore di intensità nell'interfaccia
+4. Modalità rapida, modelli, limiti per gruppo
