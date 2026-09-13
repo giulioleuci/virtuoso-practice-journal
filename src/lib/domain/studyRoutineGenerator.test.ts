@@ -102,9 +102,10 @@ describe("generateRoutineTasks", () => {
 
 describe("adaptive weighting", () => {
   it("weights recent ratings more than older ones", () => {
-    const recentLow = decayedAverage([1, 5, 5]);
-    const recentHigh = decayedAverage([5, 1, 1]);
-    expect(recentLow).toBeLessThan(recentHigh!);
+    // Newest-first: the latest rating pulls the average towards itself.
+    expect(decayedAverage([1, 5, 5])!).toBeLessThan((1 + 5 + 5) / 3);
+    expect(decayedAverage([5, 1, 1])!).toBeGreaterThan((5 + 1 + 1) / 3);
+    expect(decayedAverage([])).toBeNull();
   });
 
   it("gives entries without history a high weight", () => {
