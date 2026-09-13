@@ -58,7 +58,7 @@ export interface ResolvedStudyPoolItem {
 export interface StudyRoutineGenerationPort {
   createRoutine(input: StudyRoutineInput, createdAt: number): Promise<StudyRoutine>;
   resolvePool(entries: StudyPoolEntry[]): Promise<Map<string, ResolvedStudyPoolItem>>;
-  weights(entries: StudyPoolEntry[]): Promise<Map<string, number>>;
+  stats(entries: StudyPoolEntry[]): Promise<Map<string, StudyPoolStat>>;
   weekStartsOn(): Promise<number>;
   persistTasks(tasks: Omit<import("../entities/task").Task, "id">[]): Promise<void>;
 }
