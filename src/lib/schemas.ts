@@ -1,4 +1,4 @@
-import type { StudyGroup } from "@/domain/ports/studyRoutine";
+import type { StudyAdaptivity, StudyGroup } from "@/domain/ports/studyRoutine";
 /** Centralized Zod schemas shared across forms. */
 import { z } from "zod";
 
@@ -68,6 +68,7 @@ export const studyGroupSchema = z.object({
     z.object({ type: z.literal("segment"), id: z.number().int().positive() }),
     z.object({ type: z.literal("collection"), id: z.number().int().positive() }),
   ])),
+  repetitionCap: z.number().int().min(1).optional(),
 });
 export type StudyGroupInput = StudyGroup;
 
