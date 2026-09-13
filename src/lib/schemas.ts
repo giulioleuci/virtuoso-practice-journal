@@ -78,7 +78,9 @@ export const studyRoutineConfigSchema = z.object({
   matrix: z.record(z.string(), z.record(z.string(), z.number().int().min(0))),
   weeksAhead: z.number().int().min(1).max(53),
   repetitionCap: z.number().int().min(1),
-  useSpacedRepetition: z.boolean(),
+  useSpacedRepetition: z.boolean().optional(),
+  adaptivity: z.enum(["uniform", "balanced", "aggressive"]).optional(),
+  avoidBackToBack: z.boolean().optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 export interface StudyRoutineConfig {
@@ -88,7 +90,9 @@ export interface StudyRoutineConfig {
   matrix: Record<string, Record<string, number>>;
   weeksAhead: number;
   repetitionCap: number;
-  useSpacedRepetition: boolean;
+  useSpacedRepetition?: boolean;
+  adaptivity?: StudyAdaptivity;
+  avoidBackToBack?: boolean;
   startDate: string;
 }
 
