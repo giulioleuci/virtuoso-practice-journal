@@ -250,7 +250,10 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   const [matrix, setMatrix] = useState<Record<string, Record<string, number>>>(initial?.matrix ?? {});
   const [weeksAhead, setWeeksAhead] = useState(initial?.weeksAhead ?? 4);
   const [repetitionCap, setRepetitionCap] = useState(initial?.repetitionCap ?? 3);
-  const [useSpacedRepetition, setUseSpacedRepetition] = useState(initial?.useSpacedRepetition ?? false);
+  const [adaptivity, setAdaptivity] = useState<Adaptivity>(
+    initial ? routineAdaptivity(initial) : "balanced",
+  );
+  const [avoidBackToBack, setAvoidBackToBack] = useState(initial?.avoidBackToBack ?? true);
   const [startDate, setStartDate] = useState(initial?.startDate ?? date);
 
 
@@ -431,7 +434,8 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
       matrix,
       weeksAhead,
       repetitionCap,
-      useSpacedRepetition,
+      adaptivity,
+      avoidBackToBack,
       startDate,
     });
   };
