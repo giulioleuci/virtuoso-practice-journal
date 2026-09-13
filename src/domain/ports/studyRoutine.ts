@@ -7,6 +7,20 @@ export interface StudyGroup {
   id: string;
   name: string;
   pool: StudyPoolEntry[];
+  /** Optional per-group weekly repetition cap, overriding the routine cap. */
+  repetitionCap?: number;
+}
+
+/** How strongly the draw favours the entries you feel least sure about. */
+export type StudyAdaptivity = "uniform" | "balanced" | "aggressive";
+
+/** Practice history for one pool entry. */
+export interface StudyPoolStat {
+  /** Recency-weighted average confidence 1-5, or null when there is no history. */
+  confidence: number | null;
+  /** Local `YYYY-MM-DD` key of the last logged session, when known. */
+  lastPracticed?: string;
+  sessions: number;
 }
 
 export interface StudyRoutine {
@@ -18,7 +32,11 @@ export interface StudyRoutine {
   matrix: Record<string, Record<string, number>>;
   weeksAhead: number;
   repetitionCap: number;
-  useSpacedRepetition: boolean;
+  /** @deprecated Legacy boolean flag; superseded by `adaptivity`. */
+  useSpacedRepetition?: boolean;
+  adaptivity?: StudyAdaptivity;
+  /** Avoid drawing the same entry two days in a row. */
+  avoidBackToBack?: boolean;
   startDate: string;
   createdAt: number;
   deletedAt?: number;
