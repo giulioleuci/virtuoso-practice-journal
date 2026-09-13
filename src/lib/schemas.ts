@@ -1,4 +1,4 @@
-import type { StudyGroup } from "@/domain/ports/studyRoutine";
+import type { StudyAdaptivity, StudyGroup } from "@/domain/ports/studyRoutine";
 /** Centralized Zod schemas shared across forms. */
 import { z } from "zod";
 
@@ -68,6 +68,7 @@ export const studyGroupSchema = z.object({
     z.object({ type: z.literal("segment"), id: z.number().int().positive() }),
     z.object({ type: z.literal("collection"), id: z.number().int().positive() }),
   ])),
+  repetitionCap: z.number().int().min(1).optional(),
 });
 export type StudyGroupInput = StudyGroup;
 
@@ -78,7 +79,9 @@ export const studyRoutineConfigSchema = z.object({
   matrix: z.record(z.string(), z.record(z.string(), z.number().int().min(0))),
   weeksAhead: z.number().int().min(1).max(53),
   repetitionCap: z.number().int().min(1),
-  useSpacedRepetition: z.boolean(),
+  useSpacedRepetition: z.boolean().optional(),
+  adaptivity: z.enum(["uniform", "balanced", "aggressive"]).optional(),
+  avoidBackToBack: z.boolean().optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 export interface StudyRoutineConfig {
@@ -88,7 +91,9 @@ export interface StudyRoutineConfig {
   matrix: Record<string, Record<string, number>>;
   weeksAhead: number;
   repetitionCap: number;
-  useSpacedRepetition: boolean;
+  useSpacedRepetition?: boolean;
+  adaptivity?: StudyAdaptivity;
+  avoidBackToBack?: boolean;
   startDate: string;
 }
 

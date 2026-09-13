@@ -7,7 +7,7 @@ const input: StudyRoutineInput = { name: "Week", subjectId: 1, groups: [{ id: "g
 const port = (): StudyRoutineGenerationPort => ({
   createRoutine: async (value, createdAt): Promise<StudyRoutine> => ({ ...value, id: 3, createdAt }),
   resolvePool: async () => new Map([["item:2", { key: "item:2", type: "item", title: "Prelude", itemId: 2, linkType: "item" }]]),
-  weights: async () => null,
+  stats: async () => new Map(),
   weekStartsOn: async () => 1,
   persistTasks: async (tasks) => { portState.tasks = tasks; },
 });

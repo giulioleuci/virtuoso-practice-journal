@@ -5,6 +5,10 @@ import {
   uniformSampleWithoutReplacement,
   weightedSampleWithoutReplacement,
   generateRoutineTasks,
+  decayedAverage,
+  adaptiveWeight,
+  mulberry32,
+  collectRoutineWarnings,
   type ResolvedPoolItem,
 } from "@/lib/domain/studyRoutineGenerator";
 import type { StudyRoutine } from "@/lib/db";
@@ -66,7 +70,7 @@ const routine = (over: Partial<StudyRoutine>): StudyRoutine => ({
 describe("generateRoutineTasks", () => {
   it("emits one task on the matrix day within the horizon", () => {
     const groupItems = new Map([["g1", [item(1, "Sonata")]]]);
-    const tasks = generateRoutineTasks(routine({}), groupItems, null, "2026-05-18", 100);
+    const tasks = generateRoutineTasks({ routine: routine({}), groupItems, stats: null, fromDate: "2026-05-18", createdAt: 100 });
     expect(tasks).toHaveLength(1);
     expect(tasks[0].date).toBe("2026-05-18");
     expect(tasks[0].itemId).toBe(1);
@@ -77,7 +81,7 @@ describe("generateRoutineTasks", () => {
   it("respects repetitionCap per week", () => {
     const groupItems = new Map([["g1", [item(1)]]]);
     const r = routine({ matrix: { "1": { g1: 1 }, "3": { g1: 1 } }, repetitionCap: 1, weeksAhead: 2 });
-    const tasks = generateRoutineTasks(r, groupItems, null, "2026-05-18", 0);
+    const tasks = generateRoutineTasks({ routine: r, groupItems, stats: null, fromDate: "2026-05-18", createdAt: 0 });
     // cap=1 → at most 1 per week × 2 weeks
     expect(tasks).toHaveLength(2);
   });
@@ -89,9 +93,91 @@ describe("generateRoutineTasks", () => {
     });
     const groupItems = new Map([["g1", [seg(1), seg(2)]]]);
     const r = routine({ matrix: { "1": { g1: 2 } } });
-    const tasks = generateRoutineTasks(r, groupItems, null, "2026-05-18", 0);
+    const tasks = generateRoutineTasks({ routine: r, groupItems, stats: null, fromDate: "2026-05-18", createdAt: 0 });
     expect(tasks).toHaveLength(1);
     expect(tasks[0].itemId).toBe(42);
     expect(tasks[0].segmentIds?.sort()).toEqual([1, 2]);
+  });
+});
+
+describe("adaptive weighting", () => {
+  it("weights recent ratings more than older ones", () => {
+    // Newest-first: the latest rating pulls the average towards itself.
+    expect(decayedAverage([1, 5, 5])!).toBeLessThan((1 + 5 + 5) / 3);
+    expect(decayedAverage([5, 1, 1])!).toBeGreaterThan((5 + 1 + 1) / 3);
+    expect(decayedAverage([])).toBeNull();
+  });
+
+  it("gives entries without history a high weight", () => {
+    const fresh = adaptiveWeight(undefined, "balanced", "2026-05-18");
+    const solid = adaptiveWeight({ confidence: 5, lastPracticed: "2026-05-18", sessions: 4 }, "balanced", "2026-05-18");
+    expect(fresh).toBeGreaterThan(solid);
+  });
+
+  it("raises the weight of entries untouched for a long time", () => {
+    const stale = adaptiveWeight({ confidence: 4, lastPracticed: "2026-04-01", sessions: 3 }, "balanced", "2026-05-18");
+    const fresh = adaptiveWeight({ confidence: 4, lastPracticed: "2026-05-18", sessions: 3 }, "balanced", "2026-05-18");
+    expect(stale).toBeGreaterThan(fresh);
+  });
+
+  it("flattens every weight in uniform mode", () => {
+    expect(adaptiveWeight({ confidence: 1, sessions: 2 }, "uniform", "2026-05-18")).toBe(1);
+  });
+
+  it("amplifies differences in aggressive mode", () => {
+    const weak = { confidence: 1, lastPracticed: "2026-05-18", sessions: 2 };
+    const strong = { confidence: 5, lastPracticed: "2026-05-18", sessions: 2 };
+    const balancedRatio = adaptiveWeight(weak, "balanced", "2026-05-18") / adaptiveWeight(strong, "balanced", "2026-05-18");
+    const aggressiveRatio = adaptiveWeight(weak, "aggressive", "2026-05-18") / adaptiveWeight(strong, "aggressive", "2026-05-18");
+    expect(aggressiveRatio).toBeGreaterThan(balancedRatio);
+  });
+});
+
+describe("deterministic preview", () => {
+  it("produces the same draw for the same seed", () => {
+    const groupItems = new Map([["g1", [item(1), item(2), item(3), item(4)]]]);
+    const r = routine({ groups: [{ id: "g1", name: "G", pool: [{ type: "item", id: 1 }] }], matrix: { "1": { g1: 2 } }, adaptivity: "balanced" });
+    const run = () => generateRoutineTasks({ routine: r, groupItems, stats: null, fromDate: "2026-05-18", createdAt: 0, rng: mulberry32(42) }).map((t) => t.itemId);
+    expect(run()).toEqual(run());
+  });
+});
+
+describe("per-group caps and back-to-back avoidance", () => {
+  it("uses the group cap over the routine cap", () => {
+    const groupItems = new Map([["g1", [item(1)]]]);
+    const r = routine({
+      groups: [{ id: "g1", name: "G", pool: [{ type: "item", id: 1 }], repetitionCap: 1 }],
+      matrix: { "1": { g1: 1 }, "3": { g1: 1 } },
+      repetitionCap: 5,
+    });
+    expect(generateRoutineTasks({ routine: r, groupItems, stats: null, fromDate: "2026-05-18", createdAt: 0 })).toHaveLength(1);
+  });
+
+  it("prefers an entry not drawn the previous day", () => {
+    const groupItems = new Map([["g1", [item(1), item(2)]]]);
+    const r = routine({ matrix: { "1": { g1: 1 }, "2": { g1: 1 } }, repetitionCap: 5, avoidBackToBack: true });
+    const tasks = generateRoutineTasks({ routine: r, groupItems, stats: null, fromDate: "2026-05-18", createdAt: 0 });
+    expect(tasks).toHaveLength(2);
+    expect(tasks[0].itemId).not.toBe(tasks[1].itemId);
+  });
+});
+
+describe("collectRoutineWarnings", () => {
+  it("flags a day asking for more than the pool holds", () => {
+    const warnings = collectRoutineWarnings({
+      groups: [{ id: "g1", name: "Scale", pool: [{ type: "item", id: 1 }] }],
+      matrix: { "1": { g1: 3 } },
+      repetitionCap: 5,
+    });
+    expect(warnings.some((w) => w.kind === "dayExceedsPool")).toBe(true);
+  });
+
+  it("flags a cap too low for the weekly demand", () => {
+    const warnings = collectRoutineWarnings({
+      groups: [{ id: "g1", name: "Scale", pool: [{ type: "item", id: 1 }] }],
+      matrix: { "1": { g1: 1 }, "2": { g1: 1 }, "3": { g1: 1 } },
+      repetitionCap: 1,
+    });
+    expect(warnings.some((w) => w.kind === "capTooLow")).toBe(true);
   });
 });
