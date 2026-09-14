@@ -24,6 +24,7 @@ import { applicationCommands } from "@/lib/applicationCommands";
 import { toast } from "sonner";
 import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
 import { QUALITY_VALS } from "@/lib/constants";
+import { routineAdaptivity } from "@/lib/domain/studyRoutineGenerator";
 import { SessionFields, type SessionFieldsValue } from "./SessionFields";
 import { StarRating } from "@/components/shared/StarRating";
 import { LastSessionStrip } from "./LastSessionStrip";
@@ -270,7 +271,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
 
     if (task.studyRoutineId) {
       const routine = await presentationQueries().execute<import("@/domain/ports/studyRoutine").StudyRoutine | undefined>("routines.one", task.studyRoutineId);
-      if (routine && routine.useSpacedRepetition) {
+      if (routine && routineAdaptivity(routine) !== "uniform") {
         applicationCommands.routines.regenerate.execute(routine, task.date).catch(() => {});
       }
     }

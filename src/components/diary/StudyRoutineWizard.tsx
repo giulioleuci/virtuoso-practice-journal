@@ -5,7 +5,7 @@ import type { StudyPoolEntry, StudyGroup, StudyRoutine } from "@/domain/ports/st
 import { useI18n } from "@/lib/i18n";
 import { applicationCommands } from "@/lib/applicationCommands";
 import { useRoutineWizardController } from "@/presentation/hooks/usePresentationControllers";
-import { poolEntryKey } from "@/lib/domain/studyRoutineGenerator";
+import { poolEntryKey, routineAdaptivity, type Adaptivity } from "@/lib/domain/studyRoutineGenerator";
 import { useSegments, useCollections } from "@/presentation/hooks/useEntities";
 import type { StudyRoutineConfig } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
@@ -1002,13 +1002,33 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                   />
                 </div>
 
+                <div className="space-y-1.5">
+                  <div className="font-medium text-sm">{t("studyRoutine.adaptivity")}</div>
+                  <div className="text-xs text-muted-foreground">{t("studyRoutine.adaptivityDesc")}</div>
+                  <div className="grid grid-cols-3 gap-1.5 pt-1">
+                    {(["uniform", "balanced", "aggressive"] as const).map((level) => (
+                      <Button
+                        key={level}
+                        type="button"
+                        size="sm"
+                        variant={adaptivity === level ? "default" : "outline"}
+                        className="h-9 text-xs"
+                        onClick={() => setAdaptivity(level)}
+                      >
+                        {t(`studyRoutine.adaptivity${level.charAt(0).toUpperCase()}${level.slice(1)}` as never)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-medium text-sm">{t("studyRoutine.spacedRepetition")}</div>
-                    <div className="text-xs text-muted-foreground">{t("studyRoutine.spacedRepetitionDesc")}</div>
+                    <div className="font-medium text-sm">{t("studyRoutine.avoidBackToBack")}</div>
+                    <div className="text-xs text-muted-foreground">{t("studyRoutine.avoidBackToBackDesc")}</div>
                   </div>
-                  <Switch checked={useSpacedRepetition} onCheckedChange={setUseSpacedRepetition} />
+                  <Switch checked={avoidBackToBack} onCheckedChange={setAvoidBackToBack} />
                 </div>
+
               </AccordionContent>
             </AccordionItem>
           </Accordion>
