@@ -270,7 +270,7 @@ export function SessionLogSheet({ open, onOpenChange, task, prefill }: Props) {
 
     if (task.studyRoutineId) {
       const routine = await presentationQueries().execute<import("@/domain/ports/studyRoutine").StudyRoutine | undefined>("routines.one", task.studyRoutineId);
-      if (routine && routine.useSpacedRepetition) {
+      if (routine && routineAdaptivity(routine) !== "uniform") {
         applicationCommands.routines.regenerate.execute(routine, task.date).catch(() => {});
       }
     }
