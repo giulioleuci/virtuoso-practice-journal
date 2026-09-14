@@ -24,6 +24,7 @@ import { applicationCommands } from "@/lib/applicationCommands";
 import { toast } from "sonner";
 import { sessionInputSchema, flattenErrors } from "@/lib/schemas";
 import { QUALITY_VALS } from "@/lib/constants";
+import { routineAdaptivity } from "@/lib/domain/studyRoutineGenerator";
 import { SessionFields, type SessionFieldsValue } from "./SessionFields";
 import { StarRating } from "@/components/shared/StarRating";
 import { LastSessionStrip } from "./LastSessionStrip";
