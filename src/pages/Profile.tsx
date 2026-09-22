@@ -29,6 +29,28 @@ export default function Profile() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [sampleOpen, setSampleOpen] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  const runSeed = async (set: "full" | "guitar") => {
+    if (!confirm(t("profile.sampleDataWarning"))) return;
+    setSeeding(true);
+    try {
+      if (set === "full") {
+        const { seedSampleData } = await import("@/lib/sampleData");
+        await seedSampleData();
+      } else {
+        const { seedGuitarSampleData } = await import("@/lib/sampleDataGuitar");
+        await seedGuitarSampleData();
+      }
+      setSampleOpen(false);
+      toast.success(t("toast.sampleDataCreated"));
+      setTimeout(() => location.reload(), 400);
+    } catch {
+      setSeeding(false);
+      toast.error(t("errors.couldNotSave"));
+    }
+  };
   const backup = useBackupCommands({
     exportBackup: () => applicationCommands.backups.export.execute(),
     importBackup: () => applicationCommands.backups.import.execute(),
@@ -405,13 +427,7 @@ export default function Profile() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={async () => {
-                if (!confirm(t("profile.sampleDataWarning"))) return;
-                const { seedSampleData } = await import("@/lib/sampleData");
-                await seedSampleData();
-                toast.success(t("toast.sampleDataCreated"));
-                setTimeout(() => location.reload(), 400);
-              }}
+              onClick={() => setSampleOpen(true)}
             >
               <BookMarked className="h-4 w-4 mr-2" /> {t("profile.createSampleData")}
             </Button>
