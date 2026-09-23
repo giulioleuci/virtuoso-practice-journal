@@ -615,7 +615,7 @@
   "studyRoutine.step3": "Schedule",
   "studyRoutine.masterPool": "Master pool",
   "studyRoutine.items": "Library items",
-  "studyRoutine.segments": "Segments",
+  "studyRoutine.addAllSegments": "Insert all segments", "studyRoutine.segments": "Segments",
   "studyRoutine.collections": "Collections",
   "studyRoutine.groupNamePlaceholder": "e.g. Technical exercises",
   "studyRoutine.weeklyMatrix": "Weekly schedule",

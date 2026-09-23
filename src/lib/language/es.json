@@ -615,7 +615,7 @@
   "studyRoutine.step3": "Horario",
   "studyRoutine.masterPool": "Pool principal",
   "studyRoutine.items": "Elementos de biblioteca",
-  "studyRoutine.segments": "Segmentos",
+  "studyRoutine.addAllSegments": "Añadir todos los segmentos", "studyRoutine.segments": "Segmentos",
   "studyRoutine.collections": "Colecciones",
   "studyRoutine.groupNamePlaceholder": "ej. Ejercicios técnicos",
   "studyRoutine.weeklyMatrix": "Horario semanal",

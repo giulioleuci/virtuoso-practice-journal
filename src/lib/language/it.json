@@ -615,7 +615,7 @@
   "studyRoutine.step3": "Programma",
   "studyRoutine.masterPool": "Pool principale",
   "studyRoutine.items": "Elementi libreria",
-  "studyRoutine.segments": "Segmenti",
+  "studyRoutine.addAllSegments": "Inserisci tutti i segmenti", "studyRoutine.segments": "Segmenti",
   "studyRoutine.collections": "Raccolte",
   "studyRoutine.groupNamePlaceholder": "es. Esercizi tecnici",
   "studyRoutine.weeklyMatrix": "Programma settimanale",
