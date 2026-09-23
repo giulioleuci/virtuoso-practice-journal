@@ -36,7 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Pager } from "@/components/shared/Pager";
 import { toast } from "sonner";
-import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, Eye } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronRight, Search, Check, Minus, Eye, ListPlus } from "lucide-react";
 
 function genId(): string {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
@@ -273,6 +273,23 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
   }, [allSegments]);
 
   const poolKeySet = useMemo(() => new Set(masterPool.map(poolEntryKey)), [masterPool]);
+
+  const addAllSegments = (itemId: number) => {
+    const segs = segmentsByItem.get(itemId) ?? [];
+    if (segs.length === 0) return;
+    setMasterPool((prev) => {
+      const keys = new Set(prev.map(poolEntryKey));
+      const next = [...prev];
+      for (const s of segs) {
+        const k = `segment:${s.id}`;
+        if (!keys.has(k)) {
+          keys.add(k);
+          next.push({ type: "segment", id: s.id });
+        }
+      }
+      return next;
+    });
+  };
 
   const addToPool = (entry: StudyPoolEntry) => {
     const k = poolEntryKey(entry);
