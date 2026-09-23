@@ -649,6 +649,19 @@ export function StudyRoutineWizard({ subjectId, date, onCreated, onCancel, initi
                               </div>
                               {expanded && segs.length > 0 && (
                                 <div className="pl-7 pb-1 divide-y divide-border/50 bg-muted/20">
+                                  <div className="flex justify-end py-1 pr-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => addAllSegments(item.id)}
+                                      disabled={segsInPool === segs.length}
+                                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-40 disabled:no-underline px-1 py-0.5"
+                                      aria-label={t("studyRoutine.addAllSegments")}
+                                      title={t("studyRoutine.addAllSegments")}
+                                    >
+                                      <ListPlus className="h-3.5 w-3.5" />
+                                      <span className="hidden min-[420px]:inline">{t("studyRoutine.addAllSegments")}</span>
+                                    </button>
+                                  </div>
                                   {pagedSegs.map((seg) => {
                                     const segInPool = poolKeySet.has(`segment:${seg.id}`);
                                     return (

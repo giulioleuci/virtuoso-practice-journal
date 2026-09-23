@@ -615,7 +615,7 @@
   "studyRoutine.step3": "Zeitplan",
   "studyRoutine.masterPool": "Haupt-Pool",
   "studyRoutine.items": "Bibliothekselemente",
-  "studyRoutine.segments": "Abschnitte",
+  "studyRoutine.addAllSegments": "Alle Segmente hinzufügen", "studyRoutine.segments": "Abschnitte",
   "studyRoutine.collections": "Sammlungen",
   "studyRoutine.groupNamePlaceholder": "z.B. Technische Übungen",
   "studyRoutine.weeklyMatrix": "Wochenplan",
