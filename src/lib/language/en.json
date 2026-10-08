@@ -615,7 +615,8 @@
   "studyRoutine.step3": "Schedule",
   "studyRoutine.masterPool": "Master pool",
   "studyRoutine.items": "Library items",
-  "studyRoutine.addAllSegments": "Insert all segments", "studyRoutine.segments": "Segments",
+  "studyRoutine.addAllSegments": "Insert all segments",
+  "studyRoutine.segments": "Segments",
   "studyRoutine.collections": "Collections",
   "studyRoutine.groupNamePlaceholder": "e.g. Technical exercises",
   "studyRoutine.weeklyMatrix": "Weekly schedule",
@@ -783,5 +784,13 @@
   "print.notes": "Practice notes",
   "print.generated": "Generated on {date}",
   "lessons.questionsShort": "Questions",
-  "lessons.summaryShort": "Summary"
+  "lessons.summaryShort": "Summary",
+  "progress.title": "Progress",
+  "progress.subtitle": "How BPM, quality, consistency and goals evolve week by week.",
+  "progress.weeks": "{{count}} wk",
+  "progress.bpm": "Best BPM per week",
+  "progress.quality": "Average session quality (1–4)",
+  "progress.consistency": "Days practised per week",
+  "progress.goals": "Target BPM reached",
+  "progress.noData": "Not enough data yet."
 }
