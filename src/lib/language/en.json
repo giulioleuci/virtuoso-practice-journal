@@ -792,5 +792,12 @@
   "progress.quality": "Average session quality (1–4)",
   "progress.consistency": "Days practised per week",
   "progress.goals": "Target BPM reached",
-  "progress.noData": "Not enough data yet."
+  "progress.noData": "Not enough data yet.",
+  "common.daysShort": "{{count}}d",
+  "progress.allItems": "All pieces",
+  "progress.allSegments": "Whole piece",
+  "progress.subject": "Subject",
+  "progress.item": "Library item",
+  "progress.segment": "Segment",
+  "progress.bpmHint": "Select a library item to see BPM progress."
 }

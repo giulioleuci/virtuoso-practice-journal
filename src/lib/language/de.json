@@ -792,5 +792,12 @@
   "progress.quality": "Durchschnittliche Sitzungsqualität (1–4)",
   "progress.consistency": "Übungstage pro Woche",
   "progress.goals": "Ziel-BPM erreicht",
-  "progress.noData": "Noch nicht genug Daten."
+  "progress.noData": "Noch nicht genug Daten.",
+  "common.daysShort": "{{count}} T.",
+  "progress.allItems": "Alle Einträge",
+  "progress.allSegments": "Ganzer Eintrag",
+  "progress.subject": "Fach",
+  "progress.item": "Bibliothekseintrag",
+  "progress.segment": "Abschnitt",
+  "progress.bpmHint": "Wähle einen Bibliothekseintrag, um BPM zu sehen."
 }

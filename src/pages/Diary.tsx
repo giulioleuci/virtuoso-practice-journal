@@ -168,7 +168,7 @@ export default function Diary() {
           {streak > 0 && (
             <div className="flex items-center gap-1.5 text-sm text-primary">
               <StreakIcon className="h-4 w-4" />
-              <span className="font-semibold tabular-nums">{streak}d</span>
+              <span className="font-semibold tabular-nums">{t("common.daysShort", { count: streak })}</span>
               {bestStreak > streak && (
                 <span className="text-xs text-muted-foreground">· {t("diary.bestStreak", { count: bestStreak })}</span>
               )}

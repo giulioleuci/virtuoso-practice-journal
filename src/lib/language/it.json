@@ -792,5 +792,12 @@
   "progress.quality": "Qualità media delle sessioni (1–4)",
   "progress.consistency": "Giorni di studio per settimana",
   "progress.goals": "BPM obiettivo raggiunto",
-  "progress.noData": "Dati ancora insufficienti."
+  "progress.noData": "Dati ancora insufficienti.",
+  "common.daysShort": "{{count}} g",
+  "progress.allItems": "Tutti gli elementi",
+  "progress.allSegments": "Elemento intero",
+  "progress.subject": "Materia",
+  "progress.item": "Elemento di libreria",
+  "progress.segment": "Segmento",
+  "progress.bpmHint": "Seleziona un elemento della libreria per vedere i BPM."
 }
