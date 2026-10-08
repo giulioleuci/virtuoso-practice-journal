@@ -615,7 +615,8 @@
   "studyRoutine.step3": "Horario",
   "studyRoutine.masterPool": "Pool principal",
   "studyRoutine.items": "Elementos de biblioteca",
-  "studyRoutine.addAllSegments": "Añadir todos los segmentos", "studyRoutine.segments": "Segmentos",
+  "studyRoutine.addAllSegments": "Añadir todos los segmentos",
+  "studyRoutine.segments": "Segmentos",
   "studyRoutine.collections": "Colecciones",
   "studyRoutine.groupNamePlaceholder": "ej. Ejercicios técnicos",
   "studyRoutine.weeklyMatrix": "Horario semanal",
@@ -783,5 +784,13 @@
   "print.notes": "Notas de estudio",
   "print.generated": "Generado el {date}",
   "lessons.questionsShort": "Preguntas",
-  "lessons.summaryShort": "Resumen"
+  "lessons.summaryShort": "Resumen",
+  "progress.title": "Progreso",
+  "progress.subtitle": "Cómo evolucionan BPM, calidad, constancia y objetivos semana a semana.",
+  "progress.weeks": "{{count}} sem.",
+  "progress.bpm": "Mejor BPM por semana",
+  "progress.quality": "Calidad media de las sesiones (1–4)",
+  "progress.consistency": "Días de práctica por semana",
+  "progress.goals": "BPM objetivo alcanzado",
+  "progress.noData": "Aún no hay suficientes datos."
 }
