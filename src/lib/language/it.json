@@ -796,7 +796,6 @@
   "common.daysShort": "{{count}} g",
   "progress.allItems": "Tutti gli elementi",
   "progress.allSegments": "Elemento intero",
-  "progress.subject": "Materia",
   "progress.item": "Elemento di libreria",
   "progress.segment": "Segmento",
   "progress.bpmHint": "Seleziona un elemento della libreria per vedere i BPM."

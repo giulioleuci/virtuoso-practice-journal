@@ -796,7 +796,6 @@
   "common.daysShort": "{{count}}d",
   "progress.allItems": "All pieces",
   "progress.allSegments": "Whole piece",
-  "progress.subject": "Subject",
   "progress.item": "Library item",
   "progress.segment": "Segment",
   "progress.bpmHint": "Select a library item to see BPM progress."

@@ -796,7 +796,6 @@
   "common.daysShort": "{{count}} T.",
   "progress.allItems": "Alle Einträge",
   "progress.allSegments": "Ganzer Eintrag",
-  "progress.subject": "Fach",
   "progress.item": "Bibliothekseintrag",
   "progress.segment": "Abschnitt",
   "progress.bpmHint": "Wähle einen Bibliothekseintrag, um BPM zu sehen."

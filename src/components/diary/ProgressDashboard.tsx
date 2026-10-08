@@ -4,6 +4,8 @@ import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Session } from "@/domain/entities/session";
 import type { Task } from "@/domain/entities/task";
 import type { Subject } from "@/domain/entities/common";
+import type { LibraryItem, Segment } from "@/domain/entities/library";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { weeklyProgress, type ProgressWeek } from "@/domain/logic/progress";
 import { useI18n } from "@/lib/i18n";
 import { dayKey } from "@/lib/date";
@@ -11,19 +13,26 @@ import { cn } from "@/lib/utils";
 
 const WEEK_OPTIONS = [4, 12, 26] as const;
 
-export function ProgressDashboard() {
+export function ProgressDashboard({ from, to }: { from?: string; to?: string }) {
   const { t } = useI18n();
   const sessions = usePresentationRead<Session[]>("sessions.all");
   const tasks = usePresentationRead<Task[]>("tasks.all");
   const subjects = usePresentationRead<Subject[]>("subjects.active");
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [weeks, setWeeks] = useState<number>(12);
+  const library = usePresentationRead<LibraryItem[]>("library.active");
+  const segments = usePresentationRead<Segment[]>("segments.active");
+  const [itemId, setItemId] = useState<number | undefined>();
+  const [segmentId, setSegmentId] = useState<number | undefined>();
+  const items = useMemo(() => (library ?? []).filter((i) => subjectId == null || i.subjectId === subjectId).sort((a, b) => a.title.localeCompare(b.title)), [library, subjectId]);
+  const itemSegments = useMemo(() => (segments ?? []).filter((x) => itemId != null && x.itemId === itemId), [segments, itemId]);
+  const pickSubject = (id?: number) => { setSubjectId(id); setItemId(undefined); setSegmentId(undefined); };
 
   const data = useMemo(
     () =>
-      weeklyProgress(sessions ?? [], (tasks ?? []).map((x) => ({ id: x.id, subjectId: x.subjectId, targetBpm: x.targetBpm })), subjectId, weeks, dayKey(new Date()))
+      weeklyProgress(sessions ?? [], (tasks ?? []).map((x) => ({ id: x.id, subjectId: x.subjectId, itemId: x.itemId, targetBpm: x.targetBpm })), { subjectId, itemId, segmentId, from, to }, weeks, to || dayKey(new Date()))
         .map((w) => ({ ...w, label: w.weekKey.slice(5) })),
-    [sessions, tasks, subjectId, weeks],
+    [sessions, tasks, subjectId, itemId, segmentId, from, to, weeks],
   );
 
   const chip = (active: boolean) =>
@@ -36,20 +45,42 @@ export function ProgressDashboard() {
         <p className="text-sm text-muted-foreground">{t("progress.subtitle")}</p>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        <button className={chip(subjectId == null)} onClick={() => setSubjectId(undefined)}>{t("common.all")}</button>
+        <button className={chip(subjectId == null)} onClick={() => pickSubject(undefined)}>{t("common.all")}</button>
         {(subjects ?? []).map((s) => (
-          <button key={s.id} className={chip(subjectId === s.id)} onClick={() => setSubjectId(s.id)}>{s.name}</button>
+          <button key={s.id} className={chip(subjectId === s.id)} onClick={() => pickSubject(s.id)}>{s.name}</button>
         ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <Select value={itemId != null ? String(itemId) : "all"} onValueChange={(v) => { setItemId(v === "all" ? undefined : Number(v)); setSegmentId(undefined); }}>
+          <SelectTrigger aria-label={t("progress.item")}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("progress.allItems")}</SelectItem>
+            {items.map((i) => <SelectItem key={i.id} value={String(i.id)}>{i.title}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {itemId != null && itemSegments.length > 0 && (
+          <Select value={segmentId != null ? String(segmentId) : "all"} onValueChange={(v) => setSegmentId(v === "all" ? undefined : Number(v))}>
+            <SelectTrigger aria-label={t("progress.segment")}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("progress.allSegments")}</SelectItem>
+              {itemSegments.map((x) => <SelectItem key={x.id} value={String(x.id)}>{x.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
       </div>
       <div className="flex gap-2">
         {WEEK_OPTIONS.map((n) => (
           <button key={n} className={chip(weeks === n)} onClick={() => setWeeks(n)}>{t("progress.weeks", { count: n })}</button>
         ))}
       </div>
-      <ChartCard title={t("progress.bpm")} data={data} dataKey="bpm" kind="line" />
       <ChartCard title={t("progress.quality")} data={data} dataKey="quality" kind="line" domain={[1, 4]} />
       <ChartCard title={t("progress.consistency")} data={data} dataKey="activeDays" kind="bar" domain={[0, 7]} />
       <ChartCard title={t("progress.goals")} data={data} dataKey="goalRate" kind="line" domain={[0, 100]} unit="%" />
+      {itemId != null ? (
+        <ChartCard title={t("progress.bpm")} data={data} dataKey="bpm" kind="line" />
+      ) : (
+        <p className="text-xs text-muted-foreground italic text-center">{t("progress.bpmHint")}</p>
+      )}
     </section>
   );
 }
