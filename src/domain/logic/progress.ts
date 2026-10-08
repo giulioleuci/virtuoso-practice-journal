@@ -15,7 +15,9 @@ export interface ProgressWeek {
   goalRate: number | null;
 }
 
-export interface ProgressTask { id?: number; subjectId: number; targetBpm?: number }
+export interface ProgressTask { id?: number; subjectId: number; itemId?: number; targetBpm?: number }
+
+export interface ProgressFilter { subjectId?: number; itemId?: number; segmentId?: number; from?: string; to?: string }
 
 function mondayKey(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
@@ -26,12 +28,13 @@ function mondayKey(date: string): string {
 
 /** Weekly progress series for one subject (or all if subjectId undefined), oldest first, last `weeks` weeks ending at `today`. */
 export function weeklyProgress(
-  sessions: Pick<Session, "taskId" | "date" | "bpmReached" | "quality" | "snapshot">[],
+  sessions: Pick<Session, "taskId" | "date" | "bpmReached" | "quality" | "snapshot" | "segmentMetrics">[],
   tasks: ProgressTask[],
-  subjectId: number | undefined,
+  filter: number | undefined | ProgressFilter,
   weeks: number,
   today: string,
 ): ProgressWeek[] {
+  const f: ProgressFilter = typeof filter === "object" ? filter : { subjectId: filter };
   const taskById = new Map(tasks.map((t) => [t.id, t]));
   const end = mondayKey(today);
   const keys: string[] = [];
@@ -44,16 +47,27 @@ export function weeklyProgress(
   const acc = new Map(keys.map((k) => [k, { bpm: null as number | null, q: [] as number[], days: new Set<string>(), hit: 0, tracked: 0 }]));
   for (const s of sessions) {
     const task = taskById.get(s.taskId);
-    if (subjectId != null && task?.subjectId !== subjectId) continue;
+    if (f.subjectId != null && task?.subjectId !== f.subjectId) continue;
+    if (f.itemId != null && task?.itemId !== f.itemId) continue;
+    if (f.from && s.date < f.from) continue;
+    if (f.to && s.date > f.to) continue;
+    let bpmReached = s.bpmReached;
+    let quality = s.quality;
+    if (f.segmentId != null) {
+      const m = s.segmentMetrics?.[String(f.segmentId)];
+      if (!m) continue;
+      bpmReached = m.bpmReached;
+      quality = m.quality ?? s.quality;
+    }
     const a = acc.get(mondayKey(s.date));
     if (!a) continue;
     a.days.add(s.date);
-    if (s.bpmReached) a.bpm = Math.max(a.bpm ?? 0, s.bpmReached);
-    if (s.quality) a.q.push(QUALITY_SCORE[s.quality]);
+    if (bpmReached) a.bpm = Math.max(a.bpm ?? 0, bpmReached);
+    if (quality) a.q.push(QUALITY_SCORE[quality]);
     const target = s.snapshot?.targetBpm ?? task?.targetBpm;
-    if (target && s.bpmReached) {
+    if (target && bpmReached) {
       a.tracked++;
-      if (s.bpmReached >= target) a.hit++;
+      if (bpmReached >= target) a.hit++;
     }
   }
   return keys.map((k) => {

@@ -32,7 +32,7 @@ export default function Analytics() {
 
       <StatsDashboard from={from || undefined} to={to || undefined} sessions={sessions ?? []} />
 
-      <ProgressDashboard />
+      <ProgressDashboard from={from || undefined} to={to || undefined} />
     </div>
   );
 }

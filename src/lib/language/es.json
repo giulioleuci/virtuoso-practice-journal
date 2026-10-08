@@ -792,5 +792,11 @@
   "progress.quality": "Calidad media de las sesiones (1–4)",
   "progress.consistency": "Días de práctica por semana",
   "progress.goals": "BPM objetivo alcanzado",
-  "progress.noData": "Aún no hay suficientes datos."
+  "progress.noData": "Aún no hay suficientes datos.",
+  "common.daysShort": "{{count}} d",
+  "progress.allItems": "Todos los elementos",
+  "progress.allSegments": "Elemento completo",
+  "progress.item": "Elemento de biblioteca",
+  "progress.segment": "Segmento",
+  "progress.bpmHint": "Selecciona un elemento de la biblioteca para ver los BPM."
 }
