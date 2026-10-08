@@ -3,6 +3,7 @@ import { useSessionsInRange } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
+import { ProgressDashboard } from "@/components/diary/ProgressDashboard";
 
 /** Practice analytics: charts and trends, separate from the chronological session log. */
 export default function Analytics() {
@@ -30,6 +31,8 @@ export default function Analytics() {
       )}
 
       <StatsDashboard from={from || undefined} to={to || undefined} sessions={sessions ?? []} />
+
+      <ProgressDashboard />
     </div>
   );
 }
