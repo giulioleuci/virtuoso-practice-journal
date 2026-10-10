@@ -798,5 +798,12 @@
   "progress.allSegments": "Whole piece",
   "progress.item": "Library item",
   "progress.segment": "Segment",
-  "progress.bpmHint": "Select a library item to see BPM progress."
+  "progress.bpmHint": "Select a library item to see BPM progress.",
+  "analytics.exportPdf": "Export analytics as PDF",
+  "analytics.exportPdfShort": "PDF",
+  "analytics.pdfPeriod": "Period",
+  "analytics.pdfSubject": "Subject",
+  "analytics.pdfWeeks": "Weeks",
+  "analytics.pdfDone": "PDF exported",
+  "analytics.pdfError": "Could not export the PDF"
 }

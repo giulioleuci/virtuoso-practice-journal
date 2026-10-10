@@ -798,5 +798,12 @@
   "progress.allSegments": "Elemento completo",
   "progress.item": "Elemento de biblioteca",
   "progress.segment": "Segmento",
-  "progress.bpmHint": "Selecciona un elemento de la biblioteca para ver los BPM."
+  "progress.bpmHint": "Selecciona un elemento de la biblioteca para ver los BPM.",
+  "analytics.exportPdf": "Exportar análisis en PDF",
+  "analytics.exportPdfShort": "PDF",
+  "analytics.pdfPeriod": "Periodo",
+  "analytics.pdfSubject": "Materia",
+  "analytics.pdfWeeks": "Semanas",
+  "analytics.pdfDone": "PDF exportado",
+  "analytics.pdfError": "No se pudo exportar el PDF"
 }
