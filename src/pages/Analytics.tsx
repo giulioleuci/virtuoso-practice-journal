@@ -13,7 +13,7 @@ import { ProgressDashboard } from "@/components/diary/ProgressDashboard";
 
 /** Practice analytics: charts and trends, separate from the chronological session log. */
 export default function Analytics() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
@@ -30,7 +30,7 @@ export default function Analytics() {
         fileName: `analytics-${dayKey(new Date())}.pdf`,
         title: t("analytics.title"),
         lines: [
-          `${t("analytics.pdfPeriod")}: ${from ? formatDate(from) : "…"} – ${to ? formatDate(to) : "…"}`,
+          `${t("analytics.pdfPeriod")}: ${from ? formatDate(from, lang) : "…"} – ${to ? formatDate(to, lang) : "…"}`,
           `${t("analytics.pdfSubject")}: ${labels.subject ?? all}`,
           `${t("progress.item")}: ${labels.item ?? t("progress.allItems")}`,
           `${t("progress.segment")}: ${labels.segment ?? t("progress.allSegments")}`,
