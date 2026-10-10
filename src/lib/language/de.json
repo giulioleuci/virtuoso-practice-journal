@@ -798,5 +798,12 @@
   "progress.allSegments": "Ganzer Eintrag",
   "progress.item": "Bibliothekseintrag",
   "progress.segment": "Abschnitt",
-  "progress.bpmHint": "Wähle einen Bibliothekseintrag, um BPM zu sehen."
+  "progress.bpmHint": "Wähle einen Bibliothekseintrag, um BPM zu sehen.",
+  "analytics.exportPdf": "Analyse als PDF exportieren",
+  "analytics.exportPdfShort": "PDF",
+  "analytics.pdfPeriod": "Zeitraum",
+  "analytics.pdfSubject": "Fach",
+  "analytics.pdfWeeks": "Wochen",
+  "analytics.pdfDone": "PDF exportiert",
+  "analytics.pdfError": "PDF konnte nicht exportiert werden"
 }

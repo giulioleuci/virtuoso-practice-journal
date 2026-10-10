@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Session } from "@/domain/entities/session";
@@ -13,7 +13,9 @@ import { cn } from "@/lib/utils";
 
 const WEEK_OPTIONS = [4, 12, 26] as const;
 
-export function ProgressDashboard({ from, to }: { from?: string; to?: string }) {
+export interface ProgressFilterLabels { subject?: string; item?: string; segment?: string; weeks: number }
+
+export function ProgressDashboard({ from, to, onFiltersChange }: { from?: string; to?: string; onFiltersChange?: (f: ProgressFilterLabels) => void }) {
   const { t } = useI18n();
   const sessions = usePresentationRead<Session[]>("sessions.all");
   const tasks = usePresentationRead<Task[]>("tasks.all");
@@ -26,6 +28,14 @@ export function ProgressDashboard({ from, to }: { from?: string; to?: string }) 
   const [segmentId, setSegmentId] = useState<number | undefined>();
   const items = useMemo(() => (library ?? []).filter((i) => subjectId == null || i.subjectId === subjectId).sort((a, b) => a.title.localeCompare(b.title)), [library, subjectId]);
   const itemSegments = useMemo(() => (segments ?? []).filter((x) => itemId != null && x.itemId === itemId), [segments, itemId]);
+  useEffect(() => {
+    onFiltersChange?.({
+      subject: subjects?.find((x) => x.id === subjectId)?.name,
+      item: library?.find((x) => x.id === itemId)?.title,
+      segment: segments?.find((x) => x.id === segmentId)?.label,
+      weeks,
+    });
+  }, [onFiltersChange, subjects, library, segments, subjectId, itemId, segmentId, weeks]);
   const pickSubject = (id?: number) => { setSubjectId(id); setItemId(undefined); setSegmentId(undefined); };
 
   const data = useMemo(
