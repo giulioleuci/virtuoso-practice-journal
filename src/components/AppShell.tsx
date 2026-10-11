@@ -57,7 +57,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
           paddingBottom: "calc(6rem + env(safe-area-inset-bottom))",
         }}
       >
-        <div key={pageKey} className="animate-fade-in">
+        <div key={pageKey} className="animate-page-in">
           <Outlet context={{ profile }} />
         </div>
       </main>

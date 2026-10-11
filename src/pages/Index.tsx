@@ -7,19 +7,33 @@ import IntroSlides from "@/components/onboarding/IntroSlides";
 import AppShell from "@/components/AppShell";
 import { Routes, Route } from "react-router-dom";
 
-// Code splitting routes for better initial load performance
-const Diary = lazy(() => import("./Diary"));
-const Library = lazy(() => import("./Library"));
-const Collections = lazy(() => import("./Collections"));
-const Repertoire = lazy(() => import("./Repertoire"));
-const Lessons = lazy(() => import("./Lessons"));
-const Assignments = lazy(() => import("./Assignments"));
-const History = lazy(() => import("./History"));
-const Analytics = lazy(() => import("./Analytics"));
-const PrintSummary = lazy(() => import("./PrintSummary"));
-
-const Tasks = lazy(() => import("./Tasks"));
-const Profile = lazy(() => import("./Profile"));
+// Main tabs are bundled eagerly so switching between them is instant (local-first app).
+import Diary from "./Diary";
+import Library from "./Library";
+import Lessons from "./Lessons";
+import Tasks from "./Tasks";
+// Secondary pages stay lazy, but are prefetched once the app is idle.
+const loadCollections = () => import("./Collections");
+const loadRepertoire = () => import("./Repertoire");
+const loadAssignments = () => import("./Assignments");
+const loadHistory = () => import("./History");
+const loadAnalytics = () => import("./Analytics");
+const loadPrintSummary = () => import("./PrintSummary");
+const loadProfile = () => import("./Profile");
+const Collections = lazy(loadCollections);
+const Repertoire = lazy(loadRepertoire);
+const Assignments = lazy(loadAssignments);
+const History = lazy(loadHistory);
+const Analytics = lazy(loadAnalytics);
+const PrintSummary = lazy(loadPrintSummary);
+const Profile = lazy(loadProfile);
+if (typeof window !== "undefined") {
+  setTimeout(() => {
+    [loadCollections, loadRepertoire, loadAssignments, loadHistory, loadAnalytics, loadPrintSummary, loadProfile,
+      () => import("./NewTaskPage"), () => import("./EditTaskPage"), () => import("./EditStudyRoutinePage"), () => import("./ItemAnalysisPage"),
+    ].forEach((load) => void load().catch(() => undefined));
+  }, 1500);
+}
 const NewTaskPage = lazy(() => import("./NewTaskPage"));
 const EditTaskPage = lazy(() => import("./EditTaskPage"));
 const EditStudyRoutinePage = lazy(() => import("./EditStudyRoutinePage"));
