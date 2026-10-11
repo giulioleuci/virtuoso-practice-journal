@@ -1,8 +1,24 @@
-import { liveQuery } from "dexie";
+import Dexie from "dexie";
 import type { PresentationReadPort } from "@/application/queries/presentationReadPort";
 import { db } from "./db";
 
 const active = <T extends { deletedAt?: number }>(row: T) => !row.deletedAt;
+
+const listeners = new Set<() => void>();
+let hooked = false;
+let scheduled = false;
+function ensureMutationHook() {
+  if (hooked) return;
+  hooked = true;
+  Dexie.on("storagemutated", () => {
+    if (scheduled) return;
+    scheduled = true;
+    queueMicrotask(() => {
+      scheduled = false;
+      for (const l of [...listeners]) l();
+    });
+  });
+}
 
 /** Dexie implementation of named presentation read DTO operations. */
 export const dexiePresentationReads: PresentationReadPort = {
@@ -123,7 +139,9 @@ export const dexiePresentationReads: PresentationReadPort = {
     return this.read("helpRequests.openCount");
   },
   subscribe(listener) {
-    const subscription = liveQuery(() => Promise.all(db.tables.map((table) => table.toArray()))).subscribe({ next: listener });
-    return () => subscription.unsubscribe();
+    // One shared, lightweight mutation listener instead of re-reading every table per hook.
+    listeners.add(listener);
+    ensureMutationHook();
+    return () => { listeners.delete(listener); };
   },
 };
