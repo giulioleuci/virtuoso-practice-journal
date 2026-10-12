@@ -98,3 +98,8 @@ Pages are in `src/pages/`. Feature-scoped components (forms, cards, dialogs) liv
 ### Testing
 
 Vitest with jsdom; `fake-indexeddb` mocks IndexedDB so Dexie tests run in Node. Setup file is `src/test/setup.ts` (mocks `window.matchMedia`). Add domain/application tests with fakes, Dexie repository integration tests, and architecture-boundary tests as the refactor proceeds.
+
+<!-- LOVABLE:BEGIN -->
+- Keep diary grouping, carryover selection, and next-lesson preparation in presentation components using existing query hooks and service actions, so UX changes do not introduce a new persistence boundary.
+- Use the existing practice audio timer for tempo and CSS for visual pendulum motion with reduced-motion support, so visual motion does not alter beat scheduling.
+<!-- LOVABLE:END -->
