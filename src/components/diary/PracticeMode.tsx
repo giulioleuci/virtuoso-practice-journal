@@ -133,7 +133,7 @@ export function PracticeMode({ task, onClose, onFinish, onShowAnswers }: Props) 
           )}
           {task.targetBpm && (
             <p className="text-sm text-muted-foreground tabular-nums">
-              Target {targetGlyph} = {task.targetBpm}
+              {t("diary.targetBpm", { note: targetGlyph, bpm: task.targetBpm })}
             </p>
           )}
           {onShowAnswers && (
@@ -160,13 +160,10 @@ export function PracticeMode({ task, onClose, onFinish, onShowAnswers }: Props) 
 
 
         {/* Metronome */}
-        <section className="paper-card p-6 space-y-5">
+        <section className="space-y-5 py-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("practice.metronome")}</p>
-              <p className="font-serif text-xl">
-                {targetGlyph} = <span className="tabular-nums">{bpm}</span>
-              </p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -183,6 +180,12 @@ export function PracticeMode({ task, onClose, onFinish, onShowAnswers }: Props) 
                 {meterOn ? t("practice.stop") : t("practice.start")}
               </Button>
             </div>
+          </div>
+
+          <div className="text-center py-4" aria-live="off">
+            <p className="text-xl text-muted-foreground">{targetGlyph} =</p>
+            <p className="font-numeric text-7xl font-semibold leading-none py-3">{bpm}</p>
+            <p className="text-xs text-muted-foreground">{t("practice.bpmUnit")}</p>
           </div>
 
           {/* Pulse indicator */}
@@ -205,16 +208,12 @@ export function PracticeMode({ task, onClose, onFinish, onShowAnswers }: Props) 
             })}
           </div>
 
-          {/* Pulse ring (large) */}
-          <div className="flex items-center justify-center">
-            <div
-              key={pulse}
-              className={cn(
-                "h-24 w-24 rounded-full border-2 transition-transform",
-                meterOn ? "animate-[scale-in_0.12s_ease-out]" : "",
-                isAccent ? "border-primary bg-primary/15" : "border-foreground/30 bg-foreground/5"
-              )}
-            />
+          {/* Continuous beat motion, using the existing theme contrast. */}
+          <div className="relative h-32 overflow-hidden border-b border-border" aria-hidden="true">
+            <div className={cn("metronome-pendulum absolute bottom-2 left-1/2 h-28 w-1 rounded-full bg-primary", meterOn && "metronome-pendulum-running")}
+              style={{ animationDuration: `${120000 / bpm}ms` }}>
+              <span className={cn("absolute -top-1 -left-2.5 h-6 w-6 rounded-full border-2 border-primary", isAccent ? "bg-primary" : "bg-background")} />
+            </div>
           </div>
 
           {/* BPM controls */}

@@ -39,6 +39,9 @@ import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
 import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { PracticeMode } from "@/components/diary/PracticeMode";
 import { LastSessionStrip } from "@/components/diary/LastSessionStrip";
+import { CarryoverBatchActions } from "@/components/diary/CarryoverBatchActions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
 import { MessageSquareQuote } from "lucide-react";
 import { SessionFAB } from "@/components/diary/SessionFAB";
@@ -126,6 +129,7 @@ export default function Diary() {
   const answeredItemIds = usePresentationRead<Set<number>>("helpRequests.answeredItemIds") ?? new Set<number>();
   const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
   const [carryPage, setCarryPage] = useState(0);
+  const [selectedCarryIds, setSelectedCarryIds] = useState<number[]>([]);
   const [ignoredPage, setIgnoredPage] = useState(0);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const CARRY_PAGE_SIZE = 4;
@@ -149,6 +153,16 @@ export default function Diary() {
     if (selectedSubjectId === null) return tasks;
     return tasks.filter((t) => t.subjectId === selectedSubjectId);
   }, [tasks, selectedSubjectId]);
+
+  const taskGroups = useMemo(() => {
+    const groups = new Map<number, Task[]>();
+    for (const task of filteredTasks ?? []) {
+      const group = groups.get(task.subjectId) ?? [];
+      group.push(task);
+      groups.set(task.subjectId, group);
+    }
+    return Array.from(groups, ([subjectId, items]) => ({ subjectId, items }));
+  }, [filteredTasks]);
 
   const emptyQuote = useMemo(() => pickQuote(undefined, lang), [lang]);
   const heroQuote = useMemo(() => pickQuote(undefined, lang, todayKey), [lang, todayKey]);
@@ -279,8 +293,20 @@ export default function Diary() {
         ) : !filteredTasks?.length ? (
           <p className="text-sm text-muted-foreground text-center py-6">{t("common.noResults")}</p>
         ) : (
-          <ul className="space-y-2">
-            {filteredTasks.map((task) => {
+          <div className="space-y-6">
+            {taskGroups.map(({ subjectId, items }) => {
+              const groupSubject = subjectMap.get(subjectId);
+              const completed = items.filter(task => task.done).length;
+              return <section key={subjectId} aria-label={groupSubject?.name ?? t("diary.otherSubject")} className="space-y-3">
+                <div className="border-l-4 pl-3" style={subjectBorderStyle(groupSubject?.color, groupSubject?.type, groupSubject?.customColor)}>
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <h3 className="font-serif text-xl break-words">{groupSubject?.name ?? t("diary.otherSubject")}</h3>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{t("diary.groupProgress", { done: completed, total: items.length })}</span>
+                  </div>
+                  <Progress value={completed / items.length * 100} className="h-1.5" aria-label={t("diary.groupProgress", { done: completed, total: items.length })} />
+                </div>
+                <ul className="space-y-2">
+            {items.map((task) => {
               const sess = (task.id && sessionsByTask[task.id]) || [];
               const last = sess[sess.length - 1];
                 const subject = subjectMap.get(task.subjectId);
@@ -404,7 +430,10 @@ export default function Diary() {
 
               );
             })}
-          </ul>
+                </ul>
+              </section>;
+            })}
+          </div>
         )}
       </section>
 
@@ -418,6 +447,7 @@ export default function Diary() {
               </span>
             }
           />
+          <CarryoverBatchActions tasks={carryoverTasks} todayKey={todayKey} selectedIds={selectedCarryIds} onSelectionChange={setSelectedCarryIds} />
           {(() => {
             const total = carryoverTasks.length;
             const totalPages = Math.max(1, Math.ceil(total / CARRY_PAGE_SIZE));
@@ -435,9 +465,16 @@ export default function Diary() {
                           style={subjectBorderStyleLight(subject?.color, subject?.type, subject?.customColor)}
                         >
                           {/* Title */}
-                          <div className="font-serif font-semibold text-[15px] leading-snug break-words line-clamp-2">
-                            {task.title}
-                          </div>
+                          <label className="flex min-h-11 items-center gap-3">
+                            <Checkbox checked={task.id !== undefined && selectedCarryIds.includes(task.id)}
+                              aria-label={t("diary.selectTask", { title: task.title })}
+                              onCheckedChange={(checked) => {
+                                const id = task.id;
+                                if (id === undefined) return;
+                                setSelectedCarryIds(previous => checked ? [...previous.filter(value => value !== id), id] : previous.filter(value => value !== id));
+                              }} />
+                            <span className="font-serif font-semibold text-[15px] leading-snug break-words">{task.title}</span>
+                          </label>
 
                           {/* Metadata row: date + BPM */}
                           <div className="flex flex-wrap items-center gap-1.5">
