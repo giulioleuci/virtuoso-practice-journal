@@ -37,6 +37,7 @@ import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/Less
 import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
 import { AddHomeworkSheet } from "@/components/lessons/AddHomeworkSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
+import { NextLessonPanel } from "@/components/lessons/NextLessonPanel";
 import { upcomingLessonDates, slotForDate } from "@/lib/recurrence";
 import { dayKey, today } from "@/lib/date";
 import { toast } from "sonner";
@@ -60,6 +61,7 @@ export default function Lessons() {
   const openHelpCount = useOpenHelpRequestCount();
 
   const [recapOpen, setRecapOpen] = useState(false);
+  const [recapSubjectId, setRecapSubjectId] = useState<number | undefined>();
 
   const [recOpen, setRecOpen] = useState(false);
   const [editingRec, setEditingRec] = useState<LessonRecurrence | null>(null);
@@ -131,7 +133,7 @@ export default function Lessons() {
         out.push({ rec: r, date: d, isToday: d === today, slot: slotForDate(r, d) });
       }
     }
-    return out.sort((a, b) => a.date.localeCompare(b.date));
+    return out.sort((a, b) => a.date.localeCompare(b.date) || (a.slot?.startTime ?? "").localeCompare(b.slot?.startTime ?? ""));
   }, [recurrences, lessons]);
 
 
@@ -145,7 +147,7 @@ export default function Lessons() {
           </Button>
         </div>
         <div className="flex items-center gap-1">
-          <Button size="sm" variant="ghost" className="px-2 -ml-2" onClick={() => setRecapOpen(true)}>
+          <Button size="sm" variant="ghost" className="px-2 -ml-2" onClick={() => { setRecapSubjectId(undefined); setRecapOpen(true); }}>
             <HelpCircle className="h-4 w-4 mr-1" /> {t("lessons.recap")}
             {openHelpCount ? (
               <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
@@ -156,6 +158,11 @@ export default function Lessons() {
         </div>
       </div>
 
+
+      {upcoming[0] && <NextLessonPanel key={`${upcoming[0].rec.id}-${upcoming[0].date}`}
+        recurrence={upcoming[0].rec} date={upcoming[0].date} subject={subjectMap.get(upcoming[0].rec.subjectId)}
+        onLog={() => openLog(upcoming[0].rec, upcoming[0].date)}
+        onQuestions={() => { setRecapSubjectId(upcoming[0].rec.subjectId); setRecapOpen(true); }} />}
 
       {/* Recurrences */}
       <section className="space-y-2">
@@ -446,7 +453,7 @@ export default function Lessons() {
         context={logContext || undefined}
       />
 
-      <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} />
+      <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} subjectId={recapSubjectId} />
 
       {homeworkForRec && (
         <AddHomeworkSheet
