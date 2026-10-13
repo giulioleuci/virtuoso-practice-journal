@@ -805,5 +805,18 @@
   "analytics.pdfSubject": "Fach",
   "analytics.pdfWeeks": "Wochen",
   "analytics.pdfDone": "PDF exportiert",
-  "analytics.pdfError": "PDF konnte nicht exportiert werden"
+  "analytics.pdfError": "PDF konnte nicht exportiert werden",
+  "diary.otherSubject": "Anderes Fach",
+  "diary.groupProgress": "{{done}}/{{total}} erledigt",
+  "diary.selectAll": "Alle auswählen ({{count}})",
+  "diary.moveSelected": "{{count}} auf heute verschieben",
+  "diary.archiveSelected": "Auswahl archivieren",
+  "diary.selectTask": "{{title}} auswählen",
+  "diary.batchError": "Einige Aufgaben konnten nicht aktualisiert werden. Versuche die übrige Auswahl erneut.",
+  "practice.bpmUnit": "Schläge pro Minute",
+  "lessons.nextLesson": "Nächste Unterrichtsstunde",
+  "lessons.preparationCount": "{{homework}} offene Aufgaben · {{questions}} Fragen",
+  "lessons.noOpenHomework": "Keine offenen Hausaufgaben.",
+  "lessons.resolveQuestion": "Als geklärt markieren: {{question}}",
+  "lessons.preparationError": "Die Frage konnte nicht aktualisiert werden."
 }
