@@ -805,5 +805,18 @@
   "analytics.pdfSubject": "Materia",
   "analytics.pdfWeeks": "Semanas",
   "analytics.pdfDone": "PDF exportado",
-  "analytics.pdfError": "No se pudo exportar el PDF"
+  "analytics.pdfError": "No se pudo exportar el PDF",
+  "diary.otherSubject": "Otra materia",
+  "diary.groupProgress": "{{done}}/{{total}} completadas",
+  "diary.selectAll": "Seleccionar todas ({{count}})",
+  "diary.moveSelected": "Mover {{count}} a hoy",
+  "diary.archiveSelected": "Archivar seleccionadas",
+  "diary.selectTask": "Seleccionar {{title}}",
+  "diary.batchError": "Algunas tareas no se actualizaron. Reintenta con las restantes.",
+  "practice.bpmUnit": "Tiempos por minuto",
+  "lessons.nextLesson": "Próxima lección",
+  "lessons.preparationCount": "{{homework}} tareas pendientes · {{questions}} preguntas",
+  "lessons.noOpenHomework": "No hay tareas pendientes.",
+  "lessons.resolveQuestion": "Marcar como resuelta: {{question}}",
+  "lessons.preparationError": "No se pudo actualizar la pregunta."
 }

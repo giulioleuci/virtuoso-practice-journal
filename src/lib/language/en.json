@@ -805,5 +805,18 @@
   "analytics.pdfSubject": "Subject",
   "analytics.pdfWeeks": "Weeks",
   "analytics.pdfDone": "PDF exported",
-  "analytics.pdfError": "Could not export the PDF"
+  "analytics.pdfError": "Could not export the PDF",
+  "diary.otherSubject": "Other subject",
+  "diary.groupProgress": "{{done}}/{{total}} completed",
+  "diary.selectAll": "Select all ({{count}})",
+  "diary.moveSelected": "Move {{count}} to today",
+  "diary.archiveSelected": "Archive selected",
+  "diary.selectTask": "Select {{title}}",
+  "diary.batchError": "Some tasks could not be updated. Retry the remaining selection.",
+  "practice.bpmUnit": "Beats per minute",
+  "lessons.nextLesson": "Next lesson",
+  "lessons.preparationCount": "{{homework}} open assignments · {{questions}} questions",
+  "lessons.noOpenHomework": "No outstanding homework.",
+  "lessons.resolveQuestion": "Mark as resolved: {{question}}",
+  "lessons.preparationError": "Could not update the question."
 }

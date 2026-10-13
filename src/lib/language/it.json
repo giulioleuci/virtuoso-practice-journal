@@ -805,5 +805,18 @@
   "analytics.pdfSubject": "Materia",
   "analytics.pdfWeeks": "Settimane",
   "analytics.pdfDone": "PDF esportato",
-  "analytics.pdfError": "Impossibile esportare il PDF"
+  "analytics.pdfError": "Impossibile esportare il PDF",
+  "diary.otherSubject": "Altra materia",
+  "diary.groupProgress": "{{done}}/{{total}} completati",
+  "diary.selectAll": "Seleziona tutti ({{count}})",
+  "diary.moveSelected": "Sposta {{count}} a oggi",
+  "diary.archiveSelected": "Archivia selezionati",
+  "diary.selectTask": "Seleziona {{title}}",
+  "diary.batchError": "Alcuni compiti non sono stati aggiornati. Riprova con quelli rimasti.",
+  "practice.bpmUnit": "Battiti al minuto",
+  "lessons.nextLesson": "Prossima lezione",
+  "lessons.preparationCount": "{{homework}} compiti aperti · {{questions}} domande",
+  "lessons.noOpenHomework": "Nessun compito ancora aperto.",
+  "lessons.resolveQuestion": "Segna come risolta: {{question}}",
+  "lessons.preparationError": "Impossibile aggiornare la domanda."
 }
