@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, Copy, ListMusic, Minus, Plus, Trash2, Wand2 } from "lucide-react";
+import { Check, ChevronDown, Copy, ListChecks, Minus, MoreHorizontal, Plus, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { StudyGroup, StudyPoolEntry, StudyRoutine } from "@/domain/ports/studyRoutine";
@@ -20,6 +20,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Pager } from "@/components/shared/Pager";
+import { usePagination } from "@/hooks/usePagination";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { StateNotice } from "@/components/shared/StateNotice";
 import { nativeSelect } from "./WhenFields";
@@ -60,6 +64,9 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   const [startDate, setStartDate] = useState(initial?.startDate ?? today());
   const [search, setSearch] = useState("");
   const [activeDay, setActiveDay] = useState(1);
+  const [activeGroupId, setActiveGroupId] = useState<string | undefined>();
+  const [kindFilter, setKindFilter] = useState<string>("all");
+  const [openSections, setOpenSections] = useState<number | null>(null);
 
   const subject = subjectId ?? subjects?.[0]?.id;
   const library = usePresentationRead<LibraryItem[]>("library.subject", [subject]);
@@ -86,6 +93,19 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
     [library, q],
   );
   const kinds = LIBRARY_KINDS.filter((k) => items.some((i) => i.kind === k.key));
+  const visibleCollections = (collections ?? []).filter((c) => !q || c.name.toLowerCase().includes(q));
+  type Row = { key: string; title: string; composer?: string; entry: StudyPoolEntry; itemId?: number; kindLabel: string };
+  const rows = useMemo<Row[]>(() => [
+    ...items.filter((i) => kindFilter === "all" || i.kind === kindFilter).map((i) => ({
+      key: `i${i.id}`, title: i.title, composer: i.composer, entry: { type: "item" as const, id: i.id! }, itemId: i.id,
+      kindLabel: t(LIBRARY_KINDS.find((k) => k.key === i.kind)?.tKey ?? ""),
+    })),
+    ...(kindFilter === "all" || kindFilter === "collection" ? visibleCollections : []).map((c) => ({
+      key: `c${c.id}`, title: c.name, composer: c.composer, entry: { type: "collection" as const, id: c.id! }, kindLabel: t("studyRoutine.collections"),
+    })),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [items, visibleCollections.length, kindFilter, q, lang]);
+  const pager = usePagination(rows, 8);
 
   // ── groups & pools ──────────────────────────────────────────────
   const has = (g: StudyGroup, e: StudyPoolEntry) => g.pool.some((x) => poolEntryKey(x) === poolEntryKey(e));
@@ -176,6 +196,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
     } else toast.error(t("quick.failed"));
   };
 
+  const active = groups.find((g) => g.id === activeGroupId) ?? groups[0];
   const short = (d: number) => dayName(d).slice(0, 3);
   const poolSize = new Set(groups.flatMap((g) => g.pool.map(poolEntryKey))).size;
   const perWeek = activeDays.reduce((s, d) => s + dayTotal(d), 0);
@@ -190,21 +211,6 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
       </span>
     );
   };
-
-  const groupChips = (entries: StudyPoolEntry[], label: string) => (
-    <div role="group" aria-label={label} className="mt-2 flex flex-wrap gap-1.5">
-      {groups.map((g) => {
-        const on = entries.every((e) => has(g, e));
-        return (
-          <label key={g.id} className={chip(on)}>
-            <input type="checkbox" className="sr-only" checked={on} onChange={(e) => setEntries(g.id, entries, e.target.checked)} />
-            {on && <Check className="h-3 w-3" />}
-            {g.name || t("routine.groupFallback")}
-          </label>
-        );
-      })}
-    </div>
-  );
 
   return (
     <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
@@ -225,99 +231,111 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
         <section className="mt-7 border-t border-border pt-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-serif text-2xl font-semibold">{t("routine.groups")}</h2>
-            <div className="flex flex-wrap gap-1.5">
-              <Button type="button" size="sm" variant="outline" onClick={() => applyTemplate("mixed")}><Wand2 />{t("routine.templateMixed")}</Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => applyTemplate("daily")}><Wand2 />{t("routine.templateDaily")}</Button>
-              {groups.length > 0 && <Button type="button" size="sm" variant="ghost" onClick={() => applyTemplate("reset")}>{t("routine.templateReset")}</Button>}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button type="button" size="sm" variant="outline"><Wand2 />{t("routine.templates")}<ChevronDown /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => applyTemplate("mixed")}>{t("routine.templateMixed")}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => applyTemplate("daily")}>{t("routine.templateDaily")}</DropdownMenuItem>
+                {groups.length > 0 && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => applyTemplate("reset")}>{t("routine.templateReset")}</DropdownMenuItem></>}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           {groups.length === 0 ? (
             <p className="text-xs text-muted-foreground">{t("routine.groupsHint")}</p>
           ) : (
-            <ul className="grid gap-3">
+            <ul className="grid gap-2">
               {groups.map((g, i) => (
-                <li key={g.id} className="grid items-end gap-3 min-[700px]:grid-cols-[minmax(0,1fr)_auto]">
-                  <label className="grid gap-1.5 text-xs font-medium">
-                    {t("routine.groupName", { n: i + 1 })}
-                    <Input value={g.name} required maxLength={80} onChange={(e) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, name: e.target.value } : x)))} />
-                  </label>
-                  <div className="flex items-center gap-1">
-                    <Button type="button" size="sm" variant="ghost" title={t("routine.assignAllTitle")} onClick={() => setEntries(g.id, items.map(itemEntry), true)}>{t("common.all")}</Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setEntries(g.id, items.map(itemEntry), false)}>{t("common.none")}</Button>
-                    <Button type="button" size="icon" variant="ghost" className="h-10 w-10 hover:text-destructive" aria-label={t("studyRoutine.removeGroup")} onClick={() => removeGroup(g.id)}><Trash2 /></Button>
-                  </div>
+                <li key={g.id} className="flex items-center gap-2">
+                  <Input aria-label={t("routine.groupName", { n: i + 1 })} placeholder={t("routine.groupName", { n: i + 1 })} value={g.name} required maxLength={80} onChange={(e) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, name: e.target.value } : x)))} />
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{t("routine.groupCount", { n: g.pool.length })}</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button type="button" size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label={t("routine.moreActions")}><MoreHorizontal /></Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem disabled={!g.pool.length} onSelect={() => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, pool: [] } : x)))}>{t("routine.clearGroup")}</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => removeGroup(g.id)}><Trash2 />{t("studyRoutine.removeGroup")}</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </li>
               ))}
             </ul>
           )}
-          <Button type="button" size="sm" variant="outline" className="mt-3" onClick={() => addGroup()}><Plus />{t("routine.addGroup")}</Button>
+          <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={() => addGroup()}><Plus />{t("routine.addGroup")}</Button>
         </section>
 
         {groups.length > 0 && (
           <>
             <section className="mt-7 border-t border-border pt-6">
               <h2 className="mb-3 font-serif text-2xl font-semibold">{t("routine.materials")}</h2>
-              <label className="mb-4 grid gap-1.5 text-xs font-medium">
-                {t("bulk.search")}
-                <Input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("bulk.searchPlaceholder")} />
-              </label>
-              {kinds.length === 0 ? (
-                <EmptyState title={t("routine.noMaterials")} hint={t("routine.noMaterialsHint")} />
+              <p className="mb-2 text-xs font-medium text-muted-foreground">{t("routine.assignTo")}</p>
+              <div role="tablist" aria-label={t("routine.assignTo")} className="mb-4 flex flex-wrap gap-1.5">
+                {groups.map((g) => (
+                  <button key={g.id} type="button" role="tab" aria-selected={g.id === active?.id} onClick={() => setActiveGroupId(g.id)} className={chip(g.id === active?.id)}>
+                    {g.name || t("routine.groupFallback")}<span className="font-numeric tabular-nums opacity-70">{g.pool.length}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mb-3 grid gap-2 min-[560px]:grid-cols-[minmax(0,1fr)_auto_auto]">
+                <Input type="search" aria-label={t("bulk.search")} value={search} onChange={(e) => { setSearch(e.target.value); pager.reset(); }} placeholder={t("bulk.searchPlaceholder")} />
+                <select aria-label={t("routine.kindFilter")} value={kindFilter} onChange={(e) => { setKindFilter(e.target.value); pager.reset(); }} className={nativeSelect}>
+                  <option value="all">{t("routine.kindAll")}</option>
+                  {kinds.map((k) => <option key={k.key} value={k.key}>{t(k.tKey)}</option>)}
+                  {(collections?.length ?? 0) > 0 && <option value="collection">{t("studyRoutine.collections")}</option>}
+                </select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><Button type="button" variant="outline" disabled={!active || !rows.length}><ListChecks />{t("routine.selection")}<ChevronDown /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => active && setEntries(active.id, rows.map((r) => r.entry), true)}>{t("routine.selectVisible", { n: rows.length })}</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => active && setEntries(active.id, rows.map((r) => r.entry), false)}>{t("routine.clearVisible")}</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              {!active ? null : rows.length === 0 ? (
+                kinds.length === 0 && !collections?.length ? <EmptyState title={t("routine.noMaterials")} hint={t("routine.noMaterialsHint")} /> : <p className="py-6 text-center text-sm text-muted-foreground">{t("common.noResults")}</p>
               ) : (
-                kinds.map(({ key, tKey }) => {
-                  const ofKind = items.filter((i) => i.kind === key);
-                  return (
-                    <div key={key} className="mt-5 first:mt-0">
-                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                        <h3 className="text-[0.8125rem] font-semibold">{t(tKey)}</h3>
-                        <div className="flex flex-wrap gap-1">
-                          {groups.map((g) => (
-                            <Button key={g.id} type="button" size="sm" variant="ghost" onClick={() => setEntries(g.id, ofKind.map(itemEntry), true)}>
-                              {t("routine.allIn", { group: g.name || t("routine.groupFallback") })}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                      <ul className="divide-y divide-border">
-                        {ofKind.map((item) => {
-                          const segs = segmentsByItem.get(item.id!) ?? [];
-                          return (
-                            <li key={item.id} className="py-3">
-                              <div><strong className="font-medium">{item.title}</strong> <span className="text-xs text-muted-foreground">{item.composer}</span></div>
-                              {groupChips([itemEntry(item)], item.title)}
-                              {segs.length > 0 && (
-                                <details className="mt-2">
-                                  <summary className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground"><ListMusic className="h-3.5 w-3.5" />{t("routine.pickSections", { count: segs.length })}</summary>
-                                  <ul className="mt-2 grid gap-2 border-l border-border pl-3">
-                                    {segs.map((s) => (
-                                      <li key={s.id}>
-                                        <span className="text-[0.8125rem]">{s.label}</span>
-                                        {groupChips([{ type: "segment", id: s.id }], s.label)}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </details>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  );
-                })
-              )}
-              {(collections?.length ?? 0) > 0 && (
-                <div className="mt-6">
-                  <h3 className="mb-1 text-[0.8125rem] font-semibold">{t("studyRoutine.collections")}</h3>
-                  <ul className="divide-y divide-border">
-                    {collections!.filter((c) => !q || c.name.toLowerCase().includes(q)).map((c) => (
-                      <li key={c.id} className="py-3">
-                        <strong className="font-medium">{c.name}</strong> <span className="text-xs text-muted-foreground">{c.composer}</span>
-                        {groupChips([{ type: "collection", id: c.id! }], c.name)}
-                      </li>
-                    ))}
+                <>
+                  <ul className="divide-y divide-border border-y border-border">
+                    {pager.pageItems.map((r) => {
+                      const segs = r.itemId === undefined ? [] : segmentsByItem.get(r.itemId) ?? [];
+                      const segOn = segs.filter((sg) => has(active, { type: "segment", id: sg.id! })).length;
+                      const others = groups.filter((g) => g.id !== active.id && has(g, r.entry)).map((g) => g.name || t("routine.groupFallback"));
+                      const expanded = openSections === r.itemId && r.itemId !== undefined;
+                      return (
+                        <li key={r.key} className="py-2.5">
+                          <div className="flex items-center gap-3">
+                            <Checkbox id={`pool-${r.key}`} className="h-5 w-5" checked={has(active, r.entry)} onCheckedChange={(on) => setEntries(active.id, [r.entry], on === true)} />
+                            <label htmlFor={`pool-${r.key}`} className="min-w-0 flex-1 cursor-pointer">
+                              <span className="block truncate text-sm font-medium">{r.title}</span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {[r.composer, kindFilter === "all" ? r.kindLabel : undefined, others.length ? t("routine.alsoIn", { groups: others.join(", ") }) : undefined].filter(Boolean).join(" · ")}
+                              </span>
+                            </label>
+                            {segs.length > 0 && (
+                              <Button type="button" size="sm" variant="ghost" className="shrink-0 tabular-nums" aria-expanded={expanded} onClick={() => setOpenSections(expanded ? null : r.itemId!)}>
+                                {t("routine.sectionsCount", { on: segOn, n: segs.length })}<ChevronDown className={cn("transition-transform", expanded && "rotate-180")} />
+                              </Button>
+                            )}
+                          </div>
+                          {expanded && (
+                            <ul className="ml-8 mt-2 grid gap-1 border-l border-border pl-3">
+                              {segs.map((sg) => {
+                                const e: StudyPoolEntry = { type: "segment", id: sg.id! };
+                                return (
+                                  <li key={sg.id}>
+                                    <label className="flex min-h-9 cursor-pointer items-center gap-2.5 text-[0.8125rem]">
+                                      <Checkbox checked={has(active, e)} onCheckedChange={(on) => setEntries(active.id, [e], on === true)} />{sg.label}
+                                    </label>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
-                </div>
+                  <Pager page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} />
+                </>
               )}
             </section>
 
