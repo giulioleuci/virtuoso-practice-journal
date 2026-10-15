@@ -135,7 +135,9 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
     weekStartsOn: await profileWeekStartsOn(),
   });
   // ponytail: a kept task only suppresses the identical draw on its day; a different draw still lands beside it. Make generation slot-aware if days feel crowded.
-  const taken = new Set(kept.map(slotKey));
+  // Any task the routine still has from fromDate on (done today, customized, or left by an earlier run) blocks the same draw.
+  const existing = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.deletedAt && task.date >= fromDate).toArray();
+  const taken = new Set([...kept, ...existing].map(slotKey));
   const fresh = tasks.filter((task) => !taken.has(slotKey(task)));
   if (fresh.length) await db.tasks.bulkAdd(fresh);
 }
@@ -157,7 +159,13 @@ export const studyRoutineRepository = {
     if (routine) await generate(routine, input.startDate);
     return id;
   },
-  async regenerateFromDate(routine: StudyRoutine, fromDate: string) {
+  regenerateFromDate(routine: StudyRoutine, fromDate: string) {
+    // Serialized per routine: overlapping runs would each delete then each add, duplicating the plan.
+    const run = (locks.get(routine.id) ?? Promise.resolve()).catch(() => undefined).then(() => regenerate(routine, fromDate));
+    locks.set(routine.id, run);
+    return run;
+  },
+  async _unused() {
     const future = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.done && task.date >= fromDate).toArray();
     const replaceable = future.filter((task) => !task.customized);
     if (replaceable.length) await db.tasks.bulkDelete(replaceable.map((task) => task.id));
