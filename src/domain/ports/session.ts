@@ -3,15 +3,18 @@ import type { Task } from "../entities/task";
 
 export type PersistedTask = Task & { id: number };
 
-export type SessionLogInput = Omit<Session, "id" | "taskId" | "snapshot" | "createdAt"> & {
-  date: string;
+/** What a session is about: the task it was opened from (`id` set) or a free choice of subject and content. */
+export type SessionTarget = Pick<Task, "subjectId" | "linkType" | "itemId" | "collectionId" | "title" | "plan"> & { id?: number };
+
+export type SessionLogInput = Pick<Session, "date" | "notes" | "marks"> & {
   helpText?: string;
 };
 
 export interface SessionLogTransaction {
   createSession(session: Omit<Session, "id">): Promise<number>;
-  completeTask(taskId: number): Promise<void>;
-  createHelpRequest(request: { sessionId: number; taskId: number; itemId?: number; question: string; createdAt: number }): Promise<void>;
+  /** Re-derives `done` from the cumulative section coverage of the task's sessions. */
+  syncTaskDone(taskId: number): Promise<void>;
+  createHelpRequest(request: { sessionId: number; taskId?: number; itemId?: number; question: string; createdAt: number }): Promise<void>;
 }
 
 export interface SessionPort {
@@ -19,7 +22,7 @@ export interface SessionPort {
   byTask(taskId: number): Promise<Session[]>;
   log(task: Task, date: string, input: Omit<Session, "id" | "taskId" | "snapshot" | "createdAt">): Promise<number>;
   update(id: number, patch: Partial<Session>): Promise<void>;
-  buildSnapshot(task: Task): Promise<SessionSnapshot>;
+  buildSnapshot(target: SessionTarget): Promise<SessionSnapshot>;
   transaction<T>(operation: (transaction: SessionLogTransaction) => Promise<T>): Promise<T>;
   remove(id: number): Promise<void>;
   deleteWithTaskReset(sessionId: number, taskId?: number): Promise<void>;

@@ -1,24 +1,40 @@
 import type { StudyAdaptivity, StudyGroup } from "@/domain/ports/studyRoutine";
 /** Centralized Zod schemas shared across forms. */
 import { z } from "zod";
+import { NOTE_VALUES } from "@/domain/constants/noteValues";
 
-export const noteValSchema = z.enum(["half", "quarter", "eighth", "sixteenth"]);
-export const sessionQualitySchema = z.enum(["hard", "improve", "well", "great"]);
+export const noteValSchema = z.enum(NOTE_VALUES);
 export const bpmSchema = z.number().int().min(20).max(400);
-export const repsSchema = z.number().int().min(0).max(9999);
-export const confidenceSchema = z.number().int().min(1).max(5);
+export const ratingSchema = z.number().int().min(1).max(5);
 
-export const sessionInputSchema = z.object({
-  bpmReached: bpmSchema.optional(),
+export const segmentEntrySchema = z.object({
+  segmentId: z.number().int().positive().optional(),
+  bpm: bpmSchema.optional(),
   noteVal: noteValSchema.optional(),
-  reps: repsSchema.optional(),
-  confidence: confidenceSchema.optional(),
-  quality: sessionQualitySchema,
+  layers: z.array(z.string()),
+  techniques: z.array(z.number()),
+});
+
+export const segmentMarkSchema = segmentEntrySchema.extend({
+  confidence: ratingSchema.optional(),
+  mood: ratingSchema.optional(),
+  focus: ratingSchema.optional(),
+  targetBpm: bpmSchema.optional(),
+});
+
+const oneEntryPerSection = (marks: { segmentId?: number }[]) => new Set(marks.map((m) => m.segmentId ?? "whole")).size === marks.length;
+
+/** Edits of stored sessions: historical marks may lack ratings. */
+export const sessionInputSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
-  layersUsed: z.array(z.string()).optional(),
-  techniquesUsed: z.array(z.number()).optional(),
+  marks: z.array(segmentMarkSchema).refine(oneEntryPerSection, "Each section appears once"),
 });
 export type SessionInput = z.infer<typeof sessionInputSchema>;
+
+/** New sessions: at least one studied entry, each with all three ratings. */
+export const newSessionInputSchema = sessionInputSchema.extend({
+  marks: z.array(segmentMarkSchema.required({ confidence: true, mood: true, focus: true })).min(1).refine(oneEntryPerSection, "Each section appears once"),
+});
 
 export const taskLinkTypeSchema = z.enum(["free", "item", "collection"]);
 
@@ -28,18 +44,15 @@ export const taskInputSchema = z.object({
   subjectId: z.number().int().positive(),
   linkType: taskLinkTypeSchema.optional(),
   itemId: z.number().int().positive().optional(),
-  segmentIds: z.array(z.number().int().positive()).optional(),
   collectionId: z.number().int().positive().optional(),
-  targetBpm: bpmSchema.optional(),
-  noteVal: noteValSchema.optional(),
-  layers: z.array(z.string()).optional(),
-  techniqueIds: z.array(z.number()).optional(),
+  plan: z.array(segmentEntrySchema),
   executionNotes: z.string().trim().max(2000).optional(),
 }).refine(
   (v) => {
     // Mutual exclusivity: collection ⇒ no item/segments; segments ⇒ requires item
-    if (v.collectionId && (v.itemId || v.segmentIds?.length)) return false;
-    if (v.segmentIds?.length && !v.itemId) return false;
+    const hasSegments = v.plan.some((e) => e.segmentId !== undefined);
+    if (v.collectionId && (v.itemId || hasSegments)) return false;
+    if (hasSegments && !v.itemId) return false;
     return true;
   },
   { message: "Invalid link: collection excludes item; segments require an item" },

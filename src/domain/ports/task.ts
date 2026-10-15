@@ -21,7 +21,6 @@ export interface TaskPort {
   skip(id: number): Promise<void>;
   unskip(id: number): Promise<void>;
   bulkSetDone(ids: number[], done: boolean): Promise<void>;
-  findOrCreateForLog(options: { date: string; subjectId: number; itemId?: number; fallbackItemTitle: string; freeTitle: string }): Promise<Task | undefined>;
   hasSessions(id: number): Promise<boolean>;
   hardDelete(id: number): Promise<void>;
   restore(task: Task): Promise<void>;

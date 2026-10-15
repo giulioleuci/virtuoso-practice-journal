@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
-import { useAllLibrary, useAllTasks, useAssignments, useLessons, useProfile, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
+import { useAllLibrary, useAssignments, useLessons, useProfile, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { addDays, dayKey, endOfWeek, formatDate, startOfWeek } from "@/lib/date";
-import { NOTE_GLYPH } from "@/lib/constants";
+import { tempoLabel } from "@/lib/format";
+import type { NoteVal } from "@/domain/entities/common";
+import { topMark } from "@/domain/logic/sessionMetrics";
 
 /** Print-optimised one-page weekly summary for the teacher (Save as PDF via the print dialog). */
 export default function PrintSummary() {
@@ -21,38 +23,36 @@ export default function PrintSummary() {
   const to = dayKey(endOfWeek(now));
 
   const sessions = useSessionsInRange(from, to);
-  const tasks = useAllTasks();
   const items = useAllLibrary();
   const lessons = useLessons();
   const assignments = useAssignments();
 
-  const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id, task])), [tasks]);
   const itemById = useMemo(() => new Map((items ?? []).map((item) => [item.id, item])), [items]);
 
   const list = useMemo(() => {
     const all = sessions ?? [];
     if (subjectId === undefined) return all;
-    return all.filter((session) => taskById.get(session.taskId)?.subjectId === subjectId);
-  }, [sessions, subjectId, taskById]);
+    return all.filter((session) => session.subjectId === subjectId);
+  }, [sessions, subjectId]);
   const practiceDays = new Set(list.map((session) => session.date)).size;
 
   const pieces = useMemo(() => {
-    const map = new Map<string, { title: string; composer?: string; count: number; topBpm: number; noteVal?: string }>();
+    const map = new Map<string, { title: string; composer?: string; count: number; topBpm: number; noteVal?: NoteVal }>();
     for (const session of list) {
-      const task = taskById.get(session.taskId);
-      const item = task?.itemId !== undefined ? itemById.get(task.itemId) : undefined;
-      const title = item?.title ?? task?.title ?? t("history.untitled");
+      const item = session.itemId !== undefined ? itemById.get(session.itemId) : undefined;
+      const title = item?.title ?? session.snapshot?.taskTitle ?? t("history.untitled");
       const key = title;
-      const current = map.get(key) ?? { title, composer: item?.composer, count: 0, topBpm: 0, noteVal: session.noteVal };
+      const top = topMark(session.marks);
+      const current = map.get(key) ?? { title, composer: item?.composer, count: 0, topBpm: 0, noteVal: top?.noteVal };
       current.count += 1;
-      if ((session.bpmReached ?? 0) > current.topBpm) {
-        current.topBpm = session.bpmReached ?? 0;
-        current.noteVal = session.noteVal;
+      if ((top?.bpm ?? 0) > current.topBpm) {
+        current.topBpm = top?.bpm ?? 0;
+        current.noteVal = top?.noteVal;
       }
       map.set(key, current);
     }
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [list, taskById, itemById, t]);
+  }, [list, itemById, t]);
 
   const weekLessonIds = useMemo(
     () => new Set((lessons ?? []).filter((lesson) => lesson.date >= from && lesson.date <= to).map((lesson) => lesson.id)),
@@ -122,7 +122,7 @@ export default function PrintSummary() {
                     {piece.composer && <span className="text-muted-foreground italic"> · {piece.composer}</span>}
                   </td>
                   <td className="py-1.5 text-right tabular-nums whitespace-nowrap text-muted-foreground">
-                    {piece.topBpm ? `${piece.noteVal ? NOTE_GLYPH[piece.noteVal as keyof typeof NOTE_GLYPH] : "♩"}=${piece.topBpm}` : "—"}
+                    {piece.topBpm ? tempoLabel(piece.noteVal, piece.topBpm) : "—"}
                   </td>
                   <td className="py-1.5 pl-3 text-right tabular-nums whitespace-nowrap text-muted-foreground">
                     {t("history.sessions", { count: piece.count })}

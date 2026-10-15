@@ -20,21 +20,23 @@ async function subjectId() {
   return db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 }) as Promise<number>;
 }
 
+const ratedMark = (segmentId?: number) => ({ segmentId, layers: [], techniques: [], mood: 3, focus: 3, confidence: 3 });
+
 describe("Dexie repositories", () => {
   it("lists only active tasks", async () => {
     const subject = await subjectId();
     await db.tasks.bulkAdd([
-      { title: "active", date: "2026-01-01", subjectId: subject, done: false, createdAt: 1 },
-      { title: "deleted", date: "2026-01-01", subjectId: subject, done: false, createdAt: 1, deletedAt: 2 },
+      { title: "active", date: "2026-01-01", subjectId: subject, plan: [], done: false, createdAt: 1 },
+      { title: "deleted", date: "2026-01-01", subjectId: subject, plan: [], done: false, createdAt: 1, deletedAt: 2 },
     ]);
     expect((await taskRepository.list()).map((task) => task.title)).toEqual(["active"]);
   });
 
   it("soft-deletes tasks with sessions and hard-deletes tasks without sessions", async () => {
     const subject = await subjectId();
-    const soft = await taskRepository.create({ title: "soft", date: "2026-01-01", subjectId: subject });
-    const hard = await taskRepository.create({ title: "hard", date: "2026-01-01", subjectId: subject });
-    await db.sessions.add({ id: 1, taskId: soft, date: "2026-01-01", createdAt: 1 });
+    const soft = await taskRepository.create({ title: "soft", date: "2026-01-01", subjectId: subject, plan: [] });
+    const hard = await taskRepository.create({ title: "hard", date: "2026-01-01", subjectId: subject, plan: [] });
+    await db.sessions.add({ id: 1, taskId: soft, date: "2026-01-01", marks: [], createdAt: 1 });
     expect(await taskRepository.remove(soft)).toBe("soft");
     expect(await taskRepository.remove(hard)).toBe("hard");
     expect((await db.tasks.get(soft))?.deletedAt).toBeTypeOf("number");
@@ -43,9 +45,9 @@ describe("Dexie repositories", () => {
 
   it("bulk removal reports soft and hard totals", async () => {
     const subject = await subjectId();
-    const soft = await taskRepository.create({ title: "soft", date: "2026-01-01", subjectId: subject });
-    const hard = await taskRepository.create({ title: "hard", date: "2026-01-01", subjectId: subject });
-    await db.sessions.add({ id: 1, taskId: soft, date: "2026-01-01", createdAt: 1 });
+    const soft = await taskRepository.create({ title: "soft", date: "2026-01-01", subjectId: subject, plan: [] });
+    const hard = await taskRepository.create({ title: "hard", date: "2026-01-01", subjectId: subject, plan: [] });
+    await db.sessions.add({ id: 1, taskId: soft, date: "2026-01-01", marks: [], createdAt: 1 });
     expect(await taskRepository.bulkRemove([soft, hard])).toEqual({ soft: 1, hard: 1 });
   });
 
@@ -53,29 +55,47 @@ describe("Dexie repositories", () => {
     const subject = await subjectId();
     const original = db.tasks.bulkAdd;
     db.tasks.bulkAdd = (() => Promise.reject(new Error("second write fails"))) as unknown as typeof db.tasks.bulkAdd;
-    await expect(taskRepository.create({ title: "repeat", date: "2026-01-01", subjectId: subject, recurrence: { kind: "interval", startDate: "2026-01-01", occurrences: 2 } })).rejects.toThrow("second write fails");
+    await expect(taskRepository.create({ title: "repeat", date: "2026-01-01", subjectId: subject, plan: [], recurrence: { kind: "interval", startDate: "2026-01-01", occurrences: 2 } })).rejects.toThrow("second write fails");
     db.tasks.bulkAdd = original;
     expect(await db.tasks.count()).toBe(0);
   });
 
   it("logs immutable session snapshot and completes task", async () => {
     const subject = await subjectId();
-    const taskId = await taskRepository.create({ title: "Scales", date: "2026-01-01", subjectId: subject });
+    const taskId = await taskRepository.create({ title: "Scales", date: "2026-01-01", subjectId: subject, plan: [] });
     const task = (await db.tasks.get(taskId))!;
-    const id = await new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [] });
+    const id = await new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", marks: [ratedMark()] });
     expect((await db.sessions.get(id))?.snapshot?.taskTitle).toBe("Scales");
     expect((await db.tasks.get(taskId))?.done).toBe(true);
   });
 
   it("rolls back session and task completion when help logging fails", async () => {
     const subject = await subjectId();
-    const taskId = await taskRepository.create({ title: "Scales", date: "2026-01-01", subjectId: subject });
+    const taskId = await taskRepository.create({ title: "Scales", date: "2026-01-01", subjectId: subject, plan: [] });
     const task = (await db.tasks.get(taskId))!;
     const original = db.helpRequests.add;
     db.helpRequests.add = (() => Promise.reject(new Error("help fails"))) as unknown as typeof db.helpRequests.add;
-    await expect(new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", layersUsed: [], techniquesUsed: [], helpText: "help" })).rejects.toThrow("help fails");
+    await expect(new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", marks: [ratedMark()], helpText: "help" })).rejects.toThrow("help fails");
     db.helpRequests.add = original;
     expect(await db.sessions.count()).toBe(0);
+    expect((await db.tasks.get(taskId))?.done).toBe(false);
+  });
+
+  it("persists a free session with its own references and no task", async () => {
+    const subject = await subjectId();
+    const id = await new LogSessionUseCase(sessionRepository, () => 1).execute({ subjectId: subject, linkType: "free", title: "Sight-reading", plan: [] }, { date: "2026-01-02", marks: [ratedMark()] });
+    expect(await db.sessions.get(id)).toMatchObject({ subjectId: subject, linkType: "free", snapshot: { taskTitle: "Sight-reading" } });
+    expect(await db.tasks.count()).toBe(0);
+  });
+
+  it("reopens a covered task when new sections are added to its plan", async () => {
+    const subject = await subjectId();
+    const taskId = await taskRepository.create({ title: "Etude", date: "2026-01-01", subjectId: subject, plan: [{ segmentId: 1, layers: [], techniques: [] }] });
+    const task = (await db.tasks.get(taskId))!;
+    await new LogSessionUseCase(sessionRepository, () => 1).execute(task, { date: "2026-01-01", marks: [ratedMark(1)] });
+    expect((await db.tasks.get(taskId))?.done).toBe(true);
+
+    await taskRepository.update(taskId, { plan: [...task.plan, { segmentId: 2, layers: [], techniques: [] }] });
     expect((await db.tasks.get(taskId))?.done).toBe(false);
   });
 

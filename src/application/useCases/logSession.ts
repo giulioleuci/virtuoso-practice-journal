@@ -1,40 +1,37 @@
-import type { Task } from "@/domain/entities/task";
-import type { SessionLogInput, SessionPort } from "@/domain/ports/session";
+import { planSegmentIds } from "@/domain/logic/plan";
+import { sessionContext } from "@/domain/logic/sessionContext";
+import type { SessionLogInput, SessionPort, SessionTarget } from "@/domain/ports/session";
+import { newSessionInputSchema } from "@/lib/schemas";
+
 export class LogSessionUseCase {
   constructor(private readonly sessions: SessionPort, private readonly clock: () => number = Date.now) {}
-  async execute(task: Task, input: SessionLogInput): Promise<number> {
-    const taskId = task.id;
-    if (taskId === undefined) throw new Error("Cannot log a session for an unsaved task");
+
+  /** Saves what was studied. A target with an `id` is the task the session was opened from; without one the session is free. */
+  async execute(target: SessionTarget, input: SessionLogInput): Promise<number> {
+    const checked = newSessionInputSchema.safeParse({ notes: input.notes, marks: input.marks });
+    if (!checked.success) {
+      const issue = checked.error.issues[0];
+      throw new Error(`Invalid session: ${issue?.path.join(".")} ${issue?.message}`);
+    }
     const createdAt = this.clock();
     const helpText = input.helpText?.trim() || undefined;
-    const effectiveTask = {
-      ...task,
-      layers: input.layersUsed,
-      techniqueIds: input.techniquesUsed,
-      targetBpm: input.bpmReached ?? task.targetBpm,
-      noteVal: input.noteVal ?? task.noteVal,
-    };
-    const snapshot = await this.sessions.buildSnapshot(effectiveTask);
+    const studied = new Set(input.marks.map((m) => m.segmentId));
+    const notStudied = target.id === undefined ? [] : planSegmentIds(target.plan).filter((id) => !studied.has(id));
+    // Labels of planned and studied sections alike, so history survives renames and deletions.
+    const snapshot = await this.sessions.buildSnapshot({ ...target, plan: [...target.plan, ...input.marks] });
     return this.sessions.transaction(async (transaction) => {
       const sessionId = await transaction.createSession({
-        taskId,
+        taskId: target.id,
+        ...sessionContext(target),
         date: input.date,
-        bpmReached: input.bpmReached,
-        noteVal: input.noteVal,
-        reps: input.reps,
-        confidence: input.confidence,
-        quality: input.quality,
         notes: input.notes?.trim() || undefined,
-        layersUsed: input.layersUsed,
-        techniquesUsed: input.techniquesUsed,
-        layerScores: input.layerScores,
-        techniqueScores: input.techniqueScores,
-        segmentMetrics: input.segmentMetrics,
+        marks: input.marks,
+        notStudied: notStudied.length ? notStudied : undefined,
         snapshot,
         createdAt,
       });
-      await transaction.completeTask(taskId);
-      if (helpText) await transaction.createHelpRequest({ sessionId, taskId, itemId: task.itemId, question: helpText, createdAt });
+      if (target.id !== undefined) await transaction.syncTaskDone(target.id);
+      if (helpText) await transaction.createHelpRequest({ sessionId, taskId: target.id, itemId: target.itemId, question: helpText, createdAt });
       return sessionId;
     });
   }

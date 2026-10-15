@@ -1,27 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
-import { Link, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import type { LibraryKind, Subject } from "@/domain/entities/common";
-import type { Collection } from "@/domain/entities/collection";
 import type { Session } from "@/domain/entities/session";
 import { subjectColorCss } from "@/lib/subjectColors";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
-import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronRight, ArrowDownUp, BarChart3 } from "lucide-react";
+import { ArrowDownUp, RotateCcw, SearchX } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 
 
+import { PageHeader } from "@/components/shared/PageHeader";
+import { ProgressTabs } from "@/components/shared/ProgressTabs";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pager } from "@/components/shared/Pager";
+import { planSegmentIds } from "@/domain/logic/plan";
+import { sessionLabel } from "@/lib/format";
 import { usePagination } from "@/hooks/usePagination";
 
 type GroupKey = "task" | "day" | "item" | "segment";
@@ -38,7 +39,7 @@ export default function History() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [from, setFrom] = useState(searchParams.get("from") ?? "");
   const [to, setTo] = useState(searchParams.get("to") ?? "");
-  const [detail, setDetail] = useState<Session | null>(null);
+  const navigate = useNavigate();
 
   // Scope session reads by date range when set — avoids loading the entire table
   const sessions = useSessionsInRange(from || undefined, to || undefined);
@@ -54,35 +55,36 @@ export default function History() {
   const collectionById = useMemo(() => new Map((collections ?? []).map((c) => [c.id, c])), [collections]);
   const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id, s])), [subjects]);
 
+  const taskOf = useCallback((s: Session) => (s.taskId === undefined ? undefined : taskById.get(s.taskId)), [taskById]);
   const sessionSortKey = (s: Session) => `${s.date}|${String(s.createdAt).padStart(16, "0")}`;
 
   const filteredSessions = useMemo(() => {
     return (sessions ?? []).filter((s) => {
       if (from && s.date < from) return false;
       if (to && s.date > to) return false;
-      const task = taskById.get(s.taskId);
-      if (subjectFilter !== "all" && task?.subjectId !== Number(subjectFilter)) return false;
+      const task = taskOf(s);
+      if (subjectFilter !== "all" && s.subjectId !== Number(subjectFilter)) return false;
       if (kindFilter !== "all") {
-        const it = task?.itemId ? itemById.get(task.itemId) : undefined;
+        const it = s.itemId ? itemById.get(s.itemId) : undefined;
         if (it?.kind !== kindFilter) return false;
       }
       return true;
     });
-  }, [sessions, from, to, subjectFilter, kindFilter, taskById, itemById]);
+  }, [sessions, from, to, subjectFilter, kindFilter, taskOf, itemById]);
 
   const groups = useMemo(() => {
     const map = new Map<string, { sortKey: string; label: string; sub?: string; sessions: Session[]; subjectIds: number[] }>();
     for (const s of filteredSessions) {
-      const task = taskById.get(s.taskId);
-      const item = task?.itemId ? itemById.get(task.itemId) : undefined;
-      const collection = task?.collectionId ? collectionById.get(task.collectionId) : undefined;
-      const segIds = task?.segmentIds ?? [];
+      const task = taskOf(s);
+      const item = s.itemId ? itemById.get(s.itemId) : undefined;
+      const collection = s.collectionId ? collectionById.get(s.collectionId) : undefined;
+      const segIds = s.marks.flatMap((m) => (m.segmentId === undefined ? [] : [m.segmentId]));
       const seg = segIds.length ? segById.get(segIds[0]) : undefined;
       let key: string, label: string, sub: string | undefined;
       switch (groupBy) {
         case "task":
-          key = `t:${s.taskId}`;
-          label = task?.title ?? t("history.untitled");
+          key = `t:${s.taskId ?? `s${s.id}`}`;
+          label = task?.title ?? s.snapshot?.taskTitle ?? t("history.untitled");
           sub = item?.title ?? collection?.name;
           break;
         case "day":
@@ -105,8 +107,8 @@ export default function History() {
         map.set(key, g);
       }
       g.sessions.push(s);
-      if (task?.subjectId != null && !g.subjectIds.includes(task.subjectId)) {
-        g.subjectIds.push(task.subjectId);
+      if (s.subjectId != null && !g.subjectIds.includes(s.subjectId)) {
+        g.subjectIds.push(s.subjectId);
       }
     }
     const cmp = (a: string, b: string) => sortDir === "newest" ? b.localeCompare(a) : a.localeCompare(b);
@@ -115,7 +117,7 @@ export default function History() {
       g.sortKey = sessionSortKey(g.sessions[sortDir === "newest" ? 0 : g.sessions.length - 1]);
     }
     return Array.from(map.values()).sort((a, b) => cmp(a.sortKey, b.sortKey));
-  }, [filteredSessions, taskById, itemById, segById, collectionById, groupBy, sortDir, t]);
+  }, [filteredSessions, taskOf, itemById, segById, collectionById, groupBy, sortDir, lang, t]);
 
   const { page, setPage, totalPages, pageItems: pageGroups } = usePagination(groups, PAGE_SIZE);
 
@@ -128,16 +130,12 @@ export default function History() {
   }, [searchParams, setPage]);
 
   return (
-    <div className="space-y-5 pb-24">
+    <div className="pb-24">
       <SessionFAB />
-      <div className="flex items-center justify-between">
-        <h2 className="font-serif text-3xl">{t("history.title")}</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {t("history.sessions", { count: filteredSessions.length })}
-        </span>
-      </div>
+      <PageHeader title={t("nav.progress")} subtitle={t("history.sessions", { count: filteredSessions.length })} />
+      <ProgressTabs />
 
-      <Tabs value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setPage(0); }}>
+      <Tabs className="mb-4" value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setPage(0); }}>
         <TabsList className="w-full">
           <TabsTrigger value="day" className="flex-1">{t("history.groupDay")}</TabsTrigger>
           <TabsTrigger value="task" className="flex-1">{t("history.groupTask")}</TabsTrigger>
@@ -146,7 +144,7 @@ export default function History() {
         </TabsList>
       </Tabs>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="mb-3 grid gap-2 sm:grid-cols-2 min-[1000px]:grid-cols-4">
         <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(0); }}>
           <SelectTrigger><SelectValue placeholder={t("common.subject")} /></SelectTrigger>
           <SelectContent>
@@ -206,14 +204,6 @@ export default function History() {
         </button>
       )}
 
-      <Link to="/analytics" className="flex items-center justify-between gap-2 paper-card px-3.5 min-h-[52px] text-sm">
-        <span className="inline-flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-primary" /> {t("analytics.title")}
-        </span>
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      </Link>
-
-
       <div className="flex justify-end">
         <Button size="sm" variant="ghost" onClick={() => setSortDir((d) => d === "newest" ? "oldest" : "newest")}>
           <ArrowDownUp className="h-4 w-4 mr-1" /> {sortDir === "newest" ? t("history.newestFirst") : t("history.oldestFirst")}
@@ -223,11 +213,11 @@ export default function History() {
       {sessions === undefined ? (
         <ListSkeleton />
       ) : pageGroups.length === 0 ? (
-        <EmptyState title={t("history.noSessionsMatch")} />
+        <EmptyState icon={SearchX} title={t("history.noSessionsMatch")} cta={{ label: t("states.clearFilters"), icon: RotateCcw, onClick: () => { setFrom(""); setTo(""); setSearchParams({}); setSubjectFilter("all"); setKindFilter("all"); setPage(0); } }} />
       ) : (
-        <Accordion type="multiple" className="space-y-3">
+        <Accordion type="multiple" className="border-t border-border">
           {pageGroups.map((g, i) => (
-            <AccordionItem key={i} value={`g-${i}`} className="paper-card border-none px-4">
+            <AccordionItem key={i} value={`g-${i}`} className="border-b border-border">
               <AccordionTrigger className="py-4 hover:no-underline gap-2">
                 <div className="flex items-start justify-between gap-2 flex-1 min-w-0 text-left">
                   <div className="min-w-0 flex-1">
@@ -255,12 +245,12 @@ export default function History() {
               <AccordionContent className="pb-3">
                 <ul className="pt-2 border-t border-border/60 space-y-1">
                   {g.sessions.slice(0, 6).map((s) => {
-                    const task = taskById.get(s.taskId);
-                    const subj = task?.subjectId != null ? subjectMap.get(task.subjectId) as Subject | undefined : undefined;
+                    const task = taskOf(s);
+                    const subj = s.subjectId != null ? subjectMap.get(s.subjectId) as Subject | undefined : undefined;
                     return (
                       <li key={s.id}>
                         <button
-                          onClick={() => setDetail(s)}
+                          onClick={() => navigate(`/sessions/${s.id}`)}
                           className="w-full flex items-start gap-2 text-left py-2 px-2 -mx-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 active:bg-accent/60 min-h-[44px]"
                         >
                           <span
@@ -268,14 +258,8 @@ export default function History() {
                             style={{ backgroundColor: subjectColorCss(subj?.color, subj?.type, subj?.customColor) }}
                           />
                           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                            <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title : formatDate(s.date, lang)}</span>
-                            {(s.bpmReached || s.quality) && (
-                              <span className="text-xs tabular-nums">
-                                {s.bpmReached ? `${s.noteVal ? NOTE_GLYPH[s.noteVal] : "♩"}=${s.bpmReached}` : ""}
-                                {s.bpmReached && s.quality ? " · " : ""}
-                                {s.quality ? t(`session.quality${s.quality.charAt(0).toUpperCase() + s.quality.slice(1)}`) : ""}
-                              </span>
-                            )}
+                            <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title ?? s.snapshot?.taskTitle : formatDate(s.date, lang)}</span>
+                            {sessionLabel(s.marks) && <span className="text-xs tabular-nums">{sessionLabel(s.marks)}</span>}
                           </div>
                         </button>
                       </li>
@@ -295,7 +279,6 @@ export default function History() {
 
       <Pager page={page} totalPages={totalPages} onChange={setPage} />
 
-      <SessionDetailSheet open={detail !== null} onOpenChange={(o) => !o && setDetail(null)} session={detail} />
     </div>
   );
 }

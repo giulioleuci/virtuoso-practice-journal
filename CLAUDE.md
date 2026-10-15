@@ -41,7 +41,7 @@ You have access to the `codebase-memory-mcp` tool, which maintains a compiled Kn
 
 ### Data Layer (`src/lib/db.ts`)
 
-All tables are defined here with 5 migration versions. Key tables:
+All tables are defined in `src/infrastructure/dexie/db.ts` (re-exported here); v13 reshaped tasks/sessions/assignments and clears pre-release data. v14 back-fills session subject/content references and wipes nothing. Key tables:
 
 | Table | Purpose |
 |---|---|
@@ -50,11 +50,11 @@ All tables are defined here with 5 migration versions. Key tables:
 | `techniques` | Practice techniques linked to subjects |
 | `library` | Repertoire/exercises/manuals/theory items |
 | `segments` | Sub-sections of library items (e.g., movements) |
-| `tasks` | Daily practice tasks (can be free-form, library item, or collection-based) |
-| `sessions` | Practice session logs with quality ratings and snapshots |
+| `tasks` | Daily practice tasks (free-form, library item, or collection-based); `plan: SegmentEntry[]` holds per-section tempo/layers/techniques |
+| `sessions` | Practice session logs: `marks: SegmentMark[]` (per-section tempo, confidence 1-5, layers, techniques) plus snapshot |
 | `recurrences` | Recurring lesson schedule rules |
 | `lessons` | Lesson logs with snapshot context |
-| `assignments` | Teacher assignments from lessons |
+| `assignments` | Teacher homework attached to a lesson from the moment it is written; `taskIds[]` links it to planned tasks |
 | `collections` | Named groupings of library items |
 | `collectionItems` | Many-to-many join between collections and library items |
 

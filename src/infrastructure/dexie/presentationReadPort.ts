@@ -1,4 +1,5 @@
 import Dexie from "dexie";
+import { meanConfidence, topBpm } from "@/domain/logic/sessionMetrics";
 import type { PresentationReadPort } from "@/application/queries/presentationReadPort";
 import { db } from "./db";
 
@@ -47,10 +48,8 @@ export const dexiePresentationReads: PresentationReadPort = {
         const tasks = await db.tasks.where("date").equals(first).filter(active).toArray();
         const ids = tasks.flatMap((task) => task.id === undefined ? [] : [task.id]);
         const sessions = ids.length ? await db.sessions.where("taskId").anyOf(ids).toArray() : [];
-        const sessionsByTask = sessions.reduce<Record<number, typeof sessions>>((grouped, session) => {
-          (grouped[session.taskId] ??= []).push(session);
-          return grouped;
-        }, {});
+        const sessionsByTask: Record<number, typeof sessions> = {};
+        for (const session of sessions) if (session.taskId !== undefined) (sessionsByTask[session.taskId] ??= []).push(session);
         return { tasks, sessionsByTask };
       })() as unknown as Promise<T>;
       case "tasks.carryover": return (typeof first === "string" && typeof second === "string"
@@ -68,33 +67,26 @@ export const dexiePresentationReads: PresentationReadPort = {
       })() as unknown as Promise<T>;
       case "sessions.lastForTask": return (async () => {
         const [taskId, itemId, before] = parameters;
-        const ids = typeof itemId === "number" ? (await db.tasks.where("itemId").equals(itemId).toArray()).flatMap((task) => task.id === undefined ? [] : [task.id]) : typeof taskId === "number" ? [taskId] : [];
-        if (!ids.length || typeof before !== "string") return null;
-        const sessions = await db.sessions.where("taskId").anyOf(ids).and((session) => session.date < before).sortBy("date");
+        if (typeof before !== "string") return null;
+        const rows = typeof itemId === "number" ? db.sessions.where("itemId").equals(itemId) : typeof taskId === "number" ? db.sessions.where("taskId").equals(taskId) : null;
+        const sessions = rows ? await rows.and((session) => session.date < before).sortBy("date") : [];
         return sessions.at(-1) ?? null;
       })() as unknown as Promise<T>;
       case "sessions.recentBpms": return (async () => {
         const [itemId, before] = parameters;
         if (typeof itemId !== "number" || typeof before !== "string") return [];
-        const ids = (await db.tasks.where("itemId").equals(itemId).toArray()).flatMap((task) => task.id === undefined ? [] : [task.id]);
-        if (!ids.length) return [];
-        const sessions = await db.sessions.where("taskId").anyOf(ids).and((session) => session.date < before && session.bpmReached !== undefined).sortBy("date");
-        return sessions.slice(-3).flatMap((session) => session.bpmReached === undefined ? [] : [session.bpmReached]);
+        const sessions = await db.sessions.where("itemId").equals(itemId).and((session) => session.date < before && topBpm(session.marks) !== undefined).sortBy("date");
+        return sessions.slice(-3).flatMap((session) => topBpm(session.marks) ?? []);
       })() as unknown as Promise<T>;
-      case "sessions.segmentHistory": return (async () => {
-        if (typeof first !== "number") return [];
-        const ids = (await db.tasks.where("itemId").equals(first).toArray()).flatMap((task) => task.id === undefined ? [] : [task.id]);
-        return ids.length ? db.sessions.where("taskId").anyOf(ids).toArray() : [];
-      })() as unknown as Promise<T>;
+      case "sessions.segmentHistory": return (typeof first === "number" ? db.sessions.where("itemId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;
       case "sessions.bpmSuggestion": return (async () => {
         const [itemId, before] = parameters;
         if (typeof itemId !== "number" || typeof before !== "string") return null;
-        const ids = (await db.tasks.where("itemId").equals(itemId).toArray()).flatMap((task) => task.id === undefined ? [] : [task.id]);
-        const sessions = ids.length ? await db.sessions.where("taskId").anyOf(ids).and((session) => session.date < before && !!session.bpmReached).sortBy("date") : [];
-        const lastThree = sessions.slice(-3); const bpm = lastThree[0]?.bpmReached;
-        if (lastThree.length < 3 || bpm === undefined || !lastThree.every((session) => session.bpmReached === bpm && (session.quality === "well" || session.quality === "great") && (session.confidence ?? 0) >= 4)) return null;
+        const sessions = await db.sessions.where("itemId").equals(itemId).and((session) => session.date < before && !!topBpm(session.marks)).sortBy("date");
+        const lastThree = sessions.slice(-3); const bpm = topBpm(lastThree[0]?.marks ?? []);
+        if (lastThree.length < 3 || bpm === undefined || !lastThree.every((session) => topBpm(session.marks) === bpm && (meanConfidence(session.marks) ?? 0) >= 4)) return null;
         const steps = [2, 3, 4, 5, 8, 10]; const step = steps.find((value) => bpm % value === 0) ?? 5; const next = bpm + step;
-        if (next > 400 || (ids.length && await db.sessions.where("taskId").anyOf(ids).and((session) => (session.bpmReached ?? 0) >= next).first())) return null;
+        if (next > 400 || await db.sessions.where("itemId").equals(itemId).and((session) => (topBpm(session.marks) ?? 0) >= next).first()) return null;
         return { reached: bpm, next };
       })() as unknown as Promise<T>;
       case "subjects.one": return (typeof first === "number" ? db.subjects.get(first) : Promise.resolve(undefined)) as unknown as Promise<T>;
@@ -102,7 +94,7 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "profile.current": return db.profile.get("me").then((profile) => profile ?? null) as unknown as Promise<T>;
       case "routines.active": return db.studyRoutines.filter(active).toArray() as unknown as Promise<T>;
       case "recurrences.active": return db.recurrences.filter(active).toArray() as unknown as Promise<T>;
-      case "assignments.pending": return db.assignments.filter((assignment) => !assignment.transformed && !assignment.ignored).toArray() as unknown as Promise<T>;
+      case "assignments.pending": return db.assignments.filter((assignment) => !assignment.taskIds.length && !assignment.ignored).toArray() as unknown as Promise<T>;
       case "helpRequests.answeredCount": return (typeof first === "number" ? db.helpRequests.where("itemId").equals(first).filter((request) => !!request.answer).count() : Promise.resolve(0)) as unknown as Promise<T>;
       case "helpRequests.item": return (typeof first === "number" ? db.helpRequests.where("itemId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;
       case "helpRequests.answeredItem": return (typeof first === "number" ? db.helpRequests.where("itemId").equals(first).filter((request) => !!request.answer).toArray() : Promise.resolve([])) as unknown as Promise<T>;
@@ -110,11 +102,6 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "lessons.all": return db.lessons.orderBy("date").reverse().toArray() as unknown as Promise<T>;
       case "assignments.all": return db.assignments.toArray() as unknown as Promise<T>;
       case "assignments.lesson": return (typeof first === "number" ? db.assignments.where("lessonId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;
-      case "pendingAssignments.subject": return (async () => {
-        if (typeof first !== "number") return [];
-        const rows = await db.pendingAssignments.where("subjectId").equals(first).toArray();
-        return typeof second === "number" ? rows.filter((row) => row.recurrenceId == null || row.recurrenceId === second) : rows;
-      })() as unknown as Promise<T>;
       case "helpRequests.all": return db.helpRequests.toArray() as unknown as Promise<T>;
       case "helpRequests.openCount": return db.helpRequests.filter((request) => !request.resolved).count() as unknown as Promise<T>;
       case "collections.active": return db.collections.filter((row) => active(row) && (!first || row.kind === first)).toArray() as unknown as Promise<T>;
@@ -131,9 +118,6 @@ export const dexiePresentationReads: PresentationReadPort = {
   },
   assignmentsForLesson(lessonId) {
     return this.read("assignments.lesson", [lessonId]);
-  },
-  pendingAssignmentsForSubject(subjectId, recurrenceId) {
-    return this.read("pendingAssignments.subject", [subjectId, recurrenceId]);
   },
   openHelpRequestCount() {
     return this.read("helpRequests.openCount");

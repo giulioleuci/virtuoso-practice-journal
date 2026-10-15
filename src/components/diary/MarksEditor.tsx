@@ -1,0 +1,90 @@
+import { toast } from "sonner";
+import { RATING_KEYS, type RatingKey, type SegmentMark } from "@/domain/entities/common";
+import { emptyEntry } from "@/domain/logic/plan";
+import { missingRatings } from "@/domain/logic/sessionMetrics";
+import { useI18n } from "@/lib/i18n";
+import { BpmCoupler } from "@/components/library/BpmCoupler";
+import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+import { RatingScale } from "@/components/shared/RatingScale";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+
+interface Option<T extends string | number> { value: T; label: string }
+
+/** One row per section: studied or not, the three ratings up front, tempo, then layers and techniques on demand. */
+export function MarksEditor({ marks, onChange, sections, seed = emptyEntry, layerOptions, techniqueOptions, isTheory, requireRatings = true }: {
+  marks: SegmentMark[];
+  onChange: (marks: SegmentMark[]) => void;
+  /** Sections on offer; empty or missing means one whole-scope entry. */
+  sections?: { id: number; label: string }[];
+  /** Entry added when a section is switched to studied (plan targets, never ratings). */
+  seed?: (segmentId: number) => SegmentMark;
+  layerOptions: Option<string>[];
+  techniqueOptions: Option<number>[];
+  isTheory: boolean;
+  /** New sessions need every rating; edits of older records do not. */
+  requireRatings?: boolean;
+}) {
+  const { t } = useI18n();
+  const rows: { id?: number; label: string }[] = sections?.length ? sections : [{ label: "" }];
+  const patch = (segmentId: number | undefined, p: Partial<SegmentMark>) => onChange(marks.map((m) => (m.segmentId === segmentId ? { ...m, ...p } : m)));
+  const setStudied = (segmentId: number, on: boolean) => onChange(on ? [...marks, seed(segmentId)] : marks.filter((m) => m.segmentId !== segmentId));
+  const name = (key: RatingKey) => (key === "confidence" ? t("session.confidenceLabel") : t(`rating.${key}`));
+  const labels = (key: RatingKey) => [1, 2, 3, 4, 5].map((n) => (key === "confidence" ? t("common.starRating", { count: n }) : t(`rating.${key}.${n}`)));
+  const applyToOthers = (from: SegmentMark) => {
+    const before = marks;
+    onChange(marks.map((m) => (m === from ? m : { ...m, mood: from.mood, focus: from.focus, confidence: from.confidence })));
+    toast(t("rating.applied"), { action: { label: t("common.undo"), onClick: () => onChange(before) } });
+  };
+
+  return (
+    <div className="divide-y divide-border">
+      {rows.map(({ id, label }) => {
+        const m = marks.find((x) => x.segmentId === id);
+        const missing = m && requireRatings ? missingRatings(m) : [];
+        const others = m ? marks.filter((x) => x !== m) : [];
+        const replaces = m ? others.filter((x) => RATING_KEYS.some((k) => x[k] !== undefined && x[k] !== m[k])).length : 0;
+        return (
+          <section key={id ?? "whole"} aria-label={label || undefined} className="space-y-4 py-5 first:pt-0 last:pb-0">
+            {id !== undefined && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-serif text-lg font-semibold leading-tight">{label}</h3>
+                <label className="inline-flex min-h-11 items-center gap-2 text-sm">
+                  <Switch checked={!!m} onCheckedChange={(on) => setStudied(id, on)} aria-label={`${label}: ${t("rating.studied")}`} />
+                  {m ? t("rating.studied") : t("rating.notStudied")}
+                </label>
+              </div>
+            )}
+            {m && (
+              <>
+                {missing.length > 0 && <p className="text-xs font-medium text-destructive">{t("rating.missing", { fields: missing.map(name).join(", ") })}</p>}
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {RATING_KEYS.map((key) => (
+                    <RatingScale key={key} label={name(key)} question={t(`rating.${key}Question`)} labels={labels(key)} value={m[key]}
+                      onChange={(value) => patch(id, { [key]: value } as Partial<SegmentMark>)} unanswered={t("rating.unanswered")} required={requireRatings} />
+                  ))}
+                </div>
+                {others.length > 0 && missingRatings(m).length === 0 && (
+                  <div className="space-y-1">
+                    <Button type="button" size="sm" variant="outline" onClick={() => applyToOthers(m)}>{t("rating.applyToOthers")}</Button>
+                    {replaces > 0 && <p className="text-xs text-muted-foreground">{t("rating.applyReplaces", { count: replaces })}</p>}
+                  </div>
+                )}
+                {!isTheory && <BpmCoupler bpm={m.bpm} noteVal={m.noteVal} onChange={({ bpm, noteVal }) => patch(id, { bpm, noteVal })} label={t("session.bpmReached")} />}
+                <details open={isTheory} className="border-t border-border pt-3">
+                  <summary className="cursor-pointer list-none text-[0.8125rem] font-medium text-muted-foreground hover:text-foreground">
+                    {t("session.workedOn", { layers: m.layers.length, techniques: m.techniques.length })}
+                  </summary>
+                  <div className="mt-3 space-y-4">
+                    <MultiChipPicker label={t("session.layers")} options={layerOptions} value={m.layers} onChange={(layers) => patch(id, { layers })} />
+                    <MultiChipPicker label={t("session.techniquesPracticed")} options={techniqueOptions} value={m.techniques} onChange={(techniques) => patch(id, { techniques })} />
+                  </div>
+                </details>
+              </>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}

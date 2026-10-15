@@ -5,14 +5,15 @@ import type { Task } from "@/domain/entities/task";
 import type { Session } from "@/domain/entities/session";
 import type { Profile } from "@/domain/entities/profile";
 import type { LessonRecurrence } from "@/domain/entities/lesson";
-import type { NoteVal, Subject } from "@/domain/entities/common";
+import type { Subject } from "@/domain/entities/common";
+import { remainingSegmentIds } from "@/domain/logic/plan";
 import { tasksService, sessionsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
-import { today, dayKey, formatDate, now } from "@/lib/date";
+import { today, dayKey, formatDate, now, addDays, parseDayKey, getDefaultWeekStartsOn } from "@/lib/date";
 import { slotForDate } from "@/lib/recurrence";
 import { computeStreakFromSessions } from "@/lib/domain/streak";
-import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
-import { subjectBorderStyle, subjectBorderStyleLight, subjectColorCss, COLOR_CLASSES, getSubjectColor } from "@/lib/subjectColors";
+import { planTempoLabel, sessionLabel } from "@/lib/format";
+import { subjectColorCss } from "@/lib/subjectColors";
 import {
   AddIcon,
   CompleteIcon,
@@ -20,35 +21,30 @@ import {
   PlayIcon,
   CarryOverIcon,
   CloseIcon,
-  BackIcon,
-  ChevronRightIcon,
   ResetIcon,
   HideIcon,
   LessonIcon,
   ArrowRightIcon,
-  StreakIcon,
   SessionIcon,
-  CalendarIcon,
-  BpmIcon,
 } from "@/lib/icons";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Link, useNavigate, useOutletContext } from "react-router-dom";
+import { Link, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { SessionLogSheet } from "@/components/diary/SessionLogSheet";
-import { SessionDetailSheet } from "@/components/diary/SessionDetailSheet";
 import { PracticeMode } from "@/components/diary/PracticeMode";
 import { LastSessionStrip } from "@/components/diary/LastSessionStrip";
 import { CarryoverBatchActions } from "@/components/diary/CarryoverBatchActions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
-import { MessageSquareQuote } from "lucide-react";
+import { Archive, CalendarPlus, Check, CheckSquare, MessageSquareQuote, Trash2 } from "lucide-react";
 import { SessionFAB } from "@/components/diary/SessionFAB";
+import { CompletionBar } from "@/components/diary/CompletionBar";
+import { QuickAdd } from "@/components/diary/QuickAdd";
+import { WeekStrip } from "@/components/diary/WeekStrip";
 import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
-import { AddHomeworkSheet } from "@/components/lessons/AddHomeworkSheet";
-import { ClipboardPlus } from "lucide-react";
+import { HomeworkInput } from "@/components/lessons/HomeworkInput";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Pager } from "@/components/shared/Pager";
 import {
   AlertDialog,
@@ -70,8 +66,13 @@ export default function Diary() {
   const navigate = useNavigate();
   const { profile } = useOutletContext<{ profile: Profile }>();
   const todayKey = today();
+  const [params, setParams] = useSearchParams();
+  const dateParam = params.get("date");
+  const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayKey;
+  const isToday = date === todayKey;
+  const selectDay = (d: string) => setParams(d === todayKey ? {} : { date: d }, { replace: true });
 
-  const diary = usePresentationRead<{ tasks: Task[]; sessionsByTask: Record<number, Session[]> }>("tasks.diaryDate", [todayKey]);
+  const diary = usePresentationRead<{ tasks: Task[]; sessionsByTask: Record<number, Session[]> }>("tasks.diaryDate", [date]);
   const { tasks, sessionsByTask } = diary ?? { tasks: undefined, sessionsByTask: {} };
   const pendingAssignments = usePresentationRead<unknown[]>("assignments.pending");
   const pendingCount = pendingAssignments?.length ?? 0;
@@ -119,12 +120,7 @@ export default function Diary() {
 
   const carryoverTasks = usePresentationRead<Task[]>("tasks.carryover", [carryoverFrom, todayKey]);
 
-  const [logTask, setLogTask] = useState<Task | null>(null);
-  const [logPrefill, setLogPrefill] = useState<
-    { bpm?: number; noteVal?: NoteVal; notes?: string } | undefined
-  >();
   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
-  const [detailSession, setDetailSession] = useState<Session | null>(null);
   const [answersFor, setAnswersFor] = useState<{ itemId: number; title: string } | null>(null);
   const answeredItemIds = usePresentationRead<Set<number>>("helpRequests.answeredItemIds") ?? new Set<number>();
   const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
@@ -132,6 +128,11 @@ export default function Diary() {
   const [selectedCarryIds, setSelectedCarryIds] = useState<number[]>([]);
   const [ignoredPage, setIgnoredPage] = useState(0);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [completed, setCompleted] = useState<Task | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [pickedIds, setPickedIds] = useState<number[]>([]);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const CARRY_PAGE_SIZE = 4;
   const IGNORED_PAGE_SIZE = 5;
 
@@ -156,7 +157,8 @@ export default function Diary() {
 
   const taskGroups = useMemo(() => {
     const groups = new Map<number, Task[]>();
-    for (const task of filteredTasks ?? []) {
+    // Open tasks first; Array.sort is stable so the plan order is otherwise kept.
+    for (const task of [...(filteredTasks ?? [])].sort((a, b) => Number(a.done) - Number(b.done))) {
       const group = groups.get(task.subjectId) ?? [];
       group.push(task);
       groups.set(task.subjectId, group);
@@ -168,451 +170,421 @@ export default function Diary() {
   const heroQuote = useMemo(() => pickQuote(undefined, lang, todayKey), [lang, todayKey]);
   const showHeroQuote = profile?.hideHeroQuote !== true;
 
+  const dot = (s?: Subject) => (
+    <span
+      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+      style={{ backgroundColor: subjectColorCss(s?.color, s?.type, s?.customColor) }}
+      title={s?.name}
+      role="img"
+      aria-label={s?.name}
+    />
+  );
+  const firstOpenId = filteredTasks?.find((x) => !x.done)?.id;
+
+  // One-tap completion marks the task done; results are logged separately and never invented.
+  const complete = async (task: Task) => {
+    try {
+      await tasksService.toggleDone(task.id!, true);
+      setCompleted(task);
+    } catch {
+      toast.error(t("rate.failed"));
+    }
+  };
+  const undoComplete = async () => {
+    if (!completed?.id) return;
+    const task = completed;
+    setCompleted(null);
+    await tasksService.toggleDone(task.id!, false);
+    toast(t("toast.taskReopened"));
+  };
+  const picked = (filteredTasks ?? []).filter((x) => x.id !== undefined && pickedIds.includes(x.id));
+  const tomorrow = dayKey(addDays(parseDayKey(todayKey), 1));
+  const runBulk = async (action: (items: Task[]) => Promise<void>, messageKey: string) => {
+    if (bulkBusy || !picked.length) return;
+    const count = picked.length;
+    setBulkBusy(true);
+    try {
+      await action(picked);
+      toast.success(t(messageKey, { count }));
+      setPickedIds([]);
+    } catch {
+      toast.error(t("diary.batchError"));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+  const togglePicked = (id: number, on: boolean) => setPickedIds((prev) => (on ? [...prev.filter((v) => v !== id), id] : prev.filter((v) => v !== id)));
+  const stopSelecting = () => { setSelecting(false); setPickedIds([]); };
+
   return (
-    <div className="space-y-6 pb-24">
+    <div className="pb-24">
       <SessionFAB />
 
-      {/* Hero card */}
-      <section className="paper-card p-6">
-        <h2 className="font-serif text-3xl">{t("diary.hello", { name: profile?.name ?? "Musician" })}</h2>
-        <div className="flex items-center justify-between mt-3">
-          <p className="text-sm text-muted-foreground tabular-nums">
-            {t("diary.doneSummary", { done: doneCount, total: totalCount })}
-          </p>
-          {streak > 0 && (
-            <div className="flex items-center gap-1.5 text-sm text-primary">
-              <StreakIcon className="h-4 w-4" />
-              <span className="font-semibold tabular-nums">{t("common.daysShort", { count: streak })}</span>
-              {bestStreak > streak && (
-                <span className="text-xs text-muted-foreground">· {t("diary.bestStreak", { count: bestStreak })}</span>
+      <PageHeader
+        title={isToday ? t("diary.hello", { name: profile?.name ?? "Musician" }) : t("diary.dayTasks")}
+        subtitle={
+          <span className="tabular-nums">
+            {formatDate(date, lang, "long")}
+            <span className="hidden min-[700px]:inline"> · </span>
+            <span className="block min-[700px]:inline">{t("diary.doneSummary", { done: doneCount, total: totalCount })}</span>
+          </span>
+        }
+      />
+
+      <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
+        <div className="min-w-0 space-y-8">
+          {pendingCount > 0 && (
+            <Link to="/lessons/assignments" className="flex items-center gap-3 border-y border-destructive/40 py-3 text-sm font-medium text-destructive hover:bg-destructive/5">
+              <LessonIcon className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 flex-1 tabular-nums">{t("diary.homework", { count: pendingCount })}</span>
+              <ArrowRightIcon className="h-4 w-4 shrink-0" />
+            </Link>
+          )}
+
+          {allDone && tasks && tasks.length > 0 && (
+            <EndOfDaySummary tasks={tasks} sessionsByTask={sessionsByTask} t={t} navigate={navigate} />
+          )}
+
+          <section>
+            <WeekStrip date={date} weekStartsOn={profile?.weekStartsOn ?? getDefaultWeekStartsOn(lang)} onSelect={selectDay} />
+            <SectionHeader
+              title={isToday ? t("diary.today") : formatDate(date, lang, "long")}
+              action={
+                <>
+                  {!isToday && (
+                    <Button size="sm" variant="ghost" onClick={() => selectDay(todayKey)}>{t("diary.backToToday")}</Button>
+                  )}
+                  <Link to="/tasks" className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground">
+                    <TasksIcon className="h-4 w-4" /> {t("common.all")}
+                  </Link>
+                </>
+              }
+            />
+            <div className="mb-2 flex items-center justify-between gap-3 text-[0.8125rem] text-muted-foreground">
+              <span className="tabular-nums">{t("diary.doneSummary", { done: doneCount, total: totalCount })}</span>
+              {!!totalCount && (
+                <Button size="sm" variant="ghost" aria-pressed={selecting} onClick={() => (selecting ? stopSelecting() : setSelecting(true))}>
+                  {selecting ? <Check /> : <CheckSquare />} {selecting ? t("diary.selectDone") : t("diary.select")}
+                </Button>
               )}
             </div>
-          )}
-        </div>
-        {showHeroQuote && (
-          <figure className="mt-4 pt-4 border-t border-border/40">
-            <p className="font-serif italic text-foreground/80 leading-snug">"{heroQuote.text}"</p>
-            <figcaption className="text-xs uppercase tracking-widest text-muted-foreground mt-1.5">— {heroQuote.author}</figcaption>
-          </figure>
-        )}
-      </section>
+            <Progress value={totalCount ? (doneCount / totalCount) * 100 : 0} className="h-1.5" aria-label={t("diary.doneSummary", { done: doneCount, total: totalCount })} />
+            <QuickAdd collapsible date={date} subjectId={selectedSubjectId} onAdded={(d) => d !== date && selectDay(d)} />
 
-
-      {/* Lessons today banner */}
-      {todayLessons && todayLessons.length > 0 && (
-        <div className="space-y-1">
-          {todayLessons.map(({ rec, slot }) => (
-            <LessonTodayBanner key={`${rec.id}-${slot?.dayOfWeek}-${slot?.startTime}`} rec={rec} slot={slot} subjects={subjects ?? []} t={t} navigate={navigate} />
-          ))}
-        </div>
-      )}
-
-
-      {pendingCount > 0 && (
-        <Link
-          to="/lessons/assignments"
-          className="paper-card p-3 flex items-center gap-3 hover:-translate-y-0.5 transition-transform border-2 border-destructive/60 bg-destructive/5"
-        >
-          <LessonIcon className="h-4 w-4 text-destructive shrink-0" />
-          <span className="text-sm flex-1 min-w-0 break-words font-medium text-destructive tabular-nums">
-            {t("diary.homework", { count: pendingCount })}
-          </span>
-          <ArrowRightIcon className="h-4 w-4 text-destructive shrink-0" />
-        </Link>
-      )}
-
-      {/* End-of-day summary */}
-      {allDone && tasks && tasks.length > 0 && (
-        <EndOfDaySummary tasks={tasks} sessionsByTask={sessionsByTask} t={t} navigate={navigate} />
-      )}
-
-      <section>
-        <SectionHeader
-          title={t("diary.today")}
-          action={
-            <>
-              <Link
-                to="/tasks"
-                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2 py-1"
-              >
-                <TasksIcon className="h-4 w-4" /> {t("common.all")}
-              </Link>
-              <Button size="sm" variant="ghost" onClick={() => navigate("/tasks/new", { state: { date: todayKey } })}>
-                <AddIcon className="h-4 w-4 mr-1" /> {t("diary.newTask")}
-              </Button>
-            </>
-          }
-        />
-
-        {/* Subject quick-filter */}
-        {subjectFilterOptions.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar">
-            <button
-              onClick={() => setSelectedSubjectId(null)}
-              className={cn(
-                "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
-                selectedSubjectId === null
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t("diary.allSubjects")} {tasks ? `${tasks.length}` : ""}
-            </button>
-            {subjectFilterOptions.map((subj) => {
-              const bgColor = subjectColorCss(subj.color, subj.type, subj.customColor);
-              const count = tasks?.filter((t) => t.subjectId === subj.id).length ?? 0;
-              const isSelected = selectedSubjectId === subj.id;
-              return (
-                <button
-                  key={subj.id}
-                  onClick={() => setSelectedSubjectId(isSelected ? null : subj.id)}
-                  className={cn(
-                    "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
-                    isSelected ? "text-white" : "bg-muted text-muted-foreground hover:text-foreground",
-                  )}
-                  style={isSelected ? { backgroundColor: bgColor } : undefined}
-                >
-                  {subj.name} {count}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {tasks === undefined ? (
-          <div className="space-y-2">
-            <div className="paper-skeleton h-20" />
-            <div className="paper-skeleton h-20" />
-          </div>
-        ) : !tasks?.length ? (
-          <EmptyState
-            hint={t("diary.empty")}
-            quote={emptyQuote}
-            cta={{ label: t("diary.beginTask"), onClick: () => navigate("/tasks/new", { state: { date: todayKey } }) }}
-          />
-        ) : !filteredTasks?.length ? (
-          <p className="text-sm text-muted-foreground text-center py-6">{t("common.noResults")}</p>
-        ) : (
-          <div className="space-y-6">
-            {taskGroups.map(({ subjectId, items }) => {
-              const groupSubject = subjectMap.get(subjectId);
-              const completed = items.filter(task => task.done).length;
-              return <section key={subjectId} aria-label={groupSubject?.name ?? t("diary.otherSubject")} className="space-y-3">
-                <div className="border-l-4 pl-3" style={subjectBorderStyle(groupSubject?.color, groupSubject?.type, groupSubject?.customColor)}>
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <h3 className="font-serif text-xl break-words">{groupSubject?.name ?? t("diary.otherSubject")}</h3>
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{t("diary.groupProgress", { done: completed, total: items.length })}</span>
-                  </div>
-                  <Progress value={completed / items.length * 100} className="h-1.5" aria-label={t("diary.groupProgress", { done: completed, total: items.length })} />
-                </div>
-                <ul className="space-y-2">
-            {items.map((task) => {
-              const sess = (task.id && sessionsByTask[task.id]) || [];
-              const last = sess[sess.length - 1];
-                const subject = subjectMap.get(task.subjectId);
-              return (
-                <li key={task.id}>
-                  <div
-                    className={cn(
-                      "paper-card w-full relative border-l-4 overflow-hidden transition-all hover:-translate-y-0.5",
-                      task.done && "opacity-70",
-                    )}
-                    style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
-                  >
+            {subjectFilterOptions.length > 1 && (
+              <div className="no-scrollbar mb-2 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border">
+                {[null, ...subjectFilterOptions].map((subj) => {
+                  const selected = (subj?.id ?? null) === selectedSubjectId;
+                  return (
                     <button
-                      onClick={() => {
-                        if (task.done && last) {
-                          setDetailSession(last as Session);
-                        } else {
-                          setLogPrefill(undefined);
-                          setLogTask(task);
-                        }
-                      }}
-                      className="w-full text-left px-4 pt-4 pb-3 flex gap-3 items-start"
+                      key={subj?.id ?? "all"}
+                      onClick={() => setSelectedSubjectId(subj?.id ?? null)}
+                      aria-pressed={selected}
+                      className={cn(
+                        "-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-2 text-xs font-medium transition-colors",
+                        selected ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
+                      )}
                     >
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (task.done) {
-                            setConfirmUncomplete(task);
-                          } else {
-                            await sessionsService.logWithCompletion(task, {
-                              date: todayKey,
-                              layersUsed: [],
-                              techniquesUsed: [],
-                            });
-                            toast.success(t("toast.sessionLogged"));
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            (e.currentTarget as HTMLElement).click();
-                          }
-                        }}
-                        aria-label={task.done ? t("diary.markNotDone") : t("tasks.markDone")}
-                        className="shrink-0 inline-flex items-center justify-center h-7 w-7 -m-1 p-1"
-                      >
-                        {task.done ? (
-                          <span className="h-5 w-5 rounded-[4px] bg-primary flex items-center justify-center">
-                            <CompleteIcon className="h-3 w-3 text-primary-foreground" strokeWidth={3} />
-                          </span>
-                        ) : (
-                          <span className="h-5 w-5 rounded-[4px] border-2 border-muted-foreground block" />
-                        )}
-                      </span>
-
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className={cn("font-medium leading-snug break-words", task.done && "line-through")}>
-                          {task.title}
-                        </div>
-                        {task.targetBpm && (
-                          <div className="text-xs text-muted-foreground tabular-nums">
-                            {t("diary.targetBpm", {
-                              note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩",
-                              bpm: task.targetBpm,
-                            })}
-                          </div>
-                        )}
-                        {task.executionNotes && (
-                          <div className="text-xs text-muted-foreground/80 italic line-clamp-2">
-                            {task.executionNotes}
-                          </div>
-                        )}
-                        {task.studyRoutineId && routineNames.get(task.studyRoutineId) && (
-                          <div className="text-[10px] text-muted-foreground/70">
-                            {t("diary.routine")}: {routineNames.get(task.studyRoutineId)}
-                          </div>
-                        )}
-                        {last && (
-                          <div className="text-xs text-primary tabular-nums inline-flex items-center gap-1">
-                            {last.bpmReached && (
-                              <>
-                                {last.noteVal ? NOTE_GLYPH[last.noteVal] : "♩"} = {last.bpmReached} ·
-                              </>
-                            )}
-                            {last.quality && QUALITY_SYMBOL[last.quality]}
-                          </div>
-                        )}
-                      </div>
+                      {subj && dot(subj)}
+                      {subj ? subj.name : t("diary.allSubjects")}
+                      <span className="font-numeric tabular-nums">{subj ? tasks?.filter((x) => x.subjectId === subj.id).length : tasks?.length}</span>
                     </button>
+                  );
+                })}
+              </div>
+            )}
 
-                    {!task.done && task.itemId && (
-                      <div className="px-4 pb-3">
-                        <LastSessionStrip task={task} compact />
+            {tasks === undefined ? (
+              <div className="space-y-2">
+                <div className="paper-skeleton h-20" />
+                <div className="paper-skeleton h-20" />
+              </div>
+            ) : !tasks?.length ? (
+              <EmptyState
+                hint={t("diary.empty")}
+                quote={emptyQuote}
+                cta={{ label: t("diary.beginTask"), onClick: () => navigate("/tasks/new", { state: { date } }) }}
+              />
+            ) : !filteredTasks?.length ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">{t("common.noResults")}</p>
+            ) : (
+              <div className="space-y-6">
+                {taskGroups.map(({ subjectId, items }) => {
+                  const groupSubject = subjectMap.get(subjectId);
+                  const completed = items.filter((task) => task.done).length;
+                  return (
+                    <section key={subjectId} aria-label={groupSubject?.name ?? t("diary.otherSubject")}>
+                      <div className="mb-1 flex items-center justify-between gap-3">
+                        <h3 className="flex min-w-0 items-center gap-2 font-serif text-xl font-semibold">
+                          {dot(groupSubject)}
+                          <span className="break-words">{groupSubject?.name ?? t("diary.otherSubject")}</span>
+                        </h3>
+                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{t("diary.groupProgress", { done: completed, total: items.length })}</span>
                       </div>
-                    )}
+                      <Progress value={(completed / items.length) * 100} className="h-1" aria-label={t("diary.groupProgress", { done: completed, total: items.length })} />
+                      <ul className="divide-y divide-border">
+                        {items.map((task) => {
+                          const sess = (task.id && sessionsByTask[task.id]) || [];
+                          const last = sess[sess.length - 1];
+                          const left = !task.done && sess.length ? remainingSegmentIds(task.plan, sess).length : 0;
+                          return (
+                            <li key={task.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 py-[18px]">
+                              {selecting ? (
+                                <Checkbox
+                                  className="mt-1 h-5 w-5"
+                                  checked={task.id !== undefined && pickedIds.includes(task.id)}
+                                  aria-label={t("diary.selectTask", { title: task.title })}
+                                  onCheckedChange={(on) => task.id !== undefined && togglePicked(task.id, on === true)}
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  aria-label={task.done ? t("diary.markNotDone") : t("tasks.markDone")}
+                                  onClick={() => (task.done ? setConfirmUncomplete(task) : void complete(task))}
+                                  className={cn(
+                                    "relative mt-0.5 grid h-6 w-6 shrink-0 before:absolute before:-inset-2.5 before:content-[''] place-items-center rounded-full border-2 transition-colors",
+                                    task.done ? "border-primary bg-primary" : "border-muted-foreground hover:border-primary",
+                                  )}
+                                >
+                                  {task.done && <CompleteIcon className="h-3.5 w-3.5 text-primary-foreground" strokeWidth={3} />}
+                                </button>
+                              )}
 
-                    {task.itemId && answeredItemIds.has(task.itemId) && (
-                      <button
-                        onClick={() => setAnswersFor({ itemId: task.itemId!, title: task.title })}
-                        className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground border-t border-border/40 active:bg-accent/40 transition-colors"
-                      >
-                        <MessageSquareQuote className="h-3.5 w-3.5" />
-                        {t("teacherAnswers.openLabel")}
-                      </button>
-                    )}
+                              <div className="min-w-[calc(100%-2.25rem)] flex-1 space-y-1 min-[700px]:min-w-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (task.done && last) navigate(`/sessions/${last.id}`);
+                                    else navigate(`/log?task=${task.id}`);
+                                  }}
+                                  className={cn("text-left text-base font-medium leading-snug break-words", task.done && "text-muted-foreground line-through")}
+                                >
+                                  {task.title}
+                                </button>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
+                                  {planTempoLabel(task.plan) && <span>{planTempoLabel(task.plan)}</span>}
+                                  {task.studyRoutineId && routineNames.get(task.studyRoutineId) && (
+                                    <span>{t("diary.routine")}: {routineNames.get(task.studyRoutineId)}</span>
+                                  )}
+                                  {last && sessionLabel(last.marks) && <span className="text-primary">{sessionLabel(last.marks)}</span>}
+                                  {left > 0 && <span>{t("diary.remaining", { count: left })}</span>}
+                                </div>
+                                {task.executionNotes && <p className="line-clamp-2 text-xs italic text-muted-foreground">{task.executionNotes}</p>}
+                                {!task.done && task.itemId && <LastSessionStrip task={task} compact />}
+                                {task.itemId && answeredItemIds.has(task.itemId) && (
+                                  <button
+                                    onClick={() => setAnswersFor({ itemId: task.itemId!, title: task.title })}
+                                    className="flex w-fit items-center gap-1.5 text-xs font-medium text-primary hover:underline underline-offset-4"
+                                  >
+                                    <MessageSquareQuote className="h-3.5 w-3.5" />
+                                    {t("teacherAnswers.openLabel")}
+                                  </button>
+                                )}
+                              </div>
 
-                    {!task.done && (
-                      <button
-                        onClick={() => setPracticeTask(task)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium uppercase tracking-wider bg-primary/10 text-primary border-t border-border/40 active:bg-primary/20 transition-colors"
-                        aria-label={t("diary.startPractice")}
-                      >
-                        <PlayIcon className="h-4 w-4" /> {t("diary.start")}
-                      </button>
-                    )}
-                  </div>
-                </li>
+                              {!task.done && !selecting && (
+                                <Button
+                                  variant={task.id === firstOpenId ? "default" : "outline"}
+                                  onClick={() => setPracticeTask(task)}
+                                  aria-label={`${t("diary.startPractice")}: ${task.title}`}
+                                  className="max-[699px]:ml-9 max-[699px]:min-h-11"
+                                >
+                                  <PlayIcon /> {t("diary.start")}
+                                </Button>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  );
+                })}
+              </div>
+            )}
+          </section>
 
-              );
-            })}
-                </ul>
-              </section>;
-            })}
-          </div>
-        )}
-      </section>
-
-      {!!carryoverTasks?.length && (
-        <section>
-          <SectionHeader
-            title={t("diary.unfinished")}
-            action={
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {t("diary.fromLastDays", { count: carryoverDays })}
-              </span>
-            }
-          />
-          <CarryoverBatchActions tasks={carryoverTasks} todayKey={todayKey} selectedIds={selectedCarryIds} onSelectionChange={setSelectedCarryIds} />
-          {(() => {
-            const total = carryoverTasks.length;
-            const totalPages = Math.max(1, Math.ceil(total / CARRY_PAGE_SIZE));
-            const page = Math.min(carryPage, totalPages - 1);
-            const slice = carryoverTasks.slice(page * CARRY_PAGE_SIZE, page * CARRY_PAGE_SIZE + CARRY_PAGE_SIZE);
-            return (
-              <>
-                <ul className="space-y-2">
-                  {slice.map((task) => {
-                    const subject = subjectMap.get(task.subjectId);
-                    return (
-                      <li key={task.id}>
-                        <div
-                          className="paper-card p-3 w-full flex flex-col gap-2.5 border-l-4"
-                          style={subjectBorderStyleLight(subject?.color, subject?.type, subject?.customColor)}
-                        >
-                          {/* Title */}
-                          <label className="flex min-h-11 items-center gap-3">
-                            <Checkbox checked={task.id !== undefined && selectedCarryIds.includes(task.id)}
+          {isToday && !!carryoverTasks?.length && (
+            <section>
+              <SectionHeader
+                title={t("diary.unfinished")}
+                action={<span className="text-xs tabular-nums text-muted-foreground">{t("diary.fromLastDays", { count: carryoverDays })}</span>}
+              />
+              <CarryoverBatchActions tasks={carryoverTasks} todayKey={todayKey} selectedIds={selectedCarryIds} onSelectionChange={setSelectedCarryIds} />
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil(carryoverTasks.length / CARRY_PAGE_SIZE));
+                const page = Math.min(carryPage, totalPages - 1);
+                const slice = carryoverTasks.slice(page * CARRY_PAGE_SIZE, page * CARRY_PAGE_SIZE + CARRY_PAGE_SIZE);
+                return (
+                  <>
+                    <ul className="divide-y divide-border">
+                      {slice.map((task) => {
+                        const subject = subjectMap.get(task.subjectId);
+                        return (
+                          <li key={task.id} className="flex items-center gap-3 py-3.5">
+                            <Checkbox
+                              checked={task.id !== undefined && selectedCarryIds.includes(task.id)}
                               aria-label={t("diary.selectTask", { title: task.title })}
                               onCheckedChange={(checked) => {
                                 const id = task.id;
                                 if (id === undefined) return;
-                                setSelectedCarryIds(previous => checked ? [...previous.filter(value => value !== id), id] : previous.filter(value => value !== id));
-                              }} />
-                            <span className="font-serif font-semibold text-[15px] leading-snug break-words">{task.title}</span>
-                          </label>
-
-                          {/* Metadata row: date + BPM */}
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
-                              <CalendarIcon className="h-3 w-3" />
-                              {formatDate(task.date, lang, "short", true)}
-                            </span>
-                            {task.targetBpm && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[11px] text-muted-foreground tabular-nums">
-                                <BpmIcon className="h-3 w-3" />
-                                {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"} = {task.targetBpm}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-stretch gap-2 pt-0.5">
-                            <button
+                                setSelectedCarryIds((previous) => (checked ? [...previous.filter((value) => value !== id), id] : previous.filter((value) => value !== id)));
+                              }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="break-words text-sm font-medium">{task.title}</div>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground tabular-nums">
+                                {dot(subject)}
+                                <span>{formatDate(task.date, lang, "short", true)}</span>
+                                {planTempoLabel(task.plan) && <span>{planTempoLabel(task.plan)}</span>}
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              className="min-h-11 sm:min-h-0"
+                              aria-label={t("diary.moveToToday")}
                               onClick={async () => {
                                 if (!task.id) return;
                                 await tasksService.carryOver(task, todayKey);
                                 toast.success(t("toast.movedToToday"));
                               }}
-                              className="flex-1 min-h-11 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider px-3 rounded-xl bg-primary text-primary-foreground hover:opacity-90 active:opacity-80 transition-opacity"
-                              aria-label={t("diary.moveToToday")}
                             >
-                              <CarryOverIcon className="h-4 w-4" /> {t("common.today")}
-                            </button>
-                            <button
+                              <CarryOverIcon /> {t("common.today")}
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-11 w-11 sm:h-9 sm:w-9"
+                              aria-label={t("common.ignore")}
                               onClick={async () => {
                                 if (!task.id) return;
                                 await tasksService.skip(task.id);
                                 toast(t("toast.ignored"));
                               }}
-                              className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-muted/40 active:bg-muted/60 transition-colors"
-                              aria-label={t("common.ignore")}
                             >
-                              <CloseIcon className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-
-                    );
-                  })}
-                </ul>
-                <Pager page={page} totalPages={totalPages} onChange={setCarryPage} />
-              </>
-            );
-          })()}
-        </section>
-      )}
-
-      {!!ignoredTasks?.length &&
-        (() => {
-          const total = ignoredTasks.length;
-          const totalPages = Math.max(1, Math.ceil(total / IGNORED_PAGE_SIZE));
-          const page = Math.min(ignoredPage, totalPages - 1);
-          const slice = ignoredTasks.slice(page * IGNORED_PAGE_SIZE, page * IGNORED_PAGE_SIZE + IGNORED_PAGE_SIZE);
-          return (
-            <section>
-              <Accordion type="single" collapsible className="paper-card border-0 px-3">
-                <AccordionItem value="ignored" className="border-b-0">
-                  <AccordionTrigger className="text-xs uppercase tracking-widest text-muted-foreground">
-                    <span className="inline-flex items-center gap-2">
-                      <HideIcon className="h-4 w-4" /> {t("diary.ignored", { count: total })}
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <ul className="space-y-2">
-                      {slice.map((task) => {
-                        const subject = subjectMap.get(task.subjectId);
-                        return (
-                          <li key={task.id}>
-                            <div
-                              className="paper-card p-4 w-full flex flex-col gap-3 border-l-4"
-                              style={subjectBorderStyleLight(subject?.color, subject?.type, subject?.customColor)}
-                            >
-                              <div className="min-w-0">
-                                <div className="font-medium break-words">{task.title}</div>
-                                <div className="text-xs text-muted-foreground tabular-nums break-words">
-                                  {formatDate(task.date, lang, "short", true)}
-                                  {task.targetBpm && (
-                                    <>
-                                      {" "}
-                                      ·{" "}
-                                      {t("diary.targetBpm", {
-                                        note: task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩",
-                                        bpm: task.targetBpm,
-                                      })}
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={async () => {
-                                    if (!task.id) return;
-                                    await tasksService.unskip(task.id);
-                                    toast.success(t("toast.restored"));
-                                  }}
-                                  className="inline-flex items-center gap-1 text-xs uppercase tracking-wider px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"
-                                  aria-label={t("diary.unignore")}
-                                >
-                                  <ResetIcon className="h-3.5 w-3.5" /> {t("diary.unignore")}
-                                </button>
-                              </div>
-                            </div>
+                              <CloseIcon />
+                            </Button>
                           </li>
                         );
                       })}
                     </ul>
-                    <Pager page={page} totalPages={totalPages} onChange={setIgnoredPage} />
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+                    <Pager page={page} totalPages={totalPages} onChange={setCarryPage} />
+                  </>
+                );
+              })()}
             </section>
-          );
-        })()}
+          )}
 
-      <SessionLogSheet
-        open={logTask !== null}
-        onOpenChange={(o) => {
-          if (!o) {
-            setLogTask(null);
-            setLogPrefill(undefined);
-          }
-        }}
-        task={logTask}
-        prefill={logPrefill}
-      />
+          {isToday && !!ignoredTasks?.length &&
+            (() => {
+              const totalPages = Math.max(1, Math.ceil(ignoredTasks.length / IGNORED_PAGE_SIZE));
+              const page = Math.min(ignoredPage, totalPages - 1);
+              const slice = ignoredTasks.slice(page * IGNORED_PAGE_SIZE, page * IGNORED_PAGE_SIZE + IGNORED_PAGE_SIZE);
+              return (
+                <details className="group border-t border-border pt-4">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground">
+                    <HideIcon className="h-4 w-4" /> {t("diary.ignored", { count: ignoredTasks.length })}
+                  </summary>
+                  <ul className="mt-3 divide-y divide-border">
+                    {slice.map((task) => (
+                      <li key={task.id} className="flex items-center gap-3 py-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="break-words text-sm font-medium">{task.title}</div>
+                          <div className="text-xs tabular-nums text-muted-foreground">
+                            {formatDate(task.date, lang, "short", true)}
+                            {planTempoLabel(task.plan) && <> · {planTempoLabel(task.plan)}</>}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          aria-label={t("diary.unignore")}
+                          onClick={async () => {
+                            if (!task.id) return;
+                            await tasksService.unskip(task.id);
+                            toast.success(t("toast.restored"));
+                          }}
+                        >
+                          <ResetIcon /> {t("diary.unignore")}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                  <Pager page={page} totalPages={totalPages} onChange={setIgnoredPage} />
+                </details>
+              );
+            })()}
+        </div>
+
+        <aside className="min-w-0 space-y-6 min-[901px]:space-y-8">
+          {todayLessons.map(({ rec, slot }) => (
+            <LessonTodayBanner key={`${rec.id}-${slot?.dayOfWeek}-${slot?.startTime}`} rec={rec} slot={slot} subjects={subjects ?? []} t={t} navigate={navigate} />
+          ))}
+
+          {streak > 0 && (
+            <section>
+              <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("diary.continuity")}</h3>
+              <p className="flex items-baseline gap-2">
+                <strong className="font-numeric text-xl font-semibold tabular-nums">{t("common.daysShort", { count: streak })}</strong>
+                {bestStreak > streak && <span className="text-xs text-muted-foreground">· {t("diary.bestStreak", { count: bestStreak })}</span>}
+              </p>
+              <Link to="/analytics" className="mt-2 inline-flex items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+                {t("nav.progress")} <ArrowRightIcon className="h-3.5 w-3.5" />
+              </Link>
+            </section>
+          )}
+
+          {showHeroQuote && (
+            <figure className="border-t border-border pt-5">
+              <p className="font-serif text-xl italic leading-snug text-foreground/80">«{heroQuote.text}»</p>
+              <figcaption className="mt-1.5 text-xs text-muted-foreground">{heroQuote.author}</figcaption>
+            </figure>
+          )}
+        </aside>
+      </div>
+
+      {completed && (
+        <CompletionBar
+          key={completed.id}
+          task={completed}
+          onClose={() => setCompleted(null)}
+          onUndo={() => void undoComplete()}
+          onLog={() => { const id = completed.id; setCompleted(null); navigate(`/log?task=${id}`); }}
+        />
+      )}
+
+      {selecting && (
+        <div
+          role="toolbar"
+          aria-label={t("diary.selectionBar")}
+          className="fixed inset-x-3 bottom-[calc(78px+env(safe-area-inset-bottom))] z-[60] flex max-w-[760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[14px] border border-border bg-card px-3.5 py-2.5 shadow-raised min-[700px]:bottom-5 min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]"
+        >
+          <span className="text-sm"><strong className="font-numeric font-semibold tabular-nums">{t("diary.selectedCount", { count: picked.length })}</strong></span>
+          <span className="flex gap-1">
+            <Button size="sm" variant="ghost" onClick={() => setPickedIds((filteredTasks ?? []).flatMap((x) => (x.id === undefined ? [] : [x.id])))}>{t("common.all")}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPickedIds([])}>{t("common.none")}</Button>
+          </span>
+          <span className="flex flex-wrap gap-1.5">
+            <Button size="sm" disabled={bulkBusy || !picked.length} onClick={() => runBulk(async (items) => { await tasksService.bulkSetDone(items.filter((x) => !x.done).flatMap((x) => (x.id === undefined ? [] : [x.id])), true); }, "diary.bulkDone")}>
+              <Check />{t("diary.bulkComplete")}
+            </Button>
+            <Button size="sm" variant="outline" disabled={bulkBusy || !picked.length} onClick={() => runBulk(async (items) => { for (const x of items) if (!x.done) await tasksService.update(x.id!, { date: tomorrow }); }, "diary.bulkMoved")}>
+              <CalendarPlus />{t("diary.bulkTomorrow")}
+            </Button>
+            <Button size="sm" variant="outline" disabled={bulkBusy || !picked.length} onClick={() => runBulk(async (items) => { for (const x of items) await tasksService.skip(x.id!); }, "toast.ignored")}>
+              <Archive />{t("diary.bulkArchive")}
+            </Button>
+            <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" disabled={bulkBusy || !picked.length} onClick={() => setConfirmBulkDelete(true)}>
+              <Trash2 />{t("diary.bulkDelete")}
+            </Button>
+          </span>
+        </div>
+      )}
+
       {practiceTask && (
         <PracticeMode
           task={practiceTask}
           onClose={() => setPracticeTask(null)}
-          onFinish={({ bpm, noteVal }) => {
-            setLogPrefill({ bpm, noteVal });
-            setLogTask(practiceTask);
+          onFinish={({ marks }) => {
+            navigate(`/log?task=${practiceTask.id}`, { state: { prefill: { marks } } });
             setPracticeTask(null);
           }}
           onShowAnswers={
@@ -630,13 +602,23 @@ export default function Diary() {
           itemTitle={answersFor.title}
         />
       )}
-      <SessionDetailSheet
-        open={detailSession !== null}
-        onOpenChange={(o) => {
-          if (!o) setDetailSession(null);
-        }}
-        session={detailSession}
-      />
+      <AlertDialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("diary.bulkDeleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("diary.bulkDeleteDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => runBulk(async (items) => { await tasksService.bulkRemove(items.map((x) => x.id!)); }, "diary.bulkRemoved")}
+            >
+              {t("diary.bulkDelete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={confirmUncomplete !== null}
         onOpenChange={(o) => {
@@ -685,57 +667,27 @@ function LessonTodayBanner({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const subject = subjects.find((s) => s.id === rec.subjectId);
-  const [homeworkOpen, setHomeworkOpen] = useState(false);
-  const lessonLabel = `${rec.teacher ?? ""}${subject ? ` · ${subject.name}` : ""}`.trim();
+  const link = "inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4";
   return (
-    <div
-      className="paper-card overflow-hidden border-l-4 p-0"
-      style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
-    >
-      <div className="p-3.5 pb-2 flex items-start gap-2">
-        <LessonIcon className="h-4 w-4 text-primary shrink-0 mt-1" />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs uppercase tracking-wider text-primary/80">
-            {rec.teacher ? t("diary.lessonTodayWith", { teacher: rec.teacher }) : t("diary.lessonToday")}
-          </p>
-          {(subject || slot) && (
-            <p className="text-sm text-muted-foreground mt-0.5 break-words">
-              {subject?.name}{subject && slot ? " · " : ""}{slot ? slot.startTime : ""}
-            </p>
-          )}
-        </div>
-      </div>
-      <div className="grid grid-cols-2 border-t border-border/40">
-        <button
-          onClick={() => setHomeworkOpen(true)}
-          className="h-11 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors border-r border-border/40"
-        >
-          <ClipboardPlus className="h-3.5 w-3.5" /> {t("homework.addShort")}
-        </button>
-        <button
-          onClick={() =>
-            navigate("/lessons", {
-              state: { openLogForRecurrenceId: rec.id, date: today() },
-            })
-          }
-          className="h-11 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors"
-        >
+    <div className="rounded-[14px] bg-card p-6 shadow-soft">
+      <h3 className="text-xs font-medium uppercase tracking-wider text-primary">
+        {rec.teacher ? t("diary.lessonTodayWith", { teacher: rec.teacher }) : t("diary.lessonToday")}
+      </h3>
+      {(subject || slot) && (
+        <p className="mt-1 break-words text-sm text-muted-foreground">
+          {subject?.name}{subject && slot ? " · " : ""}{slot ? slot.startTime : ""}
+        </p>
+      )}
+      <HomeworkInput recurrence={rec} date={today()} className="mt-3 flex gap-2" />
+      <div className="mt-2 flex flex-wrap items-center gap-x-5">
+        <button onClick={() => navigate("/lessons", { state: { openLogForRecurrenceId: rec.id, date: today() } })} className={link}>
           {t("diary.logLessonShort")} <ArrowRightIcon className="h-3.5 w-3.5" />
         </button>
       </div>
       <LessonExtraActions subjectId={rec.subjectId} />
-      <AddHomeworkSheet
-        open={homeworkOpen}
-        onOpenChange={setHomeworkOpen}
-        subjectId={rec.subjectId}
-        recurrenceId={rec.id}
-        lessonLabel={lessonLabel}
-      />
     </div>
   );
 }
-
-
 
 function EndOfDaySummary({
   tasks,
@@ -755,7 +707,7 @@ function EndOfDaySummary({
   });
 
   return (
-    <div className="paper-card p-5 border-2 border-primary/30 bg-primary/5 space-y-4">
+    <div className="space-y-3 border-y border-primary/30 py-5">
       <div className="flex items-center gap-2">
         <SessionIcon className="h-5 w-5 text-primary" />
         <h3 className="font-serif text-xl text-primary">{t("diary.todaySummary")}</h3>
@@ -769,14 +721,7 @@ function EndOfDaySummary({
           >
             <span className="truncate flex-1 text-muted-foreground pr-2">{task.title}</span>
             <div className="flex items-center gap-2 shrink-0">
-              {last?.quality && (
-                <span className="font-serif text-base leading-none">{QUALITY_SYMBOL[last.quality]}</span>
-              )}
-              {last?.bpmReached && (
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {NOTE_GLYPH[last.noteVal ?? "quarter"]}={last.bpmReached}
-                </span>
-              )}
+              {last && sessionLabel(last.marks) && <span className="text-xs tabular-nums text-muted-foreground">{sessionLabel(last.marks)}</span>}
             </div>
           </div>
         ))}

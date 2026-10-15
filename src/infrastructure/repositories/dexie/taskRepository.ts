@@ -1,6 +1,7 @@
 import { db } from "@/infrastructure/dexie/db";
 import type { Task, TaskRecurrence } from "@/domain/entities/task";
 import type { NewTaskInput, TaskPort } from "@/domain/ports/task";
+import { planCovered } from "@/domain/logic/plan";
 import { now } from "@/lib/date";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 
@@ -36,7 +37,15 @@ export const taskRepository = {
     });
     return id;
   },
-  update: async (id: number, patch: Partial<Task>) => { await db.tasks.update(id, patch); },
+  async update(id: number, patch: Partial<Task>) {
+    await db.transaction("rw", db.tasks, db.sessions, async () => {
+      await db.tasks.update(id, patch);
+      // Sections added to an already logged plan need their own coverage.
+      if (!patch.plan) return;
+      const sessions = await db.sessions.where("taskId").equals(id).toArray();
+      if (sessions.length) await db.tasks.update(id, { done: planCovered(patch.plan, sessions) });
+    });
+  },
   toggleDone: async (id: number, done: boolean) => { await db.tasks.update(id, { done }); },
   async remove(id: number) { const result = await removeMany([id]); return result.soft ? "soft" as const : "hard" as const; },
   bulkRemove: removeMany,
@@ -45,7 +54,6 @@ export const taskRepository = {
   unskip: async (id: number) => { await db.tasks.update(id, { skipped: false }); },
   async carryOver(task: Task, toDate: string) { const { id: _id, date: _date, done: _done, skipped: _skipped, ...rest } = task; const newId = await db.tasks.add({ ...rest, date: toDate, done: false, createdAt: now() }) as number; await db.tasks.update(task.id!, { skipped: true }); return newId; },
   bulkSetDone: async (ids: number[], done: boolean) => { await db.tasks.bulkUpdate(ids.map((key) => ({ key, changes: { done } }))); },
-  async findOrCreateForLog(opts: { date: string; subjectId: number; itemId?: number; fallbackItemTitle: string; freeTitle: string; }) { if (opts.itemId) { const existing = await db.tasks.where("itemId").equals(opts.itemId).and((task) => task.date === opts.date && active(task)).first(); if (existing) return existing; const item = await db.library.get(opts.itemId); const id = await db.tasks.add({ date: opts.date, subjectId: opts.subjectId, linkType: "item", itemId: opts.itemId, title: item?.title ?? opts.fallbackItemTitle, done: false, createdAt: now() }) as number; return db.tasks.get(id); } const id = await db.tasks.add({ date: opts.date, subjectId: opts.subjectId, linkType: "free", title: opts.freeTitle, done: false, createdAt: now() }) as number; return db.tasks.get(id); },
   hasSessions: async (id: number) => (await db.sessions.where("taskId").equals(id).count()) > 0,
   hardDelete: async (id: number) => { await db.tasks.delete(id); },
   restore: async (task: Task) => { await db.tasks.add(task); },

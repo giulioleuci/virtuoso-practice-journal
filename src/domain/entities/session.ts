@@ -1,4 +1,5 @@
-import type { NoteVal, SegmentMetric, SessionQuality } from "./common";
+import type { SegmentMark } from "./common";
+import type { TaskLinkType } from "./task";
 
 export interface SessionSnapshot {
   taskTitle: string;
@@ -7,27 +8,24 @@ export interface SessionSnapshot {
   itemComposer?: string;
   segments?: { id: string; label: string }[];
   collectionName?: string;
-  targetBpm?: number;
-  noteVal?: NoteVal;
-  layers?: string[];
   techniqueNames?: string[];
 }
 
 export interface Session {
   id: number;
-  taskId: number;
+  /** Set only when the session was opened from a planned task. */
+  taskId?: number;
+  /** Absent only on legacy sessions whose task no longer exists. */
+  subjectId?: number;
+  linkType?: TaskLinkType;
+  itemId?: number;
+  collectionId?: number;
   date: string;
-  bpmReached?: number;
-  noteVal?: NoteVal;
-  reps?: number;
-  quality?: SessionQuality;
-  confidence?: number;
   notes?: string;
-  layersUsed?: string[];
-  techniquesUsed?: number[];
-  layerScores?: Record<string, number>;
-  techniqueScores?: Record<number, number>;
-  segmentMetrics?: Record<string, SegmentMetric>;
+  /** One entry per studied section, or a single whole-scope entry. */
+  marks: SegmentMark[];
+  /** Sections of the task's plan declared not studied in this session. */
+  notStudied?: number[];
   snapshot?: SessionSnapshot;
   createdAt: number;
 }

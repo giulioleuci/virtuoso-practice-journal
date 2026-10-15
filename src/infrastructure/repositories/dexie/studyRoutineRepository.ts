@@ -8,6 +8,8 @@ import type {
   StudyRoutinePort,
 } from "@/domain/ports/studyRoutine";
 import { dayKey, getDefaultWeekStartsOn, now, parseDayKey, startOfWeek, endOfWeek, today } from "@/lib/date";
+import { planSegmentIds } from "@/domain/logic/plan";
+import { meanConfidence } from "@/domain/logic/sessionMetrics";
 import {
   decayedAverage,
   generateRoutineTasks,
@@ -68,26 +70,19 @@ async function computeStats(entries: StudyPoolEntry[]): Promise<Map<string, Stud
   const stats = new Map<string, StudyPoolStat>();
   if (!unique.length) return stats;
 
-  const [sessions, tasks] = await Promise.all([db.sessions.toArray(), db.tasks.toArray()]);
-  const taskById = new Map(tasks.map((task) => [task.id, task]));
+  const sessions = await db.sessions.toArray();
 
   const byItem = new Map<number, { confidence?: number; date: string; createdAt: number }[]>();
   const byCollection = new Map<number, { confidence?: number; date: string; createdAt: number }[]>();
   const bySegment = new Map<number, { confidence?: number; date: string; createdAt: number }[]>();
 
   for (const session of sessions) {
-    const task = taskById.get(session.taskId);
-    const row = { confidence: session.confidence, date: session.date, createdAt: session.createdAt };
-    if (task?.itemId !== undefined) {
-      byItem.set(task.itemId, [...(byItem.get(task.itemId) ?? []), row]);
-    }
-    if (task?.collectionId !== undefined) {
-      byCollection.set(task.collectionId, [...(byCollection.get(task.collectionId) ?? []), row]);
-    }
-    for (const [segmentId, metric] of Object.entries(session.segmentMetrics ?? {})) {
-      const id = Number(segmentId);
-      if (!Number.isFinite(id)) continue;
-      bySegment.set(id, [...(bySegment.get(id) ?? []), { confidence: metric?.confidence, date: session.date, createdAt: session.createdAt }]);
+    const row = { confidence: meanConfidence(session.marks), date: session.date, createdAt: session.createdAt };
+    if (session.itemId !== undefined) byItem.set(session.itemId, [...(byItem.get(session.itemId) ?? []), row]);
+    if (session.collectionId !== undefined) byCollection.set(session.collectionId, [...(byCollection.get(session.collectionId) ?? []), row]);
+    for (const mark of session.marks) {
+      if (mark.segmentId === undefined) continue;
+      bySegment.set(mark.segmentId, [...(bySegment.get(mark.segmentId) ?? []), { confidence: mark.confidence, date: session.date, createdAt: session.createdAt }]);
     }
   }
 
@@ -165,7 +160,7 @@ export const studyRoutineRepository = {
     const completed = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => task.done && task.date >= first && task.date <= last).toArray();
     const counters = new Map<string, number>();
     for (const task of completed) {
-      const keys = task.collectionId ? [`collection:${task.collectionId}`] : task.segmentIds?.length ? task.segmentIds.map((id) => `segment:${id}`) : task.itemId ? [`item:${task.itemId}`] : [];
+      const keys = task.collectionId ? [`collection:${task.collectionId}`] : planSegmentIds(task.plan).length ? planSegmentIds(task.plan).map((id) => `segment:${id}`) : task.itemId ? [`item:${task.itemId}`] : [];
       for (const key of keys) counters.set(key, (counters.get(key) ?? 0) + 1);
     }
     await generate(routine, fromDate, counters);

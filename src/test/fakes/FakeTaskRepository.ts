@@ -7,7 +7,7 @@ export class FakeTaskRepository implements TaskPort {
   updated = new Map<number, Partial<Task>>();
   deleted: number[] = [];
   sessionTaskIds = new Set<number>();
-  constructor(private readonly rows: Task[] = []) {}
+  constructor(readonly rows: Task[] = []) {}
   async list() { return this.rows.filter((task) => !task.deletedAt); }
   async byDate(date: string) { return (await this.list()).filter((task) => task.date === date); }
   async create(task: NewTaskInput) { const id = this.rows.length + this.created.length + 1; this.created.push({ ...task, done: false, createdAt: task.createdAt ?? 0 }); return id; }
@@ -26,7 +26,6 @@ export class FakeTaskRepository implements TaskPort {
   async skip(id: number) { await this.update(id, { skipped: true }); }
   async unskip(id: number) { await this.update(id, { skipped: false }); }
   async bulkSetDone(ids: number[], done: boolean) { await Promise.all(ids.map((id) => this.toggleDone(id, done))); }
-  async findOrCreateForLog() { return undefined; }
   async hasSessions(id: number) { return this.sessionTaskIds.has(id); }
   async hardDelete(id: number) { this.deleted.push(id); }
   async restore(task: Task) { this.rows.push(task); }

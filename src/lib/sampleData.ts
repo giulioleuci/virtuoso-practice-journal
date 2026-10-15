@@ -1,6 +1,8 @@
-import { db, THEORY_LAYERS, type Task, type SessionQuality, type LessonRecurrence } from "./db";
+import { db, THEORY_LAYERS, type LessonRecurrence, type NoteVal, type SegmentEntry, type SegmentMark } from "./db";
+import { sessionContext } from "@/domain/logic/sessionContext";
 import { buildSessionSnapshot, buildLessonSnapshot } from "./domain/snapshots";
 import { backupService } from "./services/backup";
+import { lessonsService } from "./services/lessons";
 import { dayKey, today, addDays } from "./date";
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 // Deterministic pseudo-random in [0,1) from a seed (so re-seeding is stable).
@@ -205,7 +207,6 @@ targetBpm: 84, noteVal: "quarter",
   const secDom = (await db.library.add({
     subjectId: harmonyId, kind: "theory",
     title: "Secondary dominants & tonicization",
-    mastery: { conceptual: 78, analytical: 70, aural: 55, compositional: 60, reading: 65 },
     techniqueIds: [tChorale, tModulation],
     createdAt: now - 50 * D,
   })) as number;
@@ -213,7 +214,6 @@ targetBpm: 84, noteVal: "quarter",
   const modMix = (await db.library.add({
     subjectId: harmonyId, kind: "theory",
     title: "Modal mixture & Neapolitan",
-    mastery: { conceptual: 60, analytical: 55, aural: 40, compositional: 45, reading: 50 },
     techniqueIds: [tChorale],
     createdAt: now - 30 * D,
   })) as number;
@@ -221,7 +221,6 @@ targetBpm: 84, noteVal: "quarter",
   const speciesCpt = (await db.library.add({
     subjectId: harmonyId, kind: "theory",
     title: "Species counterpoint — first & second species",
-    mastery: { conceptual: 70, analytical: 60, aural: 50, compositional: 65, reading: 55 },
     techniqueIds: [tCounter, tChorale],
     createdAt: now - 45 * D,
   })) as number;
@@ -229,7 +228,6 @@ targetBpm: 84, noteVal: "quarter",
   const augSixth = (await db.library.add({
     subjectId: harmonyId, kind: "theory",
     title: "Augmented sixth chords (It / Fr / Ger)",
-    mastery: { conceptual: 50, analytical: 45, aural: 35, compositional: 40, reading: 40 },
     techniqueIds: [tChorale, tModulation],
     createdAt: now - 20 * D,
   })) as number;
@@ -339,7 +337,7 @@ targetBpm: 84, noteVal: "quarter",
   // ---------- Segments ----------
   const seg = async (
     itemId: number, label: string, targetBpm: number,
-    noteVal: "half" | "quarter" | "eighth" | "sixteenth",
+    noteVal: NoteVal,
     layers: string[], techniqueIds: number[]
   ) => (await db.segments.add({
     itemId, label, targetBpm, noteVal, layers, techniqueIds,
@@ -392,6 +390,7 @@ targetBpm: 84, noteVal: "quarter",
   }
   lastSixWeds.reverse();
 
+  const linkedHomework: { assignmentId: number; itemId: number }[] = [];
   const lessonAssignmentTexts: { text: string; transformed: boolean; pieces: number[] }[][] = [
     [
       { text: "Slow practice mm. 9–36 hands separately at ♩=60", transformed: true, pieces: [chopinBallade] },
@@ -440,9 +439,10 @@ targetBpm: 84, noteVal: "quarter",
       piecesPlayed: pieceIds, piecesPlayedTitles, snapshot,
       createdAt: d.getTime(),
     })) as number;
-    await db.assignments.bulkAdd(items.map((a) => ({
-      lessonId, text: a.text, transformed: a.transformed, createdAt: d.getTime(),
-    })));
+    for (const a of items) {
+      const assignmentId = await lessonsService.addAssignment(lessonId, a.text);
+      if (a.transformed && a.pieces[0]) linkedHomework.push({ assignmentId, itemId: a.pieces[0] });
+    }
   }
 
   // One past harmony lesson
@@ -466,18 +466,26 @@ targetBpm: 84, noteVal: "quarter",
       piecesPlayed: pieceIds, piecesPlayedTitles, snapshot,
       createdAt: d.getTime(),
     })) as number;
-    await db.assignments.bulkAdd([
-      { lessonId, text: "Realize 4 figured-bass exercises (Piston ch. 12)", transformed: true, createdAt: d.getTime() },
-      { lessonId, text: "Aural drill: identify V/V vs V in 10 examples",    transformed: true, createdAt: d.getTime() },
-      { lessonId, text: "Compose a short period using Neapolitan sixth",     transformed: false, createdAt: d.getTime() },
-    ]);
+    linkedHomework.push({ assignmentId: await lessonsService.addAssignment(lessonId, "Realize 4 figured-bass exercises (Piston ch. 12)"), itemId: piston });
+    linkedHomework.push({ assignmentId: await lessonsService.addAssignment(lessonId, "Aural drill: identify V/V vs V in 10 examples"), itemId: secDom });
+    await lessonsService.addAssignment(lessonId, "Compose a short period using Neapolitan sixth");
   }
 
   // ---------- Tasks: history with sessions ----------
   type TaskRow = Parameters<typeof db.tasks.add>[0];
 
-  const pickQuality = (n: number): SessionQuality =>
-    (n >= 85 ? "great" : n >= 70 ? "well" : n >= 55 ? "improve" : "hard");
+  /** One plan entry per section (or a single whole-task entry) sharing the same targets. */
+  const plan = (layers: string[], techniques: number[], bpm?: number, noteVal?: NoteVal, segmentIds?: number[]): SegmentEntry[] =>
+    (segmentIds?.length ? segmentIds : [undefined]).map((segmentId) => ({ segmentId, bpm, noteVal, layers, techniques }));
+
+  /** Deterministic session marks for a plan: confidence follows `trend`, `bias` shifts each section. */
+  const sessionMarks = (entries: SegmentEntry[], trend: number, seed: number, bias: (k: number) => number = () => 0): SegmentMark[] =>
+    entries.map((e, k) => ({
+      ...e,
+      targetBpm: e.bpm,
+      bpm: e.bpm ? clamp(Math.round(e.bpm - 6 + bias(k) / 2 + rand(seed + k * 17) * 10), 20, 400) : undefined,
+      confidence: clamp(Math.round((trend + bias(k) - 8 + rand(seed + k * 31) * 18) / 20), 1, 5),
+    }));
 
   const histDays = 30;
   const pastTasks: TaskRow[] = [];
@@ -489,9 +497,8 @@ targetBpm: 84, noteVal: "quarter",
 
     // Daily Hanon
     pastTasks.push({
-      date: d, subjectId: pianoId, linkType: "item", itemId: hanon, segmentIds: [hanonEx18],
-      title: "Hanon — Exercise 18", targetBpm: 96, noteVal: "sixteenth",
-      layers: ["RH","LH","Both"], techniqueIds: [tLegato],
+      date: d, subjectId: pianoId, linkType: "item", itemId: hanon,
+      title: "Hanon — Exercise 18", plan: plan(["RH","LH","Both"], [tLegato], 96, "sixteenth", [hanonEx18]),
       done: true, createdAt: now - i * D,
     });
 
@@ -500,8 +507,7 @@ targetBpm: 84, noteVal: "quarter",
       pastTasks.push({
         date: d, subjectId: pianoId, linkType: "item", itemId: scales,
         title: "Scales — 4 octaves HT",
-        targetBpm: 100 + Math.min(20, Math.floor((histDays - i) / 2)),
-        noteVal: "sixteenth", layers: ["Both"], techniqueIds: [tLegato, tStaccato],
+        plan: plan(["Both"], [tLegato, tStaccato], 100 + Math.min(20, Math.floor((histDays - i) / 2)), "sixteenth"),
         done: true, createdAt: now - i * D,
       });
     }
@@ -509,9 +515,8 @@ targetBpm: 84, noteVal: "quarter",
     // Ballade — every other day
     if (i % 2 === 0) {
       pastTasks.push({
-        date: d, subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeA],
-        title: "Ballade — first theme", targetBpm: 66, noteVal: "quarter",
-        layers: ["RH","LH","Slow"], techniqueIds: [tVoicing, tLegato],
+        date: d, subjectId: pianoId, linkType: "item", itemId: chopinBallade,
+        title: "Ballade — first theme", plan: plan(["RH","LH","Slow"], [tVoicing, tLegato], 66, "quarter", [balladeA]),
         done: true, createdAt: now - i * D,
       });
     }
@@ -519,9 +524,8 @@ targetBpm: 84, noteVal: "quarter",
     // Bach — 3x/week (a few skipped)
     if (i % 3 === 0) {
       pastTasks.push({
-        date: d, subjectId: pianoId, linkType: "item", itemId: bachWtcCsh, segmentIds: [wtcFugue],
-        title: "Bach — Fugue exposition", targetBpm: 56, noteVal: "quarter",
-        layers: ["RH","LH","Both"], techniqueIds: [tVoicing],
+        date: d, subjectId: pianoId, linkType: "item", itemId: bachWtcCsh,
+        title: "Bach — Fugue exposition", plan: plan(["RH","LH","Both"], [tVoicing], 56, "quarter", [wtcFugue]),
         done: i > 4, skipped: i <= 4 ? false : undefined,
         createdAt: now - i * D,
       });
@@ -532,8 +536,7 @@ targetBpm: 84, noteVal: "quarter",
       pastTasks.push({
         date: d, subjectId: pianoId, linkType: "item", itemId: czerny740,
         title: "Czerny 740 — No. 5 staccato",
-        targetBpm: 110 + Math.min(10, Math.floor((histDays - i) / 3)), noteVal: "sixteenth",
-        layers: ["RH","LH","Both"], techniqueIds: [tStaccato, tLegato],
+        plan: plan(["RH","LH","Both"], [tStaccato, tLegato], 110 + Math.min(10, Math.floor((histDays - i) / 3)), "sixteenth"),
         done: true, createdAt: now - i * D,
       });
     }
@@ -542,8 +545,7 @@ targetBpm: 84, noteVal: "quarter",
     if ([2, 5].includes(dow)) {
       pastTasks.push({
         date: d, subjectId: harmonyId, linkType: "item", itemId: piston,
-        title: "Piston — chapter exercises",
-        layers: [...THEORY_LAYERS], techniqueIds: [tFigured, tChorale],
+        title: "Piston — chapter exercises", plan: plan([...THEORY_LAYERS], [tFigured, tChorale]),
         done: true, createdAt: now - i * D,
       });
     }
@@ -552,14 +554,13 @@ targetBpm: 84, noteVal: "quarter",
     if (dow === 4) {
       pastTasks.push({
         date: d, subjectId: harmonyId, linkType: "item", itemId: secDom,
-        title: "Aural drill — secondary dominants",
-        layers: ["aural", "analytical"], techniqueIds: [tModulation],
+        title: "Aural drill — secondary dominants", plan: plan(["aural", "analytical"], [tModulation]),
         done: true, createdAt: now - i * D,
       });
     }
   }
 
-  // Insert + create sessions for done ones, with full dimensions
+  // Insert + create sessions for done ones
   for (let idx = 0; idx < pastTasks.length; idx++) {
     const t = pastTasks[idx];
     const id = (await db.tasks.add(t)) as number;
@@ -569,69 +570,34 @@ targetBpm: 84, noteVal: "quarter",
     if (!fullTask) continue;
     const snapshot = await buildSessionSnapshot(fullTask);
 
-    const r = rand(idx + 1);
-    const baseBpm = t.targetBpm ?? 0;
-    const bpmReached = baseBpm
-      ? clamp(Math.round(baseBpm - 6 + r * 10), 20, 400)
-      : undefined;
-
-    const layersUsed = t.layers ?? [];
-    const techniquesUsed = t.techniqueIds ?? [];
-
-    // Trend: more recent → higher scores
+    // Trend: more recent → higher confidence
     const ageDays = Math.round((todayDate.getTime() - new Date(t.date).getTime()) / D);
     const trend = clamp(70 + (histDays - ageDays) * 0.6, 40, 95);
 
-    const layerScores: Record<string, number> = {};
-    layersUsed.forEach((l, k) => {
-      layerScores[l] = clamp(Math.round(trend - 8 + rand(idx * 7 + k) * 16), 0, 100);
-    });
-    const techniqueScores: Record<number, number> = {};
-    techniquesUsed.forEach((tid, k) => {
-      techniqueScores[tid] = clamp(Math.round(trend - 10 + rand(idx * 11 + k) * 20), 0, 100);
-    });
-
-    const meanScore = (() => {
-      const all = [...Object.values(layerScores), ...Object.values(techniqueScores)];
-      return all.length ? all.reduce((a, b) => a + b, 0) / all.length : trend;
-    })();
-
     await db.sessions.add({
-      taskId: id, date: t.date,
-      bpmReached, noteVal: t.noteVal,
-      reps: t.targetBpm ? Math.round(4 + r * 8) : undefined,
-      quality: pickQuality(meanScore),
-      confidence: clamp(Math.round(meanScore / 20), 1, 5),
+      taskId: id, ...sessionContext(fullTask), date: t.date,
       notes: idx % 5 === 0
         ? "Inner voices clearer today; pedaling lighter at the cadence."
         : undefined,
-      layersUsed, techniquesUsed,
-      layerScores, techniqueScores,
+      marks: sessionMarks(t.plan, trend, idx * 7 + 1),
       snapshot,
       createdAt: now - (histDays - idx) * 3600000,
     });
   }
 
-  // ---------- Multi-segment history: Ballade Intro + A theme run-throughs ----------
-  // Adds 8 past sessions with per-segment metrics so segment breakdown views
-  // (LastSessionStrip, SessionDetailSheet) have real data to visualize.
-  const multiSegLayers = ["RH", "LH", "Both", "Slow"];
-  const multiSegTechs = [tVoicing, tLegato, tPedal];
+  // ---------- Multi-section history: Ballade Intro + A theme run-throughs ----------
+  // Adds 8 past sessions with one mark per section so the segment breakdown views have real data.
   for (let k = 0; k < 8; k++) {
     const ageDays = 2 + k * 3; // 2, 5, 8, 11, ... days ago
-    const dateObj = addDays(todayDate, -ageDays);
-    const d = dayKey(dateObj);
+    const d = dayKey(addDays(todayDate, -ageDays));
+    const taskPlan = plan(["RH", "LH", "Both", "Slow"], [tVoicing, tLegato, tPedal], 68, "quarter", [balladeIntro, balladeA]);
     const taskId = (await db.tasks.add({
       date: d,
       subjectId: pianoId,
       linkType: "item",
       itemId: chopinBallade,
-      segmentIds: [balladeIntro, balladeA],
       title: "Ballade — Intro + First theme (slow run-through)",
-      targetBpm: 68,
-      noteVal: "quarter",
-      layers: multiSegLayers,
-      techniqueIds: multiSegTechs,
+      plan: taskPlan,
       done: true,
       createdAt: now - ageDays * D,
     })) as number;
@@ -639,64 +605,24 @@ targetBpm: 84, noteVal: "quarter",
     if (!fullTask) continue;
     const snapshot = await buildSessionSnapshot(fullTask);
 
-    // Deterministic per-segment metrics; Intro slightly ahead of first theme,
-    // and both improving over time (recent = higher).
-    const trend = clamp(68 + (30 - ageDays) * 0.8, 45, 92);
-    const segIds = [balladeIntro, balladeA];
-    const segmentMetrics: Record<string, import("./db").SegmentMetric> = {};
-    const allScores: number[] = [];
-    segIds.forEach((sid, si) => {
-      const segKey = String(sid);
-      const bias = si === 0 ? 6 : -4; // Intro stronger
-      const layerScores: Record<string, number> = {};
-      multiSegLayers.forEach((l, i) => {
-        const v = clamp(Math.round(trend + bias - 6 + rand(k * 31 + si * 7 + i) * 14), 0, 100);
-        layerScores[l] = v;
-        allScores.push(v);
-      });
-      const techniqueScores: Record<number, number> = {};
-      multiSegTechs.forEach((tid, i) => {
-        const v = clamp(Math.round(trend + bias - 8 + rand(k * 53 + si * 11 + i) * 18), 0, 100);
-        techniqueScores[tid] = v;
-        allScores.push(v);
-      });
-      const segMean = (Object.values(layerScores).concat(Object.values(techniqueScores)))
-        .reduce((a, b) => a + b, 0) / (multiSegLayers.length + multiSegTechs.length);
-      segmentMetrics[segKey] = {
-        confidence: clamp(Math.round(segMean / 20), 1, 5),
-        quality: pickQuality(segMean),
-        bpmReached: clamp(Math.round(68 - 4 + bias / 2 + rand(k * 17 + si) * 8), 20, 400),
-        reps: 3 + Math.round(rand(k * 19 + si) * 5),
-        layersUsed: multiSegLayers,
-        techniquesUsed: multiSegTechs,
-        layerScores,
-        techniqueScores,
-      };
-    });
-    const overallMean = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-
+    // Intro slightly ahead of the first theme, both improving over time.
     await db.sessions.add({
       taskId,
+      ...sessionContext(fullTask),
       date: d,
-      // Top-level metrics omitted: granular per-segment mode
-      quality: pickQuality(overallMean),
       notes: k % 3 === 0
         ? "Intro voicing settled; first theme still needs pedal cleanup at bar 16."
         : undefined,
-      layersUsed: multiSegLayers,
-      techniquesUsed: multiSegTechs,
-      segmentMetrics,
+      marks: sessionMarks(taskPlan, clamp(68 + (30 - ageDays) * 0.8, 45, 92), k * 31, (si) => (si === 0 ? 6 : -4)),
       snapshot,
       createdAt: now - ageDays * D + 3600000,
     });
   }
 
-  // ---------- Extra multi-segment histories (Bach P&F, Hanon 18, Cortot Ch.1) ----------
-  // Populates segmentMetrics on more items so the LastSessionStrip + SegmentHistorySheet
-  // have data across easy/medium/hard cases.
+  // ---------- Extra multi-section histories (Bach P&F, Hanon 18, Cortot Ch.1) ----------
   const extraMultiSeg: Array<{
     itemId: number; segmentIds: number[]; title: string;
-    targetBpm: number; noteVal: "quarter" | "eighth" | "sixteenth";
+    targetBpm: number; noteVal: NoteVal;
     layers: string[]; techniques: number[]; count: number; step: number;
   }> = [
     {
@@ -729,54 +655,20 @@ targetBpm: 84, noteVal: "quarter",
   for (const scenario of extraMultiSeg) {
     for (let k = 0; k < scenario.count; k++) {
       const ageDays = 3 + k * scenario.step;
-      const dateObj = addDays(todayDate, -ageDays);
-      const d = dayKey(dateObj);
+      const d = dayKey(addDays(todayDate, -ageDays));
+      const taskPlan = plan(scenario.layers, scenario.techniques, scenario.targetBpm, scenario.noteVal, scenario.segmentIds);
       const taskId = (await db.tasks.add({
         date: d, subjectId: pianoId, linkType: "item",
-        itemId: scenario.itemId, segmentIds: scenario.segmentIds,
-        title: scenario.title, targetBpm: scenario.targetBpm, noteVal: scenario.noteVal,
-        layers: scenario.layers, techniqueIds: scenario.techniques,
+        itemId: scenario.itemId, title: scenario.title, plan: taskPlan,
         done: true, createdAt: now - ageDays * D,
       })) as number;
       const fullTask = await db.tasks.get(taskId);
       if (!fullTask) continue;
       const snapshot = await buildSessionSnapshot(fullTask);
 
-      const trend = clamp(60 + (30 - ageDays) * 0.9, 40, 92);
-      const segmentMetrics: Record<string, import("./db").SegmentMetric> = {};
-      const allScores: number[] = [];
-      scenario.segmentIds.forEach((sid, si) => {
-        const bias = si === 0 ? 4 : -3;
-        const layerScores: Record<string, number> = {};
-        scenario.layers.forEach((l, i) => {
-          const v = clamp(Math.round(trend + bias - 5 + rand(extraSeed + k * 41 + si * 13 + i) * 14), 0, 100);
-          layerScores[l] = v; allScores.push(v);
-        });
-        const techniqueScores: Record<number, number> = {};
-        scenario.techniques.forEach((tid, i) => {
-          const v = clamp(Math.round(trend + bias - 8 + rand(extraSeed + k * 71 + si * 17 + i) * 18), 0, 100);
-          techniqueScores[tid] = v; allScores.push(v);
-        });
-        const segMean = (Object.values(layerScores).concat(Object.values(techniqueScores)))
-          .reduce((a, b) => a + b, 0) / (scenario.layers.length + scenario.techniques.length);
-        segmentMetrics[String(sid)] = {
-          confidence: clamp(Math.round(segMean / 20), 1, 5),
-          quality: pickQuality(segMean),
-          bpmReached: clamp(Math.round(scenario.targetBpm - 6 + bias / 2 + rand(extraSeed + k * 29 + si) * 10), 20, 400),
-          reps: 2 + Math.round(rand(extraSeed + k * 23 + si) * 6),
-          layersUsed: scenario.layers,
-          techniquesUsed: scenario.techniques,
-          layerScores, techniqueScores,
-        };
-      });
-      const overallMean = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-
       await db.sessions.add({
-        taskId, date: d,
-        quality: pickQuality(overallMean),
-        layersUsed: scenario.layers,
-        techniquesUsed: scenario.techniques,
-        segmentMetrics,
+        taskId, ...sessionContext(fullTask), date: d,
+        marks: sessionMarks(taskPlan, clamp(60 + (30 - ageDays) * 0.9, 40, 92), extraSeed + k * 29, (si) => (si === 0 ? 4 : -3)),
         snapshot,
         createdAt: now - ageDays * D + 7200000,
       });
@@ -786,122 +678,119 @@ targetBpm: 84, noteVal: "quarter",
 
   // ---------- Today + upcoming ----------
   const upcoming: TaskRow[] = [];
+  const todayKey = dayKey(todayDate);
 
   // Hanon — daily template
+  const hanonPlan = plan(["RH","LH","Both"], [tLegato], 104, "sixteenth", [hanonEx18]);
   const hanonTpl = (await db.tasks.add({
-    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: hanon, segmentIds: [hanonEx18],
-    title: "Hanon — Exercise 18", targetBpm: 104, noteVal: "sixteenth",
-    layers: ["RH","LH","Both"], techniqueIds: [tLegato],
+    date: todayKey, subjectId: pianoId, linkType: "item", itemId: hanon,
+    title: "Hanon — Exercise 18", plan: hanonPlan,
     done: false, createdAt: now,
-    recurrence: { kind: "interval", everyXDays: 1, startDate: dayKey(todayDate), occurrences: 14 },
+    recurrence: { kind: "interval", everyXDays: 1, startDate: todayKey, occurrences: 14 },
   })) as number;
   for (let i = 1; i < 14; i++) {
     upcoming.push({
-      date: dayKey(addDays(todayDate, i)), subjectId: pianoId, linkType: "item", itemId: hanon, segmentIds: [hanonEx18],
-      title: "Hanon — Exercise 18", targetBpm: 104, noteVal: "sixteenth",
-      layers: ["RH","LH","Both"], techniqueIds: [tLegato],
+      date: dayKey(addDays(todayDate, i)), subjectId: pianoId, linkType: "item", itemId: hanon,
+      title: "Hanon — Exercise 18", plan: hanonPlan,
       done: false, recurrenceTaskId: hanonTpl, createdAt: now,
     });
   }
 
   // Ballade — every other day
+  const balladePlan = plan(["RH","LH","Slow"], [tVoicing, tLegato], 70, "quarter", [balladeA]);
   const balladeTpl = (await db.tasks.add({
-    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeA],
-    title: "Ballade — first theme (slow, voicing)", targetBpm: 70, noteVal: "quarter",
-    layers: ["RH","LH","Slow"], techniqueIds: [tVoicing, tLegato],
+    date: todayKey, subjectId: pianoId, linkType: "item", itemId: chopinBallade,
+    title: "Ballade — first theme (slow, voicing)", plan: balladePlan,
     done: false, createdAt: now,
-    recurrence: { kind: "interval", everyXDays: 2, startDate: dayKey(todayDate), occurrences: 7 },
+    recurrence: { kind: "interval", everyXDays: 2, startDate: todayKey, occurrences: 7 },
   })) as number;
   for (let i = 2; i <= 12; i += 2) {
     upcoming.push({
-      date: dayKey(addDays(todayDate, i)), subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeA],
-      title: "Ballade — first theme (slow, voicing)", targetBpm: 70, noteVal: "quarter",
-      layers: ["RH","LH","Slow"], techniqueIds: [tVoicing, tLegato],
+      date: dayKey(addDays(todayDate, i)), subjectId: pianoId, linkType: "item", itemId: chopinBallade,
+      title: "Ballade — first theme (slow, voicing)", plan: balladePlan,
       done: false, recurrenceTaskId: balladeTpl, createdAt: now,
     });
   }
 
   // Bach fugue — Mon/Wed/Fri
+  const bachPlan = plan(["RH","LH","Both"], [tVoicing], 60, "quarter", [wtcFugue]);
   const bachTpl = (await db.tasks.add({
-    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: bachWtcCsh, segmentIds: [wtcFugue],
-    title: "Bach — Fugue exposition", targetBpm: 60, noteVal: "quarter",
-    layers: ["RH","LH","Both"], techniqueIds: [tVoicing],
+    date: todayKey, subjectId: pianoId, linkType: "item", itemId: bachWtcCsh,
+    title: "Bach — Fugue exposition", plan: bachPlan,
     done: false, createdAt: now,
-    recurrence: { kind: "weekdays", days: [1, 3, 5], startDate: dayKey(todayDate), occurrences: 9 },
+    recurrence: { kind: "weekdays", days: [1, 3, 5], startDate: todayKey, occurrences: 9 },
   })) as number;
   for (let i = 1; i <= 21; i++) {
     const d = addDays(todayDate, i);
     if ([1, 3, 5].includes(d.getDay())) {
       upcoming.push({
-        date: dayKey(d), subjectId: pianoId, linkType: "item", itemId: bachWtcCsh, segmentIds: [wtcFugue],
-        title: "Bach — Fugue exposition", targetBpm: 60, noteVal: "quarter",
-        layers: ["RH","LH","Both"], techniqueIds: [tVoicing],
+        date: dayKey(d), subjectId: pianoId, linkType: "item", itemId: bachWtcCsh,
+        title: "Bach — Fugue exposition", plan: bachPlan,
         done: false, recurrenceTaskId: bachTpl, createdAt: now,
       });
     }
   }
 
   // Harmony — Piston Tue/Fri
+  const pistonPlan = plan([...THEORY_LAYERS], [tFigured, tChorale]);
   const pistonTpl = (await db.tasks.add({
-    date: dayKey(todayDate), subjectId: harmonyId, linkType: "item", itemId: piston,
-    title: "Piston — chapter exercises",
-    layers: [...THEORY_LAYERS], techniqueIds: [tFigured, tChorale],
+    date: todayKey, subjectId: harmonyId, linkType: "item", itemId: piston,
+    title: "Piston — chapter exercises", plan: pistonPlan,
     done: false, createdAt: now,
-    recurrence: { kind: "weekdays", days: [2, 5], startDate: dayKey(todayDate), occurrences: 8 },
+    recurrence: { kind: "weekdays", days: [2, 5], startDate: todayKey, occurrences: 8 },
   })) as number;
   for (let i = 1; i <= 28; i++) {
     const d = addDays(todayDate, i);
     if ([2, 5].includes(d.getDay())) {
       upcoming.push({
         date: dayKey(d), subjectId: harmonyId, linkType: "item", itemId: piston,
-        title: "Piston — chapter exercises",
-        layers: [...THEORY_LAYERS], techniqueIds: [tFigured, tChorale],
+        title: "Piston — chapter exercises", plan: pistonPlan,
         done: false, recurrenceTaskId: pistonTpl, createdAt: now,
       });
     }
   }
 
-  // One-off tasks for today — coda, multi-segment, theory, collection
+  // One-off tasks for today — coda, multi-section, theory, collection
   upcoming.push({
-    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: chopinBallade, segmentIds: [balladeCoda],
-    title: "Ballade — Coda octaves (slow)", targetBpm: 90, noteVal: "quarter",
-    layers: ["RH","Slow"], techniqueIds: [tOctaves],
+    date: todayKey, subjectId: pianoId, linkType: "item", itemId: chopinBallade,
+    title: "Ballade — Coda octaves (slow)", plan: plan(["RH","Slow"], [tOctaves], 90, "quarter", [balladeCoda]),
     done: false, createdAt: now,
   });
 
   upcoming.push({
-    date: dayKey(todayDate), subjectId: pianoId, linkType: "item", itemId: chopinBallade,
-    segmentIds: [balladeIntro, balladeA],
+    date: todayKey, subjectId: pianoId, linkType: "item", itemId: chopinBallade,
     title: "Ballade — Intro + First theme (slow run-through)",
-    targetBpm: 70, noteVal: "quarter",
-    layers: ["RH","LH","Both","Slow"], techniqueIds: [tVoicing, tLegato, tPedal],
+    plan: plan(["RH","LH","Both","Slow"], [tVoicing, tLegato, tPedal], 70, "quarter", [balladeIntro, balladeA]),
     done: false, createdAt: now,
   });
 
   upcoming.push({
-    date: dayKey(todayDate), subjectId: harmonyId, linkType: "item", itemId: secDom,
-    title: "Aural drill — secondary dominants",
-    layers: ["aural", "compositional"], techniqueIds: [tChorale, tModulation],
+    date: todayKey, subjectId: harmonyId, linkType: "item", itemId: secDom,
+    title: "Aural drill — secondary dominants", plan: plan(["aural", "compositional"], [tChorale, tModulation]),
     done: false, createdAt: now,
   });
 
   upcoming.push({
     date: dayKey(addDays(todayDate, 1)), subjectId: pianoId,
     linkType: "collection", collectionId: colNocturnesOp9,
-    title: "Nocturnes Op. 9 — review session",
-    layers: ["Both", "Memorized"], techniqueIds: [tVoicing, tPedal],
+    title: "Nocturnes Op. 9 — review session", plan: plan(["Both", "Memorized"], [tVoicing, tPedal]),
     done: false, createdAt: now,
   });
 
   upcoming.push({
     date: dayKey(addDays(todayDate, 2)), subjectId: pianoId,
     linkType: "collection", collectionId: colCzerny,
-    title: "Czerny — daily set",
-    layers: ["RH","LH","Both"], techniqueIds: [tLegato, tStaccato],
+    title: "Czerny — daily set", plan: plan(["RH","LH","Both"], [tLegato, tStaccato]),
     done: false, createdAt: now,
   });
 
   await db.tasks.bulkAdd(upcoming);
+
+  // Homework from past lessons that already became tasks: link it to the first task of the same piece.
+  for (const { assignmentId, itemId } of linkedHomework) {
+    const task = await db.tasks.where("itemId").equals(itemId).first();
+    if (task?.id !== undefined) await lessonsService.linkTask(assignmentId, task.id);
+  }
 
   // ---------- Study routine: 24 piano scales ----------
   // Mon/Tue/Thu/Fri (1, 2, 4, 5) — 3 majors + 3 minors per day.
@@ -954,11 +843,11 @@ targetBpm: 84, noteVal: "quarter",
     },
   ]);
 
-  // ---------- Pending (async) homework, captured during the current lessons ----------
-  await db.pendingAssignments.bulkAdd([
-    { subjectId: pianoId, recurrenceId: lessonRecId, text: "Ballade — coda octaves at ♩=90, hands separately", createdAt: now - 3600000 },
-    { subjectId: pianoId, recurrenceId: lessonRecId, text: "Record the Nocturne Op. 9 No. 2 and listen back", createdAt: now - 1800000 },
-    { subjectId: harmonyId, recurrenceId: harmonyRecId, text: "Analyse two chorales for augmented sixth chords", createdAt: now - 900000 },
-  ]);
+  // ---------- Homework captured live in the upcoming lessons ----------
+  const nextOn = (dow: number) => dayKey(addDays(todayDate, (dow - todayDate.getDay() + 7) % 7));
+  const pianoLesson = await lessonsService.ensureFor(pianoId, await db.recurrences.get(lessonRecId), nextOn(wedDow));
+  await lessonsService.addAssignment(pianoLesson, "Ballade — coda octaves at ♩=90, hands separately");
+  await lessonsService.addAssignment(pianoLesson, "Record the Nocturne Op. 9 No. 2 and listen back");
+  const harmonyLesson = await lessonsService.ensureFor(harmonyId, await db.recurrences.get(harmonyRecId), nextOn(2));
+  await lessonsService.addAssignment(harmonyLesson, "Analyse two chorales for augmented sixth chords");
 }
-

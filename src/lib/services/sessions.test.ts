@@ -23,9 +23,11 @@ beforeEach(async () => {
   });
 });
 
+const rated = { layers: [], techniques: [], mood: 3, focus: 3, confidence: 3 };
+
 async function seedTask(date = "2025-03-01") {
   const subjectId = (await db.subjects.toArray())[0].id!;
-  return tasksService.create({ title: "Scales", date, subjectId });
+  return tasksService.create({ title: "Scales", date, subjectId, plan: [] });
 }
 
 // ---------------------------------------------------------------------------
@@ -41,15 +43,13 @@ describe("sessionsService.logWithCompletion", () => {
 
     const sessionId = await sessionsService.logWithCompletion(task, {
       date: "2025-03-01",
-      quality: "well",
-      layersUsed: [],
-      techniquesUsed: [],
+      marks: [{ ...rated, confidence: 4 }],
     });
 
     const session = await db.sessions.get(sessionId);
     expect(session).toBeDefined();
     expect(session!.taskId).toBe(taskId);
-    expect(session!.quality).toBe("well");
+    expect(session!.marks[0].confidence).toBe(4);
     expect(session!.createdAt).toBeGreaterThan(0);
 
     expect((await db.tasks.get(taskId))!.done).toBe(true);
@@ -61,8 +61,7 @@ describe("sessionsService.logWithCompletion", () => {
 
     await sessionsService.logWithCompletion(task, {
       date: "2025-03-01",
-      layersUsed: [],
-      techniquesUsed: [],
+      marks: [rated],
       helpText: "How should I finger this?",
     });
 
@@ -79,26 +78,23 @@ describe("sessionsService.logWithCompletion", () => {
 
     await sessionsService.logWithCompletion(task, {
       date: "2025-03-01",
-      layersUsed: [],
-      techniquesUsed: [],
+      marks: [rated],
     });
 
     expect(await db.helpRequests.count()).toBe(0);
   });
 
-  it("stores layerScores and techniqueScores", async () => {
+  it("stores layers and techniques per mark", async () => {
     const taskId = await seedTask();
     const task = (await db.tasks.get(taskId))!;
 
     const sessionId = await sessionsService.logWithCompletion(task, {
       date: "2025-03-01",
-      layersUsed: ["slow"],
-      techniquesUsed: [],
-      layerScores: { slow: 75 },
+      marks: [{ ...rated, layers: ["slow"], techniques: [3], confidence: 4 }],
     });
 
     const session = await db.sessions.get(sessionId);
-    expect(session!.layerScores).toEqual({ slow: 75 });
+    expect(session!.marks[0]).toMatchObject({ layers: ["slow"], techniques: [3] });
   });
 });
 
@@ -113,8 +109,7 @@ describe("sessionsService.deleteWithTaskReset", () => {
 
     const sessionId = await sessionsService.logWithCompletion(task, {
       date: "2025-03-01",
-      layersUsed: [],
-      techniquesUsed: [],
+      marks: [rated],
     });
 
     expect((await db.tasks.get(taskId))!.done).toBe(true);
@@ -131,13 +126,11 @@ describe("sessionsService.deleteWithTaskReset", () => {
 
     const sid1 = await sessionsService.logWithCompletion(task, {
       date: "2025-03-01",
-      layersUsed: [],
-      techniquesUsed: [],
+      marks: [rated],
     });
     const sid2 = await sessionsService.logWithCompletion(task, {
       date: "2025-03-01",
-      layersUsed: [],
-      techniquesUsed: [],
+      marks: [rated],
     });
 
     await sessionsService.deleteWithTaskReset(sid1, taskId);
@@ -158,13 +151,11 @@ describe("sessionsService.deleteByTaskAndDate", () => {
 
     await sessionsService.logWithCompletion(task, {
       date: "2025-03-01",
-      layersUsed: [],
-      techniquesUsed: [],
+      marks: [rated],
     });
     await sessionsService.logWithCompletion(task, {
       date: "2025-03-01",
-      layersUsed: [],
-      techniquesUsed: [],
+      marks: [rated],
     });
 
     await sessionsService.deleteByTaskAndDate(taskId, "2025-03-01");

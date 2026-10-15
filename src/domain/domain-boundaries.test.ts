@@ -60,11 +60,11 @@ describe("domain boundaries", () => {
     const source = await readFile(path.join(domainRoot, "ports/session.ts"), "utf8");
 
     expect(source).toContain("export type PersistedTask = Task & { id: number };");
-    expect(source).toContain("date: string;");
+    expect(source).toContain("log(task: Task, date: string, input");
     expect(source).toContain("helpText?: string;");
     expect(source).toContain("transaction<T>(operation: (transaction: SessionLogTransaction) => Promise<T>): Promise<T>;");
     expect(source).toContain("createSession(session: Omit<Session, \"id\">): Promise<number>;");
-    expect(source).toContain("completeTask(taskId: number): Promise<void>;");
+    expect(source).toContain("syncTaskDone(taskId: number): Promise<void>;");
   });
 
   it("preserves library removal outcome", async () => {
