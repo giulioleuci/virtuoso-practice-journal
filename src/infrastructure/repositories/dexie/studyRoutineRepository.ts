@@ -135,9 +135,32 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
     weekStartsOn: await profileWeekStartsOn(),
   });
   // ponytail: a kept task only suppresses the identical draw on its day; a different draw still lands beside it. Make generation slot-aware if days feel crowded.
-  const taken = new Set(kept.map(slotKey));
+  // Any task the routine still has from fromDate on (done today, customized, or left by an earlier run) blocks the same draw.
+  const existing = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.deletedAt && task.date >= fromDate).toArray();
+  const taken = new Set([...kept, ...existing].map(slotKey));
   const fresh = tasks.filter((task) => !taken.has(slotKey(task)));
   if (fresh.length) await db.tasks.bulkAdd(fresh);
+}
+
+const locks = new Map<number, Promise<void>>();
+
+async function regenerate(routine: StudyRoutine, fromDate: string) {
+  const future = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.done && task.date >= fromDate).toArray();
+  const replaceable = future.filter((task) => !task.customized);
+  // Customized copies sharing a slot (left by earlier duplicate runs) collapse to one.
+  const seen = new Set<string>();
+  for (const task of future.filter((t) => t.customized)) { if (seen.has(slotKey(task))) replaceable.push(task); else seen.add(slotKey(task)); }
+  if (replaceable.length) await db.tasks.bulkDelete(replaceable.map((task) => task.id));
+  const weekStartsOn = await profileWeekStartsOn();
+  const first = dayKey(startOfWeek(parseDayKey(fromDate), weekStartsOn));
+  const last = dayKey(endOfWeek(parseDayKey(fromDate), weekStartsOn));
+  const completed = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => task.done && task.date >= first && task.date <= last).toArray();
+  const counters = new Map<string, number>();
+  for (const task of completed) {
+    const keys = task.collectionId ? [`collection:${task.collectionId}`] : planSegmentIds(task.plan).length ? planSegmentIds(task.plan).map((id) => `segment:${id}`) : task.itemId ? [`item:${task.itemId}`] : [];
+    for (const key of keys) counters.set(key, (counters.get(key) ?? 0) + 1);
+}
+  await generate(routine, fromDate, counters, future.filter((task) => task.customized && !replaceable.includes(task)));
 }
 
 export const studyRoutineRepository = {
@@ -157,20 +180,11 @@ export const studyRoutineRepository = {
     if (routine) await generate(routine, input.startDate);
     return id;
   },
-  async regenerateFromDate(routine: StudyRoutine, fromDate: string) {
-    const future = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.done && task.date >= fromDate).toArray();
-    const replaceable = future.filter((task) => !task.customized);
-    if (replaceable.length) await db.tasks.bulkDelete(replaceable.map((task) => task.id));
-    const weekStartsOn = await profileWeekStartsOn();
-    const first = dayKey(startOfWeek(parseDayKey(fromDate), weekStartsOn));
-    const last = dayKey(endOfWeek(parseDayKey(fromDate), weekStartsOn));
-    const completed = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => task.done && task.date >= first && task.date <= last).toArray();
-    const counters = new Map<string, number>();
-    for (const task of completed) {
-      const keys = task.collectionId ? [`collection:${task.collectionId}`] : planSegmentIds(task.plan).length ? planSegmentIds(task.plan).map((id) => `segment:${id}`) : task.itemId ? [`item:${task.itemId}`] : [];
-      for (const key of keys) counters.set(key, (counters.get(key) ?? 0) + 1);
-    }
-    await generate(routine, fromDate, counters, future.filter((task) => task.customized));
+  regenerateFromDate(routine: StudyRoutine, fromDate: string) {
+    // Serialized per routine: overlapping runs would each delete then each add, duplicating the plan.
+    const run = (locks.get(routine.id) ?? Promise.resolve()).catch(() => undefined).then(() => regenerate(routine, fromDate));
+    locks.set(routine.id, run);
+    return run;
   },
   async update(id: number, patch: Partial<StudyRoutine>) {
     await db.studyRoutines.update(id, patch);
