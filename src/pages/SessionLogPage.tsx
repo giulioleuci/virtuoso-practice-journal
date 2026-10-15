@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { FloatingActions } from "@/components/shared/FloatingActions";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { FormErrors } from "@/components/shared/StateNotice";
 import { MarksEditor } from "@/components/diary/MarksEditor";
@@ -112,10 +113,10 @@ function Guide({ children }: { children?: React.ReactNode }) {
 function Footer({ onCancel, disabled, busy }: { onCancel: () => void; disabled: boolean; busy: boolean }) {
   const { t } = useI18n();
   return (
-    <div className="mt-8 flex justify-end gap-2 border-t border-border pt-5 max-[699px]:sticky max-[699px]:bottom-[calc(76px+env(safe-area-inset-bottom))] max-[699px]:bg-card max-[699px]:pb-3">
+    <FloatingActions>
       <Button type="button" variant="ghost" onClick={onCancel}>{t("common.cancel")}</Button>
       <Button type="submit" disabled={disabled || busy}>{busy ? t("logPage.saving") : t("session.saveSession")}</Button>
-    </div>
+    </FloatingActions>
   );
 }
 
@@ -303,7 +304,7 @@ function FreeSessionForm() {
       <PageHeader title={t("logPage.free")} subtitle={t("logPage.freeSubtitle")} />
       <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
         <form onSubmit={save} className={`${panel} min-w-0`}>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label className="text-xs font-medium text-foreground">{t("logPage.dateLabel")}</Label>
               <Input type="date" required aria-label={t("logPage.dateLabel")} value={date} min={minDate} max={todayKey} onChange={(e) => setDate(e.target.value)} />

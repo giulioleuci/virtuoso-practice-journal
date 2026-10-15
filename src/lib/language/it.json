@@ -1106,5 +1106,6 @@
   "rating.confidence.3": "Abbastanza sicuro",
   "rating.confidence.4": "Sicuro",
   "rating.confidence.5": "Molto sicuro",
-  "rating.scaleHint": "1 = {{low}} · 5 = {{high}}"
+  "rating.scaleHint": "1 = {{low}} · 5 = {{high}}",
+  "rating.clear": "Cancella"
 }

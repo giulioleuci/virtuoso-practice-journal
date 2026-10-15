@@ -1106,5 +1106,6 @@
   "rating.confidence.3": "Fairly secure",
   "rating.confidence.4": "Secure",
   "rating.confidence.5": "Very secure",
-  "rating.scaleHint": "1 = {{low}} · 5 = {{high}}"
+  "rating.scaleHint": "1 = {{low}} · 5 = {{high}}",
+  "rating.clear": "Clear"
 }

@@ -1,31 +1,38 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { BarChart3, BookMarked, CalendarDays, GraduationCap, History as HistoryIcon, Printer, UserRound, ListChecks, MoreHorizontal } from "lucide-react";
+import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHorizontal, Printer, Settings } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { useAssignments } from "@/presentation/hooks/useEntities";
+import { needsTask } from "@/domain/logic/assignments";
 import { cn } from "@/lib/utils";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Profile } from "@/domain/entities/profile";
+
+const WIDE_PAGES = ["/", "/tasks", "/library", "/lessons", "/analytics", "/history", "/profile", "/log", "/sessions"];
+const SIDEBAR_W = "min-[700px]:ml-[195px] min-[1151px]:ml-[208px] min-[1600px]:ml-[250px]";
 
 export default function AppShell({ profile }: { profile: Profile }) {
   const { t } = useI18n();
   const location = useLocation();
   const pageKey = "/" + (location.pathname.split("/")[1] ?? "");
+  const pendingHomework = (useAssignments() ?? []).filter(needsTask).length;
   const items = [
-    { to: "/", label: t("nav.diary"), icon: CalendarDays, end: true },
-    { to: "/tasks", label: t("nav.tasks"), icon: ListChecks },
+    { to: "/", label: t("nav.today"), icon: CalendarDays, end: true },
+    { to: "/tasks", label: t("nav.plan"), short: t("nav.planShort"), icon: ListChecks },
     { to: "/library", label: t("nav.library"), icon: BookMarked },
-    { to: "/lessons", label: t("nav.lessons"), icon: GraduationCap },
+    { to: "/lessons", label: t("nav.lessons"), icon: GraduationCap, badge: pendingHomework },
+    { to: "/analytics", label: t("nav.progress"), icon: BarChart3, also: ["/history"] },
   ];
-  const moreItems = [
-    { to: "/analytics", label: t("nav.analytics"), icon: BarChart3 },
-    { to: "/history", label: t("nav.history"), icon: HistoryIcon },
+  const secondary = [
     { to: "/print/weekly", label: t("nav.weeklySummary"), icon: Printer },
-    { to: "/profile", label: t("nav.profile"), icon: UserRound },
+    { to: "/profile", label: t("nav.settings"), icon: Settings },
   ];
-
-  const moreActive = moreItems.some((m) => location.pathname.startsWith(m.to));
+  const isActive = (to: string, also: string[] = []) =>
+    [to, ...also].some((p) => (p === "/" ? location.pathname === "/" : location.pathname.startsWith(p)));
+  const moreActive = secondary.some((m) => isActive(m.to));
 
   const [hidden, setHidden] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -48,104 +55,122 @@ export default function AppShell({ profile }: { profile: Profile }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const mobileLink = (active: boolean) =>
+    cn(
+      "flex flex-1 flex-col items-center justify-center gap-1 py-2 min-h-[60px] text-xs transition-colors",
+      active ? "text-primary font-semibold" : "text-muted-foreground active:text-foreground"
+    );
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <main
-        className="flex-1 px-4 sm:px-6 max-w-3xl w-full mx-auto"
-        style={{
-          paddingTop: "calc(1rem + env(safe-area-inset-top))",
-          paddingBottom: "calc(6rem + env(safe-area-inset-bottom))",
-        }}
+    <div className="min-h-screen">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:bg-primary focus:p-3 focus:text-primary-foreground"
       >
-        <div key={pageKey} className="animate-page-in">
-          <Outlet context={{ profile }} />
+        {t("nav.skipToContent")}
+      </a>
+
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[195px] flex-col border-r border-border bg-background px-3 pb-5 pt-7 min-[700px]:flex min-[1151px]:w-[208px] min-[1151px]:px-5 min-[1600px]:w-[250px]">
+        <NavLink to="/" className="mb-9 ml-2.5 flex items-center gap-2.5 font-serif text-[1.75rem] font-semibold tracking-tight min-[1151px]:text-[2rem]">
+          <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-lg" />
+          Virtuoso
+        </NavLink>
+        <nav aria-label={t("nav.main")} className="grid gap-1.5">
+          {items.map(({ to, label, icon: Icon, end, badge, also }) => {
+            const active = isActive(to, also);
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex min-h-[46px] items-center gap-3 rounded-lg px-2.5 py-3 text-[0.8125rem] font-medium transition-colors min-[1151px]:px-3.5 min-[1151px]:text-sm",
+                  active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/40"
+                )}
+              >
+                <Icon className="h-5 w-5" strokeWidth={1.75} />
+                {label}
+                {!!badge && (
+                  <span className="ml-auto min-w-5 rounded bg-primary px-1.5 py-px text-center font-numeric text-xs font-semibold text-primary-foreground">
+                    {badge}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+        <div className="mt-auto grid gap-1.5">
+          {secondary.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={cn(
+                "flex min-h-[46px] items-center gap-3 rounded-lg px-2.5 py-3 text-[0.8125rem] font-medium transition-colors min-[1151px]:px-3.5",
+                isActive(to) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/40"
+              )}
+            >
+              <Icon className="h-5 w-5" strokeWidth={1.75} />
+              {label}
+            </NavLink>
+          ))}
+          <NavLink to="/profile" className="mt-3 flex items-center gap-2.5 rounded-lg px-2.5 pt-4 text-xs text-muted-foreground hover:bg-secondary/40">
+            <span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary">
+              {profile.name?.[0]?.toUpperCase()}
+            </span>
+            <strong className="truncate text-[0.8125rem] font-semibold text-foreground">{profile.name}</strong>
+          </NavLink>
+        </div>
+      </aside>
+
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={cn("px-5 min-[700px]:px-7 min-[1151px]:px-9 pb-28 min-[700px]:pb-16", SIDEBAR_W)}
+        style={{ paddingTop: "calc(1.75rem + env(safe-area-inset-top))" }}
+      >
+        {/* ponytail: pages not yet ported to the new design stay in a 3xl column */}
+        <div key={pageKey} className={cn("mx-auto w-full animate-page-in", WIDE_PAGES.includes(pageKey) ? "max-w-[1200px]" : "max-w-3xl")}>
+          <ErrorBoundary inline resetKey={location.pathname}><Outlet context={{ profile, navHidden }} /></ErrorBoundary>
         </div>
       </main>
 
       <nav
+        aria-label={t("nav.main")}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-out",
-          "border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
+          "fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card px-2 transition-transform duration-300 ease-out min-[700px]:hidden",
           navHidden ? "translate-y-full" : "translate-y-0"
         )}
-        style={{
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         aria-hidden={navHidden}
       >
-        <div className="max-w-3xl mx-auto flex items-stretch justify-between px-1">
-          {items.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                cn(
-                  "group relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[60px] transition-colors",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground active:text-foreground active:bg-accent/40"
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span
-                    className={cn(
-                      "absolute top-0 h-0.5 rounded-full bg-primary transition-all duration-300 ease-out",
-                      isActive ? "w-8 opacity-100" : "w-0 opacity-0"
-                    )}
-                  />
-                  <Icon
-                    className={cn(
-                      "h-[22px] w-[22px] transition-transform duration-300 ease-out",
-                      isActive ? "scale-110" : ""
-                    )}
-                    strokeWidth={isActive ? 2.25 : 1.75}
-                  />
-                  <span className={cn("text-[10px] font-medium tracking-wide leading-none", isActive && "font-semibold")}>{label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
-
+        <div className="flex items-stretch justify-around">
+          {items.map(({ to, label, short, icon: Icon, end, also }) => {
+            const active = isActive(to, also);
+            return (
+              <NavLink key={to} to={to} end={end} aria-current={active ? "page" : undefined} className={mobileLink(active)}>
+                <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.3 : 1.75} />
+                <span>{short ?? label}</span>
+              </NavLink>
+            );
+          })}
           <Popover open={moreOpen} onOpenChange={setMoreOpen}>
             <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-label={t("nav.more")}
-                className={cn(
-                  "group relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[60px] transition-colors",
-                  moreActive
-                    ? "text-primary"
-                    : "text-muted-foreground active:text-foreground active:bg-accent/40"
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute top-0 h-0.5 rounded-full bg-primary transition-all duration-300 ease-out",
-                    moreActive ? "w-8 opacity-100" : "w-0 opacity-0"
-                  )}
-                />
-                <MoreHorizontal
-                  className={cn("h-[22px] w-[22px] transition-transform duration-300 ease-out", moreActive ? "scale-110" : "")}
-                  strokeWidth={moreActive ? 2.25 : 1.75}
-                />
-                <span className={cn("text-[10px] font-medium tracking-wide leading-none", moreActive && "font-semibold")}>
-                  {t("nav.more")}
-                </span>
+              <button type="button" className={mobileLink(moreActive)}>
+                <MoreHorizontal className="h-[21px] w-[21px]" strokeWidth={moreActive ? 2.3 : 1.75} />
+                <span>{t("nav.more")}</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" side="top" className="w-48 p-1">
-              {moreItems.map(({ to, label, icon: Icon }) => (
+            <PopoverContent align="end" side="top" className="w-52 p-1">
+              {secondary.map(({ to, label, icon: Icon }) => (
                 <NavLink
                   key={to}
                   to={to}
                   onClick={() => setMoreOpen(false)}
-                  className={({ isActive }) =>
+                  className={({ isActive: a }) =>
                     cn(
-                      "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
-                      isActive ? "text-primary bg-accent/60" : "text-foreground hover:bg-accent/60"
+                      "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors",
+                      a ? "bg-primary/10 text-primary" : "text-foreground hover:bg-secondary/40"
                     )
                   }
                 >

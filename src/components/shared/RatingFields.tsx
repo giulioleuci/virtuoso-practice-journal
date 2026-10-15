@@ -12,7 +12,7 @@ export function RatingFields({ mark, onChange, requireRatings = true }: { mark: 
         return (
           <RatingScale key={key} label={key === "confidence" ? t("session.confidenceLabel") : t(`rating.${key}`)} question={t(`rating.${key}Question`)} labels={labels} value={mark[key]}
             onChange={(value) => onChange({ [key]: value } as Partial<SegmentMark>)} unanswered={t("rating.unanswered")}
-            scaleHint={t("rating.scaleHint", { low: labels[0], high: labels[4] })} required={requireRatings && key === "confidence"} />
+            scaleHint={t("rating.scaleHint", { low: labels[0], high: labels[4] })} clearLabel={t("rating.clear")} required={requireRatings && key === "confidence"} />
         );
       })}
     </div>

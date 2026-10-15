@@ -25,6 +25,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { FloatingActions } from "@/components/shared/FloatingActions";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { FormErrors } from "@/components/shared/StateNotice";
 import { SectionHeader } from "@/components/shared/SectionHeader";
@@ -128,10 +129,10 @@ function SessionView({ session }: { session: Session }) {
             <Textarea rows={3} maxLength={2000} aria-label={t("session.notes")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("session.notesPlaceholder")} />
           </div>
           <FormErrors errors={errors} className="mt-6" />
-          <div className="mt-8 flex justify-end gap-2 border-t border-border pt-5 max-[699px]:sticky max-[699px]:bottom-[calc(76px+env(safe-area-inset-bottom))] max-[699px]:bg-card max-[699px]:pb-3">
+          <FloatingActions>
             <Button type="button" variant="ghost" onClick={() => { setEditing(false); setMarks(session.marks); setNotes(session.notes ?? ""); setDate(session.date); }}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={errors.length > 0}>{t("common.save")}</Button>
-          </div>
+          </FloatingActions>
         </form>
       ) : (
         <div className="grid gap-8 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px]">

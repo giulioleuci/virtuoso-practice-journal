@@ -1,11 +1,11 @@
-import { Star } from "lucide-react";
+import { Star, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * Five stars for one 1-5 rating. The meaning of the chosen star (or the scale, before any choice) is spelled out,
- * so state never relies on colour. An optional rating is cleared by choosing the same star again.
+ * so state never relies on colour. A visible button clears the choice, for a slip of the finger or a change of mind.
  */
-export function RatingScale({ label, question, labels, value, onChange, unanswered, scaleHint, required = false }: {
+export function RatingScale({ label, question, labels, value, onChange, unanswered, scaleHint, clearLabel, required = false }: {
   label: string;
   question: string;
   /** Five labels; index 0 is value 1. */
@@ -15,6 +15,8 @@ export function RatingScale({ label, question, labels, value, onChange, unanswer
   unanswered: string;
   /** Spells out both ends of the scale, e.g. "1 = Very low · 5 = Very high". */
   scaleHint: string;
+  /** Accessible start of the button that clears the choice; the scale's label is appended. */
+  clearLabel: string;
   required?: boolean;
 }) {
   return (
@@ -25,16 +27,24 @@ export function RatingScale({ label, question, labels, value, onChange, unanswer
         {labels.map((text, i) => {
           const n = i + 1;
           return (
-            <button key={n} type="button" aria-pressed={value === n} aria-label={`${n} — ${text}`} onClick={() => onChange(!required && value === n ? undefined : n)}
+            <button key={n} type="button" aria-pressed={value === n} aria-label={`${n} — ${text}`} onClick={() => onChange(n)}
               className={cn("grid h-11 w-11 place-items-center rounded-md transition-colors hover:bg-secondary/40", value !== undefined && n <= value ? "text-primary" : "text-muted-foreground")}>
               <Star className={cn("h-6 w-6", value !== undefined && n <= value && "fill-current")} aria-hidden />
             </button>
           );
         })}
       </div>
-      <p aria-live="polite" className={cn("text-xs", value === undefined && required ? "font-medium text-destructive" : "text-muted-foreground")}>
-        {value === undefined ? `${required ? `${unanswered} · ` : ""}${scaleHint}` : labels[value - 1]}
-      </p>
+      <div className="flex min-h-11 items-center justify-between gap-2">
+        <p aria-live="polite" className={cn("text-xs", value === undefined && required ? "font-medium text-destructive" : "text-muted-foreground")}>
+          {value === undefined ? `${required ? `${unanswered} · ` : ""}${scaleHint}` : labels[value - 1]}
+        </p>
+        {value !== undefined && (
+          <button type="button" aria-label={`${clearLabel}: ${label}`} onClick={() => onChange(undefined)}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground">
+            <X className="h-3.5 w-3.5" aria-hidden />{clearLabel}
+          </button>
+        )}
+      </div>
     </fieldset>
   );
 }
