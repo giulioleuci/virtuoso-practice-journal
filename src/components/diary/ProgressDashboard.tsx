@@ -40,7 +40,7 @@ export function ProgressDashboard({ from, to, onFiltersChange }: { from?: string
 
   const data = useMemo(
     () =>
-      weeklyProgress(sessions ?? [], (tasks ?? []).map((x) => ({ id: x.id, subjectId: x.subjectId, itemId: x.itemId, targetBpm: x.targetBpm })), { subjectId, itemId, segmentId, from, to }, weeks, to || dayKey(new Date()))
+      weeklyProgress(sessions ?? [], (tasks ?? []).map((x) => ({ id: x.id, subjectId: x.subjectId, itemId: x.itemId, plan: x.plan })), { subjectId, itemId, segmentId, from, to }, weeks, to || dayKey(new Date()))
         .map((w) => ({ ...w, label: w.weekKey.slice(5) })),
     [sessions, tasks, subjectId, itemId, segmentId, from, to, weeks],
   );
@@ -83,7 +83,10 @@ export function ProgressDashboard({ from, to, onFiltersChange }: { from?: string
           <button key={n} className={chip(weeks === n)} onClick={() => setWeeks(n)}>{t("progress.weeks", { count: n })}</button>
         ))}
       </div>
-      <ChartCard title={t("progress.quality")} data={data} dataKey="quality" kind="line" domain={[1, 4]} />
+      <ChartCard title={t("progress.confidence")} data={data} dataKey="confidence" kind="line" domain={[1, 5]} />
+      <ChartCard title={t("progress.mood")} data={data} dataKey="mood" kind="line" domain={[1, 5]} />
+      <ChartCard title={t("progress.focus")} data={data} dataKey="focus" kind="line" domain={[1, 5]} />
+      <p className="text-xs italic text-muted-foreground">{t("progress.contextHint")}</p>
       <ChartCard title={t("progress.consistency")} data={data} dataKey="activeDays" kind="bar" domain={[0, 7]} />
       <ChartCard title={t("progress.goals")} data={data} dataKey="goalRate" kind="line" domain={[0, 100]} unit="%" />
       {itemId != null ? (
@@ -103,9 +106,9 @@ function ChartCard({ title, data, dataKey, kind, domain, unit }: { title: string
   const latest = values.at(-1);
   const axis = { fontSize: 10, fill: "hsl(var(--muted-foreground))" };
   return (
-    <div className="paper-card p-4 space-y-2">
+    <div className="space-y-2 border-t border-border pt-4">
       <div className="flex items-baseline justify-between">
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{title}</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">{title}</div>
         <div className="font-serif text-xl tabular-nums">{latest != null ? `${latest}${unit ?? ""}` : "—"}</div>
       </div>
       {values.length === 0 ? (

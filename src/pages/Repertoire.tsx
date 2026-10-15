@@ -1,18 +1,19 @@
 import { useMemo, useState } from "react";
-import { BarChart3, CalendarDays, CheckCircle2, MoreVertical, Music4, Pencil, Plus, Trash2 } from "lucide-react";
-import { useAllSegments, useAllTasks, usePerformanceEvents, usePerformanceLinks, useRepertoire, useSessions } from "@/presentation/hooks/useEntities";
+import { Link, useSearchParams } from "react-router-dom";
+import { CalendarDays, CheckCircle2, ChevronLeft, MoreVertical, Music4, Pencil, Plus, Trash2 } from "lucide-react";
+import { usePerformanceEvents, usePerformanceLinks, useRepertoire } from "@/presentation/hooks/useEntities";
+import { useReadiness } from "@/presentation/hooks/useReadiness";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { PerformanceEvent } from "@/domain/entities/performance";
-import { calculateReadiness } from "@/domain/logic/readiness";
+import type { PieceEvidence } from "@/domain/logic/readiness";
 import { daysUntilReview, isReviewDue } from "@/domain/logic/repertoireReview";
 import { useI18n } from "@/lib/i18n";
 import { formatDate, parseDayKey, today } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { PerformanceEventSheet } from "@/components/library/PerformanceEventSheet";
-import { ProgrammeAnalysisSheet, type ProgrammeEntry } from "@/components/library/ProgrammeAnalysisSheet";
 import { performancesService, repertoireService } from "@/lib/services/performances";
 import { toast } from "sonner";
 
@@ -23,47 +24,27 @@ export default function Repertoire() {
   const todayKey = today();
 
   const items = useRepertoire();
-  const sessions = useSessions();
-  const segments = useAllSegments();
-  const tasks = useAllTasks();
   const events = usePerformanceEvents();
   const links = usePerformanceLinks();
+  const { itemsById, evidenceFor } = useReadiness();
 
-  const [tab, setTab] = useState<Tab>("repertoire");
+  const coverage = (ev: PieceEvidence) => [
+    ev.total ? t("evidence.rated", { rated: ev.rated, total: ev.total }) : t("evidence.whole"),
+    ev.lastStudied ? t("evidence.lastStudied", { date: formatDate(ev.lastStudied, lang, "dayMonth") }) : t("evidence.never"),
+  ].join(" · ");
+
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(params.get("tab") === "performances" ? "performances" : "repertoire");
   const [eventSheet, setEventSheet] = useState<{ open: boolean; event: PerformanceEvent | null }>({ open: false, event: null });
-  const [analysis, setAnalysis] = useState<{ open: boolean; event: PerformanceEvent | null; entries: ProgrammeEntry[] }>({ open: false, event: null, entries: [] });
-
-  const sessionsByItem = useMemo(() => {
-    const taskItem = new Map<number, number>();
-    for (const task of tasks ?? []) if (task.id !== undefined && task.itemId !== undefined) taskItem.set(task.id, task.itemId);
-    const map = new Map<number, typeof sessions>();
-    for (const session of sessions ?? []) {
-      const itemId = taskItem.get(session.taskId);
-      if (itemId === undefined) continue;
-      map.set(itemId, [...(map.get(itemId) ?? []), session]);
-    }
-    return map;
-  }, [sessions, tasks]);
-
-  const readinessFor = (item: LibraryItem) =>
-    calculateReadiness(
-      item,
-      (segments ?? []).filter((segment) => segment.itemId === item.id),
-      (item.id !== undefined ? sessionsByItem.get(item.id) : undefined) ?? [],
-      todayKey,
-    );
 
   const sortedItems = useMemo(
     () => (items ?? []).slice().sort((a, b) => (a.nextReviewAt ?? "").localeCompare(b.nextReviewAt ?? "")),
     [items]
   );
-
   const sortedEvents = useMemo(
     () => (events ?? []).slice().sort((a, b) => a.date.localeCompare(b.date)),
     [events]
   );
-
-  const itemsById = useMemo(() => new Map((items ?? []).map((item) => [item.id, item])), [items]);
 
   const markReviewed = async (item: LibraryItem) => {
     if (item.id === undefined) return;
@@ -84,15 +65,23 @@ export default function Repertoire() {
   };
 
   return (
-    <div className="space-y-5 pb-24">
-      <h2 className="font-serif text-3xl">{t("repertoire.title")}</h2>
+    <div className="pb-24">
+      <Link to="/library" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+        <ChevronLeft className="h-4 w-4" /> {t("item.back")}
+      </Link>
+      <PageHeader
+        title={t("repertoire.title")}
+        actions={tab === "performances" && <Button onClick={() => setEventSheet({ open: true, event: null })}><Plus /> {t("performances.new")}</Button>}
+      />
 
-      <div className="grid grid-cols-2 gap-2">
+      <div role="tablist" className="mb-5 flex gap-6 border-b border-border">
         {(["repertoire", "performances"] as Tab[]).map((key) => (
           <button
             key={key}
+            role="tab"
+            aria-selected={tab === key}
             onClick={() => setTab(key)}
-            className={`paper-card py-3 text-sm font-medium min-h-[44px] ${tab === key ? "ring-2 ring-primary/60" : ""}`}
+            className={`-mb-px border-b-2 pb-2 text-sm font-medium transition-colors ${tab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
             {key === "repertoire" ? t("repertoire.tab") : t("performances.tab")}
           </button>
@@ -103,13 +92,13 @@ export default function Repertoire() {
         sortedItems.length === 0 ? (
           <EmptyState icon={Music4} title={t("repertoire.emptyTitle")} hint={t("repertoire.emptyBody")} />
         ) : (
-          <ul className="space-y-3">
+          <ul className="divide-y divide-border border-t border-border">
             {sortedItems.map((item) => {
               const due = isReviewDue(item, todayKey);
               const days = daysUntilReview(item, todayKey);
-              const readiness = readinessFor(item);
+              const ev = evidenceFor(item);
               return (
-                <li key={item.id} className="paper-card p-3.5 space-y-2.5">
+                <li key={item.id} className="space-y-2.5 py-4">
                   <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-serif text-[1.35rem] leading-tight break-words">{item.title}</h3>
@@ -144,13 +133,9 @@ export default function Repertoire() {
                     )}
                   </div>
 
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{t("performances.readiness")}</span>
-                      <span className="tabular-nums font-medium text-foreground">{readiness.overall}%</span>
-                    </div>
-                    <Progress value={readiness.overall} className="h-2" />
-                  </div>
+                  <p className="text-xs tabular-nums text-muted-foreground">
+                    {coverage(ev)}{ev.toDo.length ? ` · ${t("evidence.programmeToDo", { count: ev.toDo.length })}` : ""}
+                  </p>
                 </li>
               );
             })}
@@ -160,80 +145,44 @@ export default function Repertoire() {
 
       {tab === "performances" && (
         sortedEvents.length === 0 ? (
-          <EmptyState icon={CalendarDays} title={t("performances.emptyTitle")} hint={t("performances.emptyBody")} />
+          <EmptyState icon={CalendarDays} title={t("performances.emptyTitle")} hint={t("performances.emptyBody")} cta={{ label: t("performances.new"), onClick: () => setEventSheet({ open: true, event: null }) }} />
         ) : (
-          <ul className="space-y-3">
+          <ul className="divide-y divide-border border-t border-border">
             {sortedEvents.map((event) => {
-              const programme = (links ?? []).filter((link) => link.eventId === event.id);
-              const scores = programme.flatMap((link) => {
+              const pieces = (links ?? []).filter((link) => link.eventId === event.id).flatMap((link) => {
                 const item = itemsById.get(link.itemId);
-                if (!item) return [];
-                return [{
-                  item,
-                  readiness: readinessFor(item),
-                  sessions: (item.id !== undefined ? sessionsByItem.get(item.id) : undefined) ?? [],
-                  segments: (segments ?? []).filter((segment) => segment.itemId === item.id),
-                }];
+                return item ? [evidenceFor(item)] : [];
               });
-
-              const overall = scores.length
-                ? Math.round(scores.reduce((sum, entry) => sum + entry.readiness.overall, 0) / scores.length)
-                : 0;
+              const toDo = pieces.reduce((sum, ev) => sum + ev.toDo.length, 0);
               const daysLeft = Math.round((parseDayKey(event.date).getTime() - parseDayKey(todayKey).getTime()) / 86_400_000);
               return (
-                <li key={event.id} className="paper-card p-3.5 space-y-2.5">
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-serif text-[1.35rem] leading-tight break-words">{event.name}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        {t(`performances.kind.${event.kind}`)} · {formatDate(event.date, lang, "medium")}
-                        {event.venue ? ` · ${event.venue}` : ""}
-                      </p>
+                <li key={event.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-4">
+                  <div className="min-w-[calc(100%-6rem)] flex-1 min-[700px]:min-w-0">
+                    <h3 className="break-words font-serif text-[1.375rem] font-semibold leading-tight">
+                      <Link to={`/library/events/${event.id}`} className="hover:underline underline-offset-4">{event.name}</Link>
+                    </h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {t(`performances.kind.${event.kind}`)} · {formatDate(event.date, lang, "medium")}{event.venue ? ` · ${event.venue}` : ""} · {pieces.length} {t("performances.programme").toLowerCase()}
+                    </p>
+                    <div className="mt-2 flex items-center gap-3 text-xs">
+                      <span className="tabular-nums text-muted-foreground">
+                        {daysLeft >= 0 ? t("performances.daysLeft").replace("{days}", String(daysLeft)) : t("performances.past")}
+                      </span>
+                      <span className="tabular-nums">{t("evidence.programmeToDo", { count: toDo })}</span>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="h-10 w-10 -mr-1.5 -mt-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent" aria-label={t("common.more")}>
-                          <MoreVertical className="h-[18px] w-[18px]" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setAnalysis({ open: true, event, entries: scores })}>
-                          <BarChart3 className="h-4 w-4 mr-2" /> {t("performances.analysis")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setEventSheet({ open: true, event })}>
-                          <Pencil className="h-4 w-4 mr-2" /> {t("common.edit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteEvent(event)}>
-                          <Trash2 className="h-4 w-4 mr-2" /> {t("common.delete")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
-
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground tabular-nums">
-                      {daysLeft >= 0
-                        ? t("performances.daysLeft").replace("{days}", String(daysLeft))
-                        : t("performances.past")}
-                    </span>
-                    <span className="tabular-nums font-medium">{overall}%</span>
-                  </div>
-                  <Progress value={overall} className="h-2" />
-
-                  <ul className="space-y-2 pt-1">
-                    {scores.map(({ item, readiness }) => (
-                      <li key={item.id} className="space-y-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="font-serif text-base leading-tight break-words min-w-0">{item.title}</span>
-                          <span className="text-xs tabular-nums text-muted-foreground shrink-0">{readiness.overall}%</span>
-                        </div>
-                        <Progress value={readiness.overall} className="h-1.5" />
-                        <p className="text-[11px] text-muted-foreground tabular-nums">
-                          {t("performances.bpm")} {readiness.bpm}% · {t("performances.mastery")} {readiness.mastery}% · {t("performances.frequency")} {readiness.frequency}%
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
+                  <Button asChild size="sm" variant="outline"><Link to={`/library/events/${event.id}`}>{t("event.preparation")}</Link></Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40" aria-label={`${t("common.more")}: ${event.name}`}>
+                        <MoreVertical className="h-[18px] w-[18px]" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEventSheet({ open: true, event })}><Pencil className="mr-2 h-4 w-4" /> {t("common.edit")}</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteEvent(event)}><Trash2 className="mr-2 h-4 w-4" /> {t("common.delete")}</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </li>
               );
             })}
@@ -241,28 +190,11 @@ export default function Repertoire() {
         )
       )}
 
-      {tab === "performances" && (
-        <button
-          onClick={() => setEventSheet({ open: true, event: null })}
-          className="fixed bottom-24 right-5 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg inline-flex items-center justify-center"
-          aria-label={t("performances.new")}
-        >
-          <Plus className="h-6 w-6" />
-        </button>
-      )}
-
       <PerformanceEventSheet
         open={eventSheet.open}
         onOpenChange={(open) => setEventSheet((current) => ({ ...current, open }))}
         event={eventSheet.event}
         programme={(links ?? []).filter((link) => link.eventId === eventSheet.event?.id).map((link) => link.itemId)}
-      />
-
-      <ProgrammeAnalysisSheet
-        open={analysis.open}
-        onOpenChange={(open) => setAnalysis((current) => ({ ...current, open }))}
-        event={analysis.event}
-        entries={analysis.entries}
       />
     </div>
   );
