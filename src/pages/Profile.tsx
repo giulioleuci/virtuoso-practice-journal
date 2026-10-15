@@ -13,17 +13,20 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   Download, Upload, Trash2, FlaskConical, Pencil, PlayCircle,
-  Bell, Languages, Settings2, Database, AlertTriangle, BookMarked, User, Info,
+  Bell, Languages, BookMarked, User, Info, FileSpreadsheet,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { nativeSelect } from "@/components/diary/WhenFields";
 
 const APP_VERSION = "0.3alpha";
 
 export default function Profile() {
   const { t, lang, setLang } = useI18n();
   const profile = useProfile();
+  const [csvFrom, setCsvFrom] = useState("");
+  const [csvTo, setCsvTo] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -95,6 +98,15 @@ export default function Profile() {
     else toast.error(result.error || t("errors.couldNotSave"));
   };
 
+  const onExportCsv = async () => {
+    try {
+      await applicationCommands.backups.csv.execute(csvFrom || undefined, csvTo || undefined);
+      toast.success(t("toast.csvExported"));
+    } catch (error) {
+      toast.error((error as Error).message || t("errors.couldNotSave"));
+    }
+  };
+
   const onImport = async () => {
     const result = await backup.importBackup();
     if (result.ok && result.value) toast.success(t("toast.imported"));
@@ -104,36 +116,15 @@ export default function Profile() {
   const remindersOn = profile.reminderEnabled !== false;
 
   return (
-    <div className="space-y-5 pb-8">
-      {/* Identity hero */}
-      <section className="paper-card p-5">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-accent/70 flex items-center justify-center shrink-0">
-            <User className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              {t("nav.profile")}
-            </p>
-            <div className="flex items-center gap-1.5">
-              <h1 className="font-serif text-2xl truncate">
-                {profile.name || <span className="italic text-muted-foreground">{t("profile.unnamed")}</span>}
-              </h1>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 shrink-0"
-                aria-label={t("profile.editName")}
-                onClick={() => { setNameDraft(profile.name ?? ""); setEditingName(true); }}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
+    <div className="pb-8">
+      <PageHeader title={t("nav.settings")} subtitle={t("settings.subtitle")} />
+      <div className="grid gap-8 min-[901px]:grid-cols-[210px_minmax(0,1fr)]">
+        <nav aria-label={t("settings.navLabel")} className="flex gap-1 overflow-x-auto no-scrollbar min-[901px]:sticky min-[901px]:top-6 min-[901px]:flex-col min-[901px]:self-start">
+          {[["preferences", t("settings.preferences")], ["subjects", t("settings.subjects")], ["practice", t("profile.settings")], ["data", t("profile.data")], ["advanced", t("profile.dev")]].map(([id, label]) => (
+            <a key={id} href={`#settings-${id}`} className="shrink-0 rounded-lg px-3 py-2 max-[900px]:whitespace-nowrap text-[0.8125rem] font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground">{label}</a>
+          ))}
+        </nav>
+        <div className="min-w-0 max-w-[720px] space-y-10">
       <Dialog open={editingName} onOpenChange={setEditingName}>
         <DialogContent>
           <DialogHeader>
@@ -170,7 +161,20 @@ export default function Profile() {
       </Dialog>
 
       {/* Quick preferences: language + reminders, always visible */}
-      <section className="paper-card p-4 space-y-3">
+      <section id="settings-preferences" className="scroll-mt-6 space-y-3">
+        <h2 className="font-serif text-2xl font-semibold">{t("settings.preferences")}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate text-sm">{profile.name || <span className="italic text-muted-foreground">{t("profile.unnamed")}</span>}</span>
+          </div>
+          <Button type="button" size="sm" variant="outline" aria-label={t("profile.editName")} onClick={() => { setNameDraft(profile.name ?? ""); setEditingName(true); }}>
+            <Pencil />{t("common.edit")}
+          </Button>
+        </div>
+
+        <div className="h-px bg-border" />
+
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -183,7 +187,7 @@ export default function Profile() {
               setLang(v);
               await update({ lang: v });
             }}
-            className="bg-background border border-border rounded-md px-2 py-1.5 text-sm shrink-0"
+            className={nativeSelect}
           >
             {SUPPORTED_LANGS.map((l) => (
               <option key={l.code} value={l.code}>{l.label}</option>
@@ -191,7 +195,7 @@ export default function Profile() {
           </select>
         </div>
 
-        <div className="h-px bg-border/60" />
+        <div className="h-px bg-border" />
 
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
@@ -221,7 +225,7 @@ export default function Profile() {
                 type="time"
                 value={profile.reminderTime}
                 onChange={(e) => update({ reminderTime: e.target.value })}
-                className="bg-background border border-border rounded-md px-2 py-1.5 text-sm tabular-nums"
+                className={nativeSelect}
               />
             </div>
 
@@ -280,7 +284,7 @@ export default function Profile() {
               </div>
             )}
 
-            <div className="h-px bg-border/60" />
+            <div className="h-px bg-border" />
 
             <div className="space-y-2">
               <span className="text-sm text-muted-foreground">{t("profile.reminderMessages")}</span>
@@ -336,25 +340,21 @@ export default function Profile() {
         )}
       </section>
 
-      {/* Subjects, layers & techniques */}
-      <SubjectsEditor />
+      <section id="settings-subjects" className="scroll-mt-6">
+        <h2 className="mb-3 font-serif text-2xl font-semibold">{t("settings.subjects")}</h2>
+        <SubjectsEditor />
+      </section>
 
       {/* Grouped collapsibles */}
-      <Accordion type="multiple" className="space-y-3">
-        <AccordionItem value="practice" className="paper-card border-0 px-4">
-          <AccordionTrigger className="hover:no-underline py-3">
-            <span className="flex items-center gap-2 font-serif text-base">
-              <Settings2 className="h-4 w-4 text-muted-foreground" />
-              {t("profile.settings")}
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-3 pb-4">
+      
+        <section id="settings-practice" className="scroll-mt-6 space-y-3 ">
+          <h2 className="font-serif text-2xl font-semibold ">{t("profile.settings")}</h2>
             <Row label={t("profile.lateRecovery")}>
               <input
                 type="number" min={0} max={14}
                 value={profile.lateRecoveryDays}
                 onChange={(e) => update({ lateRecoveryDays: Number(e.target.value) })}
-                className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-20 tabular-nums"
+                className={`${nativeSelect} w-20 tabular-nums`}
               />
             </Row>
             <Row label={t("profile.carryover")}>
@@ -362,14 +362,14 @@ export default function Profile() {
                 type="number" min={0} max={14}
                 value={profile.carryoverDays ?? 2}
                 onChange={(e) => update({ carryoverDays: Number(e.target.value) })}
-                className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-20 tabular-nums"
+                className={`${nativeSelect} w-20 tabular-nums`}
               />
             </Row>
             <Row label={t("profile.weekStartsOn")}>
               <select
                 value={profile.weekStartsOn ?? getDefaultWeekStartsOn(lang)}
                 onChange={(e) => update({ weekStartsOn: Number(e.target.value) })}
-                className="bg-background border border-border rounded-md px-2 py-1.5 text-sm w-32 tabular-nums"
+                className={`${nativeSelect} w-36`}
               >
                 {[0, 1, 2, 3, 4, 5, 6].map((i) => (
                   <option key={i} value={i}>{t(`weekday.${i}`)}</option>
@@ -393,36 +393,38 @@ export default function Profile() {
                 <PlayCircle className="h-4 w-4 mr-2" />{t("profile.introTour")}
               </Button>
             </div>
-          </AccordionContent>
-        </AccordionItem>
+          </section>
 
-        <AccordionItem value="data" className="paper-card border-0 px-4">
-          <AccordionTrigger className="hover:no-underline py-3">
-            <span className="flex items-center gap-2 font-serif text-base">
-              <Database className="h-4 w-4 text-muted-foreground" />
-              {t("profile.data")}
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pb-4">
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={onExport} disabled={backup.progress !== "idle"} className="w-full">
-                <Download className="h-4 w-4 mr-2" />{t("profile.export")}
-              </Button>
-              <Button variant="outline" onClick={onImport} disabled={backup.progress !== "idle"} className="w-full">
-                <Upload className="h-4 w-4 mr-2" />{t("profile.import")}
+        <section id="settings-data" className="scroll-mt-6 space-y-3 ">
+          <h2 className="font-serif text-2xl font-semibold ">{t("profile.data")}</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Button variant="outline" onClick={onExport} disabled={backup.progress !== "idle"} className="w-full">
+                  <Download className="h-4 w-4 mr-2" />{t("profile.exportData")}
+                </Button>
+                <p className="text-xs text-muted-foreground">{t("profile.exportDataHint")}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Button variant="outline" onClick={onImport} disabled={backup.progress !== "idle"} className="w-full">
+                  <Upload className="h-4 w-4 mr-2" />{t("profile.import")}
+                </Button>
+                <p className="text-xs text-muted-foreground">{t("profile.importHint")}</p>
+              </div>
+            </div>
+            <div className="space-y-2 border-t border-border pt-4">
+              <div className="grid grid-cols-2 gap-2">
+                <label className="grid gap-1 text-xs font-medium">{t("profile.csvFrom")}<Input type="date" value={csvFrom} max={csvTo || undefined} onChange={(e) => setCsvFrom(e.target.value)} /></label>
+                <label className="grid gap-1 text-xs font-medium">{t("profile.csvTo")}<Input type="date" value={csvTo} min={csvFrom || undefined} onChange={(e) => setCsvTo(e.target.value)} /></label>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("profile.csvHint")}</p>
+              <Button variant="outline" onClick={() => void onExportCsv()} className="w-full">
+                <FileSpreadsheet className="h-4 w-4 mr-2" />{t("profile.exportCsv")}
               </Button>
             </div>
-          </AccordionContent>
-        </AccordionItem>
+          </section>
 
-        <AccordionItem value="dev" className="paper-card border-0 px-4">
-          <AccordionTrigger className="hover:no-underline py-3">
-            <span className="flex items-center gap-2 font-serif text-base">
-              <FlaskConical className="h-4 w-4 text-muted-foreground" />
-              {t("profile.dev")}
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-3 pb-4">
+        <section id="settings-advanced" className="scroll-mt-6 space-y-3 ">
+          <h2 className="font-serif text-2xl font-semibold ">{t("profile.dev")}</h2>
             <p className="text-xs text-muted-foreground italic">{t("profile.devDesc")}</p>
             <Button
               variant="outline"
@@ -431,17 +433,10 @@ export default function Profile() {
             >
               <BookMarked className="h-4 w-4 mr-2" /> {t("profile.createSampleData")}
             </Button>
-          </AccordionContent>
-        </AccordionItem>
+          </section>
 
-        <AccordionItem value="danger" className="paper-card border-0 border-destructive/30 px-4">
-          <AccordionTrigger className="hover:no-underline py-3">
-            <span className="flex items-center gap-2 font-serif text-base text-destructive">
-              <AlertTriangle className="h-4 w-4" />
-              {t("profile.wipe")}
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-3 pb-4">
+        <section id="settings-danger" className="scroll-mt-6 space-y-3 border-t border-destructive/30 pt-6">
+          <h2 className="font-serif text-2xl font-semibold text-destructive">{t("profile.wipe")}</h2>
             {!confirming ? (
               <Button variant="destructive" className="w-full" onClick={() => setConfirming(true)}>
                 <Trash2 className="h-4 w-4 mr-2" />{t("profile.wipe")}
@@ -477,11 +472,9 @@ export default function Profile() {
                 </div>
               </div>
             )}
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+          </section>
 
-      <div className="pt-2 text-center">
+        <div className="pt-2">
         <button
           type="button"
           onClick={() => setAboutOpen(true)}
@@ -490,6 +483,8 @@ export default function Profile() {
           <Info className="h-3.5 w-3.5" />
           {t("profile.about")}
         </button>
+        </div>
+        </div>
       </div>
 
       <Dialog open={sampleOpen} onOpenChange={setSampleOpen}>

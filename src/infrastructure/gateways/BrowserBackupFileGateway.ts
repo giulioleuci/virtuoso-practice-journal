@@ -2,7 +2,7 @@ import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
 
 export class BrowserBackupFileGateway implements BackupFileGateway {
   async save(filename: string, content: string): Promise<void> {
-    const blob = new Blob([content], { type: "application/json" });
+    const blob = new Blob([content], { type: filename.endsWith(".csv") ? "text/csv;charset=utf-8" : "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

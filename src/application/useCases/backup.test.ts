@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ExportBackupUseCase } from "./exportBackup";
 import { ImportBackupUseCase } from "./importBackup";
+import type { Session } from "@/domain/entities/session";
 import type { BackupData, BackupPort } from "@/domain/ports/backup";
 import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
 
@@ -20,7 +21,7 @@ class FakeFiles implements BackupFileGateway {
 }
 
 describe("backup use cases", () => {
-  it("exports current data in version 2 backup format", async () => {
+  it("exports current data in version 3 backup format", async () => {
     const files = new FakeFiles();
     let calls = 0;
     await new ExportBackupUseCase(new FakeBackupRepository({ tasks: [{ id: 1 }] }), files, () => {
@@ -29,7 +30,7 @@ describe("backup use cases", () => {
     }).execute();
     expect(files.saved).toEqual({
       filename: "virtuoso-backup-1970-01-01.json",
-      content: JSON.stringify({ version: 2, exportedAt: 123, data: { tasks: [{ id: 1 }] } }, null, 2),
+      content: JSON.stringify({ version: 3, exportedAt: 123, data: { tasks: [{ id: 1 }] } }, null, 2),
     });
   });
 
@@ -48,8 +49,8 @@ describe("backup use cases", () => {
 
   it("rejects unsupported backup versions before replacing data", async () => {
     const repository = new FakeBackupRepository();
-    const files = new FakeFiles(JSON.stringify({ version: 3, data: {} }));
-    await expect(new ImportBackupUseCase(repository, files).execute()).rejects.toThrow("Unsupported backup version: 3");
+    const files = new FakeFiles(JSON.stringify({ version: 99, data: {} }));
+    await expect(new ImportBackupUseCase(repository, files).execute()).rejects.toThrow("Unsupported backup version: 99");
     expect(repository.imported).toBeUndefined();
   });
 
@@ -61,5 +62,24 @@ describe("backup use cases", () => {
       wipeAll: async () => {},
     };
     await expect(new ImportBackupUseCase(repository, files).execute()).rejects.toThrow("transaction rolled back");
+  });
+
+  it("rejects unknown versions and out-of-scale ratings before touching data", async () => {
+    const repository = new FakeBackupRepository();
+    const useCase = new ImportBackupUseCase(repository, new FakeFiles());
+    await expect(useCase.importContent(JSON.stringify({ version: 99, data: {} }))).rejects.toThrow("Unsupported backup version: 99");
+    await expect(useCase.importContent(JSON.stringify({ version: 3, data: { sessions: [{ id: 1, date: "2026-10-01", marks: [{ layers: [], techniques: [], mood: 6 }], createdAt: 1 }] } }))).rejects.toThrow();
+    expect(repository.imported).toBeUndefined();
+  });
+
+  it("back-fills session references in older backups and leaves missing ratings missing", async () => {
+    const repository = new FakeBackupRepository();
+    await new ImportBackupUseCase(repository, new FakeFiles()).importContent(JSON.stringify({ version: 2, data: {
+      tasks: [{ id: 4, subjectId: 2, linkType: "item", itemId: 5, title: "Etude", date: "2026-10-01", plan: [], done: true, createdAt: 1 }],
+      sessions: [{ id: 1, taskId: 4, date: "2026-10-01", marks: [{ layers: [], techniques: [], confidence: 3 }], notes: "keep", createdAt: 1 }],
+    } }));
+    const [imported] = repository.imported?.sessions as Session[];
+    expect(imported).toMatchObject({ subjectId: 2, itemId: 5, notes: "keep", marks: [{ confidence: 3 }] });
+    expect(imported.marks[0].mood).toBeUndefined();
   });
 });

@@ -192,7 +192,6 @@
   "assignments.makeTask": "Crear tarea",
   "assignments.back": "Atrás",
   "profile.settings": "Ajustes",
-  "profile.export": "Exportar datos",
   "profile.import": "Importar datos",
   "profile.wipe": "Eliminar todos los datos",
   "profile.unnamed": "Sin nombre",
@@ -1069,5 +1068,13 @@
   "segment.observations_plural": "{{count}} observaciones",
   "progress.mood": "Ánimo medio (1–5)",
   "progress.focus": "Concentración media (1–5)",
-  "progress.contextHint": "El ánimo y la concentración son contexto: no cambian la preparación, el plan ni las rutinas."
+  "progress.contextHint": "El ánimo y la concentración son contexto: no cambian la preparación, el plan ni las rutinas.",
+  "profile.exportData": "Exportar copia de seguridad de los datos",
+  "profile.exportDataHint": "Incluye datos y valoraciones. No incluye los archivos de audio.",
+  "profile.importHint": "Importa solo datos. Los archivos de audio no se restauran. Las grabaciones locales no se importan ni se exportan.",
+  "profile.exportCsv": "Exportar datos CSV — sin archivos de audio",
+  "profile.csvFrom": "Desde",
+  "profile.csvTo": "Hasta",
+  "profile.csvHint": "Sin fechas se exporta todo el historial.",
+  "toast.csvExported": "Archivos CSV exportados"
 }

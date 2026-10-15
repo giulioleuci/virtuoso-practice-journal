@@ -192,7 +192,6 @@
   "assignments.makeTask": "Make task",
   "assignments.back": "Back",
   "profile.settings": "Settings",
-  "profile.export": "Export data",
   "profile.import": "Import data",
   "profile.wipe": "Delete all data",
   "profile.unnamed": "Unnamed",
@@ -1069,5 +1068,13 @@
   "segment.observations_plural": "{{count}} observations",
   "progress.mood": "Average mood (1–5)",
   "progress.focus": "Average focus (1–5)",
-  "progress.contextHint": "Mood and focus are context: they never change readiness, plans or routines."
+  "progress.contextHint": "Mood and focus are context: they never change readiness, plans or routines.",
+  "profile.exportData": "Export data backup",
+  "profile.exportDataHint": "Includes data and ratings. Does not include audio files.",
+  "profile.importHint": "Imports data only. Audio files are not restored. Local recordings are never imported or exported.",
+  "profile.exportCsv": "Export CSV data — no audio files",
+  "profile.csvFrom": "From",
+  "profile.csvTo": "To",
+  "profile.csvHint": "Without dates, the whole history is exported.",
+  "toast.csvExported": "CSV files exported"
 }

@@ -6,6 +6,7 @@ import { RegenerateStudyRoutineUseCase } from "@/application/useCases/regenerate
 import { RemoveTaskUseCase } from "@/application/useCases/removeTask";
 import { UpdateTaskUseCase } from "@/application/useCases/updateTask";
 import { UpdateStudyRoutineUseCase } from "@/application/useCases/updateStudyRoutine";
+import { ExportCsvUseCase } from "@/application/useCases/exportCsv";
 import { ExportBackupUseCase } from "@/application/useCases/exportBackup";
 import { ImportBackupUseCase } from "@/application/useCases/importBackup";
 import { CapacitorBackupFileGateway } from "./gateways/CapacitorBackupFileGateway";
@@ -26,6 +27,7 @@ export const application = {
   },
   backups: {
     export: new ExportBackupUseCase(backupRepository, backupFiles),
+    csv: new ExportCsvUseCase(sessionRepository, backupFiles),
     import: new ImportBackupUseCase(backupRepository, backupFiles),
     wipe: () => backupRepository.wipeAll(),
   },
