@@ -985,7 +985,7 @@
   "session.carryForwardHint": "Tempo, Schichten und Techniken der gemeinsamen Abschnitte werden in deren Plan kopiert. Du kannst sie später bearbeiten.",
   "practice.prevSection": "Vorheriger Abschnitt",
   "practice.nextSection": "Nächster Abschnitt",
-  "practice.rateNext": "Sicherheit — danach zum nächsten Abschnitt",
+  "practice.rateNext": "Sicherheit (letzte Skala) — danach geht es zum nächsten Abschnitt",
   "homework.tasksLinked": "{{count}} Aufgabe",
   "homework.tasksLinked_plural": "{{count}} Aufgaben",
   "assignments.pickDays": "Planen für",
@@ -1014,8 +1014,8 @@
   "rating.focus.5": "Sehr hoch",
   "rating.unanswered": "Nicht beantwortet",
   "rating.missing": "Fehlt: {{fields}}",
-  "rating.missingSummary": "Bewertungen für {{count}} Abschnitt ergänzen",
-  "rating.missingSummary_plural": "Bewertungen für {{count}} Abschnitte ergänzen",
+  "rating.missingSummary": "Sicherheit für {{count}} Abschnitt angeben",
+  "rating.missingSummary_plural": "Sicherheit für {{count}} Abschnitte angeben",
   "rating.applyToOthers": "Diese Werte auf die anderen Abschnitte anwenden",
   "rating.applyReplaces": "Ersetzt {{count}} vorhandene Antwort",
   "rating.applyReplaces_plural": "Ersetzt {{count}} vorhandene Antworten",
@@ -1100,5 +1100,11 @@
   "audio.deleteSessionClips": "Dabei wird auch {{count}} Aufnahme gelöscht.",
   "audio.deleteSessionClips_plural": "Dabei werden auch {{count}} Aufnahmen gelöscht.",
   "toast.importedClips": "Daten importiert. Referenzierte Aufnahmen: {{available}} verfügbar, {{missing}} nicht verfügbar.",
-  "profile.wipeAudio": "Dabei werden auch alle Audioaufnahmen auf diesem Gerät gelöscht."
+  "profile.wipeAudio": "Dabei werden auch alle Audioaufnahmen auf diesem Gerät gelöscht.",
+  "rating.confidence.1": "Gar nicht sicher",
+  "rating.confidence.2": "Wenig sicher",
+  "rating.confidence.3": "Einigermaßen sicher",
+  "rating.confidence.4": "Sicher",
+  "rating.confidence.5": "Sehr sicher",
+  "rating.scaleHint": "1 = {{low}} · 5 = {{high}}"
 }

@@ -1,4 +1,4 @@
-import { RATING_KEYS, type RatingKey, type SegmentMark } from "../entities/common";
+import type { RatingKey, SegmentMark } from "../entities/common";
 
 /** Mark with the highest tempo, carrying its note value. */
 export const topMark = (marks: SegmentMark[]): SegmentMark | undefined =>
@@ -14,5 +14,5 @@ export function meanRating(marks: SegmentMark[], key: RatingKey): number | undef
 
 export const meanConfidence = (marks: SegmentMark[]) => meanRating(marks, "confidence");
 
-/** Ratings a new session still needs on this mark. */
-export const missingRatings = (mark: SegmentMark): RatingKey[] => RATING_KEYS.filter((key) => mark[key] === undefined);
+/** Ratings a new session still needs on this mark: only confidence is required, mood and focus are optional. */
+export const missingRatings = (mark: SegmentMark): RatingKey[] => (mark.confidence === undefined ? ["confidence"] : []);

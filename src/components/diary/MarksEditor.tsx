@@ -1,11 +1,11 @@
 import { toast } from "sonner";
-import { RATING_KEYS, type RatingKey, type SegmentMark } from "@/domain/entities/common";
+import { RATING_KEYS, type SegmentMark } from "@/domain/entities/common";
 import { emptyEntry } from "@/domain/logic/plan";
 import { missingRatings } from "@/domain/logic/sessionMetrics";
 import { useI18n } from "@/lib/i18n";
 import { BpmCoupler } from "@/components/library/BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
-import { RatingScale } from "@/components/shared/RatingScale";
+import { RatingFields } from "@/components/shared/RatingFields";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 
@@ -29,8 +29,6 @@ export function MarksEditor({ marks, onChange, sections, seed = emptyEntry, laye
   const rows: { id?: number; label: string }[] = sections?.length ? sections : [{ label: "" }];
   const patch = (segmentId: number | undefined, p: Partial<SegmentMark>) => onChange(marks.map((m) => (m.segmentId === segmentId ? { ...m, ...p } : m)));
   const setStudied = (segmentId: number, on: boolean) => onChange(on ? [...marks, seed(segmentId)] : marks.filter((m) => m.segmentId !== segmentId));
-  const name = (key: RatingKey) => (key === "confidence" ? t("session.confidenceLabel") : t(`rating.${key}`));
-  const labels = (key: RatingKey) => [1, 2, 3, 4, 5].map((n) => (key === "confidence" ? t("common.starRating", { count: n }) : t(`rating.${key}.${n}`)));
   const applyToOthers = (from: SegmentMark) => {
     const before = marks;
     onChange(marks.map((m) => (m === from ? m : { ...m, mood: from.mood, focus: from.focus, confidence: from.confidence })));
@@ -57,13 +55,8 @@ export function MarksEditor({ marks, onChange, sections, seed = emptyEntry, laye
             )}
             {m && (
               <>
-                {missing.length > 0 && <p className="text-xs font-medium text-destructive">{t("rating.missing", { fields: missing.map(name).join(", ") })}</p>}
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {RATING_KEYS.map((key) => (
-                    <RatingScale key={key} label={name(key)} question={t(`rating.${key}Question`)} labels={labels(key)} value={m[key]}
-                      onChange={(value) => patch(id, { [key]: value } as Partial<SegmentMark>)} unanswered={t("rating.unanswered")} required={requireRatings} />
-                  ))}
-                </div>
+                {missing.length > 0 && <p className="text-xs font-medium text-destructive">{t("rating.missing", { fields: missing.map((key) => (key === "confidence" ? t("session.confidenceLabel") : t(`rating.${key}`))).join(", ") })}</p>}
+                <RatingFields mark={m} onChange={(p) => patch(id, p)} requireRatings={requireRatings} />
                 {others.length > 0 && missingRatings(m).length === 0 && (
                   <div className="space-y-1">
                     <Button type="button" size="sm" variant="outline" onClick={() => applyToOthers(m)}>{t("rating.applyToOthers")}</Button>

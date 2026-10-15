@@ -24,7 +24,7 @@ Used at the instrument (hands busy, phone or tablet) and in lessons (fast typing
 ## Capabilities and Constraints
 - Tempo is expressed as a note value = bpm. Note values include whole, half, quarter, eighth, sixteenth plus dotted half/quarter/eighth for compound meters.
 - Migrations preserve data: no wipe shortcuts.
-- Three per-section ratings (1-5): mood, focus, confidence. Mood and focus are context only; confidence alone feeds routine weighting. No quality scale, no per-layer or per-technique scores.
+- Three per-section star ratings (1-5): mood, focus, confidence. Confidence is required for a new session; mood and focus are optional context only; confidence alone feeds routine weighting. No quality scale, no per-layer or per-technique scores.
 
 ## Product Principles
 - Fewest taps to record a session; detail is opt-in.

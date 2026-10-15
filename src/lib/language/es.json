@@ -985,7 +985,7 @@
   "session.carryForwardHint": "El tempo, las capas y las técnicas de las secciones compartidas se copian en su plan. Podrás editarlos después.",
   "practice.prevSection": "Sección anterior",
   "practice.nextSection": "Sección siguiente",
-  "practice.rateNext": "Confianza — y pasas a la siguiente sección",
+  "practice.rateNext": "Seguridad (última escala) — luego se pasa a la siguiente sección",
   "homework.tasksLinked": "{{count}} tarea",
   "homework.tasksLinked_plural": "{{count}} tareas",
   "assignments.pickDays": "Planificar para",
@@ -1014,8 +1014,8 @@
   "rating.focus.5": "Muy alta",
   "rating.unanswered": "Sin respuesta",
   "rating.missing": "Faltan: {{fields}}",
-  "rating.missingSummary": "Completa las valoraciones de {{count}} sección",
-  "rating.missingSummary_plural": "Completa las valoraciones de {{count}} secciones",
+  "rating.missingSummary": "Indica la seguridad de {{count}} sección",
+  "rating.missingSummary_plural": "Indica la seguridad de {{count}} secciones",
   "rating.applyToOthers": "Aplicar estos valores a los demás segmentos",
   "rating.applyReplaces": "Sustituye {{count}} respuesta ya dada",
   "rating.applyReplaces_plural": "Sustituye {{count}} respuestas ya dadas",
@@ -1100,5 +1100,11 @@
   "audio.deleteSessionClips": "También se eliminará {{count}} grabación.",
   "audio.deleteSessionClips_plural": "También se eliminarán {{count}} grabaciones.",
   "toast.importedClips": "Datos importados. Grabaciones referenciadas: {{available}} disponibles, {{missing}} no disponibles.",
-  "profile.wipeAudio": "También elimina todas las grabaciones de audio de este dispositivo."
+  "profile.wipeAudio": "También elimina todas las grabaciones de audio de este dispositivo.",
+  "rating.confidence.1": "Nada seguro",
+  "rating.confidence.2": "Poco seguro",
+  "rating.confidence.3": "Bastante seguro",
+  "rating.confidence.4": "Seguro",
+  "rating.confidence.5": "Muy seguro",
+  "rating.scaleHint": "1 = {{low}} · 5 = {{high}}"
 }

@@ -151,9 +151,20 @@ describe("task and session use cases", () => {
     const tasks = new FakeTaskRepository([baseTask]);
     const sessions = new FakeSessionRepository(tasks);
 
-    await expect(new LogSessionUseCase(sessions).execute(baseTask, { date: "2026-07-20", marks: [{ layers: [], techniques: [], mood: 4, confidence: 5 }] })).rejects.toThrow(/focus/);
+    await expect(new LogSessionUseCase(sessions).execute(baseTask, { date: "2026-07-20", marks: [{ layers: [], techniques: [], mood: 4, focus: 3 }] })).rejects.toThrow(/confidence/);
     await expect(new LogSessionUseCase(sessions).execute(sectioned, { date: "2026-07-20", marks: [rated(1), rated(1)] })).rejects.toThrow(/once/);
     expect(sessions.sessions).toHaveLength(0);
+  });
+
+  it("accepts a result with confidence only: mood and focus are optional and stay missing", async () => {
+    const tasks = new FakeTaskRepository([baseTask]);
+    const sessions = new FakeSessionRepository(tasks);
+
+    await new LogSessionUseCase(sessions).execute(baseTask, { date: "2026-07-20", marks: [{ layers: [], techniques: [], confidence: 2 }] });
+
+    expect(sessions.sessions[0].marks[0]).toMatchObject({ confidence: 2 });
+    expect(sessions.sessions[0].marks[0].mood).toBeUndefined();
+    expect(sessions.sessions[0].marks[0].focus).toBeUndefined();
   });
 
   it("stores one rated result per studied section and records the planned ones left out", async () => {

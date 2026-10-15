@@ -14,6 +14,7 @@ import { applicationCommands } from "@/lib/applicationCommands";
 import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { RatingFields } from "@/components/shared/RatingFields";
 import { ClipDrafts } from "./Recorder";
 import { Slider } from "@/components/ui/slider";
 import { X, Volume2, VolumeX, MessageSquareQuote, ChevronLeft, ChevronRight, Check } from "lucide-react";
@@ -51,9 +52,10 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   const patchMark = (patch: Partial<SegmentMark>) => setMarks((all) => all.map((m, i) => (i === current ? { ...m, ...patch } : m)));
   const setBpm = (next: number | ((b: number) => number)) => patchMark({ bpm: typeof next === "function" ? next(bpm) : next });
   const setNoteVal = (nv: SegmentMark["noteVal"]) => patchMark({ noteVal: nv });
-  const rate = (confidence: number) => {
-    patchMark({ confidence });
-    if (current < marks.length - 1) setCurrent(current + 1);
+  // Confidence is the last scale: choosing it moves on to the next section; mood and focus are optional.
+  const rate = (patch: Partial<SegmentMark>) => {
+    patchMark(patch);
+    if (patch.confidence !== undefined && current < marks.length - 1) setCurrent(current + 1);
   };
   const focusTechniques = mark.techniques.map((id) => techniques?.find((x) => x.id === id)?.name).filter(Boolean) as string[];
 
@@ -206,16 +208,9 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               </div>
             </div>
 
-            <div role="group" aria-label={t("session.confidenceLabel")} className="mt-6 border-t border-border pt-5">
-              <p className="mb-2 text-xs font-medium">{marks.length > 1 && current < marks.length - 1 ? t("practice.rateNext") : t("session.confidenceLabel")}</p>
-              <div className="grid grid-cols-5 gap-2">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button key={n} type="button" aria-pressed={mark.confidence === n} onClick={() => rate(n)}
-                    className={cn("min-h-12 rounded-lg border text-lg font-semibold tabular-nums transition-colors", mark.confidence === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-secondary/40")}>
-                    {n}
-                  </button>
-                ))}
-              </div>
+            <div className="mt-6 border-t border-border pt-5">
+              {marks.length > 1 && current < marks.length - 1 && <p className="mb-2 text-xs font-medium">{t("practice.rateNext")}</p>}
+              <RatingFields mark={mark} onChange={rate} />
             </div>
 
             <div className="mt-6 border-t border-border pt-5">

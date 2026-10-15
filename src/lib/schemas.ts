@@ -31,9 +31,9 @@ export const sessionInputSchema = z.object({
 });
 export type SessionInput = z.infer<typeof sessionInputSchema>;
 
-/** New sessions: at least one studied entry, each with all three ratings. */
+/** New sessions: at least one studied entry, each with a confidence rating; mood and focus are optional. */
 export const newSessionInputSchema = sessionInputSchema.extend({
-  marks: z.array(segmentMarkSchema.required({ confidence: true, mood: true, focus: true })).min(1).refine(oneEntryPerSection, "Each section appears once"),
+  marks: z.array(segmentMarkSchema.required({ confidence: true })).min(1).refine(oneEntryPerSection, "Each section appears once"),
 });
 
 export const taskLinkTypeSchema = z.enum(["free", "item", "collection"]);

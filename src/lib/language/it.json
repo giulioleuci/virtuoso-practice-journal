@@ -985,7 +985,7 @@
   "session.carryForwardHint": "Tempo, livelli e tecniche delle sezioni in comune vengono copiati nel loro piano. Potrai modificarli dopo.",
   "practice.prevSection": "Sezione precedente",
   "practice.nextSection": "Sezione successiva",
-  "practice.rateNext": "Sicurezza — poi si passa alla sezione successiva",
+  "practice.rateNext": "Sicurezza (ultima scala) — poi si passa alla sezione successiva",
   "homework.tasksLinked": "{{count}} esercizio",
   "homework.tasksLinked_plural": "{{count}} esercizi",
   "assignments.pickDays": "Pianifica per",
@@ -1014,8 +1014,8 @@
   "rating.focus.5": "Molto alta",
   "rating.unanswered": "Non risposto",
   "rating.missing": "Mancano: {{fields}}",
-  "rating.missingSummary": "Completa le valutazioni di {{count}} sezione",
-  "rating.missingSummary_plural": "Completa le valutazioni di {{count}} sezioni",
+  "rating.missingSummary": "Indica la sicurezza di {{count}} sezione",
+  "rating.missingSummary_plural": "Indica la sicurezza di {{count}} sezioni",
   "rating.applyToOthers": "Applica questi valori agli altri segmenti",
   "rating.applyReplaces": "Sostituisce {{count}} risposta già data",
   "rating.applyReplaces_plural": "Sostituisce {{count}} risposte già date",
@@ -1100,5 +1100,11 @@
   "audio.deleteSessionClips": "Verrà eliminata anche {{count}} registrazione.",
   "audio.deleteSessionClips_plural": "Verranno eliminate anche {{count}} registrazioni.",
   "toast.importedClips": "Dati importati. Registrazioni referenziate: {{available}} disponibili, {{missing}} non disponibili.",
-  "profile.wipeAudio": "Elimina anche tutte le registrazioni audio di questo dispositivo."
+  "profile.wipeAudio": "Elimina anche tutte le registrazioni audio di questo dispositivo.",
+  "rating.confidence.1": "Per niente sicuro",
+  "rating.confidence.2": "Poco sicuro",
+  "rating.confidence.3": "Abbastanza sicuro",
+  "rating.confidence.4": "Sicuro",
+  "rating.confidence.5": "Molto sicuro",
+  "rating.scaleHint": "1 = {{low}} · 5 = {{high}}"
 }

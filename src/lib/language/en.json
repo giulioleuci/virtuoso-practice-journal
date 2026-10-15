@@ -985,7 +985,7 @@
   "session.carryForwardHint": "Tempo, layers and techniques of the shared sections are copied into their plan. You can edit them later.",
   "practice.prevSection": "Previous section",
   "practice.nextSection": "Next section",
-  "practice.rateNext": "Confidence — then on to the next section",
+  "practice.rateNext": "Confidence (last scale) — then on to the next section",
   "homework.tasksLinked": "{{count}} task",
   "homework.tasksLinked_plural": "{{count}} tasks",
   "assignments.pickDays": "Plan for",
@@ -1014,8 +1014,8 @@
   "rating.focus.5": "Very high",
   "rating.unanswered": "Not answered",
   "rating.missing": "Missing: {{fields}}",
-  "rating.missingSummary": "Answer the ratings of {{count}} section",
-  "rating.missingSummary_plural": "Answer the ratings of {{count}} sections",
+  "rating.missingSummary": "Rate the confidence of {{count}} section",
+  "rating.missingSummary_plural": "Rate the confidence of {{count}} sections",
   "rating.applyToOthers": "Apply these values to the other sections",
   "rating.applyReplaces": "Replaces {{count}} existing answer",
   "rating.applyReplaces_plural": "Replaces {{count}} existing answers",
@@ -1100,5 +1100,11 @@
   "audio.deleteSessionClips": "This also deletes {{count}} recording.",
   "audio.deleteSessionClips_plural": "This also deletes {{count}} recordings.",
   "toast.importedClips": "Data imported. Referenced recordings: {{available}} available, {{missing}} unavailable.",
-  "profile.wipeAudio": "This also deletes every audio recording on this device."
+  "profile.wipeAudio": "This also deletes every audio recording on this device.",
+  "rating.confidence.1": "Not secure at all",
+  "rating.confidence.2": "Hardly secure",
+  "rating.confidence.3": "Fairly secure",
+  "rating.confidence.4": "Secure",
+  "rating.confidence.5": "Very secure",
+  "rating.scaleHint": "1 = {{low}} · 5 = {{high}}"
 }
