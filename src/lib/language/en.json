@@ -1107,5 +1107,17 @@
   "rating.confidence.4": "Secure",
   "rating.confidence.5": "Very secure",
   "rating.scaleHint": "1 = {{low}} · 5 = {{high}}",
-  "rating.clear": "Clear"
+  "rating.clear": "Clear",
+  "routine.templates": "Templates",
+  "routine.groupCount": "{{n}} materials",
+  "routine.moreActions": "More actions",
+  "routine.clearGroup": "Remove all materials",
+  "routine.assignTo": "Assign materials to",
+  "routine.kindFilter": "Material type",
+  "routine.kindAll": "All types",
+  "routine.selection": "Select",
+  "routine.selectVisible": "Select all shown ({{n}})",
+  "routine.clearVisible": "Deselect all shown",
+  "routine.alsoIn": "also in {{groups}}",
+  "routine.sectionsCount": "Sections {{on}}/{{n}}"
 }

@@ -1107,5 +1107,17 @@
   "rating.confidence.4": "Seguro",
   "rating.confidence.5": "Muy seguro",
   "rating.scaleHint": "1 = {{low}} · 5 = {{high}}",
-  "rating.clear": "Borrar"
+  "rating.clear": "Borrar",
+  "routine.templates": "Plantillas",
+  "routine.groupCount": "{{n}} materiales",
+  "routine.moreActions": "Más acciones",
+  "routine.clearGroup": "Quitar todos los materiales",
+  "routine.assignTo": "Asignar materiales a",
+  "routine.kindFilter": "Tipo de material",
+  "routine.kindAll": "Todos los tipos",
+  "routine.selection": "Seleccionar",
+  "routine.selectVisible": "Seleccionar los mostrados ({{n}})",
+  "routine.clearVisible": "Deseleccionar los mostrados",
+  "routine.alsoIn": "también en {{groups}}",
+  "routine.sectionsCount": "Secciones {{on}}/{{n}}"
 }
