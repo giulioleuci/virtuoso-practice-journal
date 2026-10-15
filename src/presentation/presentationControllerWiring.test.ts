@@ -15,8 +15,8 @@ describe("presentation controller wiring", () => {
 
   it("keeps controller-backed presentation features free of legacy persistence services", () => {
     for (const path of [
-      "../components/diary/SessionLogSheet.tsx",
-      "../components/diary/StudyRoutineWizard.tsx",
+      "../pages/SessionLogPage.tsx",
+      "../components/diary/RoutineBuilder.tsx",
       "../pages/Profile.tsx",
     ]) {
       expect(source(path)).not.toMatch(/\b(?:studyRoutinesService|sessionsService|backupService)\b/);

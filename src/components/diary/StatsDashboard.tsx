@@ -116,14 +116,14 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
   };
 
   return (
-    <section className="paper-card p-5 space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+    <section className="space-y-4 border-y border-border py-5">
+      <div className="grid max-w-md grid-cols-2 gap-3">
         <Stat label={t("stats.thisWeek")} value={`${totalWeek}`} sub={t("stats.sessions")} />
         <Stat label={rangeLabel} value={`${hasRange ? rangeCount : (sessions ?? []).length}`} />
       </div>
 
       <div>
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{last14Label}</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{last14Label}</div>
         <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-10" preserveAspectRatio="none">
           <path d={path} fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           {last14.map((d, i) => (
@@ -133,7 +133,7 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
       </div>
 
       <div>
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{heatmapLabel}</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{heatmapLabel}</div>
         <div className="flex gap-[3px]">
           {heatmap.map((col, ci) => (
             <div key={ci} className="flex flex-col gap-[3px]">
@@ -167,8 +167,8 @@ function Stat({ label, value, sub, icon }: { label: string; value: string; sub?:
     <div className="text-center">
       {icon && <div className="mb-1">{icon}</div>}
       <div className="font-serif text-2xl tabular-nums leading-none">{value}</div>
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
-      {sub && <div className="text-[10px] text-muted-foreground italic">{sub}</div>}
+      <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
+      {sub && <div className="text-xs text-muted-foreground italic">{sub}</div>}
     </div>
   );
 }

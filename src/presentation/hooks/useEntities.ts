@@ -8,7 +8,6 @@ import type { Profile } from "@/domain/entities/profile";
 import type { StudyRoutine } from "@/domain/ports/studyRoutine";
 import type { HelpRequest } from "@/domain/ports/helpRequest";
 import type { Assignment, Lesson, LessonRecurrence } from "@/domain/entities/lesson";
-import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
 import type { PerformanceEvent, PerformanceItem } from "@/domain/entities/performance";
 import { presentationQueries } from "@/application/queries/presentationQueryService";
 import { usePresentationQuery, usePresentationReader } from "./usePresentationQuery";
@@ -57,7 +56,5 @@ export const usePerformanceEvents = () => useRead<PerformanceEvent[]>("performan
 export const usePerformanceLinks = () => useRead<PerformanceItem[]>("performances.links");
 export const useAssignmentsForLesson = (lessonId?: number) =>
   usePresentationReader<Assignment[]>((queries) => queries.assignmentsForLesson(lessonId), [lessonId]);
-export const usePendingAssignmentsForSubject = (subjectId?: number, recurrenceId?: number) =>
-  usePresentationReader<PendingAssignment[]>((queries) => queries.pendingAssignmentsForSubject(subjectId, recurrenceId), [subjectId, recurrenceId]);
 export const useOpenHelpRequestCount = () =>
   usePresentationReader<number>((queries) => queries.openHelpRequestCount());

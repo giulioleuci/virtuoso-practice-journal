@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { nativeSelect } from "@/components/diary/WhenFields";
+import { AudioNotice } from "@/components/diary/Recorder";
 
 const APP_VERSION = "0.3alpha";
 
@@ -413,6 +414,7 @@ export default function Profile() {
                 <p className="text-xs text-muted-foreground">{t("profile.importHint")}</p>
               </div>
             </div>
+            <div className="border-t border-border pt-4"><AudioNotice /></div>
             <div className="space-y-2 border-t border-border pt-4">
               <div className="grid grid-cols-2 gap-2">
                 <label className="grid gap-1 text-xs font-medium">{t("profile.csvFrom")}<Input type="date" value={csvFrom} max={csvTo || undefined} onChange={(e) => setCsvFrom(e.target.value)} /></label>

@@ -4,6 +4,7 @@
  * stats from the DB, then hands the resolved inputs here to produce the tasks.
  */
 import type { StudyPoolEntry, StudyRoutine, Task } from "@/lib/db";
+import { emptyEntry } from "@/domain/logic/plan";
 import { parseDayKey, dayKey, addDays, weekKey } from "@/lib/date";
 
 export interface ResolvedPoolItem {
@@ -167,9 +168,9 @@ function buildTask(
     subjectId,
     linkType: item.linkType,
     itemId: item.itemId,
-    segmentIds: item.segmentIds,
     collectionId: item.collectionId,
     title: item.title,
+    plan: (item.segmentIds ?? []).map((id) => emptyEntry(id)),
     done: false,
     studyRoutineId: routineId,
     createdAt,

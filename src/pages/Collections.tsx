@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useCollectionLinks, useCollections } from "@/presentation/hooks/useEntities";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryKind } from "@/domain/entities/common";
 import { useI18n } from "@/lib/i18n";
@@ -10,14 +10,13 @@ import { Plus, Pencil, Trash2, ChevronLeft, FolderOpen, Music2 } from "lucide-re
 import { collectionsService } from "@/lib/services";
 import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet";
-import { AssignPiecesSheet } from "@/components/collections/AssignPiecesSheet";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function Collections() {
   const { t } = useI18n();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialKind = (searchParams.get("kind") as LibraryKind) || "repertoire";
   const [active, setActive] = useState<LibraryKind>(
@@ -40,7 +39,6 @@ export default function Collections() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Collection | null>(null);
-  const [assigning, setAssigning] = useState<Collection | null>(null);
 
   const countFor = (id?: number) =>
     id ? (links ?? []).filter((l) => l.collectionId === id).length : 0;
@@ -66,39 +64,27 @@ export default function Collections() {
   const sorted = collections.slice().sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-2">
-        <Button size="sm" variant="ghost" onClick={() => navigate("/library")} className="-ml-2">
-          <ChevronLeft className="h-4 w-4 mr-1" /> {t("collections.back")}
-        </Button>
-        <h2 className="font-serif text-3xl ml-auto">{t("collections.title")}</h2>
-      </div>
+    <div className="pb-24">
+      <Link to="/library" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+        <ChevronLeft className="h-4 w-4" /> {t("collections.back")}
+      </Link>
+      <PageHeader
+        title={t("collections.title")}
+        actions={<Button onClick={openCreate}><Plus /> {t(`collections.newByKind.${active}`)}</Button>}
+      />
 
-      <div className="grid grid-cols-4 gap-2">
-        {LIBRARY_KINDS.map(({ key, icon: Icon, tKey, tint }) => (
+      <div role="tablist" className="mb-5 flex gap-6 overflow-x-auto overflow-y-hidden border-b border-border no-scrollbar">
+        {LIBRARY_KINDS.map(({ key, tKey }) => (
           <button
             key={key}
+            role="tab"
+            aria-selected={active === key}
             onClick={() => setActive(key)}
-            className={cn(
-              "paper-card flex flex-col items-center gap-1 py-3 transition-all relative overflow-hidden",
-              active === key ? "-translate-y-0.5" : "hover:-translate-y-0.5"
-            )}
-            style={
-              active === key
-                ? { boxShadow: `inset 0 0 0 2px ${tint}, var(--shadow-card)`, background: `color-mix(in oklab, ${tint} 12%, hsl(var(--card)))` }
-                : undefined
-            }
+            className={cn("-mb-px shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors", active === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
           >
-            <Icon className="h-5 w-5" style={{ color: active === key ? tint : "hsl(var(--muted-foreground))" }} />
-            <span className="text-[11px] font-medium leading-tight text-center">{t(tKey)}</span>
+            {t(tKey)}
           </button>
         ))}
-      </div>
-
-      <div className="flex justify-end">
-        <Button size="sm" variant="ghost" onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-1" /> {t(`collections.newByKind.${active}`)}
-        </Button>
       </div>
 
       {allCollections === undefined ? (
@@ -110,50 +96,26 @@ export default function Collections() {
           cta={{ label: t(`collections.newByKind.${active}`), onClick: openCreate }}
         />
       ) : (
-        <ul className="space-y-2">
-          {sorted.map((c) => {
-            const count = countFor(c.id);
-            return (
-              <li key={c.id} className="paper-card p-4 flex gap-3">
-                <span
-                  className="w-1.5 rounded-full self-stretch shrink-0"
-                  style={{ backgroundColor: c.color ? `hsl(var(--key-${c.color}))` : "hsl(var(--muted))" }}
-                />
-                <div className="flex-1 min-w-0 space-y-2">
-                  <div className="min-w-0">
-                    <div className="font-serif text-xl break-words">{c.name}</div>
-                    {(c.composer || c.catalog) && (
-                      <div className="text-xs text-muted-foreground break-words italic">
-                        {[c.composer, c.catalog].filter(Boolean).join(" · ")}
-                      </div>
-                    )}
-                    <div className="text-xs text-muted-foreground tabular-nums mt-1 inline-flex items-center gap-1">
-                      <Music2 className="h-3 w-3" /> {t(`collections.itemsCount.${active}`, { count })}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 -ml-2">
-                    <Button size="sm" variant="ghost" onClick={() => setAssigning(c)}>
-                      <Music2 className="h-4 w-4 mr-1" /> {t(`collections.manageItems.${active}`)}
-                    </Button>
-                    <button
-                      onClick={() => openEdit(c)}
-                      className="ml-auto p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                      aria-label={t("common.edit")}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteCollection(c)}
-                      className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
-                      aria-label={t("common.delete")}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+        <ul className="divide-y divide-border border-t border-border">
+          {sorted.map((c) => (
+            <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-4">
+              <span
+                className="h-3 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: c.color ? `hsl(var(--key-${c.color}))` : "hsl(var(--muted))" }}
+                aria-hidden
+              />
+              <div className="min-w-[calc(100%-2rem)] flex-1 min-[700px]:min-w-0">
+                <Link to={`/library/collections/${c.id}`} className="block break-words font-serif text-xl font-semibold leading-tight hover:underline underline-offset-4">{c.name}</Link>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
+                  {(c.composer || c.catalog) && <span className="italic">{[c.composer, c.catalog].filter(Boolean).join(" · ")}</span>}
+                  <span className="inline-flex items-center gap-1"><Music2 className="h-3 w-3" /> {t(`collections.itemsCount.${active}`, { count: countFor(c.id) })}</span>
                 </div>
-              </li>
-            );
-          })}
+              </div>
+              <Button asChild size="sm" variant="outline"><Link to={`/library/collections/${c.id}`}><Music2 />{t("collection.manage")}</Link></Button>
+              <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => openEdit(c)} aria-label={`${t("common.edit")} ${c.name}`}><Pencil /></Button>
+              <Button size="icon" variant="ghost" className="h-10 w-10 hover:text-destructive" onClick={() => deleteCollection(c)} aria-label={`${t("common.delete")} ${c.name}`}><Trash2 /></Button>
+            </li>
+          ))}
         </ul>
       )}
 
@@ -163,12 +125,6 @@ export default function Collections() {
         collection={editing}
         kind={active}
       />
-      <AssignPiecesSheet
-        open={assigning !== null}
-        onOpenChange={(o) => !o && setAssigning(null)}
-        collection={assigning}
-      />
-
     </div>
   );
 }

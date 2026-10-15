@@ -90,7 +90,7 @@ describe("lessonsService.log", () => {
     const assignments = await db.assignments.where("lessonId").equals(lessonId).toArray();
     expect(assignments).toHaveLength(2);
     expect(assignments.map((a) => a.text).sort()).toEqual(["Practice scales", "Work on dynamics"]);
-    expect(assignments[0].transformed).toBe(false);
+    expect(assignments[0].taskIds).toEqual([]);
   });
 
   it("trims whitespace from notes and leaves undefined when empty", async () => {
@@ -105,34 +105,51 @@ describe("lessonsService.log", () => {
 // ---------------------------------------------------------------------------
 
 describe("lessonsService.updateLesson", () => {
-  it("updates date and notes, replacing assignments", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", "Old notes", [
-      "Old assignment",
-    ]);
+  it("updates date and notes and leaves the assignments alone", async () => {
+    const lessonId = await lessonsService.log(1, null, "2025-03-01", "Old notes", ["Keep me"]);
     const lesson = (await db.lessons.get(lessonId))!;
 
-    await lessonsService.updateLesson(lesson, "2025-03-02", "New notes", ["New assignment"]);
+    await lessonsService.updateLesson(lesson, "2025-03-02", "New notes");
 
     const updated = await db.lessons.get(lessonId);
     expect(updated!.date).toBe("2025-03-02");
     expect(updated!.notes).toBe("New notes");
+    expect((await db.assignments.where("lessonId").equals(lessonId).toArray()).map((a) => a.text)).toEqual(["Keep me"]);
+  });
+});
 
-    const assignments = await db.assignments.where("lessonId").equals(lessonId).toArray();
-    expect(assignments).toHaveLength(1);
-    expect(assignments[0].text).toBe("New assignment");
+// ---------------------------------------------------------------------------
+// ensureFor / addAssignment — homework captured live
+// ---------------------------------------------------------------------------
+
+describe("lessonsService.ensureFor", () => {
+  it("creates the lesson once per slot and day and attaches homework to it", async () => {
+    const recurrence = { id: 5, subjectId: 1, teacher: "T", schedules: [], startDate: "2025-01-01", color: "blue" as const, createdAt: 1 };
+    const first = await lessonsService.ensureFor(1, recurrence, "2025-03-05");
+    const again = await lessonsService.ensureFor(1, recurrence, "2025-03-05");
+    const other = await lessonsService.ensureFor(1, recurrence, "2025-03-12");
+
+    expect(again).toBe(first);
+    expect(other).not.toBe(first);
+    expect(await db.lessons.count()).toBe(2);
+
+    await lessonsService.addAssignment(first, "  Scales at 80  ");
+    await lessonsService.addAssignment(first, "   ");
+    const rows = await db.assignments.where("lessonId").equals(first).toArray();
+    expect(rows.map((a) => a.text)).toEqual(["Scales at 80"]);
+    expect(rows[0].taskIds).toEqual([]);
   });
 
-  it("removes all assignments when new list is empty", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, [
-      "Assignment A",
-      "Assignment B",
-    ]);
-    const lesson = (await db.lessons.get(lessonId))!;
+  it("log() keeps the lesson created by earlier homework and sets its notes", async () => {
+    const recurrence = { id: 6, subjectId: 1, teacher: "T", schedules: [], startDate: "2025-01-01", color: "blue" as const, createdAt: 1 };
+    const id = await lessonsService.ensureFor(1, recurrence, "2025-03-05");
+    await lessonsService.addAssignment(id, "Arpeggios");
 
-    await lessonsService.updateLesson(lesson, "2025-03-01", undefined, []);
+    const logged = await lessonsService.log(1, recurrence, "2025-03-05", "Good lesson");
 
-    const assignments = await db.assignments.where("lessonId").equals(lessonId).toArray();
-    expect(assignments).toHaveLength(0);
+    expect(logged).toBe(id);
+    expect((await db.lessons.get(id))!.notes).toBe("Good lesson");
+    expect(await db.assignments.where("lessonId").equals(id).count()).toBe(1);
   });
 });
 
@@ -185,33 +202,36 @@ describe("lessonsService.ignoreAssignment / restoreAssignment", () => {
 // transformAssignment
 // ---------------------------------------------------------------------------
 
-describe("lessonsService.transformAssignment", () => {
-  it("marks the assignment as transformed and links it to a task", async () => {
+describe("lessonsService.linkTask", () => {
+  it("links the assignment to a task, once per task", async () => {
     const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, ["Scales"]);
     const [assignment] = await db.assignments.where("lessonId").equals(lessonId).toArray();
     const id = assignment.id!;
     const taskId = (await db.tasks.add({
-      subjectId: 1, title: "Scales", date: "2025-03-02", done: false, createdAt: Date.now(),
+      subjectId: 1, title: "Scales", date: "2025-03-02", plan: [], done: false, createdAt: Date.now(),
     })) as number;
 
-    await lessonsService.transformAssignment(id, taskId);
+    await lessonsService.linkTask(id, taskId);
+    await lessonsService.linkTask(id, taskId);
 
     const updated = (await db.assignments.get(id))!;
-    expect(updated.transformed).toBe(true);
-    expect(updated.taskId).toBe(taskId);
+    expect(updated.taskIds).toEqual([taskId]);
+    expect(await db.assignments.where("taskIds").equals(taskId).count()).toBe(1);
+
+    await lessonsService.unlinkTask(id, taskId);
+    expect((await db.assignments.get(id))!.taskIds).toEqual([]);
   });
 
   it("does not mutate other assignments on the same lesson", async () => {
     const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, ["A", "B"]);
     const assignments = await db.assignments.where("lessonId").equals(lessonId).toArray();
     const taskId = (await db.tasks.add({
-      subjectId: 1, title: "A", date: "2025-03-02", done: false, createdAt: Date.now(),
+      subjectId: 1, title: "A", date: "2025-03-02", plan: [], done: false, createdAt: Date.now(),
     })) as number;
 
-    await lessonsService.transformAssignment(assignments[0].id!, taskId);
+    await lessonsService.linkTask(assignments[0].id!, taskId);
 
     const other = await db.assignments.get(assignments[1].id!);
-    expect(other!.transformed).toBe(false);
-    expect(other!.taskId).toBeUndefined();
+    expect(other!.taskIds).toEqual([]);
   });
 });

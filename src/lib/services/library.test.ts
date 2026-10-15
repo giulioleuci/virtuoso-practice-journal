@@ -161,10 +161,11 @@ describe("libraryService.remove", () => {
       itemId,
       date: "2025-01-01",
       title: "Practice",
+      plan: [],
       done: true,
       createdAt: 1,
     })) as number;
-    await db.sessions.add({ taskId, date: "2025-01-01", quality: "well", createdAt: 1 });
+    await db.sessions.add({ taskId, date: "2025-01-01", marks: [], createdAt: 1 });
 
     const result = await libraryService.remove(itemId);
     expect(result).toBe("soft");
@@ -222,8 +223,8 @@ describe("libraryService — round-trip integration", () => {
     expect((await libraryService.list()).map((i) => i.title).sort()).toEqual(["Piece A", "Piece B"]);
 
     // Attach a session so remove produces a soft-delete
-    const taskId = (await db.tasks.add({ subjectId, itemId: id1, date: "2025-01-01", title: "T", done: true, createdAt: 1 })) as number;
-    await db.sessions.add({ taskId, date: "2025-01-01", quality: "well", createdAt: 1 });
+    const taskId = (await db.tasks.add({ subjectId, itemId: id1, date: "2025-01-01", title: "T", plan: [], done: true, createdAt: 1 })) as number;
+    await db.sessions.add({ taskId, date: "2025-01-01", marks: [], createdAt: 1 });
     await libraryService.remove(id1);
 
     const remaining = await libraryService.list();

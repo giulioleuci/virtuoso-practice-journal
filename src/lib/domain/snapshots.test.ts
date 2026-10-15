@@ -20,8 +20,8 @@ describe("buildSessionSnapshot", () => {
 
     const snap = await buildSessionSnapshot({
       title: "Caprice", date: "2025-01-01", subjectId, itemId,
-      segmentIds: [seg1, seg2], techniqueIds: [tech], targetBpm: 120, noteVal: "eighth",
-      layers: ["slow"], done: false, createdAt: 0,
+      plan: [seg1, seg2].map((segmentId) => ({ segmentId, bpm: 120, noteVal: "eighth" as const, layers: ["slow"], techniques: [tech] })),
+      done: false, createdAt: 0,
     });
 
     expect(snap.subjectName).toBe("Violin");
@@ -29,14 +29,12 @@ describe("buildSessionSnapshot", () => {
     expect(snap.itemComposer).toBe("Paganini");
     expect(snap.segments?.map((s) => s.label).sort()).toEqual(["Theme", "Var I"]);
     expect(snap.techniqueNames).toEqual(["Spiccato"]);
-    expect(snap.targetBpm).toBe(120);
-    expect(snap.layers).toEqual(["slow"]);
   });
 
   it("falls back to em-dash when subject is missing", async () => {
     const snap = await buildSessionSnapshot({
       title: "Mystery", date: "2025-01-01", subjectId: 9999,
-      done: false, createdAt: 0,
+      plan: [], done: false, createdAt: 0,
     });
     expect(snap.subjectName).toBe("—");
     expect(snap.itemTitle).toBeUndefined();
@@ -50,7 +48,7 @@ describe("buildSessionSnapshot", () => {
     })) as number;
     const snap = await buildSessionSnapshot({
       title: "Op. 10 No. 1", date: "2025-01-01", subjectId, collectionId,
-      done: false, createdAt: 0,
+      plan: [], done: false, createdAt: 0,
     });
     expect(snap.collectionName).toBe("Études Op. 10");
   });

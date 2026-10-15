@@ -24,7 +24,6 @@ class FakeReads implements PresentationReadPort {
   }
 
   assignmentsForLesson() { return Promise.resolve([]); }
-  pendingAssignmentsForSubject() { return Promise.resolve([]); }
   openHelpRequestCount() { return Promise.resolve(0); }
 
   subscribe(listener: () => void): () => void {

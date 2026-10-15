@@ -22,10 +22,11 @@ export function usePresentationQuery<T>(
     value: cacheFor(queries).get(cacheKey) as T | undefined,
   }));
   const load = useCallback(() => {
-    void queries.execute<T>(operation, ...parameters).then((value) => {
+    queries.execute<T>(operation, ...parameters).then((value) => {
       cacheFor(queries).set(cacheKey, value);
       setState({ key: cacheKey, value });
-    });
+    // Rethrow from a state update so the nearest ErrorBoundary shows a recoverable error.
+    }, (error) => setState(() => { throw error; }));
   // parameterKey prevents an inline argument array from re-subscribing each render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [operation, parameterKey, queries]);

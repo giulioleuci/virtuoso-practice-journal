@@ -1,26 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
-import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { LibraryKind } from "@/domain/entities/common";
-import type { TheoryLayer } from "@/domain/constants/theoryLayers";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
-import type { Session } from "@/domain/entities/session";
-import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
 import { today } from "@/lib/date";
-import { Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Layers, LineChart, Play, Star } from "lucide-react";
+import { RotateCcw, SearchX, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Flag, Layers, LineChart, Play, Star } from "lucide-react";
 import { repertoireService } from "@/lib/services/performances";
 
-import { MasterySparkline } from "@/components/library/MasterySparkline";
-import { type MasteryState } from "@/components/library/MasterySliders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { BpmSparkline } from "@/components/library/BpmSparkline";
@@ -28,8 +21,10 @@ import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { FeatureEmptyState } from "@/components/shared/FeatureEmptyState";
 import { Pager } from "@/components/shared/Pager";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeader } from "@/components/shared/SectionHeader";
 import { useCollectionLinks, useCollections, useHelpRequests, useLibraryByKind, useSegments, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
-import { subjectBorderStyle } from "@/lib/subjectColors";
+import { subjectColorCss } from "@/lib/subjectColors";
 import { libraryService } from "@/lib/services";
 import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
 import {
@@ -140,343 +135,194 @@ export default function Library() {
   };
 
 
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-serif text-3xl">{t("nav.library")}</h2>
-        <div className="flex items-center gap-1">
-          <Button size="sm" variant="ghost" onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-1" /> {t("library.add")}
+  const renderRow = (it: LibraryItem) => {
+    const segs = it.id ? (segmentsByItem[it.id] ?? []) : [];
+    const subject = subjectMap.get(it.subjectId);
+    const itemHelp = (allHelp ?? []).filter((h) => h.itemId === it.id);
+    const openHelp = itemHelp.filter((h) => !h.resolved).length;
+    const techNames = (it.techniqueIds ?? [])
+      .map((id) => (allTechniques ?? []).find((tech) => tech.id === id)?.name)
+      .filter(Boolean) as string[];
+    const hasSparkline = !!it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual");
+    return (
+      <li key={it.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 py-[18px]">
+        <div className="min-w-[calc(100%-7rem)] flex-1 min-[700px]:min-w-0">
+          <h3 className="font-serif text-[1.375rem] font-semibold leading-tight break-words">
+            <Link to={`/library/item/${it.id}`} className="hover:underline underline-offset-4">{it.title}</Link>
+            {it.inRepertoire && <Star className="ml-1.5 inline-block h-4 w-4 fill-current align-middle text-primary" aria-label={t("repertoire.title")} />}
+          </h3>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
+            <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectColorCss(subject?.color, subject?.type, subject?.customColor) }} title={subject?.name} role="img" aria-label={subject?.name} />
+            {it.composer && <span className="italic">{it.composer}</span>}
+            {it.kind === "technique" && (it.startBpm || it.targetBpm) && <span>{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>}
+            {it.kind !== "technique" && it.targetBpm && <span>{it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}</span>}
+            {it.kind === "manual" && (it.totalExercises || it.currentExercise) && (
+              <span>{it.totalExercises ? t("library.exerciseOf", { current: it.currentExercise ?? 1, total: it.totalExercises }) : t("library.exercise", { current: it.currentExercise ?? 1 })}</span>
+            )}
+            {(it.kind === "repertoire" || it.kind === "manual") && segs.length > 0 && <span>{t("library.segments", { count: segs.length })}</span>}
+            {it.tags?.map((tag) => <span key={`tag-${tag}`}>#{tag}</span>)}
+            {techNames.map((name) => <span key={name}>{name}</span>)}
+          </div>
+        </div>
+        {hasSparkline && <div className="hidden opacity-80 min-[700px]:block"><BpmSparkline itemId={it.id!} /></div>}
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <Button
+            size="sm"
+            className="min-h-11 sm:min-h-0"
+            onClick={() => navigate("/tasks/new", { state: { date: today(), prefill: { itemId: it.id, itemTitle: it.title, itemSubjectId: it.subjectId } } })}
+          >
+            <Play /> {t("library.practiceThis")}
           </Button>
+          <button
+            onClick={() => setHelpItem(it)}
+            className="relative inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40 hover:text-primary"
+            aria-label={t("library.askTeacher")}
+          >
+            <MessageCircleQuestion className="h-[18px] w-[18px]" />
+            {itemHelp.length > 0 && (
+              <span className={`absolute right-1 top-1 inline-flex h-[14px] min-w-[14px] items-center justify-center rounded-full px-1 text-xs leading-none tabular-nums ${openHelp ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{itemHelp.length}</span>
+            )}
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40 hover:text-foreground" aria-label={`${t("common.more")}: ${it.title}`}>
+                <MoreVertical className="h-[18px] w-[18px]" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => openEdit(it)}><Pencil className="mr-2 h-4 w-4" /> {t("common.edit")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => it.id && navigate(`/library/item/${it.id}?tab=analysis`)}><LineChart className="mr-2 h-4 w-4" /> {t("library.analysis.menu")}</DropdownMenuItem>
+              {it.kind === "repertoire" && (
+                <DropdownMenuItem onClick={() => toggleRepertoire(it)}>
+                  <Star className={cn("mr-2 h-4 w-4", it.inRepertoire && "fill-current text-primary")} />
+                  {it.inRepertoire ? t("repertoire.remove") : t("repertoire.add")}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => askDeleteItem(it)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> {t("common.delete")}</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </li>
+    );
+  };
+
+  const paginate = <T,>(arr: T[], p: number) => arr.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE);
+
+  const list = (() => {
+    if (items === undefined) return <ListSkeleton />;
+    if (!filteredItems.length) {
+      return items.length === 0
+        ? <FeatureEmptyState description={t("library.empty")} quote={libraryQuote} action={{ label: t("library.addToLibrary"), onClick: openCreate }} />
+        : <EmptyState icon={SearchX} title={t("library.noItemsMatch")} cta={{ label: t("states.clearFilters"), icon: RotateCcw, onClick: () => { setSearch(""); setSubjectFilter("all"); } }} />;
+    }
+
+    if (groupByCollection) {
+      const cols = (allCollections ?? []).filter((c) => c.kind === active).slice().sort((a, b) => a.name.localeCompare(b.name));
+      const links = allCollectionLinks ?? [];
+      const filteredIds = new Set(filteredItems.map((i) => i.id));
+      const itemsById = new Map(filteredItems.map((i) => [i.id, i]));
+      const inAnyCollection = new Set<number>();
+      const groups = cols.map((c) => {
+        const ids = links.filter((l) => l.collectionId === c.id).map((l) => l.itemId).filter((id) => filteredIds.has(id));
+        ids.forEach((id) => inAnyCollection.add(id));
+        const groupItems = ids
+          .map((id) => itemsById.get(id))
+          .filter((item): item is LibraryItem => item !== undefined)
+          .sort((a, b) => a.title.localeCompare(b.title));
+        return { key: `c-${c.id}`, title: c.name, collection: c, items: groupItems };
+      });
+      const uncollected = filteredItems.filter((i) => !inAnyCollection.has(i.id));
+      const all = [...groups, ...(uncollected.length ? [{ key: "__uncollected", title: t("library.uncollected"), collection: undefined, items: uncollected }] : [])];
+      return (
+        <div className="space-y-8">
+          {all.map((g) => {
+            const p = pageByGroup[g.key] ?? 1;
+            const totalPages = Math.max(1, Math.ceil(g.items.length / PAGE_SIZE));
+            return (
+              <section key={g.key}>
+                <SectionHeader
+                  title={g.title}
+                  action={g.collection && <Link to={`/library/collections/${g.collection.id}`} className="inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4"><FolderOpen className="h-4 w-4" />{t("library.collections")}</Link>}
+                />
+                {g.items.length === 0 ? (
+                  <p className="border-t border-border py-4 text-xs italic text-muted-foreground">{t("library.emptyCollection")}</p>
+                ) : (
+                  <>
+                    <ul className="divide-y divide-border border-t border-border">{paginate(g.items, p).map(renderRow)}</ul>
+                    <Pager page={p - 1} totalPages={totalPages} onChange={(np) => setGroupPage(g.key, np + 1)} />
+                  </>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      );
+    }
+
+    const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+    const currentPage = Math.min(page, totalPages);
+    return (
+      <>
+        <ul className="divide-y divide-border border-t border-border">{paginate(filteredItems, currentPage).map(renderRow)}</ul>
+        <Pager page={currentPage - 1} totalPages={totalPages} onChange={(np) => setPage(np + 1)} />
+      </>
+    );
+  })();
+
+  const linkCls = "inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-[0.8125rem] font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground";
+
+  return (
+    <div className="pb-24">
+      <PageHeader
+        title={t("nav.library")}
+        subtitle={LIBRARY_KINDS.map((k) => t(k.tKey)).join(", ")}
+        actions={<Button onClick={openCreate}><Plus /> {t("library.add")}</Button>}
+      />
+
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-border max-[699px]:block">
+        <div role="tablist" className="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden no-scrollbar max-[699px]:w-full">
+          {LIBRARY_KINDS.map(({ key, tKey }) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={active === key}
+              onClick={() => setActive(key)}
+              className={cn("shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors", active === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+            >
+              {t(tKey)}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap pb-1 max-[699px]:mt-3">
+          <Link to={`/library/collections?kind=${active}`} className={linkCls}><FolderOpen className="h-4 w-4" />{t("library.collections")}</Link>
+          <Link to="/library/repertoire" className={linkCls}><Star className="h-4 w-4" />{t("repertoire.tab")}</Link>
+          <Link to="/library/repertoire?tab=performances" className={linkCls}><Flag className="h-4 w-4" />{t("library.events")}</Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
-        {LIBRARY_KINDS.map(({ key, icon: Icon, tKey, tint }) => (
-          <button
-            key={key}
-            onClick={() => setActive(key)}
-            className={cn(
-              "paper-card flex flex-col items-center gap-1 py-3 transition-all relative overflow-hidden",
-              active === key ? "-translate-y-0.5" : "hover:-translate-y-0.5"
-            )}
-            style={
-              active === key
-                ? { boxShadow: `inset 0 0 0 2px ${tint}, var(--shadow-card)`, background: `color-mix(in oklab, ${tint} 12%, hsl(var(--card)))` }
-                : undefined
-            }
-          >
-            <Icon className="h-5 w-5" style={{ color: active === key ? tint : "hsl(var(--muted-foreground))" }} />
-            <span className="text-[11px] font-medium leading-tight text-center">{t(tKey)}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
+      <div className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_200px_200px_auto]">
+        <Input type="search" aria-label={t("library.searchTitleComposer")} placeholder={t("library.searchTitleComposer")} value={search} onChange={(e) => setSearch(e.target.value)} />
         <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger aria-label={t("common.subject")}><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
-            {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-            ))}
+            {(subjects ?? []).map((s) => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger aria-label={t("library.sortRecent")}><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="recent"><span className="inline-flex items-center gap-2"><ArrowDownUp className="h-3 w-3" /> {t("library.sortRecent")}</span></SelectItem>
             <SelectItem value="title">{t("library.sortTitle")}</SelectItem>
             <SelectItem value="composer">{t("library.sortComposer")}</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-      <div className="flex items-center gap-2">
-        <Input
-          placeholder={t("library.searchTitleComposer")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1"
-        />
-        <Button asChild size="sm" variant="ghost" className="shrink-0">
-          <Link to={`/library/collections?kind=${active}`}><FolderOpen className="h-4 w-4 mr-1" /> {t("library.collections")}</Link>
-        </Button>
-        <Button asChild size="sm" variant="ghost" className="shrink-0">
-          <Link to="/library/repertoire"><Star className="h-4 w-4 mr-1" /> {t("repertoire.tab")}</Link>
+        <Button variant={groupByCollection ? "secondary" : "outline"} aria-pressed={groupByCollection} onClick={() => setGroupByCollection((v) => !v)}>
+          <Layers /> {groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}
         </Button>
       </div>
 
-      <div className="flex justify-end">
-        <Button
-          size="sm"
-          variant={groupByCollection ? "secondary" : "ghost"}
-          onClick={() => setGroupByCollection((v) => !v)}
-        >
-          <Layers className="h-4 w-4 mr-1" />
-          {groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}
-        </Button>
-      </div>
-
-      {(() => {
-        const renderCard = (it: LibraryItem) => {
-          const segs = it.id ? (segmentsByItem[it.id] ?? []) : [];
-          const subject = subjectMap.get(it.subjectId);
-            const itemHelp = (allHelp ?? []).filter((h) => h.itemId === it.id);
-            const openHelp = itemHelp.filter((h) => !h.resolved).length;
-            const techNames = (it.techniqueIds ?? [])
-              .map((id) => (allTechniques ?? []).find((tech) => tech.id === id)?.name)
-              .filter(Boolean) as string[];
-            const hasMetaRow =
-              (it.kind === "technique" && (it.startBpm || it.targetBpm)) ||
-              (it.kind === "manual" && (it.totalExercises || it.currentExercise)) ||
-              !!it.targetBpm ||
-              (!!it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual"));
-            return (
-              <li
-                key={it.id}
-                className="paper-card overflow-hidden border-l-4 p-0"
-                style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
-              >
-                {/* Header: title + composer, with compact action cluster */}
-                <div className="flex items-start gap-2 p-3.5 pb-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-serif text-[1.35rem] leading-tight break-words">
-                      {it.title}
-                      {it.inRepertoire && (
-                        <Star
-                          className="inline-block align-middle ml-1.5 h-4 w-4 fill-current text-primary shrink-0"
-                          aria-label={t("repertoire.title")}
-                        />
-                      )}
-                    </h3>
-                    {it.composer && (
-                      <p className="text-sm text-muted-foreground italic truncate mt-0.5">{it.composer}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-0.5 shrink-0 -mr-1.5 -mt-1">
-                    <button
-                      onClick={() => setHelpItem(it)}
-                      className="relative h-10 w-10 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-accent active:bg-accent/80"
-                      aria-label={t("library.askTeacher")}
-                    >
-                      <MessageCircleQuestion className="h-[18px] w-[18px]" />
-                      {itemHelp.length > 0 && (
-                        <span className={`absolute top-1.5 right-1.5 text-[9px] tabular-nums leading-none rounded-full min-w-[14px] h-[14px] px-1 inline-flex items-center justify-center ${openHelp ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                          {itemHelp.length}
-                        </span>
-                      )}
-                    </button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className="h-10 w-10 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/80"
-                          aria-label={t("common.more")}
-                        >
-                          <MoreVertical className="h-[18px] w-[18px]" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(it)}>
-                          <Pencil className="h-4 w-4 mr-2" /> {t("common.edit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => it.id && navigate(`/library/item/${it.id}/analysis`)}>
-                          <LineChart className="h-4 w-4 mr-2" /> {t("library.analysis.menu")}
-                        </DropdownMenuItem>
-                        {it.kind === "repertoire" && (
-                          <DropdownMenuItem onClick={() => toggleRepertoire(it)}>
-                            <Star className={cn("h-4 w-4 mr-2", it.inRepertoire && "fill-current text-primary")} />
-                            {it.inRepertoire ? t("repertoire.remove") : t("repertoire.add")}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          onClick={() => askDeleteItem(it)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" /> {t("common.delete")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                {/* Hero metric: BPM target large, plus context */}
-                {it.targetBpm && (
-                  <div className="px-3.5 pb-2 flex items-end justify-between gap-3">
-                    <div className="font-serif tabular-nums text-primary leading-none">
-                      <span className="text-2xl mr-1">{it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"}</span>
-                      <span className="text-2xl">= {it.targetBpm}</span>
-                    </div>
-                    {it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual") && (
-                      <div className="opacity-80"><BpmSparkline itemId={it.id} /></div>
-                    )}
-                  </div>
-                )}
-
-                {/* Meta row: status + ranges + exercise count */}
-                {hasMetaRow && (
-                  <div className="px-3.5 pb-2 flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-
-                    {it.kind === "technique" && (it.startBpm || it.targetBpm) && (
-                      <span className="tabular-nums">{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>
-                    )}
-                    {it.kind === "manual" && (it.totalExercises || it.currentExercise) && (
-                      <span>
-                        {it.totalExercises
-                          ? t("library.exerciseOf", { current: it.currentExercise ?? 1, total: it.totalExercises })
-                          : t("library.exercise", { current: it.currentExercise ?? 1 })}
-                      </span>
-                    )}
-                    {!it.targetBpm && it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual") && (
-                      <div className="ml-auto"><BpmSparkline itemId={it.id} /></div>
-                    )}
-                  </div>
-                )}
-
-                {/* Tags + techniques */}
-                {(!!it.tags?.length || techNames.length > 0) && (
-                  <div className="px-3.5 pb-2 flex flex-wrap gap-1.5">
-                    {it.tags?.map((tag) => (
-                      <span key={`tag-${tag}`} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                        #{tag}
-                      </span>
-                    ))}
-                    {techNames.map((name, i) => (
-                      <span key={`tech-${i}`} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/60 text-foreground/70">
-                        {name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Theory mastery */}
-                {it.kind === "theory" && it.id && (
-                  <div className="px-3.5 pb-2">
-                    <TheoryMasterySection itemId={it.id} />
-                  </div>
-                )}
-
-                {/* Footer: segments count + full-width primary action */}
-                <div className="mt-1 border-t border-border/40 bg-primary/[0.04]">
-                  {(it.kind === "repertoire" || it.kind === "manual") && segs.length > 0 && (
-                    <div className="px-3.5 pt-2 text-[11px] uppercase tracking-wider text-muted-foreground">
-                      {t("library.segments", { count: segs.length })}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => navigate("/tasks/new", {
-                      state: {
-                        date: today(),
-                        prefill: {
-                          itemId: it.id,
-                          itemTitle: it.title,
-                          itemSubjectId: it.subjectId,
-                          itemBpm: it.targetBpm,
-                          itemNoteVal: it.noteVal,
-                        },
-                      },
-                    })}
-                    className="w-full h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary hover:bg-primary/10 active:bg-primary/15 transition-colors"
-                  >
-                    <Play className="h-4 w-4" /> {t("library.practiceThis")}
-                  </button>
-                </div>
-              </li>
-            );
-        };
-
-        if (items === undefined) return <ListSkeleton />;
-        if (!filteredItems.length) {
-          return items.length === 0
-            ? <FeatureEmptyState description={t("library.empty")} quote={libraryQuote} action={{ label: t("library.addToLibrary"), onClick: openCreate }} />
-            : <EmptyState title={t("library.noItemsMatch")} />;
-        }
-
-        const paginate = <T,>(arr: T[], p: number) => arr.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE);
-
-        if (groupByCollection) {
-          const cols = (allCollections ?? []).filter((c) => c.kind === active).slice().sort((a, b) => a.name.localeCompare(b.name));
-          const links = allCollectionLinks ?? [];
-          const filteredIds = new Set(filteredItems.map((i) => i.id));
-          const itemsById = new Map(filteredItems.map((i) => [i.id, i]));
-          const inAnyCollection = new Set<number>();
-          const groups = cols.map((c) => {
-            const ids = links.filter((l) => l.collectionId === c.id).map((l) => l.itemId).filter((id) => filteredIds.has(id));
-            ids.forEach((id) => inAnyCollection.add(id));
-            const groupItems = ids
-              .map((id) => itemsById.get(id))
-              .filter((item): item is LibraryItem => item !== undefined)
-              .sort((a, b) => a.title.localeCompare(b.title));
-            return { collection: c, items: groupItems };
-          });
-          const uncollected = filteredItems.filter((i) => !inAnyCollection.has(i.id));
-          const uncollectedPage = pageByGroup["__uncollected"] ?? 1;
-          const uncollectedTotalPages = Math.max(1, Math.ceil(uncollected.length / PAGE_SIZE));
-
-          return (
-            <div className="space-y-2">
-              <Accordion type="multiple" className="space-y-2">
-                {groups.map((g, gi) => {
-                  const key = `c-${g.collection.id}`;
-                  const p = pageByGroup[key] ?? 1;
-                  const totalPages = Math.max(1, Math.ceil(g.items.length / PAGE_SIZE));
-                  return (
-                    <AccordionItem key={gi} value={key} className="paper-card border-0 px-3">
-                      <AccordionTrigger className="hover:no-underline py-3">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          {g.collection?.color ? (
-                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: `hsl(var(--key-${g.collection.color}))` }} />
-                          ) : (
-                            <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                          )}
-                          <span className="font-serif text-lg truncate">{g.collection.name}</span>
-                          <span className="text-xs text-muted-foreground tabular-nums ml-auto mr-2">{g.items.length}</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        {g.items.length === 0 ? (
-                          <p className="text-xs text-muted-foreground italic px-1 pb-3">{t("library.emptyCollection")}</p>
-                        ) : (
-                          <>
-                            <ul className="space-y-2 pb-2">{paginate(g.items, p).map(renderCard)}</ul>
-                            <Pager page={p - 1} totalPages={totalPages} onChange={(np) => setGroupPage(key, np + 1)} />
-                          </>
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
-
-              {uncollected.length > 0 && (
-                <Accordion type="multiple" className="space-y-2 pt-2">
-                  <AccordionItem value="__uncollected" className="paper-card border-0 px-3">
-                    <AccordionTrigger className="hover:no-underline py-3">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="font-serif text-lg truncate">{t("library.uncollected")}</span>
-                        <span className="text-xs text-muted-foreground tabular-nums ml-auto mr-2">{uncollected.length}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ul className="space-y-2 pb-2">{paginate(uncollected, uncollectedPage).map(renderCard)}</ul>
-                      <Pager page={uncollectedPage - 1} totalPages={uncollectedTotalPages} onChange={(np) => setGroupPage("__uncollected", np + 1)} />
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              )}
-            </div>
-          );
-        }
-
-        const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
-        const currentPage = Math.min(page, totalPages);
-        return (
-          <>
-            <ul className="space-y-2">{paginate(filteredItems, currentPage).map(renderCard)}</ul>
-            <Pager page={currentPage - 1} totalPages={totalPages} onChange={(np) => setPage(np + 1)} />
-          </>
-        );
-      })()}
+      {list}
 
       <NewLibraryItemSheet
         open={sheetOpen}
@@ -514,55 +360,6 @@ export default function Library() {
         </AlertDialogContent>
       </AlertDialog>
 
-    </div>
-  );
-}
-
-/** Computes the latest score per theory dimension from sessions and renders radar + sparklines. */
-function TheoryMasterySection({ itemId }: { itemId: number }) {
-  const { t } = useI18n();
-
-  const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
-
-  const latestScores = useMemo((): MasteryState => {
-    const result: MasteryState = { conceptual: 0, analytical: 0, aural: 0, compositional: 0, reading: 0 };
-    if (!sessions?.length) return result;
-    // For each layer, find the session with the latest date that has a score for it
-    for (const layer of THEORY_LAYERS) {
-      const scored = sessions
-        .filter((s) => s.layerScores?.[layer] != null)
-        .sort((a, b) => b.date.localeCompare(a.date));
-      const topScore = scored[0]?.layerScores?.[layer];
-      if (topScore != null) result[layer] = topScore;
-    }
-    return result;
-  }, [sessions]);
-
-  const hasAnyScore = THEORY_LAYERS.some((l) => latestScores[l] > 0);
-
-  if (!hasAnyScore) {
-    return (
-      <div className="mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground italic">
-        {t("library.masteryFromSessions")}
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-3 pt-3 border-t border-border/60">
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-        {THEORY_LAYERS.map((layer) => (
-          <div key={layer} className="flex items-center gap-1.5">
-            <div className="text-[9px] uppercase tracking-wider text-muted-foreground w-10 shrink-0 truncate">
-              {t(`library.mastery.${layer}`).slice(0, 4)}
-            </div>
-            <MasterySparkline itemId={itemId} layer={layer as TheoryLayer} weeks={8} />
-            <div className="text-[10px] font-serif tabular-nums text-primary ml-auto">
-              {latestScores[layer]}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

@@ -3,36 +3,35 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, XAx
 import type { Session } from "@/domain/entities/session";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
-import { NOTE_GLYPH } from "@/lib/constants";
+import { confidenceLabel, tempoLabel } from "@/lib/format";
+import { meanConfidence, topMark } from "@/domain/logic/sessionMetrics";
 import { Slider } from "@/components/ui/slider";
 
 interface Props {
   sessions: Session[];
   targetBpm?: number;
+  /** Chart only the marks of this section. */
+  segmentId?: number;
 }
-
-const qualityKey = (q?: string) => (q ? `session.quality${q.charAt(0).toUpperCase()}${q.slice(1)}` : undefined);
 
 /**
  * Interactive tempo timeline for a single piece: a BPM line over time with a
- * scrubber that reveals the quality rating and notes logged on that date.
+ * scrubber that reveals the confidence and notes logged on that date.
  */
-export function BpmTimelineChart({ sessions, targetBpm }: Props) {
+export function BpmTimelineChart({ sessions, targetBpm, segmentId }: Props) {
   const { t, lang } = useI18n();
 
   const points = useMemo(
     () =>
       sessions
-        .filter((session) => typeof session.bpmReached === "number" && session.bpmReached > 0)
         .slice()
         .sort((a, b) => a.date.localeCompare(b.date))
-        .map((session) => ({
-          date: session.date,
-          bpm: session.bpmReached as number,
-          label: formatDate(session.date, lang, "dayMonth"),
-          session,
-        })),
-    [sessions, lang],
+        .flatMap((session) => {
+          const marks = segmentId === undefined ? session.marks : session.marks.filter((m) => m.segmentId === segmentId);
+          const top = topMark(marks);
+          return top?.bpm ? [{ date: session.date, bpm: top.bpm, noteVal: top.noteVal, confidence: meanConfidence(marks), label: formatDate(session.date, lang, "dayMonth"), session }] : [];
+        }),
+    [sessions, lang, segmentId],
   );
 
   const [index, setIndex] = useState(0);
@@ -90,16 +89,14 @@ export function BpmTimelineChart({ sessions, targetBpm }: Props) {
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-sm font-medium">{formatDate(active.date, lang, "medium")}</span>
           <span className="text-sm tabular-nums font-medium">
-            {active.session.noteVal ? NOTE_GLYPH[active.session.noteVal] : "♩"}={active.bpm}
+            {tempoLabel(active.noteVal, active.bpm)}
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground tabular-nums">
+        <p className="text-xs text-muted-foreground tabular-nums">
           {t("drilldown.sinceStart").replace("{delta}", `${delta >= 0 ? "+" : ""}${delta}`)}
           {targetBpm ? ` · ${t("drilldown.ofTarget").replace("{pct}", String(Math.round((active.bpm / targetBpm) * 100)))}` : ""}
         </p>
-        {active.session.quality && (
-          <p className="text-xs">{t(qualityKey(active.session.quality) as string)}</p>
-        )}
+        {active.confidence !== undefined && <p className="text-xs tabular-nums">{confidenceLabel(active.confidence)}</p>}
         {active.session.notes ? (
           <p className="text-xs text-muted-foreground break-words whitespace-pre-line">{active.session.notes}</p>
         ) : (

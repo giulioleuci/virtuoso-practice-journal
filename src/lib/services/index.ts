@@ -1,12 +1,10 @@
 export { tasksService } from "./tasks";
 export { sessionsService } from "./sessions";
-export type { FullSessionLogInput } from "./sessions";
 export { libraryService } from "./library";
 export { collectionsService } from "./collections";
 export { studyRoutinesService } from "./studyRoutines";
 export { profileService } from "./profile";
 export { subjectsService } from "./subjects";
 export { lessonsService } from "./lessons";
-export { pendingAssignmentsService } from "./pendingAssignments";
 export { helpRequestsService } from "./helpRequests";
 export { backupService } from "./backup";

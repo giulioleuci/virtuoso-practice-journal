@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useActiveTasks, useAssignments, useLessons, useOpenHelpRequestCount, useRecurrences, useSubjects } from "@/presentation/hooks/useEntities";
-import { subjectBorderStyle } from "@/lib/subjectColors";
+import { subjectColorCss } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
 import { lessonsService } from "@/lib/services";
+import { needsTask } from "@/domain/logic/assignments";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
 import { Button } from "@/components/ui/button";
@@ -26,16 +27,12 @@ import {
   CheckCircle2,
   HelpCircle,
   CalendarClock,
-  ChevronLeft,
   ChevronRight,
   X,
-  ClipboardPlus,
 } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
 import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
-import { AddHomeworkSheet } from "@/components/lessons/AddHomeworkSheet";
 import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
 import { NextLessonPanel } from "@/components/lessons/NextLessonPanel";
 import { upcomingLessonDates, slotForDate } from "@/lib/recurrence";
@@ -45,6 +42,8 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { FeatureEmptyState } from "@/components/shared/FeatureEmptyState";
 import { Pager } from "@/components/shared/Pager";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeader } from "@/components/shared/SectionHeader";
 
 const PAGE_SIZE = 5;
 
@@ -71,10 +70,8 @@ export default function Lessons() {
   const [logContext, setLogContext] = useState<LessonLogContext | null>(null);
   const [delLessonId, setDelLessonId] = useState<number | null>(null);
 
-  const [pageAssign, setPageAssign] = useState(0);
   const [pageUpcoming, setPageUpcoming] = useState(0);
   const [pageRecent, setPageRecent] = useState(0);
-  const [homeworkForRec, setHomeworkForRec] = useState<LessonRecurrence | null>(null);
 
   const openNew = () => {
     setEditingRec(null);
@@ -120,320 +117,176 @@ export default function Lessons() {
     setDelLessonId(null);
   };
 
-  const pendingAssignments = (assignments ?? []).filter((a) => !a.transformed && !a.ignored);
+  const pendingAssignments = (assignments ?? []).filter(needsTask);
 
   const upcoming = useMemo(() => {
     const today = dayKey(new Date());
-    const loggedDates = new Set((lessons ?? []).map((l) => `${l.recurrenceId ?? "x"}:${l.date}`));
     const out: { rec: LessonRecurrence; date: string; isToday: boolean; slot?: ReturnType<typeof slotForDate> }[] = [];
     for (const r of recurrences ?? []) {
       const dates = upcomingLessonDates(r, 3);
       for (const d of dates) {
-        if (loggedDates.has(`${r.id}:${d}`)) continue;
         out.push({ rec: r, date: d, isToday: d === today, slot: slotForDate(r, d) });
       }
     }
     return out.sort((a, b) => a.date.localeCompare(b.date) || (a.slot?.startTime ?? "").localeCompare(b.slot?.startTime ?? ""));
-  }, [recurrences, lessons]);
+  }, [recurrences]);
 
+  // One live panel per teacher, nearest lesson first.
+  const nextPerTeacher = useMemo(() => upcoming.filter((u, i) => upcoming.findIndex((o) => o.rec.id === u.rec.id) === i), [upcoming]);
+
+
+  const dot = (subjectId: number) => {
+    const sub = subjectMap.get(subjectId);
+    return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectColorCss(sub?.color, sub?.type, sub?.customColor) }} title={sub?.name} role="img" aria-label={sub?.name} />;
+  };
+  const linkBtn = "inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4";
+  const iconBtn = "inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40";
+
+  const upcomingTotal = Math.max(1, Math.ceil(upcoming.length / PAGE_SIZE));
+  const upcomingPage = Math.min(pageUpcoming, upcomingTotal - 1);
+  const recentTotal = Math.max(1, Math.ceil((lessons?.length ?? 0) / PAGE_SIZE));
+  const recentPage = Math.min(pageRecent, recentTotal - 1);
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="font-serif text-3xl">{t("nav.lessons")}</h2>
-          <Button size="sm" variant="ghost" onClick={openNew}>
-            <Plus className="h-4 w-4 mr-1" /> {t("lessons.addRecurrence")}
-          </Button>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button size="sm" variant="ghost" className="px-2 -ml-2" onClick={() => { setRecapSubjectId(undefined); setRecapOpen(true); }}>
-            <HelpCircle className="h-4 w-4 mr-1" /> {t("lessons.recap")}
-            {openHelpCount ? (
-              <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
-                {openHelpCount}
-              </span>
-            ) : null}
-          </Button>
-        </div>
-      </div>
+    <div className="pb-24">
+      <PageHeader
+        title={t("nav.lessons")}
+        subtitle={t("lessons.subtitle")}
+        actions={<Button onClick={openNew}><Plus /> {t("lessons.addRecurrence")}</Button>}
+      />
 
+      <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
+        <div className="min-w-0 space-y-8">
+          {nextPerTeacher.map(({ rec, date }) => <NextLessonPanel key={`${rec.id}-${date}`}
+            recurrence={rec} date={date} subject={subjectMap.get(rec.subjectId)}
+            onLog={() => openLog(rec, date)}
+            onQuestions={() => { setRecapSubjectId(rec.subjectId); setRecapOpen(true); }} />)}
 
-      {upcoming[0] && <NextLessonPanel key={`${upcoming[0].rec.id}-${upcoming[0].date}`}
-        recurrence={upcoming[0].rec} date={upcoming[0].date} subject={subjectMap.get(upcoming[0].rec.subjectId)}
-        onLog={() => openLog(upcoming[0].rec, upcoming[0].date)}
-        onQuestions={() => { setRecapSubjectId(upcoming[0].rec.subjectId); setRecapOpen(true); }} />}
+          {pendingAssignments.length > 0 && (
+            <Link to="/lessons/assignments" className="flex items-center gap-3 border-y border-primary/30 py-3 text-sm font-medium text-primary hover:bg-primary/5">
+              <Wand2 className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 flex-1 break-words">{t("lessons.assignments", { count: pendingAssignments.length })}</span>
+              <ChevronRight className="h-4 w-4 shrink-0" />
+            </Link>
+          )}
 
-      {/* Recurrences */}
-      <section className="space-y-2">
-        <h3 className="text-xs uppercase tracking-wider text-muted-foreground">{t("lessons.teachers")}</h3>
-        {!recurrences?.length ? (
-          <FeatureEmptyState description={t("lessons.empty")} quote={lessonQuote} action={{ label: t("lessons.addRecurrence"), onClick: openNew }} />
-        ) : (
-          <ul className="space-y-2">
-            {recurrences.map((r) => {
-              const rSubject = subjectMap.get(r.subjectId);
-              return (
-                <li
-                  key={r.id}
-                  className="paper-card overflow-hidden border-l-4 p-0"
-                  style={subjectBorderStyle(rSubject?.color, rSubject?.type, rSubject?.customColor)}
-                >
-                  {/* Header: teacher + edit/delete in one row */}
-                  <div className="flex items-start gap-2 p-3.5 pb-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-serif text-[1.35rem] leading-tight break-words">{r.teacher}</div>
-                      <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1 truncate">
-                        {subjectName(r.subjectId)}
-                      </div>
+          {upcoming.length > 0 && (
+            <section>
+              <SectionHeader title={t("lessons.upcoming", { count: upcoming.length })} />
+              <ul className="divide-y divide-border border-t border-border">
+                {upcoming.slice(upcomingPage * PAGE_SIZE, (upcomingPage + 1) * PAGE_SIZE).map(({ rec, date, isToday, slot }) => (
+                  <li key={`${rec.id}-${date}`} className="flex items-center gap-3 py-3.5">
+                    {dot(rec.subjectId)}
+                    <div className="min-w-0 flex-1">
+                      <div className="break-words text-sm font-medium">{rec.teacher} · {subjectName(rec.subjectId)}</div>
+                      <div className="text-xs text-muted-foreground">{isToday ? t("lessons.today") : formatDate(date, lang)}{slot ? ` · ${slot.startTime}–${slot.endTime}` : ""}</div>
                     </div>
-                    <div className="flex items-center gap-0.5 shrink-0 -mr-1.5 -mt-1">
-                      <button
-                        onClick={() => openEdit(r)}
-                        aria-label={t("common.edit")}
-                        className="h-10 w-10 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/80"
-                      >
-                        <Pencil className="h-[18px] w-[18px]" />
-                      </button>
-                      <button
-                        onClick={() => r.id && setDelRecId(r.id)}
-                        aria-label={t("common.delete")}
-                        className="h-10 w-10 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-accent active:bg-accent/80"
-                      >
-                        <Trash2 className="h-[18px] w-[18px]" />
-                      </button>
-                    </div>
-                  </div>
+                    <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}><NotebookPen />{t("lessons.log")}</Button>
+                  </li>
+                ))}
+              </ul>
+              <Pager page={upcomingPage} totalPages={upcomingTotal} onChange={setPageUpcoming} />
+            </section>
+          )}
 
-                  {/* Schedule chips */}
-                  <div className="px-3.5 pb-3 flex flex-wrap gap-1.5">
-                    {(r.schedules ?? []).map((slot, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-accent/60 text-foreground/80"
-                      >
-                        <CalendarClock className="h-3.5 w-3.5" />
-                        {t(`weekday.${slot.dayOfWeek}`)} · {slot.startTime}–{slot.endTime}
-                        <span className="text-[10px] uppercase tracking-wider text-primary/80">
-                          · {t(`teacher.freq.${slot.frequency}`)}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-
-
-                  {/* Footer: log + add-homework */}
-                  <div className="grid grid-cols-2 border-t border-border/40">
-                    <button
-                      onClick={() => setHomeworkForRec(r)}
-                      className="h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors border-r border-border/40"
-                    >
-                      <ClipboardPlus className="h-4 w-4" /> {t("homework.add")}
-                    </button>
-                    <button
-                      onClick={() => openLog(r)}
-                      className="h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors"
-                    >
-                      <NotebookPen className="h-4 w-4" /> {t("lessons.log")}
-                    </button>
-                  </div>
-                  <LessonExtraActions subjectId={r.subjectId} />
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      {/* Pending assignments — link to dedicated page */}
-      {pendingAssignments.length > 0 && (
-        <Link
-          to="/lessons/assignments"
-          className="paper-card p-4 flex items-center gap-3 hover:-translate-y-0.5 transition-transform"
-        >
-          <Wand2 className="h-4 w-4 text-primary shrink-0" />
-          <span className="text-sm flex-1 min-w-0 break-words">
-            {t("lessons.assignments", { count: pendingAssignments.length })}
-          </span>
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-        </Link>
-      )}
-
-      <Accordion type="multiple" className="space-y-2">
-        {/* Upcoming schedule */}
-        {upcoming.length > 0 &&
-          (() => {
-            const totalPages = Math.max(1, Math.ceil(upcoming.length / PAGE_SIZE));
-            const page = Math.min(pageUpcoming, totalPages - 1);
-            const slice = upcoming.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-            return (
-              <AccordionItem value="upcoming" className="border-none">
-                <AccordionTrigger className="text-xs uppercase tracking-wider text-muted-foreground hover:no-underline py-2">
-                  {t("lessons.upcoming", { count: upcoming.length })}
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ul className="space-y-2">
-                    {slice.map(({ rec, date, isToday, slot }) => {
-                      const upSubject = subjectMap.get(rec.subjectId);
-                      return (
-                        <li
-                          key={`${rec.id}-${date}`}
-                          className="paper-card p-3 flex gap-3 border-l-4"
-                          style={subjectBorderStyle(upSubject?.color, upSubject?.type, upSubject?.customColor)}
-                        >
-                          <CalendarClock className="h-4 w-4 text-primary shrink-0 mt-1" />
-                          <div className="flex-1 min-w-0 space-y-2">
-                            <div className="min-w-0">
-                              <div className="font-medium text-sm break-words">
-                                {rec.teacher} · {subjectName(rec.subjectId)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {isToday ? t("lessons.today") : formatDate(date, lang)}{slot ? ` · ${slot.startTime}–${slot.endTime}` : ""}
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant={isToday ? "default" : "outline"}
-                              onClick={() => openLog(rec, date)}
-                              className="-ml-2"
-                            >
-                              <NotebookPen className="h-4 w-4 mr-1" /> {t("lessons.log")}
-                            </Button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <Pager page={page} totalPages={totalPages} onChange={setPageUpcoming} />
-                </AccordionContent>
-              </AccordionItem>
-            );
-          })()}
-
-        {/* Recent lessons */}
-        <AccordionItem value="recent" className="border-none">
-          <AccordionTrigger className="text-xs uppercase tracking-wider text-muted-foreground hover:no-underline py-2">
-            {t("lessons.recent", { count: lessons?.length ?? 0 })}
-          </AccordionTrigger>
-          <AccordionContent>
+          <section>
+            <SectionHeader title={t("lessons.recent", { count: lessons?.length ?? 0 })} />
             {!lessons?.length ? (
               <EmptyState title={t("lessons.noLessonsLogged")} />
             ) : (
-              (() => {
-                const totalPages = Math.max(1, Math.ceil(lessons.length / PAGE_SIZE));
-                const page = Math.min(pageRecent, totalPages - 1);
-                const slice = lessons.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-                return (
-                  <>
-                    <ul className="space-y-2">
-                      {slice.map((l) => {
-                        const las = (assignments ?? []).filter((a) => a.lessonId === l.id);
-                        const lSubject = subjectMap.get(l.subjectId);
-                        return (
-                          <li
-                            key={l.id}
-                            className="paper-card p-4 border-l-4"
-                            style={subjectBorderStyle(lSubject?.color, lSubject?.type, lSubject?.customColor)}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-serif text-lg">{subjectName(l.subjectId)}</div>
-                                <div className="text-xs text-muted-foreground">{formatDate(l.date, lang)}</div>
-                                {l.notes && <p className="text-sm mt-1 line-clamp-2">{l.notes}</p>}
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  onClick={() => openEditLesson(l)}
-                                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => l.id && setDelLessonId(l.id)}
-                                  className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </div>
-                            {las.length > 0 && (
-                              <ul className="mt-2 pt-2 border-t border-border/60 space-y-1">
-                                {las.map((a) => {
-                                  const linkedTask = a.taskId ? tasksAll?.find((tk) => tk.id === a.taskId) : undefined;
-                                  return (
-                                    <li key={a.id} className="text-xs flex items-center gap-2">
-                                      {a.transformed ? (
-                                        <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
-                                      ) : (
-                                        <Wand2 className="h-3 w-3 text-muted-foreground shrink-0" />
-                                      )}
-                                      <span className="flex-1 truncate">{a.text}</span>
-                                      {a.transformed ? (
-                                        <span className="text-[10px] uppercase tracking-wider text-primary truncate max-w-[40%]">
-                                          → {linkedTask?.title ?? t("lessons.scheduled")}
-                                        </span>
-                                      ) : a.ignored ? (
-                                        <button
-                                          onClick={async () => {
-                                            if (a.id) {
-                                              await lessonsService.restoreAssignment(a.id);
-                                              toast(t("toast.restored"));
-                                            }
-                                          }}
-                                          className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary italic"
-                                        >
-                                          {t("lessons.ignoredRestore")}
-                                        </button>
-                                      ) : (
-                                        <>
-                                          <button
-                                            onClick={() =>
-                                              navigate("/tasks/new", {
-                                                state: {
-                                                  date: today(),
-                                                  prefill: {
-                                                    subjectId: l.subjectId,
-                                                    title: a.text,
-                                                    assignmentId: a.id,
-                                                  },
-                                                },
-                                              })
-                                            }
-                                            className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary"
-                                          >
-                                            {t("lessons.makeTask")}
-                                          </button>
-                                          <button
-                                            onClick={async () => {
-                                              if (a.id) {
-                                                await lessonsService.ignoreAssignment(a.id);
-                                                toast(t("toast.ignored"));
-                                              }
-                                            }}
-                                            className="text-muted-foreground hover:text-destructive"
-                                            aria-label={t("common.ignore")}
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </button>
-                                        </>
-                                      )}
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    <Pager page={page} totalPages={totalPages} onChange={setPageRecent} />
-                  </>
-                );
-              })()
+              <>
+                <ul className="divide-y divide-border border-t border-border">
+                  {lessons.slice(recentPage * PAGE_SIZE, (recentPage + 1) * PAGE_SIZE).map((l) => {
+                    const las = (assignments ?? []).filter((a) => a.lessonId === l.id);
+                    return (
+                      <li key={l.id} className="py-4">
+                        <div className="flex items-start gap-3">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="flex items-center gap-2 font-serif text-xl font-semibold">{dot(l.subjectId)}{subjectName(l.subjectId)}</h3>
+                            <div className="text-xs text-muted-foreground">{formatDate(l.date, lang)}</div>
+                            {l.notes && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{l.notes}</p>}
+                          </div>
+                          <button onClick={() => openEditLesson(l)} className={iconBtn} aria-label={`${t("common.edit")} ${formatDate(l.date, lang)}`}><Pencil className="h-4 w-4" /></button>
+                          <button onClick={() => l.id && setDelLessonId(l.id)} className={`${iconBtn} hover:text-destructive`} aria-label={`${t("common.delete")} ${formatDate(l.date, lang)}`}><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                        {las.length > 0 && (
+                          <ul className="mt-2 space-y-1 border-t border-border pt-2">
+                            {las.map((a) => {
+                              const linked = a.taskIds.flatMap((id) => tasksAll?.find((tk) => tk.id === id) ?? []);
+                              return (
+                                <li key={a.id} className="flex items-center gap-2 text-xs">
+                                  {a.taskIds.length ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" /> : <Wand2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                                  <span className="flex-1 truncate">{a.text}</span>
+                                  {a.taskIds.length ? (
+                                    <span className="max-w-[40%] truncate text-primary">→ {linked.length === 1 ? linked[0].title : t("homework.tasksLinked", { count: a.taskIds.length })}</span>
+                                  ) : a.ignored ? (
+                                    <button onClick={async () => { await lessonsService.restoreAssignment(a.id); toast(t("toast.restored")); }} className="italic text-muted-foreground hover:text-primary">{t("lessons.ignoredRestore")}</button>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => navigate("/tasks/new", { state: { date: today(), prefill: { subjectId: l.subjectId, title: a.text, assignmentId: a.id } } })}
+                                        className="font-medium text-primary hover:underline underline-offset-4"
+                                      >
+                                        {t("lessons.makeTask")}
+                                      </button>
+                                      <button onClick={async () => { await lessonsService.ignoreAssignment(a.id); toast(t("toast.ignored")); }} className="inline-flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive" aria-label={t("common.ignore")}><X className="h-3.5 w-3.5" /></button>
+                                    </>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <Pager page={recentPage} totalPages={recentTotal} onChange={setPageRecent} />
+              </>
             )}
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+          </section>
+        </div>
+
+        <aside className="min-w-0 space-y-6">
+          <section>
+            <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("lessons.teachers")}</h2>
+            {!recurrences?.length ? (
+              <FeatureEmptyState description={t("lessons.empty")} quote={lessonQuote} action={{ label: t("lessons.addRecurrence"), onClick: openNew }} />
+            ) : (
+              <ul className="divide-y divide-border border-y border-border">
+                {recurrences.map((r) => (
+                  <li key={r.id} className="py-4">
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="break-words font-serif text-xl font-semibold leading-tight">{r.teacher}</div>
+                        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">{dot(r.subjectId)}{subjectName(r.subjectId)}</div>
+                      </div>
+                      <button onClick={() => openEdit(r)} aria-label={`${t("common.edit")} ${r.teacher ?? ""}`} className={iconBtn}><Pencil className="h-[18px] w-[18px]" /></button>
+                      <button onClick={() => r.id && setDelRecId(r.id)} aria-label={`${t("common.delete")} ${r.teacher ?? ""}`} className={`${iconBtn} hover:text-destructive`}><Trash2 className="h-[18px] w-[18px]" /></button>
+                    </div>
+                    <ul className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
+                      {(r.schedules ?? []).map((slot, i) => (
+                        <li key={i} className="flex items-center gap-1.5 tabular-nums">
+                          <CalendarClock className="h-3.5 w-3.5" />
+                          {t(`weekday.${slot.dayOfWeek}`)} · {slot.startTime}–{slot.endTime} · {t(`teacher.freq.${slot.frequency}`)}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-5">
+                      <button onClick={() => openLog(r)} className={linkBtn}><NotebookPen className="h-4 w-4" />{t("lessons.log")}</button>
+                    </div>
+                    <LessonExtraActions subjectId={r.subjectId} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          <Button variant="outline" onClick={() => { setRecapSubjectId(undefined); setRecapOpen(true); }}>
+            <HelpCircle /> {t("lessons.recap")}
+            {openHelpCount ? <span className="rounded-full bg-primary px-1.5 py-0.5 font-numeric text-xs text-primary-foreground">{openHelpCount}</span> : null}
+          </Button>
+        </aside>
+      </div>
 
       <RecurrenceSheet
         open={recOpen}
@@ -454,16 +307,6 @@ export default function Lessons() {
       />
 
       <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} subjectId={recapSubjectId} />
-
-      {homeworkForRec && (
-        <AddHomeworkSheet
-          open={!!homeworkForRec}
-          onOpenChange={(o) => !o && setHomeworkForRec(null)}
-          subjectId={homeworkForRec.subjectId}
-          recurrenceId={homeworkForRec.id}
-          lessonLabel={`${homeworkForRec.teacher ?? ""} · ${subjectName(homeworkForRec.subjectId)}`}
-        />
-      )}
 
       <AlertDialog open={delRecId !== null} onOpenChange={(o) => !o && setDelRecId(null)}>
         <AlertDialogContent>

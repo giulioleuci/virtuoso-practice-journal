@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BpmCoupler } from "./BpmCoupler";
 import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
-import { type MasteryState } from "./MasterySliders";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { cn } from "@/lib/utils";
 import type { LibraryKind, NoteVal } from "@/domain/entities/common";
@@ -19,7 +18,6 @@ interface Props {
   segments: DraftSegment[]; setSegments: (v: DraftSegment[]) => void;
   totalExercises?: number; setTotalExercises: (v?: number) => void;
   currentExercise?: number; setCurrentExercise: (v?: number) => void;
-  mastery: MasteryState; setMastery: (v: MasteryState) => void;
   techniqueOptions: { value: number; label: string }[];
   subjectLayers: string[];
   collectionIds?: number[]; setCollectionIds?: (v: number[]) => void;
@@ -53,9 +51,6 @@ export function LibraryItemKindFields(p: Props) {
   if (p.kind === "theory") {
     return (
       <>
-        <p className="text-xs text-muted-foreground italic">
-          {t("library.masteryFromSessions")}
-        </p>
         {collectionsBlock}
         <SegmentsEditor
           segments={p.segments}
@@ -73,7 +68,7 @@ export function LibraryItemKindFields(p: Props) {
         <div className="grid grid-cols-2 gap-3">
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("library.currentExercise")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("library.currentExercise")}</Label>
             <Input
               type="number" min={1}
               value={p.currentExercise ?? ""}
@@ -82,7 +77,7 @@ export function LibraryItemKindFields(p: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("library.totalExercises")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("library.totalExercises")}</Label>
             <Input
               type="number" min={1}
               value={p.totalExercises ?? ""}

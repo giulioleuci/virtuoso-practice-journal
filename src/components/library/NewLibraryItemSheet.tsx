@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/select";
 import { LibraryItemKindFields } from "./LibraryItemKindFields";
 import { type DraftSegment } from "./SegmentsEditor";
-import { type MasteryState } from "./MasterySliders";
 import { libraryService, collectionsService } from "@/lib/services";
 import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet";
 import { toast } from "sonner";
@@ -37,13 +36,6 @@ interface Props {
 }
 
 
-const emptyMastery: MasteryState = {
-  conceptual: 0,
-  analytical: 0,
-  aural: 0,
-  compositional: 0,
-  reading: 0,
-};
 
 const BPM_MIN = 20;
 const BPM_MAX = 400;
@@ -75,7 +67,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const [totalExercises, setTotalExercises] = useState<number | undefined>();
   const [currentExercise, setCurrentExercise] = useState<number | undefined>(1);
 
-  const [mastery, setMastery] = useState<MasteryState>(emptyMastery);
   const [collectionIds, setCollectionIds] = useState<number[]>([]);
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
 
@@ -121,7 +112,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setTechniqueIds(item.techniqueIds ?? []);
       setTotalExercises(item.totalExercises);
       setCurrentExercise(item.currentExercise ?? 1);
-      setMastery({ ...emptyMastery, ...(item.mastery ?? {}) });
     }
     if (open && !isEdit) setCollectionIds([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,7 +152,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       setSegments([]);
       setTotalExercises(undefined);
       setCurrentExercise(1);
-      setMastery(emptyMastery);
       setSubjectId(undefined);
       setCollectionIds([]);
     }
@@ -244,7 +233,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
       base.noteVal = noteVal;
       base.techniqueIds = techniqueIds;
     }
-    // theory: mastery is derived from sessions, not stored directly
 
     const segmentsPayload = segments.length
       ? segments.map((s) => ({
@@ -278,7 +266,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5">
           {/* Subject */}
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+            <Label className="text-xs font-medium text-foreground">
               {t("common.subject")}
             </Label>
             <Select
@@ -300,7 +288,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
 
           {/* Title */}
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+            <Label className="text-xs font-medium text-foreground">
               {t("common.title")}
             </Label>
             <Input
@@ -315,7 +303,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
           {/* Composer / Author */}
           {(editingKind === "repertoire" || editingKind === "manual") && (
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              <Label className="text-xs font-medium text-foreground">
                 {editingKind === "manual" ? t("library.labelAuthor") : t("library.labelComposer")}
               </Label>
               <Input
@@ -337,7 +325,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
             segments={segments} setSegments={setSegments}
             totalExercises={totalExercises} setTotalExercises={setTotalExercises}
             currentExercise={currentExercise} setCurrentExercise={setCurrentExercise}
-            mastery={mastery} setMastery={setMastery}
             techniqueOptions={subjectTechniqueOptions}
             subjectLayers={subjectLayers}
             collectionIds={collectionIds}

@@ -22,22 +22,19 @@ export function LessonExtraActions({ subjectId }: Props) {
     return (helpRequests ?? []).filter((h) => !h.resolved && h.itemId !== undefined && bySubject.get(h.itemId) === subjectId).length;
   }, [helpRequests, items, subjectId]);
 
-  const btn =
-    "h-11 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors";
+  const link = "inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4";
 
   return (
     <>
-      <div className="grid grid-cols-2 border-t border-border/40">
-        <button onClick={() => setRecapOpen(true)} className={`${btn} border-r border-border/40`}>
-          <HelpCircle className="h-3.5 w-3.5" /> {t("lessons.questionsShort")}
+      <div className="flex flex-wrap items-center gap-x-5">
+        <button onClick={() => setRecapOpen(true)} className={link}>
+          <HelpCircle className="h-4 w-4" /> {t("lessons.questionsShort")}
           {openCount > 0 && (
-            <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
-              {openCount}
-            </span>
+            <span className="rounded-full bg-primary px-1.5 py-0.5 font-numeric text-xs text-primary-foreground">{openCount}</span>
           )}
         </button>
-        <button onClick={() => navigate(`/print-summary?subject=${subjectId}`)} className={btn}>
-          <FileText className="h-3.5 w-3.5" /> {t("lessons.summaryShort")}
+        <button onClick={() => navigate(`/print/weekly?subject=${subjectId}`)} className={link}>
+          <FileText className="h-4 w-4" /> {t("lessons.summaryShort")}
         </button>
       </div>
       <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} subjectId={subjectId} />

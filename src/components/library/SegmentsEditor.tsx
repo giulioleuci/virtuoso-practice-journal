@@ -54,7 +54,7 @@ export function SegmentsEditor({ segments, onChange, subjectLayers = [], techniq
 
   return (
     <div className="space-y-3">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+      <Label className="text-xs font-medium text-foreground">
         {t("segments.label")}
       </Label>
 
@@ -66,7 +66,7 @@ export function SegmentsEditor({ segments, onChange, subjectLayers = [], techniq
           placeholder={t("segments.placeholder")}
           className="border-0 bg-transparent focus-visible:ring-0"
         />
-        <Button type="button" size="icon" variant="ghost" onClick={addSegment}>
+        <Button type="button" size="icon" variant="ghost" onClick={addSegment} aria-label={t("common.add")}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>

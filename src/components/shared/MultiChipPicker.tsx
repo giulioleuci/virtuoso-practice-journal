@@ -40,7 +40,7 @@ export function MultiChipPicker<T extends string | number>({
   return (
     <div className="space-y-2">
       {label && (
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+        <Label className="text-xs font-medium text-foreground">
           {label}
         </Label>
       )}

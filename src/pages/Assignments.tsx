@@ -1,124 +1,141 @@
-import { useState } from "react";
-import { useAssignments, useLessons, useSubjects } from "@/presentation/hooks/useEntities";
-import { useNavigate } from "react-router-dom";
-
-import { lessonsService } from "@/lib/services";
-import { today, formatDate } from "@/lib/date";
+import { useMemo, useState } from "react";
+import { useActiveTasks, useAssignments, useLessons, useSubjects } from "@/presentation/hooks/useEntities";
+import { Link, useNavigate } from "react-router-dom";
+import { needsTask } from "@/domain/logic/assignments";
+import type { Assignment } from "@/domain/entities/lesson";
+import { lessonsService, tasksService } from "@/lib/services";
+import { addDays, dayKey, formatDate, parseDayKey, today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Wand2, X, ArrowLeft } from "lucide-react";
+import { Plus, X, ArrowLeft, Link2 } from "lucide-react";
 import { toast } from "sonner";
-import { subjectBorderStyle } from "@/lib/subjectColors";
+import { subjectColorCss } from "@/lib/subjectColors";
+import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Pager } from "@/components/shared/Pager";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { nativeSelect } from "@/components/diary/WhenFields";
 
 const PAGE_SIZE = 5;
+const DAYS_AHEAD = 7;
+
+/** Inline planner for one homework: tick days to create a task each, or link an existing task. */
+function PlanHomework({ assignment, subjectId }: { assignment: Assignment; subjectId?: number }) {
+  const { t, lang } = useI18n();
+  const navigate = useNavigate();
+  const tasks = useActiveTasks();
+  const [days, setDays] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const base = parseDayKey(today());
+  const options = Array.from({ length: DAYS_AHEAD }, (_, i) => dayKey(addDays(base, i)));
+  const openTasks = useMemo(
+    () => (tasks ?? []).filter((task) => task.subjectId === subjectId && !task.done && !task.skipped && task.date >= today()).sort((a, b) => a.date.localeCompare(b.date)),
+    [tasks, subjectId],
+  );
+
+  const create = async () => {
+    if (!days.length || busy || subjectId === undefined) return;
+    setBusy(true);
+    try {
+      for (const date of days) {
+        const id = await tasksService.create({ date, subjectId, linkType: "free", title: assignment.text, plan: [] });
+        await lessonsService.linkTask(assignment.id, id);
+      }
+      toast.success(t("assignments.created", { count: days.length }));
+    } catch {
+      toast.error(t("errors.couldNotSave"));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 w-full space-y-3 border-t border-border pt-3">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("assignments.pickDays")}>
+        {options.map((date) => (
+          <button
+            key={date}
+            type="button"
+            aria-pressed={days.includes(date)}
+            onClick={() => setDays((cur) => (cur.includes(date) ? cur.filter((d) => d !== date) : [...cur, date]))}
+            className={cn("min-h-11 min-w-14 rounded-paper border px-3 text-xs font-medium transition-colors", days.includes(date) ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground")}
+          >
+            {date === today() ? t("common.today") : formatDate(date, lang, "weekdayShort")}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" disabled={!days.length || busy} onClick={create}><Plus />{t("assignments.create", { count: Math.max(1, days.length) })}</Button>
+        <Button size="sm" variant="ghost" onClick={() => navigate("/tasks/new", { state: { date: today(), prefill: { subjectId, title: assignment.text, assignmentId: assignment.id } } })}>{t("assignments.moreOptions")}</Button>
+        {!!openTasks.length && (
+          <select aria-label={t("assignments.linkExisting")} value="" className={cn(nativeSelect, "max-w-[16rem]")} onChange={(e) => e.target.value && void lessonsService.linkTask(assignment.id, Number(e.target.value))}>
+            <option value="">{t("assignments.linkExisting")}</option>
+            {openTasks.map((task) => <option key={task.id} value={task.id}>{formatDate(task.date, lang)} · {task.title}</option>)}
+          </select>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Assignments() {
   const { t, lang } = useI18n();
-  const navigate = useNavigate();
   const assignments = useAssignments();
   const lessons = useLessons();
   const subjects = useSubjects();
 
   const [page, setPage] = useState(0);
+  const [planning, setPlanning] = useState<number | null>(null);
 
-  const pending = (assignments ?? []).filter((a) => !a.transformed && !a.ignored);
+  const pending = (assignments ?? []).filter(needsTask);
   const totalPages = Math.max(1, Math.ceil(pending.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const slice = pending.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
-  
-
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <button
-          type="button"
-          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/lessons"))}
-          className="inline-flex items-center gap-1 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> {t("assignments.back")}
-        </button>
-        <h2 className="font-serif text-3xl">{t("assignments.title")}</h2>
-        <p className="text-sm text-muted-foreground italic">
-          {t("assignments.description")}
-        </p>
-      </div>
+    <div className="pb-24">
+      <Link to="/lessons" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+        <ArrowLeft className="h-4 w-4" /> {t("assignments.back")}
+      </Link>
+      <PageHeader title={t("assignments.title")} subtitle={t("assignments.description")} />
 
       {pending.length === 0 ? (
-        <div className="paper-card p-10 text-center">
-          <p className="font-serif text-xl italic text-foreground/85">{t("assignments.allCaughtUp")}</p>
-          <p className="text-sm text-muted-foreground italic mt-2">
-            {t("assignments.noneWaiting")}
-          </p>
-        </div>
+        <EmptyState title={t("assignments.allCaughtUp")} hint={t("assignments.noneWaiting")} />
       ) : (
-        <section className="space-y-2">
-          <ul className="space-y-2">
+        <section>
+          <ul className="divide-y divide-border border-t border-border">
             {slice.map((a) => {
               const lesson = lessons?.find((l) => l.id === a.lessonId);
               const subject = subjects?.find((s) => s.id === lesson?.subjectId);
               return (
-                <li
-                  key={a.id}
-                  className="paper-card overflow-hidden border-l-4 p-0"
-                  style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
-                >
-                  {/* Body: assignment text + meta */}
-                  <div className="flex items-start gap-2.5 p-3.5 pb-2">
-                    <Wand2 className="h-4 w-4 text-primary shrink-0 mt-1" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[15px] leading-snug break-words">{a.text}</p>
-                      {lesson && (
-                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground mt-1.5 truncate">
-                          {formatDate(lesson.date, lang)}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={async () => {
-                        if (!a.id) return;
-                        await lessonsService.ignoreAssignment(a.id);
-                        toast(t("toast.ignored"));
-                      }}
-                      className="h-9 w-9 -mr-1.5 -mt-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-accent shrink-0"
-                      aria-label={t("common.ignore")}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                <li key={a.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 py-4">
+                  <span className="mt-1.5 inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectColorCss(subject?.color, subject?.type, subject?.customColor) }} title={subject?.name} role="img" aria-label={subject?.name} />
+                  <div className="min-w-[calc(100%-8rem)] flex-1 min-[700px]:min-w-0">
+                    <p className="break-words text-[0.9375rem] leading-snug">{a.text}</p>
+                    {lesson && <p className="mt-1 text-xs text-muted-foreground">{formatDate(lesson.date, lang)}</p>}
                   </div>
-
-                  {/* Footer: full-width primary action */}
-                  <button
-                    onClick={() =>
-                      navigate("/tasks/new", {
-                        state: {
-                          date: today(),
-                          prefill: { subjectId: lesson?.subjectId, title: a.text, assignmentId: a.id },
-                        },
-                      })
-                    }
-                    className="w-full h-11 inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider text-primary border-t border-border/40 bg-primary/[0.04] hover:bg-primary/10 active:bg-primary/15 transition-colors"
+                  <Button size="sm" variant={planning === a.id ? "secondary" : "default"} aria-expanded={planning === a.id} onClick={() => setPlanning(planning === a.id ? null : a.id)}>
+                    <Link2 /> {t("assignments.makeTask")}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-11 w-11 hover:text-destructive"
+                    aria-label={`${t("common.ignore")}: ${a.text}`}
+                    onClick={async () => {
+                      await lessonsService.ignoreAssignment(a.id);
+                      toast(t("toast.ignored"));
+                    }}
                   >
-                    <Wand2 className="h-4 w-4" /> {t("assignments.makeTask")}
-                  </button>
+                    <X />
+                  </Button>
+                  {planning === a.id && <PlanHomework assignment={a} subjectId={lesson?.subjectId} />}
                 </li>
               );
             })}
           </ul>
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <Button size="sm" variant="ghost" disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-xs text-muted-foreground tabular-nums">{safePage + 1} / {totalPages}</span>
-              <Button size="sm" variant="ghost" disabled={safePage >= totalPages - 1} onClick={() => setPage(safePage + 1)}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <Pager page={safePage} totalPages={totalPages} onChange={setPage} />
         </section>
       )}
-
     </div>
   );
 }

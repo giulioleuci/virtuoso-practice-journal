@@ -12,7 +12,6 @@ export interface LibraryItem {
   techniqueIds?: number[];
   totalExercises?: number;
   currentExercise?: number;
-  mastery?: { conceptual: number; analytical: number; aural: number; compositional: number; reading?: number };
   tags?: string[];
   /** Explicit "to keep" flag: the piece is permanently part of the repertoire. */
   inRepertoire?: boolean;

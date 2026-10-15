@@ -84,10 +84,10 @@ function SubjectGroup({
   };
 
   return (
-    <div className="paper-card p-3 space-y-3">
+    <div className="space-y-3 border-t border-border pt-4">
       <div className="flex items-center gap-2 text-muted-foreground px-1">
         {icon}
-        <h3 className="text-[11px] uppercase tracking-widest">{title}</h3>
+        <h3 className="text-xs uppercase tracking-widest">{title}</h3>
         <span className="text-xs ml-auto tabular-nums">{items.length}</span>
       </div>
 
@@ -120,7 +120,7 @@ function SubjectGroup({
             className="h-11"
           />
           <Button size="default" onClick={submit} className="h-11 px-4">{t("common.add")}</Button>
-          <Button size="icon" variant="ghost" onClick={() => { setAdding(false); setDraft(""); }} className="h-11 w-11 shrink-0">
+          <Button size="icon" variant="ghost" onClick={() => { setAdding(false); setDraft(""); }} className="h-11 w-11 shrink-0" aria-label={t("common.close")}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -214,8 +214,8 @@ function SectionHeader({ icon, label, count }: { icon: React.ReactNode; label: s
   return (
     <div className="flex items-center gap-1.5 text-muted-foreground">
       {icon}
-      <span className="text-[10px] uppercase tracking-widest">{label}</span>
-      {count !== undefined && <span className="text-[10px] tabular-nums ml-auto">{count}</span>}
+      <span className="text-xs uppercase tracking-widest">{label}</span>
+      {count !== undefined && <span className="text-xs tabular-nums ml-auto">{count}</span>}
     </div>
   );
 }
@@ -299,7 +299,7 @@ function SubjectCard({
           />
           <div className="flex-1 min-w-0">
             <div className="font-serif text-base truncate leading-tight">{subject.name}</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1 flex items-center gap-3">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1 flex items-center gap-3">
               <span className="inline-flex items-center gap-1"><Layers className="h-3 w-3" />{layerCount}</span>
               <span className="inline-flex items-center gap-1"><Wrench className="h-3 w-3" />{techniques.length}</span>
             </div>
@@ -345,7 +345,7 @@ function SubjectCard({
                     <Chip key={l} label={t(`library.mastery.${l}`)} />
                   ))}
                 </div>
-                <p className="text-[11px] italic text-muted-foreground">{t("subjects.theoryLayersFixed")}</p>
+                <p className="text-xs italic text-muted-foreground">{t("subjects.theoryLayersFixed")}</p>
               </>
             ) : (
               <>
@@ -369,7 +369,7 @@ function SubjectCard({
                     )
                   ))}
                   {!(subject.layers ?? []).length && (
-                    <span className="text-[11px] italic text-muted-foreground">{t("subjects.layersHint")}</span>
+                    <span className="text-xs italic text-muted-foreground">{t("subjects.layersHint")}</span>
                   )}
                 </div>
                 <div className="flex gap-1.5">
@@ -380,7 +380,7 @@ function SubjectCard({
                     placeholder={t("subjects.addLayer")}
                     className="h-10 text-sm"
                   />
-                  <Button size="icon" variant="outline" onClick={addLayer} className="h-10 w-10 shrink-0">
+                  <Button size="icon" variant="outline" onClick={addLayer} className="h-10 w-10 shrink-0" aria-label={t("common.add")}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -415,7 +415,7 @@ function SubjectCard({
                 )
               ))}
               {!techniques.length && (
-                <span className="text-[11px] italic text-muted-foreground">{t("subjects.techniquesHint")}</span>
+                <span className="text-xs italic text-muted-foreground">{t("subjects.techniquesHint")}</span>
               )}
             </div>
             <div className="flex gap-1.5">
@@ -426,7 +426,7 @@ function SubjectCard({
                 placeholder={t("subjects.addTechnique")}
                 className="h-10 text-sm"
               />
-              <Button size="icon" variant="outline" onClick={addTechnique} className="h-10 w-10 shrink-0">
+              <Button size="icon" variant="outline" onClick={addTechnique} className="h-10 w-10 shrink-0" aria-label={t("common.add")}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -479,7 +479,7 @@ function SubjectCard({
             {subject.customColor && (
               <button
                 onClick={() => subject.id && subjectsService.setCustomColor(subject.id, undefined)}
-                className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                className="text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"
               >
                 {t("common.reset")}
               </button>

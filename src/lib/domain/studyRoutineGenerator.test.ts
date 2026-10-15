@@ -11,6 +11,7 @@ import {
   collectRoutineWarnings,
   type ResolvedPoolItem,
 } from "@/lib/domain/studyRoutineGenerator";
+import { planSegmentIds } from "@/domain/logic/plan";
 import type { StudyRoutine } from "@/lib/db";
 
 const item = (id: number, title = `i${id}`): ResolvedPoolItem => ({
@@ -96,7 +97,7 @@ describe("generateRoutineTasks", () => {
     const tasks = generateRoutineTasks({ routine: r, groupItems, stats: null, fromDate: "2026-05-18", createdAt: 0 });
     expect(tasks).toHaveLength(1);
     expect(tasks[0].itemId).toBe(42);
-    expect(tasks[0].segmentIds?.sort()).toEqual([1, 2]);
+    expect(planSegmentIds(tasks[0].plan).sort()).toEqual([1, 2]);
   });
 });
 

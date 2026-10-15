@@ -16,7 +16,7 @@ import { nativeSelect } from "./WhenFields";
 
 type Section = { id: number; label: string };
 
-/** The data-only contract, visible next to every recorder and clip list. */
+/** The data-only contract, shown on the backup screen. */
 export function AudioNotice() {
   const { t } = useI18n();
   return (
@@ -27,11 +27,15 @@ export function AudioNotice() {
   );
 }
 
-/** Explicit record/stop; a finished clip is already stored on the device when `onClip` receives it. */
-export function Recorder({ sections, onClip }: { sections: Section[]; onClip: (clip: AudioDraft) => void | Promise<void> }) {
+/**
+ * Explicit record/stop; a finished clip is already stored on the device when `onClip` receives it.
+ * `compact` is an icon-only button for tight headers: no section picker, clips go to `segmentId`.
+ */
+export function Recorder({ sections, onClip, compact, segmentId: fixedSegmentId }: { sections: Section[]; onClip: (clip: AudioDraft) => void | Promise<void>; compact?: boolean; segmentId?: number }) {
   const { t } = useI18n();
   const [recording, setRecording] = useState(false);
-  const [segmentId, setSegmentId] = useState<number | undefined>();
+  const [picked, setPicked] = useState<number | undefined>();
+  const segmentId = compact ? fixedSegmentId : picked;
   const fail = (error: unknown) => toast.error(t(`audio.error.${error instanceof AudioError ? error.code : "unsupported"}`));
   const stop = async (interrupted = false) => {
     setRecording(false);
@@ -44,12 +48,21 @@ export function Recorder({ sections, onClip }: { sections: Section[]; onClip: (c
   const start = async () => {
     try { await applicationCommands.audio.start(() => void stop(true)); setRecording(true); } catch (error) { fail(error); }
   };
+  if (compact) {
+    return recording ? (
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="destructive" className="min-h-11" onClick={() => void stop()}><Square />{t("audio.stop")}</Button>
+        <span role="status" className="sr-only">{t("audio.recording")}</span>
+      </div>
+    ) : (
+      <Button type="button" size="icon" variant="ghost" className="h-11 w-11" onClick={() => void start()} aria-label={t("audio.record")}><Mic /></Button>
+    );
+  }
   return (
     <div className="space-y-3">
-      <AudioNotice />
       <div className="flex flex-wrap items-center gap-2">
         {sections.length > 0 && (
-          <select aria-label={t("audio.segment")} value={segmentId ?? ""} disabled={recording} onChange={(e) => setSegmentId(e.target.value ? Number(e.target.value) : undefined)} className={nativeSelect}>
+          <select aria-label={t("audio.segment")} value={segmentId ?? ""} disabled={recording} onChange={(e) => setPicked(e.target.value ? Number(e.target.value) : undefined)} className={nativeSelect}>
             <option value="">{t("audio.noSegment")}</option>
             {sections.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
@@ -82,11 +95,21 @@ export function ClipPlayer({ uid, label }: { uid: string; label: string }) {
 /** Clips of a session being logged: stored on the device, saved with the session, discarded explicitly. */
 export function ClipDrafts({ clips, onChange, sections }: { clips: AudioDraft[]; onChange: (clips: AudioDraft[]) => void; sections: Section[] }) {
   const { t } = useI18n();
-  const discard = (uid: string) => { void applicationCommands.audio.discard([uid]); onChange(clips.filter((c) => c.uid !== uid)); };
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium">{t("audio.title")}</h3>
       <Recorder sections={sections} onClip={(clip) => onChange([...clips, clip])} />
+      <ClipDraftList clips={clips} onChange={onChange} sections={sections} />
+    </div>
+  );
+}
+
+/** The unsaved clips alone, for screens that put the recorder elsewhere. */
+export function ClipDraftList({ clips, onChange, sections }: { clips: AudioDraft[]; onChange: (clips: AudioDraft[]) => void; sections: Section[] }) {
+  const { t } = useI18n();
+  const discard = (uid: string) => { void applicationCommands.audio.discard([uid]); onChange(clips.filter((c) => c.uid !== uid)); };
+  return (
+    <>
       {clips.length > 0 && (
         <ul className="space-y-3">
           {clips.map((clip) => (
@@ -101,7 +124,7 @@ export function ClipDrafts({ clips, onChange, sections }: { clips: AudioDraft[];
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }
 

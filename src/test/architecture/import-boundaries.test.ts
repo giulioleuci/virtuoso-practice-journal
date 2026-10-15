@@ -96,7 +96,7 @@ describe("library presentation boundary", () => {
     const files = [
       ...await filesIn(join(sourceRoot, "components", "library")),
       join(sourceRoot, "pages", "Library.tsx"),
-      join(sourceRoot, "pages", "ItemAnalysisPage.tsx"),
+      join(sourceRoot, "pages", "ItemPage.tsx"),
     ];
     const legacyAliases = /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["']@\/lib\/(?:presentationQueries|subscriptions)(?:["'])/;
     const offenders = (await Promise.all(files.map(async (file) => {

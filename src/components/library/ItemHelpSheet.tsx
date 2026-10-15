@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { HelpRequest } from "@/domain/ports/helpRequest";
 import { helpRequestsService } from "@/lib/services";
@@ -20,14 +20,13 @@ interface Props {
   itemTitle: string;
 }
 
-export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
+/** Question list and composer for one library item (used in the item page and in the sheet). */
+export function ItemQuestions({ itemId }: { itemId: number }) {
   const { t, lang } = useI18n();
   const reqs = usePresentationRead<HelpRequest[]>("helpRequests.item", [itemId]);
 
   const [draft, setDraft] = useState("");
   const [answers, setAnswers] = useState<Record<number, string>>({});
-
-  useEffect(() => { if (!open) { setDraft(""); setAnswers({}); } }, [open]);
 
   const addQuestion = async () => {
     if (!draft.trim()) return;
@@ -51,20 +50,10 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
   const sorted = (reqs ?? []).sort((a, b) => Number(a.resolved) - Number(b.resolved) || b.createdAt - a.createdAt);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="h-[85vh] max-h-[85dvh] rounded-t-3xl bg-background p-0 flex flex-col"
-      >
-        <SheetHeader className="px-6 pt-6">
-          <SheetTitle className="font-serif text-2xl">{t("recap.title")}</SheetTitle>
-          <SheetDescription>{itemTitle}</SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] mt-4 space-y-4">
+    <div className="space-y-4">
           {/* New question composer */}
           <div className="paper-card border-none p-4 space-y-3">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">
               {t("help.newQuestion")}
             </div>
             <Textarea
@@ -87,16 +76,14 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
           {sorted.length === 0 ? (
             <EmptyState title={t("help.noQuestions")} />
           ) : (
-            <Accordion type="single" collapsible className="space-y-2">
+            <Accordion type="single" collapsible className="border-t border-border">
               {sorted.map((r) => {
                 const isAnswering = answers[r.id!] !== undefined;
                 return (
                   <AccordionItem
                     key={r.id}
                     value={String(r.id)}
-                    className={`paper-card border-none overflow-hidden border-l-4 ${
-                      r.resolved ? "border-l-muted-foreground/30" : "border-l-primary"
-                    }`}
+                    className="overflow-hidden border-b border-border"
                   >
                     <AccordionTrigger className="group px-3 py-3 hover:no-underline gap-2">
                       <div className="flex items-start gap-2 flex-1 min-w-0 text-left">
@@ -113,7 +100,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
                     <AccordionContent className="p-0">
                       {r.answer ? (
                         <div className="px-4 py-3 bg-accent/30 space-y-1.5">
-                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+                          <div className="text-xs uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
                             <MessageSquareQuote className="h-3.5 w-3.5" />
                             {t("recap.saveAnswer")}
                           </div>
@@ -121,7 +108,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
                             {r.answer}
                           </div>
                           {r.answeredAt && (
-                            <div className="text-[11px] text-muted-foreground tabular-nums pt-0.5">
+                            <div className="text-xs text-muted-foreground tabular-nums pt-0.5">
                               {formatDate(new Date(r.answeredAt), lang, "medium")}
                             </div>
                           )}
@@ -160,7 +147,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
                         {!r.answer && !isAnswering && (
                           <button
                             onClick={() => setAnswers((a) => ({ ...a, [r.id!]: "" }))}
-                            className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wider text-primary hover:bg-primary/10 active:bg-primary/15"
+                            className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary hover:bg-primary/10 active:bg-primary/15"
                           >
                             <MessageSquareQuote className="h-3.5 w-3.5" />
                             {t("recap.recordAnswer")}
@@ -168,7 +155,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
                         )}
                         <button
                           onClick={() => r.id && remove(r.id)}
-                          className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         >
                           <X className="h-3.5 w-3.5" />
                           {t("common.delete")}
@@ -180,8 +167,26 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
               })}
             </Accordion>
           )}
-        </div>
+    </div>
+  );
+}
 
+export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
+  const { t } = useI18n();
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="h-[85vh] max-h-[85dvh] rounded-t-3xl bg-background p-0 flex flex-col"
+      >
+        <SheetHeader className="px-6 pt-6">
+          <SheetTitle className="font-serif text-2xl">{t("recap.title")}</SheetTitle>
+          <SheetDescription>{itemTitle}</SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] mt-4">
+          {open && <ItemQuestions itemId={itemId} />}
+        </div>
       </SheetContent>
     </Sheet>
   );

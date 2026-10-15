@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
+import { NOTE_VALUES } from "@/domain/constants/noteValues";
 import { sessionInputSchema, taskInputSchema, flattenErrors, bpmSchema } from "./schemas";
 
 describe("bpmSchema", () => {
@@ -13,17 +14,16 @@ describe("bpmSchema", () => {
 });
 
 describe("sessionInputSchema", () => {
+  const mark = { layers: [], techniques: [] };
   it("accepts a minimal valid session", () => {
-    const r = sessionInputSchema.safeParse({ quality: "well" });
-    expect(r.success).toBe(true);
+    expect(sessionInputSchema.safeParse({ marks: [mark] }).success).toBe(true);
   });
   it("rejects invalid confidence", () => {
-    const r = sessionInputSchema.safeParse({ quality: "well", confidence: 9 });
-    expect(r.success).toBe(false);
+    expect(sessionInputSchema.safeParse({ marks: [{ ...mark, confidence: 9 }] }).success).toBe(false);
   });
-  it("rejects invalid quality", () => {
-    const r = sessionInputSchema.safeParse({ quality: "amazing" });
-    expect(r.success).toBe(false);
+  it("accepts every note value, dotted ones included", () => {
+    for (const noteVal of NOTE_VALUES) expect(sessionInputSchema.safeParse({ marks: [{ ...mark, bpm: 60, noteVal }] }).success).toBe(true);
+    expect(sessionInputSchema.safeParse({ marks: [{ ...mark, noteVal: "dotted-whole" }] }).success).toBe(false);
   });
 });
 
@@ -33,6 +33,7 @@ describe("taskInputSchema", () => {
       title: "Practice scales",
       date: "2025-01-01",
       subjectId: 1,
+      plan: [],
     });
     expect(ok.success).toBe(true);
 
@@ -40,6 +41,7 @@ describe("taskInputSchema", () => {
       title: "",
       date: "01/01/2025",
       subjectId: 1,
+      plan: [],
     });
     expect(bad.success).toBe(false);
   });

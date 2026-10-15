@@ -86,13 +86,13 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
       }
     >
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("performances.name")}</Label>
+        <Label className="text-xs font-medium text-foreground">{t("performances.name")}</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("performances.namePlaceholder")} className="bg-card h-12" />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("performances.kind")}</Label>
+          <Label className="text-xs font-medium text-foreground">{t("performances.kind")}</Label>
           <Select value={kind} onValueChange={(value) => setKind(value as PerformanceKind)}>
             <SelectTrigger className="bg-card"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -103,18 +103,18 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
           </Select>
         </div>
         <div className="space-y-2">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("common.date")}</Label>
+          <Label className="text-xs font-medium text-foreground">{t("common.date")}</Label>
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-card" />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("performances.venue")}</Label>
+        <Label className="text-xs font-medium text-foreground">{t("performances.venue")}</Label>
         <Input value={venue} onChange={(e) => setVenue(e.target.value)} className="bg-card" />
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("common.subject")}</Label>
+        <Label className="text-xs font-medium text-foreground">{t("common.subject")}</Label>
         <Select value={subjectId !== undefined ? String(subjectId) : ""} onValueChange={(value) => setSubjectId(Number(value))}>
           <SelectTrigger className="bg-card"><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
           <SelectContent>
@@ -126,7 +126,7 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+        <Label className="text-xs font-medium text-foreground">
           {t("performances.programme")} · {itemIds.length}
         </Label>
         <ul className="space-y-1">

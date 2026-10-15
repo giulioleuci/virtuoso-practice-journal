@@ -1,4 +1,4 @@
-/** Repeat / recurrence subform used by NewTaskPage and TaskWizard. */
+/** Repeat / recurrence subform used by NewTaskPage. */
 import { useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,12 +42,12 @@ export function RecurrenceFields({ state, setState, nextLessonDate }: Props) {
       {state.enabled && (
         <div className="space-y-3 pt-1">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.startDate")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("teacher.startDate")}</Label>
             <Input type="date" value={state.startDate} onChange={(e) => setState({ startDate: e.target.value })} />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("recurrence.pattern")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("recurrence.pattern")}</Label>
             <Select value={state.kind} onValueChange={(v) => setState({ kind: v as RecurrenceState["kind"] })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -87,7 +87,7 @@ export function RecurrenceFields({ state, setState, nextLessonDate }: Props) {
           )}
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("recurrence.ends")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("recurrence.ends")}</Label>
             <Select value={state.endMode} onValueChange={(v) => setState({ endMode: v as EndMode })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>

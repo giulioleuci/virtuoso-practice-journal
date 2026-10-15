@@ -15,10 +15,11 @@ import { useI18n } from "@/lib/i18n";
 import { NOTE_GLYPH } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { RatingFields } from "@/components/shared/RatingFields";
-import { ClipDrafts } from "./Recorder";
+import { ClipDraftList, Recorder } from "./Recorder";
 import { Slider } from "@/components/ui/slider";
 import { X, Volume2, VolumeX, MessageSquareQuote, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FloatingActions } from "@/components/shared/FloatingActions";
 
 interface Props {
   task: Task;
@@ -136,7 +137,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
   const overlay = (
     <div role="dialog" aria-modal="true" aria-label={t("practice.practiceMode")} className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-background animate-fade-in pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <div className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col px-5 pb-6 pt-6 min-[700px]:px-9">
+      <div className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col px-5 pb-28 pt-6 min-[700px]:px-9">
         <header className="mb-6 flex items-start justify-between gap-4">
           <h1 className="font-serif text-[2.25rem] font-semibold leading-[1.15] tracking-tight">{t("practice.practiceMode")}</h1>
           <Button size="icon" variant="ghost" className="h-11 w-11" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
@@ -145,7 +146,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
         <div className="grid flex-1 gap-8 min-[900px]:grid-cols-[minmax(0,1fr)_320px] min-[900px]:items-start">
           <section className="min-w-0 rounded-[16px] bg-card p-6 shadow-soft min-[700px]:p-9" aria-label={t("practice.metronome")}>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("practice.metronome")}</h2>
+              <Recorder sections={[]} segmentId={mark.segmentId} compact onClip={(clip) => setClips((c) => [...c, clip])} />
               <div className="flex items-center gap-2">
                 <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => setMuted((m) => !m)} aria-label={muted ? t("practice.unmute") : t("practice.mute")}>
                   {muted ? <VolumeX /> : <Volume2 />}
@@ -213,9 +214,12 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               <RatingFields mark={mark} onChange={rate} />
             </div>
 
-            <div className="mt-6 border-t border-border pt-5">
-              <ClipDrafts clips={clips} onChange={setClips} sections={segments?.map((s) => ({ id: s.id, label: s.label })) ?? []} />
-            </div>
+            {clips.length > 0 && (
+              <div className="mt-6 space-y-3 border-t border-border pt-5">
+                <h3 className="text-sm font-medium">{t("audio.title")}</h3>
+                <ClipDraftList clips={clips} onChange={setClips} sections={segments?.map((s) => ({ id: s.id, label: s.label })) ?? []} />
+              </div>
+            )}
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-border pt-5">
               <div role="group" aria-label={t("practice.beatsPerBar")} className="flex items-center gap-1">
@@ -285,10 +289,11 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
           </aside>
         </div>
 
-        <footer className="mt-8 flex justify-end gap-2 border-t border-border pt-5">
+        {/* Overlay has no nav or sidebar: sit on the system bar alone, above the overlay (z-100). */}
+        <FloatingActions className="z-[110] bottom-[calc(12px+env(safe-area-inset-bottom))] min-[700px]:left-8 min-[1151px]:left-8 min-[1600px]:left-8">
           <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={finish}>{t("practice.finishLog")}</Button>
-        </footer>
+        </FloatingActions>
       </div>
     </div>
   );

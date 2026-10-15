@@ -1,6 +1,5 @@
 import type { PresentationReadPort } from "./presentationReadPort";
 import type { Assignment } from "@/domain/entities/lesson";
-import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
 
 /** Typed application query service used by React presentation adapters. */
 export class PresentationQueryService {
@@ -16,10 +15,6 @@ export class PresentationQueryService {
 
   assignmentsForLesson(lessonId?: number): Promise<Assignment[]> {
     return this.reads.assignmentsForLesson(lessonId);
-  }
-
-  pendingAssignmentsForSubject(subjectId?: number, recurrenceId?: number): Promise<PendingAssignment[]> {
-    return this.reads.pendingAssignmentsForSubject(subjectId, recurrenceId);
   }
 
   openHelpRequestCount(): Promise<number> {

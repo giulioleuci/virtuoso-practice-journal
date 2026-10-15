@@ -14,7 +14,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { subjectBorderStyle, subjectColorCss } from "@/lib/subjectColors";
+import { subjectColorCss } from "@/lib/subjectColors";
 
 interface Props {
   open: boolean;
@@ -138,14 +138,13 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
               )}
               {grouped.map((g) => (
                 <section key={g.subjectName} className="space-y-2">
-                  <h3 className="text-[11px] uppercase tracking-widest text-muted-foreground px-1">{g.subjectName}</h3>
+                  <h3 className="text-xs uppercase tracking-widest text-muted-foreground px-1">{g.subjectName}</h3>
                   <Accordion type="multiple" className="space-y-2">
                     {Array.from(g.items.values()).map((b) => (
                       <AccordionItem
                         key={b.itemTitle}
                         value={b.itemTitle}
-                        className="paper-card border-none border-l-4 overflow-hidden"
-                        style={subjectBorderStyle(g.subjectColor, g.subjectType, g.subjectCustomColor)}
+                        className="paper-card border-none overflow-hidden"
                       >
                         <AccordionTrigger className="group px-3.5 py-3 hover:no-underline gap-2 w-full min-w-0">
                           <div className="flex items-center gap-2 flex-1 min-w-0 text-left">
@@ -157,7 +156,7 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                             <span className="font-serif text-base flex-1 min-w-0 block group-data-[state=closed]:truncate group-data-[state=open]:whitespace-normal group-data-[state=open]:break-words leading-snug">
                               {b.itemTitle}
                             </span>
-                            <span className="text-[11px] tabular-nums text-muted-foreground shrink-0 rounded-full bg-accent/60 px-2 py-0.5">
+                            <span className="text-xs tabular-nums text-muted-foreground shrink-0 rounded-full bg-accent/60 px-2 py-0.5">
                               {b.reqs.length}
                             </span>
                           </div>
@@ -167,7 +166,7 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                             <Link
                               to={`/library`}
                               onClick={() => onOpenChange(false)}
-                              className="text-[11px] uppercase tracking-wider text-primary hover:underline inline-flex items-center gap-0.5 mb-3"
+                              className="text-xs uppercase tracking-wider text-primary hover:underline inline-flex items-center gap-0.5 mb-3"
                             >
                               {t("recap.openInLibrary")} <ChevronRight className="h-3 w-3" />
                             </Link>
@@ -199,7 +198,7 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                                           {r.answer}
                                         </p>
                                         {r.answeredAt && (
-                                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground tabular-nums mt-1">
+                                          <div className="text-xs uppercase tracking-wider text-muted-foreground tabular-nums mt-1">
                                             {formatDate(new Date(r.answeredAt), lang, "medium")}
                                           </div>
                                         )}
@@ -233,7 +232,7 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                                     <div className="flex items-stretch border-t border-border/50 divide-x divide-border/50">
                                       <button
                                         onClick={() => startAnswer(r)}
-                                        className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wider text-primary hover:bg-primary/10 active:bg-primary/15"
+                                        className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary hover:bg-primary/10 active:bg-primary/15"
                                       >
                                         <MessageSquareQuote className="h-3.5 w-3.5" />
                                         {r.answer ? t("recap.editAnswer") : t("recap.recordAnswer")}
@@ -241,7 +240,7 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                                       {!r.resolved && (
                                         <button
                                           onClick={() => r.id && resolve(r.id)}
-                                          className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                                          className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent/40"
                                         >
                                           <CheckCircle2 className="h-3.5 w-3.5" />
                                           {t("recap.resolve")}

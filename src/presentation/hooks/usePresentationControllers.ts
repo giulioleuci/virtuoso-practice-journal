@@ -29,17 +29,6 @@ export function useSessionSubmission<Input>(command: Command<Input>) {
   return { submitting, error, submit, reset };
 }
 
-export function useRoutineWizardController<Output>(command: Command<Output>, onCreated: () => void) {
-  const [step, setStep] = useState(1);
-  const submission = useSessionSubmission(command);
-  const next = useCallback(() => setStep((current) => Math.min(3, current + 1)), []);
-  const back = useCallback(() => setStep((current) => Math.max(1, current - 1)), []);
-  const submit = useCallback(async (output: Output) => {
-    if (await submission.submit(output)) onCreated();
-  }, [onCreated, submission]);
-  return { step, setStep, next, back, ...submission, submit };
-}
-
 export function useBackupCommands(commands: { exportBackup: () => Promise<unknown>; importBackup: () => Promise<unknown> }) {
   const [progress, setProgress] = useState<"idle" | "exporting" | "importing">("idle");
   const [error, setError] = useState<string | null>(null);

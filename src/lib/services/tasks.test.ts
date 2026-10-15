@@ -27,6 +27,7 @@ describe("tasksService.create — no recurrence", () => {
       title: "Scales",
       date: "2025-03-01",
       subjectId,
+      plan: [],
     });
     const task = await db.tasks.get(id);
     expect(task).toBeDefined();
@@ -45,14 +46,10 @@ describe("tasksService.create — no recurrence", () => {
       title: "Etude",
       date: "2025-03-01",
       subjectId,
-      targetBpm: 120,
-      noteVal: "quarter",
-      layers: ["aural"],
+      plan: [{ bpm: 120, noteVal: "quarter", layers: ["aural"], techniques: [] }],
     });
     const task = await db.tasks.get(id);
-    expect(task!.targetBpm).toBe(120);
-    expect(task!.noteVal).toBe("quarter");
-    expect(task!.layers).toEqual(["aural"]);
+    expect(task!.plan).toEqual([{ bpm: 120, noteVal: "quarter", layers: ["aural"], techniques: [] }]);
   });
 });
 
@@ -67,6 +64,7 @@ describe("tasksService.create — weekdays recurrence", () => {
       title: "Etude",
       date: "2025-01-06",
       subjectId,
+      plan: [],
       recurrence: {
         kind: "weekdays",
         days: [1, 3], // Mon, Wed
@@ -95,7 +93,7 @@ describe("tasksService.create — weekdays recurrence", () => {
       title: "Arpeggios",
       date: "2025-01-06",
       subjectId,
-      targetBpm: 80,
+      plan: [{ bpm: 80, layers: [], techniques: [] }],
       recurrence: {
         kind: "weekdays",
         days: [1],
@@ -107,7 +105,7 @@ describe("tasksService.create — weekdays recurrence", () => {
     expect(children).toHaveLength(2);
     for (const child of children) {
       expect(child.title).toBe("Arpeggios");
-      expect(child.targetBpm).toBe(80);
+      expect(child.plan[0].bpm).toBe(80);
       expect(child.subjectId).toBe(subjectId);
       expect(child.recurrence).toBeUndefined();
       expect(child.recurrenceTaskId).toBe(firstId);
@@ -121,6 +119,7 @@ describe("tasksService.create — weekdays recurrence", () => {
         title: "Etude",
         date: "2025-01-01",
         subjectId,
+        plan: [],
         recurrence: { kind: "weekdays", days: [], startDate: "2025-01-01" },
       }),
     ).rejects.toThrow("Recurrence produced no dates");
@@ -133,6 +132,7 @@ describe("tasksService.create — weekdays recurrence", () => {
       title: "Piece",
       date: "2025-01-01",
       subjectId,
+      plan: [],
       recurrence: {
         kind: "weekdays",
         days: [0, 1, 2, 3, 4, 5, 6],
@@ -151,6 +151,7 @@ describe("tasksService.create — weekdays recurrence", () => {
       title: "Solo",
       date: "2025-01-06",
       subjectId,
+      plan: [],
       recurrence: {
         kind: "weekdays",
         days: [1],
@@ -176,6 +177,7 @@ describe("tasksService.create — interval recurrence", () => {
       title: "Exercise",
       date: "2025-01-01",
       subjectId,
+      plan: [],
       recurrence: {
         kind: "interval",
         everyXDays: 7,
@@ -200,6 +202,7 @@ describe("tasksService.create — interval recurrence", () => {
       title: "Daily",
       date: "2025-01-01",
       subjectId,
+      plan: [],
       recurrence: {
         kind: "interval",
         startDate: "2025-01-01",
@@ -217,6 +220,7 @@ describe("tasksService.create — interval recurrence", () => {
       title: "Bounded",
       date: "2025-01-01",
       subjectId,
+      plan: [],
       recurrence: {
         kind: "interval",
         everyXDays: 3,
@@ -237,9 +241,9 @@ describe("tasksService.create — interval recurrence", () => {
 describe("tasksService.byDate", () => {
   it("returns only tasks for the given date", async () => {
     const subjectId = await seedSubject();
-    await tasksService.create({ title: "A", date: "2025-01-01", subjectId });
-    await tasksService.create({ title: "B", date: "2025-01-02", subjectId });
-    await tasksService.create({ title: "C", date: "2025-01-01", subjectId });
+    await tasksService.create({ title: "A", date: "2025-01-01", subjectId, plan: [] });
+    await tasksService.create({ title: "B", date: "2025-01-02", subjectId, plan: [] });
+    await tasksService.create({ title: "C", date: "2025-01-01", subjectId, plan: [] });
 
     const jan1 = await tasksService.byDate("2025-01-01");
     expect(jan1.map((t) => t.title).sort()).toEqual(["A", "C"]);
@@ -250,7 +254,7 @@ describe("tasksService.byDate", () => {
 
   it("excludes soft-deleted tasks", async () => {
     const subjectId = await seedSubject();
-    const id = await tasksService.create({ title: "Deleted", date: "2025-01-01", subjectId });
+    const id = await tasksService.create({ title: "Deleted", date: "2025-01-01", subjectId, plan: [] });
     await db.tasks.update(id, { deletedAt: Date.now() });
     expect(await tasksService.byDate("2025-01-01")).toHaveLength(0);
   });
@@ -267,16 +271,16 @@ describe("tasksService.byDate", () => {
 describe("tasksService.list", () => {
   it("returns all non-deleted tasks across dates", async () => {
     const subjectId = await seedSubject();
-    await tasksService.create({ title: "A", date: "2025-01-01", subjectId });
-    await tasksService.create({ title: "B", date: "2025-06-15", subjectId });
+    await tasksService.create({ title: "A", date: "2025-01-01", subjectId, plan: [] });
+    await tasksService.create({ title: "B", date: "2025-06-15", subjectId, plan: [] });
     const tasks = await tasksService.list();
     expect(tasks).toHaveLength(2);
   });
 
   it("excludes soft-deleted tasks", async () => {
     const subjectId = await seedSubject();
-    const id = await tasksService.create({ title: "Keep", date: "2025-01-01", subjectId });
-    await tasksService.create({ title: "Active", date: "2025-01-01", subjectId });
+    const id = await tasksService.create({ title: "Keep", date: "2025-01-01", subjectId, plan: [] });
+    await tasksService.create({ title: "Active", date: "2025-01-01", subjectId, plan: [] });
     await db.tasks.update(id, { deletedAt: Date.now() });
     const tasks = await tasksService.list();
     expect(tasks).toHaveLength(1);
@@ -291,7 +295,7 @@ describe("tasksService.list", () => {
 describe("tasksService.toggleDone", () => {
   it("marks a task done then undone", async () => {
     const subjectId = await seedSubject();
-    const id = await tasksService.create({ title: "Practice", date: "2025-01-01", subjectId });
+    const id = await tasksService.create({ title: "Practice", date: "2025-01-01", subjectId, plan: [] });
     expect((await db.tasks.get(id))!.done).toBe(false);
 
     await tasksService.toggleDone(id, true);
@@ -313,12 +317,12 @@ describe("tasksService.update", () => {
       title: "Old title",
       date: "2025-01-01",
       subjectId,
-      targetBpm: 80,
+      plan: [{ bpm: 80, layers: [], techniques: [] }],
     });
-    await tasksService.update(id, { title: "New title", targetBpm: 120 });
+    await tasksService.update(id, { title: "New title", plan: [{ bpm: 120, layers: [], techniques: [] }] });
     const task = await db.tasks.get(id);
     expect(task!.title).toBe("New title");
-    expect(task!.targetBpm).toBe(120);
+    expect(task!.plan[0].bpm).toBe(120);
     expect(task!.date).toBe("2025-01-01");
     expect(task!.subjectId).toBe(subjectId);
   });
@@ -331,7 +335,7 @@ describe("tasksService.update", () => {
 describe("tasksService.remove", () => {
   it("hard-deletes a task that has no sessions", async () => {
     const subjectId = await seedSubject();
-    const id = await tasksService.create({ title: "No sessions", date: "2025-01-01", subjectId });
+    const id = await tasksService.create({ title: "No sessions", date: "2025-01-01", subjectId, plan: [] });
     const result = await tasksService.remove(id);
     expect(result).toBe("hard");
     expect(await db.tasks.get(id)).toBeUndefined();
@@ -339,8 +343,8 @@ describe("tasksService.remove", () => {
 
   it("soft-deletes a task that has at least one session", async () => {
     const subjectId = await seedSubject();
-    const id = await tasksService.create({ title: "Has session", date: "2025-01-01", subjectId });
-    await db.sessions.add({ taskId: id, date: "2025-01-01", quality: "well", createdAt: Date.now() });
+    const id = await tasksService.create({ title: "Has session", date: "2025-01-01", subjectId, plan: [] });
+    await db.sessions.add({ taskId: id, date: "2025-01-01", marks: [], createdAt: Date.now() });
     const result = await tasksService.remove(id);
     expect(result).toBe("soft");
     const task = await db.tasks.get(id);
@@ -360,8 +364,8 @@ describe("tasksService.bulkRemove", () => {
 
   it("hard-deletes tasks without sessions", async () => {
     const subjectId = await seedSubject();
-    const id1 = await tasksService.create({ title: "A", date: "2025-01-01", subjectId });
-    const id2 = await tasksService.create({ title: "B", date: "2025-01-02", subjectId });
+    const id1 = await tasksService.create({ title: "A", date: "2025-01-01", subjectId, plan: [] });
+    const id2 = await tasksService.create({ title: "B", date: "2025-01-02", subjectId, plan: [] });
     const result = await tasksService.bulkRemove([id1, id2]);
     expect(result).toEqual({ soft: 0, hard: 2 });
     expect(await db.tasks.get(id1)).toBeUndefined();
@@ -370,8 +374,8 @@ describe("tasksService.bulkRemove", () => {
 
   it("soft-deletes tasks that have sessions", async () => {
     const subjectId = await seedSubject();
-    const id = await tasksService.create({ title: "With session", date: "2025-01-01", subjectId });
-    await db.sessions.add({ taskId: id, date: "2025-01-01", quality: "hard", createdAt: Date.now() });
+    const id = await tasksService.create({ title: "With session", date: "2025-01-01", subjectId, plan: [] });
+    await db.sessions.add({ taskId: id, date: "2025-01-01", marks: [], createdAt: Date.now() });
     const result = await tasksService.bulkRemove([id]);
     expect(result).toEqual({ soft: 1, hard: 0 });
     expect((await db.tasks.get(id))!.deletedAt).toBeDefined();
@@ -379,9 +383,9 @@ describe("tasksService.bulkRemove", () => {
 
   it("mixes soft and hard deletes correctly", async () => {
     const subjectId = await seedSubject();
-    const hardId = await tasksService.create({ title: "No session", date: "2025-01-01", subjectId });
-    const softId = await tasksService.create({ title: "Has session", date: "2025-01-02", subjectId });
-    await db.sessions.add({ taskId: softId, date: "2025-01-02", quality: "well", createdAt: Date.now() });
+    const hardId = await tasksService.create({ title: "No session", date: "2025-01-01", subjectId, plan: [] });
+    const softId = await tasksService.create({ title: "Has session", date: "2025-01-02", subjectId, plan: [] });
+    await db.sessions.add({ taskId: softId, date: "2025-01-02", marks: [], createdAt: Date.now() });
 
     const result = await tasksService.bulkRemove([hardId, softId]);
     expect(result.hard).toBe(1);
@@ -399,7 +403,7 @@ describe("tasksService.bulkRemove", () => {
 describe("tasksService.skip / unskip", () => {
   it("sets skipped=true then false", async () => {
     const subjectId = await seedSubject();
-    const id = await tasksService.create({ title: "Scales", date: "2025-01-01", subjectId });
+    const id = await tasksService.create({ title: "Scales", date: "2025-01-01", subjectId, plan: [] });
 
     await tasksService.skip(id);
     expect((await db.tasks.get(id))!.skipped).toBe(true);
@@ -420,7 +424,7 @@ describe("tasksService.carryOver", () => {
       title: "Etude",
       date: "2025-01-01",
       subjectId,
-      targetBpm: 80,
+      plan: [{ bpm: 80, layers: [], techniques: [] }],
     });
     const original = (await db.tasks.get(id))!;
 
@@ -432,7 +436,7 @@ describe("tasksService.carryOver", () => {
     const copy = (await db.tasks.get(newId))!;
     expect(copy.date).toBe("2025-01-02");
     expect(copy.title).toBe("Etude");
-    expect(copy.targetBpm).toBe(80);
+    expect(copy.plan[0].bpm).toBe(80);
     expect(copy.done).toBe(false);
     expect(copy.skipped).toBeFalsy();
 
@@ -448,8 +452,8 @@ describe("tasksService.carryOver", () => {
 describe("tasksService.bulkSetDone", () => {
   it("marks multiple tasks done", async () => {
     const subjectId = await seedSubject();
-    const id1 = await tasksService.create({ title: "A", date: "2025-01-01", subjectId });
-    const id2 = await tasksService.create({ title: "B", date: "2025-01-01", subjectId });
+    const id1 = await tasksService.create({ title: "A", date: "2025-01-01", subjectId, plan: [] });
+    const id2 = await tasksService.create({ title: "B", date: "2025-01-01", subjectId, plan: [] });
 
     await tasksService.bulkSetDone([id1, id2], true);
 
@@ -459,8 +463,8 @@ describe("tasksService.bulkSetDone", () => {
 
   it("marks multiple tasks not done", async () => {
     const subjectId = await seedSubject();
-    const id1 = await tasksService.create({ title: "A", date: "2025-01-01", subjectId });
-    const id2 = await tasksService.create({ title: "B", date: "2025-01-01", subjectId });
+    const id1 = await tasksService.create({ title: "A", date: "2025-01-01", subjectId, plan: [] });
+    const id2 = await tasksService.create({ title: "B", date: "2025-01-01", subjectId, plan: [] });
     await tasksService.bulkSetDone([id1, id2], true);
 
     await tasksService.bulkSetDone([id1, id2], false);
@@ -486,6 +490,7 @@ describe("tasksService.removeSeries", () => {
       title: "Exercise",
       date: "2025-01-06",
       subjectId,
+      plan: [],
       recurrence: {
         kind: "weekdays",
         days: [1],

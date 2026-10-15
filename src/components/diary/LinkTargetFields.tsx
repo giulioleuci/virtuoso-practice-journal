@@ -1,4 +1,4 @@
-/** Shared "Link to" picker used by NewTaskPage, TaskWizard, and task edit flows.
+/** Shared "Link to" picker used by the new and edit task pages.
  *  Enforces mutual exclusivity: free | item (+optional segments) | collection.
  */
 import { useMemo } from "react";
@@ -52,7 +52,7 @@ export function LinkTargetFields({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.linkTo")}</Label>
+        <Label className="text-xs font-medium text-foreground">{t("link.linkTo")}</Label>
         <div className="flex flex-wrap gap-1.5">
           {LINK_TYPE_VALS.map((val) => (
             <button
@@ -97,7 +97,7 @@ export function LinkTargetFields({
 
       {linkType === "collection" && (
         <div className="space-y-2">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.collection")}</Label>
+          <Label className="text-xs font-medium text-foreground">{t("link.collection")}</Label>
           <Select
             value={collectionId?.toString() ?? ""}
             onValueChange={(v) => setCollectionId(Number(v))}
@@ -163,7 +163,7 @@ function ItemPicker({
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.filterByKind")}</Label>
+        <Label className="text-xs font-medium text-foreground">{t("link.filterByKind")}</Label>
         <div className="flex flex-wrap gap-1.5">
           {KIND_VALS.map((val) => (
             <button
@@ -195,7 +195,7 @@ function ItemPicker({
       )}
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.sortBy")}</Label>
+        <Label className="text-xs font-medium text-foreground">{t("link.sortBy")}</Label>
         <div className="flex flex-wrap gap-1.5">
           {(["title", "composer"] as const).map((val) => (
             <button
@@ -214,7 +214,7 @@ function ItemPicker({
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("link.item")}</Label>
+        <Label className="text-xs font-medium text-foreground">{t("link.item")}</Label>
         <Select
           value={itemId?.toString() ?? ""}
           onValueChange={(v) => setItemId(Number(v))}

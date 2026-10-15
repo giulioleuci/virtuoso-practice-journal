@@ -1,0 +1,141 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - generic [ref=e8]:
+    - link "Skip to content" [ref=e9] [cursor=pointer]:
+      - /url: "#main-content"
+    - complementary [ref=e10]:
+      - link "Virtuoso" [ref=e11] [cursor=pointer]:
+        - /url: /
+      - navigation "Main navigation" [ref=e12]:
+        - link "Today" [ref=e13] [cursor=pointer]:
+          - /url: /
+        - link "Study plan" [ref=e16] [cursor=pointer]:
+          - /url: /tasks
+        - link "Library" [ref=e20] [cursor=pointer]:
+          - /url: /library
+        - link "Lessons 11" [ref=e24] [cursor=pointer]:
+          - /url: /lessons
+          - text: Lessons
+          - generic [ref=e28]: "11"
+        - link "Progress" [ref=e29] [cursor=pointer]:
+          - /url: /analytics
+      - generic [ref=e32]:
+        - link "Weekly summary" [ref=e33] [cursor=pointer]:
+          - /url: /print/weekly
+        - link "Settings" [ref=e38] [cursor=pointer]:
+          - /url: /profile
+        - link "W Wolfgang" [ref=e42] [cursor=pointer]:
+          - /url: /profile
+          - generic [ref=e43]: W
+          - strong [ref=e44]: Wolfgang
+    - main [ref=e45]:
+      - generic [ref=e47]:
+        - link "Diary" [ref=e48] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e52]:
+          - heading "Free session" [level=1] [ref=e53]
+          - paragraph [ref=e54]: Log a free session, even without a planned task.
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57]:
+              - generic [ref=e58]:
+                - generic [ref=e59]: Session date
+                - textbox "Session date" [ref=e60]: 2026-10-15
+              - generic [ref=e61]:
+                - text: Subject
+                - combobox "Subject" [ref=e62]:
+                  - option "Piano" [selected]
+                  - option "Harmony"
+              - generic [ref=e63]:
+                - text: Optional material
+                - combobox "Optional material" [ref=e64]:
+                  - option "Free session" [selected]
+                  - option "Ballade No. 1 in G minor, Op. 23"
+                  - option "WTC I — Prelude & Fugue in C# minor, BWV 849"
+                  - option "Sonata Op. 110 in A♭ major"
+                  - option "Nocturne in E♭ major, Op. 9 No. 2"
+                  - option "Nocturne in B♭ minor, Op. 9 No. 1"
+                  - option "WTC I — Prelude & Fugue in C major, BWV 846"
+                  - option "Sonata Op. 109 in E major"
+                  - option "Hanon — The Virtuoso Pianist"
+                  - option "Cortot — Rational Principles of Pianoforte Technique"
+                  - option "Czerny — The Art of Finger Dexterity, Op. 740"
+                  - option "24 scales — major & minor (4 octaves, hands together)"
+                  - option "Dominant 7th arpeggios — all keys"
+              - generic [ref=e65]:
+                - text: Session title
+                - textbox "Session title" [ref=e66]:
+                  - /placeholder: Log ad-hoc session
+            - generic [ref=e69]:
+              - paragraph [ref=e70]: "Missing: Focus, Confidence"
+              - generic [ref=e71]:
+                - group "Mood" [ref=e72]:
+                  - paragraph [ref=e74]: How did working on this passage feel?
+                  - group "Mood" [ref=e75]:
+                    - button "1 — Very negative" [ref=e76] [cursor=pointer]: "1"
+                    - button "2 — Negative" [ref=e77] [cursor=pointer]: "2"
+                    - button "3 — Neutral" [active] [pressed] [ref=e78] [cursor=pointer]: "3"
+                    - button "4 — Positive" [ref=e79] [cursor=pointer]: "4"
+                    - button "5 — Very positive" [ref=e80] [cursor=pointer]: "5"
+                  - paragraph [ref=e81]: Neutral
+                - group "Focus" [ref=e82]:
+                  - paragraph [ref=e84]: How well did you stay focused?
+                  - group "Focus" [ref=e85]:
+                    - button "1 — Very low" [ref=e86] [cursor=pointer]: "1"
+                    - button "2 — Low" [ref=e87] [cursor=pointer]: "2"
+                    - button "3 — Medium" [ref=e88] [cursor=pointer]: "3"
+                    - button "4 — High" [ref=e89] [cursor=pointer]: "4"
+                    - button "5 — Very high" [ref=e90] [cursor=pointer]: "5"
+                  - paragraph [ref=e91]: Not answered
+                - group "Confidence" [ref=e92]:
+                  - paragraph [ref=e94]: How secure do you feel playing it?
+                  - group "Confidence" [ref=e95]:
+                    - button "1 — 1 star" [ref=e96] [cursor=pointer]: "1"
+                    - button "2 — 2 stars" [ref=e97] [cursor=pointer]: "2"
+                    - button "3 — 3 stars" [ref=e98] [cursor=pointer]: "3"
+                    - button "4 — 4 stars" [ref=e99] [cursor=pointer]: "4"
+                    - button "5 — 5 stars" [ref=e100] [cursor=pointer]: "5"
+                  - paragraph [ref=e101]: Not answered
+              - generic [ref=e102]:
+                - text: BPM reached
+                - generic [ref=e103]:
+                  - generic [ref=e104]:
+                    - spinbutton "BPM reached" [ref=e105]
+                    - generic [ref=e106]: BPM
+                  - group "Note value" [ref=e107]:
+                    - button "Whole note" [ref=e108] [cursor=pointer]: 𝅝
+                    - button "Half note" [ref=e109] [cursor=pointer]: 𝅗𝅥
+                    - button "Quarter note" [ref=e110] [cursor=pointer]: ♩
+                    - button "Eighth note" [ref=e111] [cursor=pointer]: ♪
+                    - button "Sixteenth note" [ref=e112] [cursor=pointer]: 𝅘𝅥𝅯
+                    - button "Dotted half note" [ref=e114] [cursor=pointer]: 𝅗𝅥.
+                    - button "Dotted quarter note" [ref=e115] [cursor=pointer]: ♩.
+                    - button "Dotted eighth note" [ref=e116] [cursor=pointer]: ♪.
+              - group [ref=e117]:
+                - generic "Layers (0) · Techniques (0)" [ref=e118] [cursor=pointer]
+            - generic [ref=e120]:
+              - heading "Recordings" [level=3] [ref=e121]
+              - generic [ref=e122]:
+                - generic [ref=e123]:
+                  - paragraph [ref=e124]: Recordings stay on this device. They are not included in backups and cannot be imported or exported.
+                  - paragraph [ref=e125]: Clearing the app's data or losing its local storage can make recordings unrecoverable.
+                - button "Record" [ref=e127] [cursor=pointer]
+            - generic [ref=e128]:
+              - text: Notes
+              - textbox "Notes" [ref=e129]:
+                - /placeholder: A thought, a difficulty, a small win…
+            - generic [ref=e131]:
+              - generic [ref=e132]:
+                - generic [ref=e133]: Ask the teacher
+                - generic [ref=e134]: Flag this for the next lesson
+              - switch "Ask the teacher" [ref=e135] [cursor=pointer]
+              - checkbox [aria-hidden]
+            - status [ref=e136]:
+              - listitem [ref=e137]: • Answer the ratings of 1 section
+            - generic [ref=e138]:
+              - button "Cancel" [ref=e139] [cursor=pointer]
+              - button "Save session" [disabled]
+          - complementary [ref=e140]:
+            - generic [ref=e141]:
+              - heading "Rating the session" [level=2] [ref=e142]
+              - paragraph [ref=e143]: Log overall ratings or ratings for single sections. You can add a question for your next lesson.

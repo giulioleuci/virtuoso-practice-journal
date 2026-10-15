@@ -1,6 +1,5 @@
 import type { Assignment } from "@/domain/entities/lesson";
 import type { HelpRequest } from "@/domain/ports/helpRequest";
-import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
 
 /**
  * Application-facing read and invalidation boundary for presentation adapters.
@@ -10,9 +9,8 @@ import type { PendingAssignment } from "@/domain/ports/pendingAssignment";
 export interface PresentationReadPort {
   read<T>(operation: string, parameters?: readonly unknown[]): Promise<T>;
   assignmentsForLesson(lessonId?: number): Promise<Assignment[]>;
-  pendingAssignmentsForSubject(subjectId?: number, recurrenceId?: number): Promise<PendingAssignment[]>;
   openHelpRequestCount(): Promise<number>;
   subscribe(listener: () => void): () => void;
 }
 
-export type { Assignment, HelpRequest, PendingAssignment };
+export type { Assignment, HelpRequest };

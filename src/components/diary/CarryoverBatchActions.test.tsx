@@ -8,7 +8,7 @@ const commands = vi.hoisted(() => ({ carryOver: vi.fn(), skip: vi.fn() }));
 vi.mock("@/lib/services", () => ({ tasksService: commands }));
 vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-const tasks: Task[] = [1, 2].map(id => ({ id, date: "2026-10-10", subjectId: 1, title: `Task ${id}`, done: false, createdAt: 1 }));
+const tasks: Task[] = [1, 2].map(id => ({ id, date: "2026-10-10", subjectId: 1, title: `Task ${id}`, plan: [], done: false, createdAt: 1 }));
 function Harness({ initial = [] }: { initial?: number[] }) {
   const [ids, setIds] = useState(initial);
   return <CarryoverBatchActions tasks={tasks} todayKey="2026-10-11" selectedIds={ids} onSelectionChange={setIds} />;

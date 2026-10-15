@@ -101,7 +101,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("common.name")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("common.name")}</Label>
             <Input
               value={name}
               onChange={(e) => setField("name", e.target.value)}
@@ -114,20 +114,20 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
           {showComposerLike && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                <Label className="text-xs font-medium text-foreground">
                   {effectiveKind === "manual" ? t("library.labelAuthor") : t("library.labelComposer")}
                 </Label>
                 <Input value={composer} onChange={(e) => setField("composer", e.target.value)} placeholder={effectiveKind === "manual" ? "Hanon" : "Chopin"} className="bg-card" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelCatalog")}</Label>
+                <Label className="text-xs font-medium text-foreground">{t("collections.labelCatalog")}</Label>
                 <Input value={catalog} onChange={(e) => setField("catalog", e.target.value)} placeholder="Op. 9" className="bg-card" />
               </div>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelColor")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("collections.labelColor")}</Label>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -151,7 +151,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelDefaultSubject")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("collections.labelDefaultSubject")}</Label>
             <Select
               value={defaultSubjectId !== undefined ? String(defaultSubjectId) : "none"}
               onValueChange={(v) => setField("defaultSubjectId", v === "none" ? undefined : Number(v))}
@@ -167,7 +167,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("collections.labelNotesOptional")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("collections.labelNotesOptional")}</Label>
             <Textarea value={notes} onChange={(e) => setField("notes", e.target.value)} placeholder={t("collections.notesPlaceholder")} className="bg-card" rows={3} />
           </div>
         </div>

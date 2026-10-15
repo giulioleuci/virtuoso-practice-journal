@@ -33,7 +33,7 @@ export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: P
         className="h-[85vh] max-h-[85dvh] rounded-t-3xl bg-background p-0 flex flex-col"
       >
         <SheetHeader className="px-4 pt-6 text-left">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
             <BookOpen className="h-3.5 w-3.5" />
             {label}
           </div>
@@ -55,10 +55,10 @@ export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: P
             answered.map((r) => (
               <article
                 key={r.id}
-                className="paper-card border-none overflow-hidden border-l-4 border-l-primary"
+                className="paper-card border-none overflow-hidden"
               >
                 <div className="px-4 py-3 space-y-1">
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
                     {t("teacherAnswers.question")}
                   </div>
                   <p className="text-[15px] leading-snug whitespace-pre-wrap break-words">
@@ -66,7 +66,7 @@ export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: P
                   </p>
                 </div>
                 <div className="px-4 py-3 bg-accent/30 space-y-1.5">
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
                     <MessageSquareQuote className="h-3.5 w-3.5" />
                     {t("teacherAnswers.answer")}
                   </div>
@@ -74,7 +74,7 @@ export function TeacherAnswersSheet({ open, onOpenChange, itemId, itemTitle }: P
                     {r.answer}
                   </p>
                   {r.answeredAt && (
-                    <div className="text-[11px] text-muted-foreground tabular-nums pt-0.5">
+                    <div className="text-xs text-muted-foreground tabular-nums pt-0.5">
                       {formatDate(new Date(r.answeredAt), lang, "medium")}
                     </div>
                   )}

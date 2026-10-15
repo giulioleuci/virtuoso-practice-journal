@@ -3,12 +3,12 @@ import type { Task } from "@/domain/entities/task";
 import type { StudyRoutine } from "@/domain/ports/studyRoutine";
 import { useActiveTasks, useStudyRoutines, useSubjects } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
-import { formatDate } from "@/lib/date";
+import { formatDate, today } from "@/lib/date";
 import type { Lang } from "@/domain/entities/common";
 import { studyRoutinesService, tasksService } from "@/lib/services";
 import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
 import { NOTE_GLYPH } from "@/lib/constants";
-import { subjectBorderStyle } from "@/lib/subjectColors";
+import { subjectColorCss } from "@/lib/subjectColors";
 
 
 import { Input } from "@/components/ui/input";
@@ -19,21 +19,23 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, Pencil, Trash2, RefreshCw, CalendarRange, MoreVertical, Plus } from "lucide-react";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Check, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { QuickAdd } from "@/components/diary/QuickAdd";
 
 import { TaskCalendarView } from "@/components/diary/TaskCalendarView";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Pager } from "@/components/shared/Pager";
+import { firstTempo } from "@/domain/logic/plan";
 import { usePagination } from "@/hooks/usePagination";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 8;
+type Tab = "tasks" | "series" | "routines" | "calendar";
+const TABS: Tab[] = ["tasks", "series", "routines", "calendar"];
 
 function summarizeRecurrence(
   rec: NonNullable<Task["recurrence"]>,
@@ -59,8 +61,9 @@ export default function Tasks() {
   const subjects = useSubjects();
   const routines = useStudyRoutines() ?? [];
 
-  const [view, setView] = useState<"series" | "routines">("series");
-  const [filter, setFilter] = useState<"all" | "active" | "done">("all");
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = TABS.find((x) => x === params.get("tab")) ?? "tasks";
+  const [filter, setFilter] = useState<"all" | "active" | "done">("active");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [q, setQ] = useState("");
 
@@ -70,7 +73,7 @@ export default function Tasks() {
   const [delMode, setDelMode] = useState<"one" | "series">("one");
 
   const filtered = useMemo(() => {
-    let arr = (tasks ?? []).filter((task) => !!task.recurrence);
+    let arr = (tasks ?? []).filter((task) => tab !== "series" || !!task.recurrence);
     if (filter === "active") arr = arr.filter((task) => !task.done);
     if (filter === "done") arr = arr.filter((task) => task.done);
     if (subjectFilter !== "all") arr = arr.filter((task) => task.subjectId === Number(subjectFilter));
@@ -83,7 +86,7 @@ export default function Tasks() {
       if (a.done) return b.date.localeCompare(a.date);
       return a.date.localeCompare(b.date);
     });
-  }, [tasks, filter, subjectFilter, q]);
+  }, [tasks, tab, filter, subjectFilter, q]);
 
   const { page, setPage, totalPages, pageItems } = usePagination(filtered, PAGE_SIZE);
 
@@ -167,197 +170,123 @@ export default function Tasks() {
     }
   };
 
+  const dot = (subjectId: number) => {
+    const s = subjects?.find((x) => x.id === subjectId);
+    return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectColorCss(s?.color, s?.type, s?.customColor) }} title={s?.name} role="img" aria-label={s?.name} />;
+  };
+  const setTab = (next: Tab) => { setParams(next === "tasks" ? {} : { tab: next }, { replace: true }); setPage(0); };
+  const subtitle = { tasks: "plan.subtitle", series: "plan.subtitle", routines: "plan.subtitleRoutines", calendar: "plan.subtitleCalendar" }[tab];
+
   return (
-    <div className="space-y-5 pb-24">
-      <button
-        onClick={() => navigate("/tasks/new")}
-        className="fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
-        aria-label={t("tasks.newTask")}
-      >
-        <Plus className="h-6 w-6" />
-      </button>
-      <div className="flex items-center gap-3">
-        <Link to="/" className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></Link>
-        <h2 className="font-serif text-3xl flex-1">{t("tasks.allTasks")}</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {view === "series" ? filtered.length : routines.length}
-        </span>
+    <div className="pb-24">
+      <PageHeader
+        title={t("nav.plan")}
+        subtitle={t(subtitle)}
+        actions={
+          <Button onClick={() => navigate(tab === "routines" ? "/tasks/routines/new" : "/tasks/new")}>
+            <Plus /> {tab === "routines" ? t("plan.newRoutine") : t("diary.newTask")}
+          </Button>
+        }
+      />
+
+      <div role="tablist" className="mb-5 flex gap-6 overflow-x-auto border-b border-border no-scrollbar overflow-y-hidden">
+        {TABS.map((id) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`-mb-px shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors ${tab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            {t(`plan.tab.${id}`)}
+            {id === "tasks" && tasks !== undefined && <span className="ml-1.5 font-numeric text-xs tabular-nums">{tasks.length}</span>}
+          </button>
+        ))}
       </div>
 
-      <Tabs value={view} onValueChange={(v) => { setView(v as typeof view); setPage(0); }}>
-        <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="series">{t("tasks.recurringSeries")}</TabsTrigger>
-          <TabsTrigger value="routines">{t("tasks.studyRoutines")}</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {view === "routines" ? (
+      {tab === "calendar" ? (
+        tasks !== undefined && <TaskCalendarView subjects={subjects ?? []} />
+      ) : tab === "routines" ? (
         routines.length === 0 ? (
-          <EmptyState title={t("tasks.studyRoutines")} />
+          <EmptyState
+            title={t("plan.noRoutines")}
+            hint={t("plan.noRoutinesHint")}
+            cta={{ label: t("plan.createRoutine"), onClick: () => navigate("/tasks/routines/new") }}
+          />
         ) : (
-          <ul className="space-y-2.5">
-            {routines.map((r) => {
-              const subject = subjects?.find((s) => s.id === r.subjectId);
-              return (
-              <li
-                key={r.id}
-                className="paper-card p-3.5 flex flex-col gap-3 border-l-4"
-                style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
-              >
-                <div className="flex items-start gap-2">
-                  <h3 className="flex-1 min-w-0 text-base font-medium leading-snug break-words">
-                    {r.name ?? subjectName(r.subjectId)}
-                  </h3>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent shrink-0"
-                        aria-label={t("common.actions")}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleRegenerate(r)} disabled={regeneratingId === r.id}>
-                        <RefreshCw className={`h-4 w-4 mr-2 ${regeneratingId === r.id ? "animate-spin" : ""}`} />
-                        {t("studyRoutine.regenerate")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate(`/tasks/routines/edit/${r.id}`)}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        {t("common.edit")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => r.id && setDelRoutineId(r.id)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        {t("common.delete")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+          <ul className="divide-y divide-border border-t border-border">
+            {routines.map((r) => (
+              <li key={r.id} className="flex items-center gap-3 py-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="break-words text-base font-medium leading-snug">{r.name ?? subjectName(r.subjectId)}</h3>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground tabular-nums">
+                    {dot(r.subjectId)}
+                    <span>{r.groups.length} {t("studyRoutine.groupsLabel", { count: r.groups.length })}</span>
+                    <span>{summarizeRoutineDays(r.matrix)}</span>
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums">
-                  <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                    {r.groups.length} {t("studyRoutine.groupsLabel", { count: r.groups.length })}
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                    {summarizeRoutineDays(r.matrix)}
-                  </span>
-                </div>
+                <Button size="sm" variant="outline" onClick={() => handleRegenerate(r)} disabled={regeneratingId === r.id}>
+                  <RefreshCw className={regeneratingId === r.id ? "animate-spin" : ""} />
+                  <span className="max-[699px]:sr-only">{t("studyRoutine.regenerate")}</span>
+                </Button>
+                <Button size="icon" variant="ghost" className="h-10 w-10" aria-label={`${t("common.edit")} ${r.name ?? ""}`} onClick={() => navigate(`/tasks/routines/edit/${r.id}`)}><Pencil /></Button>
+                <Button size="icon" variant="ghost" className="h-10 w-10 hover:text-destructive" aria-label={`${t("common.delete")} ${r.name ?? ""}`} onClick={() => r.id && setDelRoutineId(r.id)}><Trash2 /></Button>
               </li>
-              );
-            })}
-
+            ))}
           </ul>
         )
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2">
+          {tab === "tasks" && <QuickAdd date={today()} subjectId={subjectFilter === "all" ? null : Number(subjectFilter)} onAdded={() => undefined} />}
+          <div className="my-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_200px_200px]">
+            <Input type="search" aria-label={t("tasks.searchByTitle")} placeholder={t("tasks.searchByTitle")} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
+            <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(0); }}>
+              <SelectTrigger aria-label={t("common.subject")}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
+                {(subjects ?? []).map((s) => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Select value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(0); }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-label={t("plan.status")}><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("common.all")}</SelectItem>
-                <SelectItem value="active">{t("tasks.active")}</SelectItem>
+                <SelectItem value="active">{t("plan.statusOpen")}</SelectItem>
                 <SelectItem value="done">{t("common.done")}</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(0); }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
-                {(subjects ?? []).map((s) => (
-                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-          <Input placeholder={t("tasks.searchByTitle")} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
 
           {tasks === undefined ? (
             <ListSkeleton />
           ) : pageItems.length === 0 ? (
-            <EmptyState title={t("tasks.noTasks")} />
+            <EmptyState icon={SearchX} title={t("plan.noMatch")} hint={t("plan.noMatchHint")} cta={{ label: t("states.clearFilters"), icon: RotateCcw, onClick: () => { setQ(""); setSubjectFilter("all"); setFilter("all"); } }} />
           ) : (
-            <ul className="space-y-2.5">
-              {pageItems.map((task) => {
-                const subject = subjects?.find((s) => s.id === task.subjectId);
-                return (
-                <li
-                  key={task.id}
-                  className={`paper-card p-3.5 flex flex-col gap-3 border-l-4 ${task.done ? "opacity-70" : ""}`}
-                  style={subjectBorderStyle(subject?.color, subject?.type, subject?.customColor)}
-                >
-                  <div className="flex items-start gap-2">
-                    <h3 className={`flex-1 min-w-0 text-base font-medium leading-snug break-words ${task.done ? "line-through" : ""}`}>
+            <ul className="divide-y divide-border border-t border-border">
+              {pageItems.map((task) => (
+                <li key={task.id} className="flex items-center gap-3 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/tasks/edit/${task.id}`} className={`break-words text-base font-medium leading-snug hover:underline underline-offset-4 ${task.done ? "text-muted-foreground line-through" : ""}`}>
                       {task.title}
-                    </h3>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className="h-8 w-8 -mt-1 -mr-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent shrink-0"
-                          aria-label={t("common.more")}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/tasks/edit/${task.id}`)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          {t("common.edit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => askDelete(task)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          {t("common.delete")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    </Link>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
+                      {dot(task.subjectId)}
+                      {task.done && <span className="inline-flex items-center gap-1 text-primary"><Check className="h-3.5 w-3.5" />{t("plan.done")}</span>}
+                      <span>{task.recurrence ? t("tasks.fromDate", { date: formatDate(task.date, lang) }) : formatDate(task.date, lang, "medium")}</span>
+                      {task.recurrence && <span>{summarizeRecurrence(task.recurrence, t, lang)}</span>}
+                      {firstTempo(task.plan) && <span>{NOTE_GLYPH[firstTempo(task.plan)!.noteVal ?? "quarter"]} = {firstTempo(task.plan)!.bpm}</span>}
+                    </div>
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums">
-                    {task.recurrence && (
-                      <>
-                        <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                          {t("tasks.fromDate", { date: formatDate(task.date, lang) })}
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                          {summarizeRecurrence(task.recurrence, t, lang)}
-                        </span>
-                      </>
-                    )}
-                    {task.targetBpm && (
-                      <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                        {task.noteVal ? NOTE_GLYPH[task.noteVal] : "♩"}={task.targetBpm}
-                      </span>
-                    )}
-                  </div>
+                  <Button size="icon" variant="ghost" className="h-10 w-10" aria-label={t("plan.editTask", { title: task.title })} onClick={() => navigate(`/tasks/edit/${task.id}`)}><Pencil /></Button>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 hover:text-destructive" aria-label={t("plan.deleteTask", { title: task.title })} onClick={() => askDelete(task)}><Trash2 /></Button>
                 </li>
-                );
-              })}
-
+              ))}
             </ul>
           )}
 
           <Pager page={page} totalPages={totalPages} onChange={setPage} />
         </>
       )}
-
-
-
-      {tasks !== undefined && (
-        <section className="space-y-2 pt-2">
-          <div className="flex items-center gap-2 px-1">
-            <CalendarRange className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-xs uppercase tracking-wider text-muted-foreground flex-1">
-              {t("tasks.upcomingSchedule")}
-            </h3>
-          </div>
-          <TaskCalendarView subjects={subjects ?? []} />
-        </section>
-      )}
-
 
       <AlertDialog open={delRoutineId !== null} onOpenChange={(o) => !o && setDelRoutineId(null)}>
         <AlertDialogContent>

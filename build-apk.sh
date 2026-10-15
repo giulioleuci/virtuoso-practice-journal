@@ -3,7 +3,8 @@
 #
 # Prerequisites (must be installed and on PATH before running):
 #   • Node.js 18+  (https://nodejs.org)
-#   • Java JDK 17+ (https://adoptium.net)
+#   • Java JDK 21 (https://adoptium.net) — Gradle 8.14 + Capacitor 8 do not run on newer JDKs;
+#     the script picks a JDK 21 automatically (JAVA_HOME, or /usr/lib/jvm/*21*)
 #   • Android SDK with:
 #       - Android platform (API 34 recommended)
 #       - build-tools (34.x)
@@ -33,16 +34,24 @@ info "Checking prerequisites…"
 
 command -v node  >/dev/null 2>&1 || die "Node.js not found. Install from https://nodejs.org"
 command -v npm   >/dev/null 2>&1 || die "npm not found. Install Node.js from https://nodejs.org"
-command -v java  >/dev/null 2>&1 || die "Java not found. Install JDK 17+ from https://adoptium.net"
 
 NODE_VER=$(node -e "process.stdout.write(process.version.replace('v',''))")
 NODE_MAJOR=$(echo "$NODE_VER" | cut -d. -f1)
 [[ "$NODE_MAJOR" -ge 18 ]] || die "Node.js 18+ required (found v$NODE_VER)"
 
-JAVA_VER=$(java -version 2>&1 | awk -F'"' 'NR==1{print $2}' | cut -d. -f1)
-# Java 9+ uses "17", Java 8 uses "1.8" — handle both
-[[ "$JAVA_VER" == "1" ]] && JAVA_VER=$(java -version 2>&1 | awk -F'"' 'NR==1{print $2}' | cut -d. -f2)
-[[ "$JAVA_VER" -ge 17 ]] 2>/dev/null || die "Java 17+ required (found version $JAVA_VER)"
+# Gradle 8.14 + Capacitor 8 need JDK 21; a newer default java (e.g. 25) fails the build.
+java_major() { "$1" -version 2>&1 | awk -F'"' 'NR==1{print $2}' | cut -d. -f1; }
+JAVA_BIN=""
+for home in "${JAVA_HOME:-}" /usr/lib/jvm/java-21-openjdk-amd64 /usr/lib/jvm/java-21-openjdk /usr/lib/jvm/temurin-21-jdk-amd64; do
+  [[ -n "$home" && -x "$home/bin/java" && "$(java_major "$home/bin/java")" == "21" ]] && JAVA_BIN="$home/bin/java" && break
+done
+if [[ -z "$JAVA_BIN" ]] && command -v java >/dev/null 2>&1 && [[ "$(java_major java)" == "21" ]]; then
+  JAVA_BIN="$(command -v java)"
+fi
+[[ -n "$JAVA_BIN" ]] || die "JDK 21 not found. Install it (sudo apt install openjdk-21-jdk) or set JAVA_HOME to a JDK 21."
+export JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$JAVA_BIN")")")"
+export PATH="$JAVA_HOME/bin:$PATH"
+JAVA_VER=21
 
 # Resolve Android SDK
 ANDROID_SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
@@ -109,14 +118,8 @@ cd android
 # Make Gradle wrapper executable
 chmod +x gradlew
 
-# Build — disable daemon for CI-friendliness
-./gradlew assembleDebug \
-  --no-daemon \
-  --warning-mode all \
-  2>&1 | grep -E "^(BUILD|FAILURE|ERROR|> Task|warning:|error:)" || true
-
-# Confirm Gradle actually succeeded (the grep above drains the pipe)
-./gradlew assembleDebug --no-daemon -q
+# One run; pipefail (set above) makes a Gradle failure stop the script.
+./gradlew assembleDebug --no-daemon --warning-mode all
 cd ..
 
 APK_SRC="android/app/build/outputs/apk/debug/app-debug.apk"

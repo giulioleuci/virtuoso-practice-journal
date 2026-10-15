@@ -110,7 +110,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
 
         <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-5 mt-5">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("teacher.subject")}</Label>
             <Select value={subjectId?.toString() ?? ""} onValueChange={(v) => setSubjectId(Number(v))}>
               <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
               <SelectContent>
@@ -122,13 +122,13 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.teacherName")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("teacher.teacherName")}</Label>
             <Input value={teacher} onChange={(e) => setTeacher(e.target.value)} placeholder={t("teacher.namePlaceholder")} />
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.schedules")}</Label>
+              <Label className="text-xs font-medium text-foreground">{t("teacher.schedules")}</Label>
               <Button type="button" size="sm" variant="ghost" onClick={addSlot} className="-mr-2">
                 <Plus className="h-4 w-4 mr-1" /> {t("teacher.addSchedule")}
               </Button>
@@ -138,7 +138,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
               {schedules.map((slot, i) => (
                 <li key={i} className="rounded-lg border border-border/60 bg-card/40 p-3 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
                       {t("teacher.scheduleN", { n: i + 1 })}
                     </span>
                     {schedules.length > 1 && (
@@ -154,7 +154,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("teacher.day")}</Label>
+                      <Label className="text-xs font-medium text-foreground">{t("teacher.day")}</Label>
                       <Select value={slot.dayOfWeek.toString()} onValueChange={(v) => updateSlot(i, { dayOfWeek: Number(v) })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -163,7 +163,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("teacher.frequency")}</Label>
+                      <Label className="text-xs font-medium text-foreground">{t("teacher.frequency")}</Label>
                       <Select value={slot.frequency} onValueChange={(v) => updateSlot(i, { frequency: v as LessonFrequency })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -176,11 +176,11 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("teacher.start")}</Label>
+                      <Label className="text-xs font-medium text-foreground">{t("teacher.start")}</Label>
                       <Input type="time" value={slot.startTime} onChange={(e) => updateSlot(i, { startTime: e.target.value })} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("teacher.end")}</Label>
+                      <Label className="text-xs font-medium text-foreground">{t("teacher.end")}</Label>
                       <Input type="time" value={slot.endTime} onChange={(e) => updateSlot(i, { endTime: e.target.value })} />
                     </div>
                   </div>
@@ -190,12 +190,12 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.startDate")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("teacher.startDate")}</Label>
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.color")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("teacher.color")}</Label>
             <div className="flex gap-2">
               {COLORS.map((c) => (
                 <button

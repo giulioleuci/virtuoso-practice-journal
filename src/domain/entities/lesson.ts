@@ -43,8 +43,8 @@ export interface Assignment {
   id: number;
   lessonId: number;
   text: string;
-  transformed: boolean;
+  /** Tasks planned from this homework; open while empty and not ignored. */
+  taskIds: number[];
   ignored?: boolean;
-  taskId?: number;
   createdAt: number;
 }

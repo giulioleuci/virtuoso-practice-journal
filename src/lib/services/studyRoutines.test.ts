@@ -12,6 +12,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import "fake-indexeddb/auto";
 import { db } from "@/lib/db";
 import { studyRoutinesService } from "@/lib/services/studyRoutines";
+import { planSegmentIds } from "@/domain/logic/plan";
 import type { StudyRoutineConfig } from "@/lib/schemas";
 
 // Monday 2026-05-18 12:00 UTC
@@ -265,7 +266,7 @@ describe("studyRoutinesService.create — task generation", () => {
     // Two segments from the same parent → merged into one task
     expect(tasks).toHaveLength(1);
     expect(tasks[0].itemId).toBe(itemId);
-    expect(tasks[0].segmentIds?.sort()).toEqual([seg1, seg2].sort());
+    expect(planSegmentIds(tasks[0].plan).sort()).toEqual([seg1, seg2].sort());
   });
 
   it("handles collection pool entries", async () => {
@@ -359,6 +360,7 @@ describe("studyRoutinesService.remove", () => {
       subjectId,
       date: "2026-05-11", // last Monday — before today
       title: "Past task",
+      plan: [],
       done: false,
       createdAt: Date.now(),
     })) as number;

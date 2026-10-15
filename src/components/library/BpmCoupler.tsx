@@ -1,15 +1,8 @@
-import type { NoteVal } from "@/domain/entities/common";
+import { COMPOUND_NOTES, NOTE_GLYPH, SIMPLE_NOTES, type NoteVal } from "@/domain/constants/noteValues";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/lib/i18n";
-
-const NOTE_OPTIONS: { val: NoteVal; glyph: string; label: string }[] = [
-  { val: "half",      glyph: "𝅗𝅥", label: "½" },
-  { val: "quarter",   glyph: "♩",  label: "¼" },
-  { val: "eighth",    glyph: "♪",  label: "⅛" },
-  { val: "sixteenth", glyph: "𝅘𝅥𝅯", label: "1⁄16" },
-];
 
 interface Props {
   bpm: number | undefined;
@@ -18,45 +11,47 @@ interface Props {
   label?: string;
 }
 
+/** Tempo input: a bpm number plus the note value it is counted in (simple, then dotted for compound meters). */
 export function BpmCoupler({ bpm, noteVal, onChange, label }: Props) {
   const { t } = useI18n();
+  const note = (n: NoteVal) => (
+    <button
+      key={n}
+      type="button"
+      aria-label={t(`note.${n}`)}
+      aria-pressed={noteVal === n}
+      title={t(`note.${n}`)}
+      onClick={() => onChange({ bpm, noteVal: n })}
+      className={cn(
+        "h-10 min-w-9 flex-1 rounded-md px-1 text-lg leading-none transition-colors",
+        noteVal === n ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent",
+      )}
+    >
+      {NOTE_GLYPH[n]}
+    </button>
+  );
   return (
     <div className="space-y-2">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label ?? t("library.targetTempo")}</Label>
-      <div className="paper-card flex items-stretch gap-1 p-2">
-        <div className="flex items-center gap-2 px-2 flex-1">
+      <Label className="text-xs font-medium text-foreground">{label ?? t("library.targetTempo")}</Label>
+      <div className="paper-card space-y-1 p-2">
+        <div className="flex items-center gap-2 px-2">
           <Input
             type="number"
             inputMode="numeric"
             min={20}
             max={400}
             value={bpm ?? ""}
-            onChange={(e) =>
-              onChange({ bpm: e.target.value ? Number(e.target.value) : undefined, noteVal })
-            }
+            onChange={(e) => onChange({ bpm: e.target.value ? Number(e.target.value) : undefined, noteVal })}
             placeholder="—"
-            className="border-0 bg-transparent focus-visible:ring-0 text-2xl font-serif tabular-nums px-0 h-10 w-20"
+            aria-label={label ?? t("library.targetTempo")}
+            className="h-10 w-20 border-0 bg-transparent px-0 font-serif text-2xl tabular-nums focus-visible:ring-0"
           />
           <span className="text-xs text-muted-foreground">BPM</span>
         </div>
-        <div className="w-px bg-border my-1" />
-        <div className="flex gap-1">
-          {NOTE_OPTIONS.map((n) => (
-            <button
-              key={n.val}
-              type="button"
-              onClick={() => onChange({ bpm, noteVal: n.val })}
-              className={cn(
-                "h-10 w-10 rounded-md text-lg leading-none transition-colors",
-                noteVal === n.val
-                  ? "bg-primary text-primary-foreground"
-                  : "text-foreground hover:bg-accent"
-              )}
-              title={n.label}
-            >
-              {n.glyph}
-            </button>
-          ))}
+        <div className="flex gap-0.5 border-t border-border pt-1" role="group" aria-label={t("note.group")}>
+          {SIMPLE_NOTES.map(note)}
+          <span aria-hidden className="my-1 w-px bg-border" />
+          {COMPOUND_NOTES.map(note)}
         </div>
       </div>
     </div>

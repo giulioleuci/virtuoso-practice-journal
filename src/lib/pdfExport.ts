@@ -1,4 +1,3 @@
-import { jsPDF } from "jspdf";
 import { toPng } from "html-to-image";
 
 /** Renders a DOM node into a multi-page A4 PDF with a text header and downloads it. */
@@ -6,6 +5,7 @@ export async function exportElementToPdf(node: HTMLElement, opts: { fileName: st
   const bg = getComputedStyle(document.body).backgroundColor || "#ffffff";
   const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: bg, cacheBust: true, filter: (n) => !(n instanceof HTMLElement && n.dataset.pdfIgnore === "true") });
   const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
+  const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
   const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), m = 12;
   pdf.setFontSize(16); pdf.text(opts.title, m, m + 4);

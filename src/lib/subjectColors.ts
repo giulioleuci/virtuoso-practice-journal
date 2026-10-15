@@ -62,13 +62,3 @@ export function subjectColorCssAlpha(color?: ColorKey, type?: SubjectType, custo
   }
   return `hsl(var(--key-${getSubjectColor(color, type)}) / ${alpha})`;
 }
-
-/** Inline style for a colored left border accent on cards. */
-export function subjectBorderStyle(color?: ColorKey, type?: SubjectType, customColor?: string): React.CSSProperties {
-  return { borderLeftColor: subjectColorCss(color, type, customColor) };
-}
-
-/** Inline style for a lighter colored left border accent (secondary/historical cards). */
-export function subjectBorderStyleLight(color?: ColorKey, type?: SubjectType, customColor?: string): React.CSSProperties {
-  return { borderLeftColor: subjectColorCssAlpha(color, type, customColor, 0.4) };
-}
