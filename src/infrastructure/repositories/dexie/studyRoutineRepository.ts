@@ -142,6 +142,27 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
   if (fresh.length) await db.tasks.bulkAdd(fresh);
 }
 
+const locks = new Map<number, Promise<void>>();
+
+async function regenerate(routine: StudyRoutine, fromDate: string) {
+  const future = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.done && task.date >= fromDate).toArray();
+  const replaceable = future.filter((task) => !task.customized);
+  // Customized copies sharing a slot (left by earlier duplicate runs) collapse to one.
+  const seen = new Set<string>();
+  for (const task of future.filter((t) => t.customized)) { if (seen.has(slotKey(task))) replaceable.push(task); else seen.add(slotKey(task)); }
+  if (replaceable.length) await db.tasks.bulkDelete(replaceable.map((task) => task.id));
+  const weekStartsOn = await profileWeekStartsOn();
+  const first = dayKey(startOfWeek(parseDayKey(fromDate), weekStartsOn));
+  const last = dayKey(endOfWeek(parseDayKey(fromDate), weekStartsOn));
+  const completed = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => task.done && task.date >= first && task.date <= last).toArray();
+  const counters = new Map<string, number>();
+  for (const task of completed) {
+    const keys = task.collectionId ? [`collection:${task.collectionId}`] : planSegmentIds(task.plan).length ? planSegmentIds(task.plan).map((id) => `segment:${id}`) : task.itemId ? [`item:${task.itemId}`] : [];
+    for (const key of keys) counters.set(key, (counters.get(key) ?? 0) + 1);
+}
+  await generate(routine, fromDate, counters, future.filter((task) => task.customized && !replaceable.includes(task)));
+}
+
 export const studyRoutineRepository = {
   async createRoutine(input: StudyRoutineInput, createdAt: number) {
     const id = await db.studyRoutines.add({ ...input, createdAt }) as number;
@@ -164,21 +185,6 @@ export const studyRoutineRepository = {
     const run = (locks.get(routine.id) ?? Promise.resolve()).catch(() => undefined).then(() => regenerate(routine, fromDate));
     locks.set(routine.id, run);
     return run;
-  },
-  async _unused() {
-    const future = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.done && task.date >= fromDate).toArray();
-    const replaceable = future.filter((task) => !task.customized);
-    if (replaceable.length) await db.tasks.bulkDelete(replaceable.map((task) => task.id));
-    const weekStartsOn = await profileWeekStartsOn();
-    const first = dayKey(startOfWeek(parseDayKey(fromDate), weekStartsOn));
-    const last = dayKey(endOfWeek(parseDayKey(fromDate), weekStartsOn));
-    const completed = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => task.done && task.date >= first && task.date <= last).toArray();
-    const counters = new Map<string, number>();
-    for (const task of completed) {
-      const keys = task.collectionId ? [`collection:${task.collectionId}`] : planSegmentIds(task.plan).length ? planSegmentIds(task.plan).map((id) => `segment:${id}`) : task.itemId ? [`item:${task.itemId}`] : [];
-      for (const key of keys) counters.set(key, (counters.get(key) ?? 0) + 1);
-    }
-    await generate(routine, fromDate, counters, future.filter((task) => task.customized));
   },
   async update(id: number, patch: Partial<StudyRoutine>) {
     await db.studyRoutines.update(id, patch);
