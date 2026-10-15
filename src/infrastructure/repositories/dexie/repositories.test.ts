@@ -173,4 +173,21 @@ describe("Dexie repositories", () => {
     expect(await db.studyRoutines.get(id)).toMatchObject({ id, subjectId });
     expect(await db.tasks.where("studyRoutineId").equals(id).count()).toBe(1);
   });
+
+  it("regeneration keeps customized future tasks and does not duplicate their slot", async () => {
+    const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
+    const itemId = await db.library.add({ subjectId, kind: "repertoire", title: "Sonata", createdAt: 1 });
+    const id = await studyRoutineRepository.create({
+      subjectId, groups: [{ id: "g", name: "G", pool: [{ type: "item", id: itemId }] }], matrix: { "1": { g: 1 } },
+      weeksAhead: 1, repetitionCap: 1, adaptivity: "uniform", startDate: "2030-01-07",
+    });
+    const [task] = await db.tasks.where("studyRoutineId").equals(id).toArray();
+    await db.tasks.update(task.id!, { customized: true, plan: [{ layers: ["edited"], techniques: [] }] });
+
+    await studyRoutineRepository.regenerateFromDate((await db.studyRoutines.get(id))!, "2030-01-07");
+
+    const after = await db.tasks.where("studyRoutineId").equals(id).toArray();
+    expect(after).toHaveLength(1);
+    expect(after[0]).toMatchObject({ id: task.id, customized: true, plan: [{ layers: ["edited"] }] });
+  });
 });

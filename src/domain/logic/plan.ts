@@ -11,11 +11,33 @@ export const entryFor = <E extends { segmentId?: number }>(entries: E[], segment
 /** Marks a session would leave for a plan (a plan with no sections gives one whole-task mark), prefilled with the plan targets. */
 export const marksFromPlan = (plan: SegmentEntry[]): SegmentMark[] => (plan.length ? plan : [emptyEntry()]).map((e) => ({ ...e, targetBpm: e.bpm }));
 
-/** Plan entries overwritten with the results of `marks`, only for sections present in both. */
-export const carryMarksToPlan = (plan: SegmentEntry[], marks: SegmentMark[]): SegmentEntry[] =>
+/** Plan entries updated from `marks` only where the user picked it; a missing reached tempo keeps the planned one. Ratings never carry. */
+export const carryMarksToPlan = (plan: SegmentEntry[], marks: SegmentMark[], picks: { tempo: Set<number | undefined>; extras: boolean }): SegmentEntry[] =>
   plan.map((e) => {
     const m = entryFor(marks, e.segmentId);
-    return m ? { segmentId: e.segmentId, bpm: m.bpm ?? e.bpm, noteVal: m.noteVal ?? e.noteVal, layers: [...m.layers], techniques: [...m.techniques] } : e;
+    if (!m) return e;
+    const tempo = picks.tempo.has(e.segmentId) && m.bpm !== undefined;
+    return {
+      segmentId: e.segmentId,
+      bpm: tempo ? m.bpm : e.bpm,
+      noteVal: tempo ? m.noteVal ?? e.noteVal : e.noteVal,
+      layers: picks.extras ? [...m.layers] : e.layers,
+      techniques: picks.extras ? [...m.techniques] : e.techniques,
+    };
+  });
+
+/** Sections where a tempo was reached that differs from the plan: the default proposal of "update next task". */
+export const tempoProposal = (plan: SegmentEntry[], marks: SegmentMark[]): (number | undefined)[] =>
+  plan.flatMap((e) => {
+    const m = entryFor(marks, e.segmentId);
+    return m?.bpm !== undefined && (m.bpm !== e.bpm || (m.noteVal ?? e.noteVal) !== e.noteVal) ? [e.segmentId] : [];
+  });
+
+/** Current marks restarted from a previous result's tempo, layers and techniques; ratings are never copied. */
+export const restartFrom = (marks: SegmentMark[], previous: SegmentMark[]): SegmentMark[] =>
+  marks.map((m) => {
+    const p = entryFor(previous, m.segmentId);
+    return p ? { ...m, bpm: p.bpm, noteVal: p.noteVal, layers: [...p.layers], techniques: [...p.techniques] } : m;
   });
 
 export const sharesSection = (plan: SegmentEntry[], marks: SegmentMark[]): boolean => plan.some((e) => entryFor(marks, e.segmentId));

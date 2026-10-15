@@ -1,0 +1,74 @@
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import type { Session } from "@/domain/entities/session";
+import { carryMarksToPlan, entryFor, followUpTasks, tempoProposal } from "@/domain/logic/plan";
+import { formatDate } from "@/lib/date";
+import { tempoLabel } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { tasksService } from "@/lib/services";
+import { useActiveTasks } from "@/presentation/hooks/useEntities";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+
+/** Opt-in carry of a session's musical results to the next matching task, previewed per section; nothing changes before "Apply". */
+export function UpdateNextTaskPanel({ session }: { session: Session }) {
+  const { t, lang } = useI18n();
+  const navigate = useNavigate();
+  const tasks = useActiveTasks();
+  const [picked, setPicked] = useState<(number | undefined)[] | null>(null);
+  const [extras, setExtras] = useState(false);
+  const next = useMemo(() => followUpTasks(
+    { id: session.taskId, date: session.date, subjectId: session.subjectId ?? -1, title: session.snapshot?.taskTitle ?? "", itemId: session.itemId, collectionId: session.collectionId },
+    session.marks,
+    tasks ?? [],
+  )[0], [session, tasks]);
+  if (tasks === undefined) return null;
+
+  const heading = <h2 id="next-task" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("nextTask.title")}</h2>;
+  if (!next) {
+    const segmentIds = session.marks.flatMap((m) => (m.segmentId === undefined ? [] : [m.segmentId]));
+    return (
+      <section aria-labelledby="next-task" className="space-y-2">
+        {heading}
+        <p className="text-sm text-muted-foreground">{t("nextTask.none")}</p>
+        <Button size="sm" variant="outline" onClick={() => navigate("/tasks/new", { state: { prefill: { subjectId: session.subjectId, itemId: session.itemId, collectionId: session.collectionId, title: session.snapshot?.taskTitle, segmentIds } } })}>
+          {t("nextTask.create")}
+        </Button>
+      </section>
+    );
+  }
+
+  const tempo = new Set(picked ?? tempoProposal(next.plan, session.marks));
+  const labels = new Map((session.snapshot?.segments ?? []).map((s) => [Number(s.id), s.label]));
+  const rows = next.plan.flatMap((e) => { const m = entryFor(session.marks, e.segmentId); return m ? [{ e, m }] : []; });
+  const toggle = (segmentId: number | undefined, on: boolean) => setPicked([...tempo].filter((id) => id !== segmentId).concat(on ? [segmentId] : []));
+  const apply = async () => {
+    await tasksService.update(next.id!, { plan: carryMarksToPlan(next.plan, session.marks, { tempo, extras }), ...(next.studyRoutineId !== undefined ? { customized: true } : {}) });
+    toast.success(t("nextTask.applied"));
+  };
+
+  return (
+    <section aria-labelledby="next-task" className="space-y-3">
+      {heading}
+      <p className="text-sm font-medium">{next.title} · {formatDate(next.date, lang, "medium")}</p>
+      <ul className="divide-y divide-border border-t border-border">
+        {rows.map(({ e, m }) => (
+          <li key={e.segmentId ?? "whole"} className="space-y-1 py-3 text-sm">
+            {e.segmentId !== undefined && <div className="font-medium">{labels.get(e.segmentId) ?? "—"}</div>}
+            <div className="tabular-nums text-muted-foreground">
+              {t("nextTask.planned")}: {e.bpm ? tempoLabel(e.noteVal, e.bpm) : "—"} · {t("nextTask.reached")}: {m.bpm ? tempoLabel(m.noteVal, m.bpm) : "—"}
+            </div>
+            {m.bpm ? (
+              <label className="flex min-h-11 items-center gap-2"><Checkbox checked={tempo.has(e.segmentId)} onCheckedChange={(on) => toggle(e.segmentId, on === true)} />{t("nextTask.useAsTarget")}</label>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("nextTask.noTempo")}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+      <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={extras} onCheckedChange={(on) => setExtras(on === true)} />{t("nextTask.extras")}</label>
+      <Button size="sm" disabled={!tempo.size && !extras} onClick={() => void apply()}>{t("nextTask.apply")}</Button>
+    </section>
+  );
+}

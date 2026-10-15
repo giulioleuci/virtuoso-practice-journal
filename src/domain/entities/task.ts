@@ -1,4 +1,4 @@
-import type { NoteVal } from "./common";
+import type { SegmentEntry } from "./common";
 
 export interface TaskRecurrence {
   kind: "weekdays" | "interval";
@@ -17,14 +17,13 @@ export interface Task {
   subjectId: number;
   linkType?: TaskLinkType;
   itemId?: number;
-  segmentIds?: number[];
   collectionId?: number;
   title: string;
-  targetBpm?: number;
-  noteVal?: NoteVal;
-  layers?: string[];
-  techniqueIds?: number[];
+  /** Per-section targets; one entry without `segmentId` when the task has no sections. */
+  plan: SegmentEntry[];
   done: boolean;
+  /** Edited by hand after a routine generated it; regeneration keeps it. */
+  customized?: boolean;
   skipped?: boolean;
   executionNotes?: string;
   recurrenceTaskId?: number;

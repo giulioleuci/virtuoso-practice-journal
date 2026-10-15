@@ -1,20 +1,22 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
-import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { SegmentMark } from "@/domain/entities/common";
 import type { Session } from "@/domain/entities/session";
 import type { Task } from "@/domain/entities/task";
 import { useI18n } from "@/lib/i18n";
-import { NOTE_GLYPH, QUALITY_SYMBOL } from "@/lib/constants";
+import { confidenceLabel, sessionLabel, tempoLabel } from "@/lib/format";
+import { meanConfidence, topMark } from "@/domain/logic/sessionMetrics";
 import { today } from "@/lib/date";
 import { cn } from "@/lib/utils";
-import { SegmentHistorySheet } from "./SegmentHistorySheet";
-import { SessionDetailSheet } from "./SessionDetailSheet";
 
 
 interface Props {
   task: Task;
   /** If provided, the strip is shown inline (e.g. in a task card). */
   compact?: boolean;
+  /** Offers to restart the log form from the last result's tempo, layers and techniques. */
+  onRestart?: (marks: SegmentMark[]) => void;
 }
 
 function daysAgoLabel(dateStr: string, t: (k: string, v?: Record<string, number>) => string): string {
@@ -31,7 +33,7 @@ function daysAgoLabel(dateStr: string, t: (k: string, v?: Record<string, number>
  * Compact row showing the last recorded session for the same item/task.
  * Displayed at the top of SessionLogSheet and in task cards.
  */
-export function LastSessionStrip({ task, compact = false }: Props) {
+export function LastSessionStrip({ task, compact = false, onRestart }: Props) {
   const { t } = useI18n();
   const todayKey = today();
 
@@ -54,69 +56,45 @@ export function LastSessionStrip({ task, compact = false }: Props) {
       .join(" ");
   }, [recentBpms]);
 
-  const theoryScores = useMemo(() => {
-    const layerScores = lastSession?.layerScores;
-    if (!isTheory || !layerScores) return null;
-    return THEORY_LAYERS.map((l) => ({
-      layer: l,
-      score: layerScores[l] ?? 0,
-    }));
-  }, [isTheory, lastSession]);
-
   const segmentBreakdown = useMemo(() => {
     const segs = lastSession?.snapshot?.segments;
-    const metrics = lastSession?.segmentMetrics;
-    if (!segs?.length || !metrics) return null;
+    if (!segs?.length || !lastSession) return null;
     const rows = segs
-      .map(({ id, label }) => ({ id, label, m: metrics[id] }))
+      .map(({ id, label }) => ({ id, label, m: lastSession.marks.find((mark) => String(mark.segmentId) === id) }))
       .filter((r) => !!r.m);
     return rows.length ? rows : null;
   }, [lastSession]);
 
-  const [historyFor, setHistoryFor] = useState<{ id: number | string; label: string } | null>(null);
-  const [detailSession, setDetailSession] = useState<Session | null>(null);
-
   if (!lastSession) return null;
+  const top = topMark(lastSession.marks);
+  const confidence = meanConfidence(lastSession.marks);
 
   if (compact) {
     return (
-      <div className="text-[11px] text-muted-foreground tabular-nums inline-flex items-center gap-1 flex-wrap">
+      <div className="text-xs text-muted-foreground tabular-nums inline-flex items-center gap-1 flex-wrap">
         <span className="font-medium text-foreground/60">{t("session.lastSession")}:</span>
-        {lastSession.quality && (
-          <span>{QUALITY_SYMBOL[lastSession.quality]}</span>
-        )}
-        {lastSession.bpmReached && (
-          <span>{NOTE_GLYPH[lastSession.noteVal ?? "quarter"]} = {lastSession.bpmReached}</span>
-        )}
-        {lastSession.confidence !== undefined && (
-          <span>★ {lastSession.confidence}/5</span>
-        )}
+        {sessionLabel(lastSession.marks) && <span>{sessionLabel(lastSession.marks)}</span>}
         <span className="opacity-70">· {daysAgoLabel(lastSession.date, t)}</span>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl bg-muted/40 border border-border/50 px-4 py-3 space-y-1.5">
+    <div className="space-y-1.5 border-y border-border py-3">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+        <span className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
           {t("session.lastSession")}
         </span>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {daysAgoLabel(lastSession.date, t)}
         </span>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        {lastSession.quality && (
-          <span className="font-serif text-lg leading-none" title={lastSession.quality}>
-            {QUALITY_SYMBOL[lastSession.quality]}
-          </span>
-        )}
-        {lastSession.bpmReached && (
+        {top?.bpm && (
           <div className="flex items-center gap-1">
             <span className="text-sm tabular-nums font-medium">
-              {NOTE_GLYPH[lastSession.noteVal ?? "quarter"]} = {lastSession.bpmReached}
+              {tempoLabel(top.noteVal, top.bpm)}
             </span>
             {sparklinePath && (
               <svg viewBox="0 0 36 14" className="h-3.5 w-9 shrink-0" preserveAspectRatio="none">
@@ -132,68 +110,41 @@ export function LastSessionStrip({ task, compact = false }: Props) {
             )}
           </div>
         )}
-        {lastSession.confidence !== undefined && (
-          <span className="text-sm tabular-nums text-muted-foreground">
-            ★ {lastSession.confidence}/5
-          </span>
+        {confidence !== undefined && (
+          <span className="text-sm tabular-nums text-muted-foreground">{confidenceLabel(confidence)}</span>
         )}
       </div>
 
-      {isTheory && theoryScores && (
-        <div className="flex items-end gap-1 pt-1">
-          {theoryScores.map(({ layer, score }) => (
-            <div key={layer} className="flex flex-col items-center gap-0.5 flex-1">
-              <div
-                className={cn(
-                  "w-full rounded-sm transition-all",
-                  score >= 70 ? "bg-primary" : score >= 40 ? "bg-primary/50" : "bg-muted-foreground/30"
-                )}
-                style={{ height: `${Math.max(2, (score / 100) * 20)}px` }}
-              />
-              <span className="text-[8px] text-muted-foreground capitalize">{layer.slice(0, 3)}</span>
-            </div>
-          ))}
-        </div>
+      {onRestart && (
+        <button type="button" onClick={() => onRestart(lastSession.marks)} className="inline-flex min-h-11 items-center text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+          {t("logPage.restartFrom")}
+        </button>
       )}
 
       {segmentBreakdown && (
         <div className="pt-2 mt-1 border-t border-border/40 space-y-1">
-          <div className="text-[9px] uppercase tracking-widest text-muted-foreground/70 font-medium">
+          <div className="text-xs uppercase tracking-widest text-muted-foreground/70 font-medium">
             {t("session.segmentBreakdown")}
           </div>
           <ul className="space-y-1">
             {segmentBreakdown.map(({ id, label, m }) => {
-              const scores = [
-                ...Object.values(m!.layerScores ?? {}),
-                ...Object.values(m!.techniqueScores ?? {}),
-              ];
-              const avg = scores.length
-                ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-                : null;
+              const avg = m!.confidence != null ? m!.confidence * 20 : null;
               const numericId = typeof id === "string" ? Number(id) : id;
               const canDrill = !!task.itemId && Number.isFinite(numericId);
               return (
                 <li key={id}>
-                  <button
-                    type="button"
-                    disabled={!canDrill}
-                    onClick={() => canDrill && setHistoryFor({ id: numericId, label })}
+                  <Link
+                    to={canDrill ? `/library/item/${task.itemId}/segment/${numericId}` : "#"}
+                    aria-disabled={!canDrill}
                     className={cn(
-                      "w-full flex items-center gap-2 text-[11px] rounded-md px-1 py-1 -mx-1 text-left",
+                      "flex min-h-9 w-full items-center gap-2 rounded-md px-1 py-1 -mx-1 text-left text-xs",
                       canDrill && "hover:bg-muted/50 transition-colors",
                     )}
                     aria-label={canDrill ? t("session.segmentHistory") : undefined}
                   >
                     <span className="truncate flex-1 text-foreground/80">{label}</span>
                     <span className="flex items-center gap-1.5 tabular-nums text-muted-foreground shrink-0">
-                      {m!.quality && (
-                        <span className="font-serif text-sm leading-none text-foreground">
-                          {QUALITY_SYMBOL[m!.quality]}
-                        </span>
-                      )}
-                      {m!.bpmReached != null && (
-                        <span>{NOTE_GLYPH[lastSession.noteVal ?? "quarter"]}={m!.bpmReached}</span>
-                      )}
+                      {m!.bpm != null && <span>{tempoLabel(m!.noteVal, m!.bpm)}</span>}
                       {m!.confidence != null && <span>★{m!.confidence}</span>}
                     </span>
                     {avg != null && (
@@ -207,7 +158,7 @@ export function LastSessionStrip({ task, compact = false }: Props) {
                         />
                       </span>
                     )}
-                  </button>
+                  </Link>
                 </li>
               );
             })}
@@ -215,19 +166,6 @@ export function LastSessionStrip({ task, compact = false }: Props) {
         </div>
       )}
 
-      <SegmentHistorySheet
-        open={historyFor !== null}
-        onOpenChange={(o) => { if (!o) setHistoryFor(null); }}
-        itemId={task.itemId}
-        segmentId={historyFor ? Number(historyFor.id) : undefined}
-        segmentLabel={historyFor?.label}
-        onOpenSession={(s) => setDetailSession(s)}
-      />
-      <SessionDetailSheet
-        open={detailSession !== null}
-        onOpenChange={(o) => { if (!o) setDetailSession(null); }}
-        session={detailSession}
-      />
     </div>
   );
 }

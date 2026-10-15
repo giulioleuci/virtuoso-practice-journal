@@ -1,4 +1,5 @@
 import { db } from "@/infrastructure/dexie/db";
+import type { Task } from "@/domain/entities/task";
 import type {
   StudyPoolEntry,
   StudyPoolStat,
@@ -113,7 +114,9 @@ async function profileWeekStartsOn() {
   return profile?.weekStartsOn ?? (profile ? getDefaultWeekStartsOn(profile.lang) : 1);
 }
 
-async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: Map<string, number>) {
+const slotKey = (task: Pick<Task, "date" | "itemId" | "collectionId">) => `${task.date}|${task.itemId ?? ""}|${task.collectionId ?? ""}`;
+
+async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: Map<string, number>, kept: Pick<Task, "date" | "itemId" | "collectionId">[] = []) {
   const entries = routine.groups.flatMap((group) => group.pool);
   const pool = await resolvePoolEntries(entries);
   const groupItems = new Map(
@@ -131,7 +134,10 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
     seedCounters,
     weekStartsOn: await profileWeekStartsOn(),
   });
-  if (tasks.length) await db.tasks.bulkAdd(tasks);
+  // ponytail: a kept task only suppresses the identical draw on its day; a different draw still lands beside it. Make generation slot-aware if days feel crowded.
+  const taken = new Set(kept.map(slotKey));
+  const fresh = tasks.filter((task) => !taken.has(slotKey(task)));
+  if (fresh.length) await db.tasks.bulkAdd(fresh);
 }
 
 export const studyRoutineRepository = {
@@ -153,7 +159,8 @@ export const studyRoutineRepository = {
   },
   async regenerateFromDate(routine: StudyRoutine, fromDate: string) {
     const future = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.done && task.date >= fromDate).toArray();
-    if (future.length) await db.tasks.bulkDelete(future.map((task) => task.id));
+    const replaceable = future.filter((task) => !task.customized);
+    if (replaceable.length) await db.tasks.bulkDelete(replaceable.map((task) => task.id));
     const weekStartsOn = await profileWeekStartsOn();
     const first = dayKey(startOfWeek(parseDayKey(fromDate), weekStartsOn));
     const last = dayKey(endOfWeek(parseDayKey(fromDate), weekStartsOn));
@@ -163,7 +170,7 @@ export const studyRoutineRepository = {
       const keys = task.collectionId ? [`collection:${task.collectionId}`] : planSegmentIds(task.plan).length ? planSegmentIds(task.plan).map((id) => `segment:${id}`) : task.itemId ? [`item:${task.itemId}`] : [];
       for (const key of keys) counters.set(key, (counters.get(key) ?? 0) + 1);
     }
-    await generate(routine, fromDate, counters);
+    await generate(routine, fromDate, counters, future.filter((task) => task.customized));
   },
   async update(id: number, patch: Partial<StudyRoutine>) {
     await db.studyRoutines.update(id, patch);

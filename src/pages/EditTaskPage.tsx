@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSubjects, useTechniques, useTask } from "@/presentation/hooks/useEntities";
+import { useMemo, useState } from "react";
+import { useItem, useSegmentsByIds, useSubjects, useTask } from "@/presentation/hooks/useEntities";
 import { useNavigate, useParams } from "react-router-dom";
-import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
-import type { NoteVal } from "@/domain/entities/common";
-import type { TaskLinkType } from "@/domain/entities/task";
-import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+import type { Task, TaskLinkType } from "@/domain/entities/task";
+import { planSegmentIds } from "@/domain/logic/plan";
 import { tasksService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -14,105 +12,20 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { BpmCoupler } from "@/components/library/BpmCoupler";
-import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+import { PlanEditor } from "@/components/diary/PlanEditor";
+import { useTaskPlan } from "@/components/diary/useTaskPlan";
 import { LinkTargetFields } from "@/components/diary/LinkTargetFields";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { FormErrors } from "@/components/shared/StateNotice";
 import { ChevronLeft } from "lucide-react";
 
 export default function EditTaskPage() {
   const { t } = useI18n();
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const taskId = id ? Number(id) : undefined;
+  const task = useTask(id ? Number(id) : undefined);
 
-  const task = useTask(taskId);
-
-  const subjects = useSubjects();
-  const allTechniques = useTechniques();
-
-  const [initialized, setInitialized] = useState(false);
-  const [subjectId, setSubjectId] = useState<number | undefined>();
-  const [linkType, setLinkType] = useState<TaskLinkType>("free");
-  const [itemId, setItemId] = useState<number | undefined>();
-  const [segmentIds, setSegmentIds] = useState<number[]>([]);
-  const [collectionId, setCollectionId] = useState<number | undefined>();
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [bpm, setBpm] = useState<number | undefined>();
-  const [noteVal, setNoteVal] = useState<NoteVal | undefined>();
-  const [layers, setLayers] = useState<string[]>([]);
-  const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
-  const [executionNotes, setExecutionNotes] = useState("");
-
-  useEffect(() => {
-    if (task && !initialized) {
-      setSubjectId(task.subjectId);
-      setLinkType(task.linkType ?? (task.collectionId ? "collection" : task.itemId ? "item" : "free"));
-      setItemId(task.itemId);
-      setSegmentIds(task.segmentIds ?? []);
-      setCollectionId(task.collectionId);
-      setTitle(task.title);
-      setDate(task.date);
-      setBpm(task.targetBpm);
-      setNoteVal(task.noteVal);
-      setLayers(task.layers ?? []);
-      setTechniqueIds(task.techniqueIds ?? []);
-      setExecutionNotes(task.executionNotes ?? "");
-      setInitialized(true);
-    }
-  }, [task, initialized]);
-
-  const selectedSubject = useMemo(
-    () => subjects?.find((s) => s.id === subjectId),
-    [subjects, subjectId]
-  );
-  const isTheorySubject = selectedSubject?.type === "theory";
-  const subjectLayers = useMemo(
-    () => getSubjectLayers(selectedSubject),
-    [selectedSubject],
-  );
-  const techniqueOptions = useMemo(
-    () => (allTechniques ?? [])
-      .filter((tech) => tech.subjectId === subjectId)
-      .map((tech) => ({ value: tech.id, label: tech.name })),
-    [allTechniques, subjectId]
-  );
-
-  const errors = useMemo(() => {
-    const e: string[] = [];
-    if (!subjectId) e.push(t("errors.pickSubject"));
-    if (!title.trim()) e.push(t("errors.titleRequired"));
-    if (!date) e.push(t("errors.dateRequired"));
-    if (linkType === "item" && !itemId) e.push(t("errors.pickItem"));
-    if (linkType === "collection" && !collectionId) e.push(t("errors.pickCollection"));
-    if (bpm !== undefined && (bpm < 20 || bpm > 400)) e.push(t("errors.bpmRange"));
-    return e;
-  }, [subjectId, title, date, bpm, linkType, itemId, collectionId, t]);
-
-  const handleCancel = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate("/tasks");
-  };
-
-  const save = async () => {
-    if (!taskId || errors.length || subjectId === undefined) return;
-    await tasksService.update(taskId, {
-      subjectId,
-      linkType,
-      itemId: linkType === "item" ? itemId : undefined,
-      segmentIds: linkType === "item" ? segmentIds : undefined,
-      collectionId: linkType === "collection" ? collectionId : undefined,
-      title: title.trim(), date, targetBpm: bpm, noteVal,
-      layers: isTheorySubject ? [...THEORY_LAYERS] : layers,
-      techniqueIds,
-      executionNotes: executionNotes.trim() || undefined,
-    });
-    toast.success(t("toast.taskUpdated"));
-    handleCancel();
-  };
-
-  // Loading state
   if (task === undefined) {
     return (
       <div className="space-y-4">
@@ -123,105 +36,134 @@ export default function EditTaskPage() {
       </div>
     );
   }
+  if (task === null) return <EmptyState title={t("tasks.notFound")} />;
+  return <EditTaskForm key={task.id} task={task} />;
+}
 
-  if (task === null) {
-    return (
-      <div className="paper-card p-10 text-center text-muted-foreground italic">
-        {t("tasks.notFound")}
-      </div>
-    );
-  }
+function EditTaskForm({ task }: { task: Task }) {
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const subjects = useSubjects();
+
+  const [subjectId, setSubjectId] = useState<number | undefined>(task.subjectId);
+  const [linkType, setLinkType] = useState<TaskLinkType>(task.linkType ?? (task.collectionId ? "collection" : task.itemId ? "item" : "free"));
+  const [itemId, setItemId] = useState<number | undefined>(task.itemId);
+  const [segmentIds, setSegmentIds] = useState<number[]>(planSegmentIds(task.plan));
+  const [collectionId, setCollectionId] = useState<number | undefined>(task.collectionId);
+  const [title, setTitle] = useState(task.title);
+  const [date, setDate] = useState(task.date);
+  const [executionNotes, setExecutionNotes] = useState(task.executionNotes ?? "");
+
+  const selectedSubject = useMemo(() => subjects?.find((s) => s.id === subjectId), [subjects, subjectId]);
+  const item = useItem(itemId);
+  const sections = useSegmentsByIds(segmentIds);
+  const [plan, setPlan] = useTaskPlan(task.plan, { linkType, itemId, segmentIds }, item, sections, selectedSubject);
+
+  const errors = useMemo(() => {
+    const e: string[] = [];
+    if (!subjectId) e.push(t("errors.pickSubject"));
+    if (!title.trim()) e.push(t("errors.titleRequired"));
+    if (!date) e.push(t("errors.dateRequired"));
+    if (linkType === "item" && !itemId) e.push(t("errors.pickItem"));
+    if (linkType === "collection" && !collectionId) e.push(t("errors.pickCollection"));
+    if (plan.some((entry) => entry.bpm !== undefined && (entry.bpm < 20 || entry.bpm > 400))) e.push(t("errors.bpmRange"));
+    return e;
+  }, [subjectId, title, date, plan, linkType, itemId, collectionId, t]);
+
+  const handleCancel = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/tasks");
+  };
+
+  const save = async () => {
+    if (!task.id || errors.length || subjectId === undefined) return;
+    await tasksService.update(task.id, {
+      subjectId,
+      linkType,
+      itemId: linkType === "item" ? itemId : undefined,
+      collectionId: linkType === "collection" ? collectionId : undefined,
+      title: title.trim(), date, plan,
+      executionNotes: executionNotes.trim() || undefined,
+      ...(task.studyRoutineId !== undefined ? { customized: true } : {}),
+    });
+    toast.success(t("toast.taskUpdated"));
+    handleCancel();
+  };
+
+  const sectionCls = "mt-6 border-t border-border pt-6";
+  const labelCls = "text-xs font-medium";
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="text-muted-foreground hover:text-foreground"
-          aria-label={t("common.back")}
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <h2 className="font-serif text-3xl flex-1">{t("tasks.editTask")}</h2>
-      </div>
-
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("common.date")}</Label>
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-      </div>
-
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("teacher.subject")}</Label>
-        <Select
-          value={subjectId?.toString() ?? ""}
-          onValueChange={(v) => { setSubjectId(Number(v)); setItemId(undefined); setSegmentIds([]); setCollectionId(undefined); }}
-        >
-          <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
-          <SelectContent>
-            {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <LinkTargetFields
-        subjectId={subjectId}
-        linkType={linkType}
-        setLinkType={setLinkType}
-        itemId={itemId}
-        setItemId={setItemId}
-        segmentIds={segmentIds}
-        setSegmentIds={setSegmentIds}
-        collectionId={collectionId}
-        setCollectionId={setCollectionId}
+    <div className="pb-24">
+      <PageHeader
+        title={t("tasks.editTask")}
+        actions={<Button variant="outline" onClick={handleCancel}><ChevronLeft />{t("common.back")}</Button>}
       />
 
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("common.title")}</Label>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-      </div>
+      <form
+        onSubmit={(e) => { e.preventDefault(); void save(); }}
+        className="max-w-[920px] rounded-[14px] bg-card p-6 shadow-soft"
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-1.5">
+            <Label className={labelCls}>{t("common.date")}</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label className={labelCls}>{t("teacher.subject")}</Label>
+            <Select
+              value={subjectId?.toString() ?? ""}
+              onValueChange={(v) => { setSubjectId(Number(v)); setItemId(undefined); setSegmentIds([]); setCollectionId(undefined); }}
+            >
+              <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
+              <SelectContent>
+                {(subjects ?? []).map((s) => (
+                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1.5 sm:col-span-2">
+            <Label className={labelCls}>{t("common.title")}</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+        </div>
 
-      <BpmCoupler bpm={bpm} noteVal={noteVal} onChange={({ bpm: b, noteVal: n }) => { setBpm(b); setNoteVal(n); }} />
+        <div className={sectionCls}>
+          <LinkTargetFields
+            subjectId={subjectId}
+            linkType={linkType}
+            setLinkType={setLinkType}
+            itemId={itemId}
+            setItemId={setItemId}
+            segmentIds={segmentIds}
+            setSegmentIds={setSegmentIds}
+            collectionId={collectionId}
+            setCollectionId={setCollectionId}
+          />
+        </div>
 
-      {!isTheorySubject && (
-        <MultiChipPicker
-          label={t("tasks.layers")}
-          options={subjectLayers.map((l) => ({ value: l, label: l }))}
-          value={layers}
-          onChange={setLayers}
-          emptyHint={t("tasks.defineLayersHint")}
-        />
-      )}
-      <MultiChipPicker
-        label={t("tasks.techniques")}
-        options={techniqueOptions}
-        value={techniqueIds}
-        onChange={setTechniqueIds}
-        emptyHint={t("tasks.addTechniquesHint")}
-      />
+        <div className={sectionCls}>
+          <PlanEditor plan={plan} onChange={setPlan} sections={sections} subject={selectedSubject} />
+        </div>
 
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("tasks.executionNotes")}</Label>
-        <Textarea
-          value={executionNotes}
-          onChange={(e) => setExecutionNotes(e.target.value)}
-          placeholder={t("tasks.executionNotesPlaceholder")}
-          rows={3}
-        />
-      </div>
+        <div className={`${sectionCls} grid gap-1.5`}>
+          <Label className={labelCls}>{t("tasks.executionNotes")}</Label>
+          <Textarea
+            value={executionNotes}
+            onChange={(e) => setExecutionNotes(e.target.value)}
+            placeholder={t("tasks.executionNotesPlaceholder")}
+            rows={3}
+          />
+        </div>
 
-      {errors.length > 0 && (
-        <ul className="text-xs text-destructive space-y-0.5">
-          {errors.map((e) => <li key={e}>• {e}</li>)}
-        </ul>
-      )}
+        <FormErrors errors={errors} className="mt-6" />
 
-      <div className="flex gap-2 pt-2">
-        <Button variant="outline" className="flex-1" onClick={handleCancel}>{t("common.cancel")}</Button>
-        <Button className="flex-1" disabled={errors.length > 0} onClick={save}>{t("common.save")}</Button>
-      </div>
+        <div className="mt-8 flex justify-end gap-2 border-t border-border pt-5 max-[699px]:sticky max-[699px]:bottom-[calc(76px+env(safe-area-inset-bottom))] max-[699px]:bg-card max-[699px]:pb-3">
+          <Button type="button" variant="ghost" onClick={handleCancel}>{t("common.cancel")}</Button>
+          <Button type="submit" disabled={errors.length > 0}>{t("common.save")}</Button>
+        </div>
+      </form>
     </div>
   );
 }

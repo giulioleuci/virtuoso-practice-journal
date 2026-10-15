@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, MessageSquareQuote } from "lucide-react";
 import { toast } from "sonner";
@@ -6,7 +6,7 @@ import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { SegmentMark, Subject } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
-import { carryMarksToPlan, emptyEntry, followUpTasks, marksFromPlan, planSegmentIds } from "@/domain/logic/plan";
+import { emptyEntry, marksFromPlan, planSegmentIds, restartFrom } from "@/domain/logic/plan";
 import { missingRatings } from "@/domain/logic/sessionMetrics";
 import type { SessionLogInput, SessionTarget } from "@/domain/ports/session";
 import type { StudyRoutine } from "@/domain/ports/studyRoutine";
@@ -16,10 +16,9 @@ import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { flattenErrors, newSessionInputSchema } from "@/lib/schemas";
 import { routineAdaptivity } from "@/lib/domain/studyRoutineGenerator";
-import { tasksService } from "@/lib/services";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useSessionSubmission } from "@/presentation/hooks/usePresentationControllers";
-import { useActiveTasks, useProfile, useSubjects, useTask, useTechniques } from "@/presentation/hooks/useEntities";
+import { useProfile, useSubjects, useTask, useTechniques } from "@/presentation/hooks/useEntities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +27,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { FormErrors } from "@/components/shared/StateNotice";
-import { CarryForwardPicker } from "@/components/diary/CarryForwardPicker";
 import { MarksEditor } from "@/components/diary/MarksEditor";
 import { LastSessionStrip } from "@/components/diary/LastSessionStrip";
 import { BpmSuggestion } from "@/components/diary/BpmSuggestion";
@@ -54,6 +52,18 @@ const markErrors = (notes: string, marks: SegmentMark[], t: ReturnType<typeof us
 /** Marks as stored: tempo and note value only mean something outside theory subjects. */
 const cleanMarks = (marks: SegmentMark[], isTheory: boolean): SegmentMark[] =>
   marks.map((m) => (isTheory ? { ...m, bpm: undefined, noteVal: undefined, targetBpm: undefined } : m));
+
+/** Adaptive routines re-plan after a log; the outcome is reported on its own, so a planning failure never touches the saved session. */
+async function refreshRoutine(routineId: number, fromDate: string, t: ReturnType<typeof useI18n>["t"], openPlan: () => void): Promise<void> {
+  const routine = await presentationQueries().execute<StudyRoutine | undefined>("routines.one", routineId);
+  if (!routine || routineAdaptivity(routine) === "uniform") return;
+  try {
+    await applicationCommands.routines.regenerate.execute(routine, fromDate);
+    toast(t("routine.regenerated"), { description: t("routine.regeneratedKept"), action: { label: t("routine.openPlan"), onClick: openPlan } });
+  } catch {
+    toast.error(t("routine.regenerateFailed"), { action: { label: t("common.retry"), onClick: () => void refreshRoutine(routineId, fromDate, t, openPlan) } });
+  }
+}
 
 /** `/log?task=ID` logs a session for a planned task; `/log` logs a free session. */
 export default function SessionLogPage() {
@@ -145,6 +155,8 @@ function useSubjectOptions(subject: Subject | undefined) {
 function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   const { t } = useI18n();
   const goBack = useGoBack();
+  const navigate = useNavigate();
+  const savedId = useRef<number>();
   const [marks, setMarks] = useState<SegmentMark[]>(() => {
     if (prefill?.marks) return prefill.marks;
     try { const saved = task.id ? JSON.parse(localStorage.getItem(marksDraftKey(task.id)) ?? "null") : null; if (Array.isArray(saved)) return saved; } catch { /* ignore */ }
@@ -155,12 +167,6 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   const [helpText, setHelpText] = useState("");
   const [bpmDismissed, setBpmDismissed] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
-  const allTasks = useActiveTasks();
-  const followUps = useMemo(() => followUpTasks(task, marks, allTasks ?? []), [task, marks, allTasks]);
-  // null = untouched: the earliest follow-up is ticked by default.
-  const [carryTo, setCarryTo] = useState<number[] | null>(null);
-  const carryIds = carryTo ?? followUps.slice(0, 1).flatMap((c) => (c.id === undefined ? [] : [c.id]));
-
   const subject = usePresentationRead<Subject | undefined>("subjects.one", [task.subjectId]);
   const item = usePresentationRead<LibraryItem | undefined>("library.item", [task.itemId]);
   const sections = usePresentationRead<Segment[]>("segments.ids", [planSegmentIds(task.plan)]);
@@ -169,7 +175,7 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   // Every planned section keeps a row even if the library segment was deleted; newly ticked rows start from the plan.
   const rows = planSegmentIds(task.plan).map((id) => ({ id, label: sections?.find((s) => s.id === id)?.label ?? "—" }));
   const seed = (id: number) => marksFromPlan(task.plan).find((m) => m.segmentId === id) ?? emptyEntry(id);
-  const submission = useSessionSubmission(async ({ input }: { input: SessionLogInput }) => { await applicationCommands.sessions.log.execute(task, input); });
+  const submission = useSessionSubmission(async ({ input }: { input: SessionLogInput }) => { savedId.current = await applicationCommands.sessions.log.execute(task, input); });
 
   const changeMarks = (next: SegmentMark[]) => {
     setMarks(next);
@@ -188,13 +194,9 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
     const logged = cleanMarks(marks, isTheory);
     const ok = await submission.submit({ input: { date: task.date, notes, marks: logged, helpText: needHelp ? helpText.trim() : undefined } });
     if (!ok) return void toast.error(submission.error ?? t("errors.couldNotSave"));
-    for (const next of followUps.filter((c) => c.id !== undefined && carryIds.includes(c.id))) await tasksService.update(next.id!, { plan: carryMarksToPlan(next.plan, logged) });
-    if (task.studyRoutineId) {
-      const routine = await presentationQueries().execute<StudyRoutine | undefined>("routines.one", task.studyRoutineId);
-      if (routine && routineAdaptivity(routine) !== "uniform") applicationCommands.routines.regenerate.execute(routine, task.date).catch(() => undefined);
-    }
+    if (task.studyRoutineId) void refreshRoutine(task.studyRoutineId, task.date, t, () => navigate("/tasks?tab=routines"));
     try { localStorage.removeItem(marksDraftKey(task.id)); } catch { /* ignore */ }
-    toast.success(t("toast.sessionLogged"));
+    toast.success(t("toast.sessionLogged"), { action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${savedId.current}`) } });
     goBack();
   };
 
@@ -216,13 +218,12 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
           </div>
 
           <HelpQuestion on={needHelp} onToggle={setNeedHelp} text={helpText} onText={setHelpText} itemTitle={item?.title} />
-          <CarryForwardPicker tasks={followUps} selected={carryIds} onChange={setCarryTo} />
           <FormErrors errors={errors} className="mt-6" />
           <Footer onCancel={goBack} disabled={errors.length > 0} busy={submission.submitting} />
         </form>
 
         <Guide>
-          <LastSessionStrip task={task} />
+          <LastSessionStrip task={task} onRestart={(previous) => changeMarks(restartFrom(marks, previous))} />
           {task.itemId && answeredCount > 0 && (
             <button type="button" onClick={() => setShowAnswers(true)} className="inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
               <MessageSquareQuote className="h-4 w-4" />{t("teacherAnswers.openLabel")} <span className="tabular-nums opacity-70">· {answeredCount}</span>
@@ -240,6 +241,7 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
 function FreeSessionForm() {
   const { t } = useI18n();
   const goBack = useGoBack();
+  const navigate = useNavigate();
   const subjects = useSubjects();
   const profile = useProfile();
   const todayKey = today();
@@ -278,8 +280,8 @@ function FreeSessionForm() {
     setBusy(true);
     try {
       const target: SessionTarget = { subjectId: subjId, linkType: itemId ? "item" : "free", itemId, title: item?.title ?? (title.trim() || t("diary.freeSession")), plan: [] };
-      await applicationCommands.sessions.log.execute(target, { date, notes, marks: cleanMarks(marks, isTheory), helpText: needHelp && itemId ? helpText.trim() : undefined });
-      toast.success(t("toast.sessionLogged"));
+      const id = await applicationCommands.sessions.log.execute(target, { date, notes, marks: cleanMarks(marks, isTheory), helpText: needHelp && itemId ? helpText.trim() : undefined });
+      toast.success(t("toast.sessionLogged"), { action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${id}`) } });
       goBack();
     } catch (err) {
       toast.error((err as Error).message || t("errors.couldNotSave"));

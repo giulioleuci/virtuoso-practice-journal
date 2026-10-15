@@ -28,6 +28,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { FormErrors } from "@/components/shared/StateNotice";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { MarksEditor } from "@/components/diary/MarksEditor";
+import { UpdateNextTaskPanel } from "@/components/diary/UpdateNextTaskPanel";
 
 /** One logged session: read-only summary with its historical snapshot, plus edit and delete. */
 export default function SessionPage() {
@@ -170,6 +171,7 @@ function SessionView({ session }: { session: Session }) {
             {!!segLabels.length && <p className="mt-2 text-sm italic text-muted-foreground">{segLabels.length > 1 ? t("session.segmentTitle_plural") : t("session.segmentTitle")}: {segLabels.join(", ")}</p>}
             {snap?.collectionName && <p className="text-sm italic text-muted-foreground">{t("session.collectionLabel")}: {snap.collectionName}</p>}
             {snap && <p className="mt-3 text-xs text-muted-foreground">{t("session.snapshotLabel")} · {snap.subjectName}</p>}
+            <div className="mt-8"><UpdateNextTaskPanel session={session} /></div>
           </aside>
         </div>
       )}
