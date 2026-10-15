@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Session } from "@/domain/entities/session";
 import type { Task } from "@/domain/entities/task";
 import { withSessionContext } from "@/domain/logic/sessionContext";
+import type { AudioPort } from "@/domain/ports/audio";
 import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
 import type { BackupData, BackupPort } from "@/domain/ports/backup";
 
@@ -25,11 +26,26 @@ const sessionRow = z.object({
   notStudied: z.array(z.number().int().positive()).optional(),
 }).passthrough();
 
+export interface ImportSummary { recordings: number; available: number }
+
+/** Clip metadata only: any audio payload, path or URL makes the backup invalid. */
+const recordingRow = z.object({
+  id: z.number().int().positive().optional(),
+  uid: z.string().uuid(),
+  sessionId: z.number().int().positive(),
+  segmentId: z.number().int().positive().optional(),
+  date: day,
+  title: z.string().max(160).optional(),
+  mimeType: z.string().regex(/^audio\//),
+  durationMs: z.number().nonnegative(),
+  createdAt: z.number(),
+}).strict();
+
 export class ImportBackupUseCase {
-  constructor(private readonly backups: BackupPort, private readonly files: BackupFileGateway) {}
+  constructor(private readonly backups: BackupPort, private readonly files: BackupFileGateway, private readonly clips?: Pick<AudioPort, "available">) {}
 
   /** Validates everything first; the store is replaced only by a fully valid backup, in one transaction. */
-  async importContent(text: string): Promise<void> {
+  async importContent(text: string): Promise<ImportSummary> {
     const parsed = backupSchema.parse(JSON.parse(text));
     const version = parsed.version ?? 1;
     if (!SUPPORTED_VERSIONS.includes(version)) throw new Error(`Unsupported backup version: ${version}`);
@@ -39,13 +55,19 @@ export class ImportBackupUseCase {
       // Rows are validated above; the cast only bridges zod's passthrough type to the entity.
       data.sessions = version < 3 ? withSessionContext(sessions as unknown as Partial<Session>[], (data.tasks ?? []) as Task[]) : sessions;
     }
+    const recordings = z.array(recordingRow).parse(data.recordings ?? []);
+    const sessionIds = new Set((data.sessions ?? []).map((session) => (session as { id: number }).id));
+    const dangling = recordings.find((recording) => !sessionIds.has(recording.sessionId));
+    if (dangling) throw new Error(`Recording ${dangling.uid} points at missing session ${dangling.sessionId}`);
     await this.backups.importAll(data);
+    // Local audio is never touched by an import; report how many referenced clips this device can still play.
+    const available = this.clips && recordings.length ? (await this.clips.available(recordings.map((r) => r.uid))).size : 0;
+    return { recordings: recordings.length, available };
   }
 
-  async execute(): Promise<boolean> {
+  async execute(): Promise<ImportSummary | null> {
     const text = await this.files.pick();
-    if (text === null) return false;
-    await this.importContent(text);
-    return true;
+    if (text === null) return null;
+    return this.importContent(text);
   }
 }

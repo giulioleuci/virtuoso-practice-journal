@@ -1,5 +1,6 @@
-import type { Session, SessionSnapshot } from "../entities/session";
+import type { Recording, Session, SessionSnapshot } from "../entities/session";
 import type { Task } from "../entities/task";
+import type { AudioDraft } from "./audio";
 
 export type PersistedTask = Task & { id: number };
 
@@ -8,12 +9,14 @@ export type SessionTarget = Pick<Task, "subjectId" | "linkType" | "itemId" | "co
 
 export type SessionLogInput = Pick<Session, "date" | "notes" | "marks"> & {
   helpText?: string;
+  clips?: AudioDraft[];
 };
 
 export interface SessionLogTransaction {
   createSession(session: Omit<Session, "id">): Promise<number>;
   /** Re-derives `done` from the cumulative section coverage of the task's sessions. */
   syncTaskDone(taskId: number): Promise<void>;
+  createRecording(recording: Omit<Recording, "id">): Promise<void>;
   createHelpRequest(request: { sessionId: number; taskId?: number; itemId?: number; question: string; createdAt: number }): Promise<void>;
 }
 

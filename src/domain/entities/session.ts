@@ -29,3 +29,18 @@ export interface Session {
   snapshot?: SessionSnapshot;
   createdAt: number;
 }
+
+/** Metadata of a device-local audio clip; the audio itself lives outside every backup and is found by `uid`. */
+export interface Recording {
+  id?: number;
+  /** Random UUID: the only link between metadata and local audio, immune to numeric id collisions on import. */
+  uid: string;
+  sessionId: number;
+  segmentId?: number;
+  date: string;
+  title?: string;
+  mimeType: string;
+  /** Clip length for the player; never study time. */
+  durationMs: number;
+  createdAt: number;
+}

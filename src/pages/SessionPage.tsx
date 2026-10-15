@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import { RATING_KEYS, type SegmentMark, type Subject } from "@/domain/entities/common";
 import type { LibraryItem } from "@/domain/entities/library";
-import type { Session } from "@/domain/entities/session";
+import type { Recording, Session } from "@/domain/entities/session";
 import type { Task } from "@/domain/entities/task";
 import { emptyEntry } from "@/domain/logic/plan";
+import { applicationCommands } from "@/lib/applicationCommands";
 import { formatDate } from "@/lib/date";
 import { tempoLabel } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -28,6 +29,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { FormErrors } from "@/components/shared/StateNotice";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { MarksEditor } from "@/components/diary/MarksEditor";
+import { ClipList, Recorder } from "@/components/diary/Recorder";
 import { UpdateNextTaskPanel } from "@/components/diary/UpdateNextTaskPanel";
 
 /** One logged session: read-only summary with its historical snapshot, plus edit and delete. */
@@ -51,6 +53,9 @@ function SessionView({ session }: { session: Session }) {
   const item = usePresentationRead<LibraryItem | undefined>("library.item", [session.itemId]);
   const subject = usePresentationRead<Subject | undefined>("subjects.one", [session.subjectId]);
   const techniques = useTechniques();
+  const recordings = usePresentationRead<Recording[]>("recordings.session", [session.id]) ?? [];
+  const sameContent = usePresentationRead<Recording[]>("recordings.item", [session.itemId]) ?? [];
+  const others = sameContent.filter((r) => r.sessionId !== session.id);
   const isTheory = subject?.type === "theory";
 
   const [editing, setEditing] = useState(false);
@@ -162,6 +167,21 @@ function SessionView({ session }: { session: Session }) {
                 <p className="whitespace-pre-wrap border-t border-border pt-4 text-sm">{session.notes}</p>
               </section>
             )}
+
+            <section>
+              <SectionHeader title={t("audio.title")} />
+              <Recorder sections={sections} onClip={async (clip) => {
+                try { await applicationCommands.recordings.add({ ...clip, sessionId: session.id, date: session.date, createdAt: Date.now() }); }
+                catch { await applicationCommands.audio.discard([clip.uid]); toast.error(t("errors.couldNotSave")); }
+              }} />
+              {recordings.length > 0 && <div className="mt-4"><ClipList recordings={recordings} sections={sections} /></div>}
+            </section>
+            {others.length > 0 && (
+              <section>
+                <SectionHeader title={t("audio.other")} />
+                <ClipList recordings={others} sections={sections} />
+              </section>
+            )}
           </div>
 
           <aside className="min-w-0">
@@ -180,7 +200,7 @@ function SessionView({ session }: { session: Session }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("session.delete")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("dialog.deleteSessionDesc")}</AlertDialogDescription>
+            <AlertDialogDescription>{t("dialog.deleteSessionDesc")}{recordings.length ? ` ${t("audio.deleteSessionClips", { count: recordings.length })}` : ""}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>

@@ -10,9 +10,11 @@ import { ExportCsvUseCase } from "@/application/useCases/exportCsv";
 import { ExportBackupUseCase } from "@/application/useCases/exportBackup";
 import { ImportBackupUseCase } from "@/application/useCases/importBackup";
 import { CapacitorBackupFileGateway } from "./gateways/CapacitorBackupFileGateway";
+import { browserAudio } from "./audio/browserAudio";
 import { backupRepository } from "./repositories/dexie/backupRepository";
 import { taskRepository } from "./repositories/dexie/taskRepository";
 import { sessionRepository } from "./repositories/dexie/sessionRepository";
+import { recordingRepository } from "./repositories/dexie/recordingRepository";
 import { studyRoutineRepository } from "./repositories/dexie/studyRoutineRepository";
 
 const backupFiles = new CapacitorBackupFileGateway();
@@ -20,6 +22,8 @@ const backupFiles = new CapacitorBackupFileGateway();
 export const application = {
   tasks: { create: new CreateTaskUseCase(taskRepository), update: new UpdateTaskUseCase(taskRepository), remove: new RemoveTaskUseCase(taskRepository) },
   sessions: { log: new LogSessionUseCase(sessionRepository), remove: new DeleteSessionUseCase(sessionRepository) },
+  audio: browserAudio,
+  recordings: recordingRepository,
   routines: {
     generate: new GenerateStudyRoutineUseCase(studyRoutineRepository),
     update: new UpdateStudyRoutineUseCase(studyRoutineRepository),
@@ -28,8 +32,8 @@ export const application = {
   backups: {
     export: new ExportBackupUseCase(backupRepository, backupFiles),
     csv: new ExportCsvUseCase(sessionRepository, backupFiles),
-    import: new ImportBackupUseCase(backupRepository, backupFiles),
-    wipe: () => backupRepository.wipeAll(),
+    import: new ImportBackupUseCase(backupRepository, backupFiles, browserAudio),
+    wipe: async () => { await backupRepository.wipeAll(); await browserAudio.wipe(); },
   },
 };
 export { taskRepository, sessionRepository, studyRoutineRepository };

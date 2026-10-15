@@ -8,6 +8,7 @@ import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
 import { emptyEntry, marksFromPlan, planSegmentIds, restartFrom } from "@/domain/logic/plan";
 import { missingRatings } from "@/domain/logic/sessionMetrics";
+import type { AudioDraft } from "@/domain/ports/audio";
 import type { SessionLogInput, SessionTarget } from "@/domain/ports/session";
 import type { StudyRoutine } from "@/domain/ports/studyRoutine";
 import { presentationQueries } from "@/application/queries/presentationQueryService";
@@ -28,12 +29,13 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { FormErrors } from "@/components/shared/StateNotice";
 import { MarksEditor } from "@/components/diary/MarksEditor";
+import { ClipDrafts } from "@/components/diary/Recorder";
 import { LastSessionStrip } from "@/components/diary/LastSessionStrip";
 import { BpmSuggestion } from "@/components/diary/BpmSuggestion";
 import { nativeSelect } from "@/components/diary/WhenFields";
 import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
 
-type Prefill = { marks?: SegmentMark[]; notes?: string };
+type Prefill = { marks?: SegmentMark[]; notes?: string; clips?: AudioDraft[] };
 const marksDraftKey = (taskId: number) => `virtuoso-marks-${taskId}`;
 const panel = "rounded-[14px] bg-card p-6 shadow-soft";
 const section = "mt-6 border-t border-border pt-6";
@@ -85,10 +87,10 @@ function useGoBack() {
   return () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
 }
 
-function BackLink() {
+function BackLink({ onClick }: { onClick?: () => void }) {
   const { t } = useI18n();
   return (
-    <Link to="/" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+    <Link to="/" onClick={onClick} className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
       <ChevronLeft className="h-4 w-4" />{t("logPage.back")}
     </Link>
   );
@@ -163,6 +165,8 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
     return initialMarks(task);
   });
   const [notes, setNotes] = useState(prefill?.notes ?? "");
+  const [clips, setClips] = useState<AudioDraft[]>(prefill?.clips ?? []);
+  const leave = () => { void applicationCommands.audio.discard(clips.map((c) => c.uid)); goBack(); };
   const [needHelp, setNeedHelp] = useState(false);
   const [helpText, setHelpText] = useState("");
   const [bpmDismissed, setBpmDismissed] = useState(false);
@@ -192,7 +196,7 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
     e.preventDefault();
     if (errors.length || submission.submitting || !task.id) return;
     const logged = cleanMarks(marks, isTheory);
-    const ok = await submission.submit({ input: { date: task.date, notes, marks: logged, helpText: needHelp ? helpText.trim() : undefined } });
+    const ok = await submission.submit({ input: { date: task.date, notes, marks: logged, helpText: needHelp ? helpText.trim() : undefined, clips } });
     if (!ok) return void toast.error(submission.error ?? t("errors.couldNotSave"));
     if (task.studyRoutineId) void refreshRoutine(task.studyRoutineId, task.date, t, () => navigate("/tasks?tab=routines"));
     try { localStorage.removeItem(marksDraftKey(task.id)); } catch { /* ignore */ }
@@ -202,7 +206,7 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
 
   return (
     <div className="pb-24">
-      <BackLink />
+      <BackLink onClick={leave} />
       <PageHeader title={t("logPage.title")} subtitle={<>{task.title}{item?.composer ? ` · ${item.composer}` : ""}</>} />
       <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
         <form onSubmit={save} className={`${panel} min-w-0`}>
@@ -212,6 +216,8 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
 
           <MarksEditor marks={marks} onChange={changeMarks} sections={rows} seed={seed} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} />
 
+          <div className={section}><ClipDrafts clips={clips} onChange={setClips} sections={rows} /></div>
+
           <div className={`${section} space-y-2`}>
             <Label className="text-xs font-medium text-foreground">{t("session.notes")}</Label>
             <Textarea rows={3} maxLength={2000} aria-label={t("session.notes")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("session.notesPlaceholder")} />
@@ -219,7 +225,7 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
 
           <HelpQuestion on={needHelp} onToggle={setNeedHelp} text={helpText} onText={setHelpText} itemTitle={item?.title} />
           <FormErrors errors={errors} className="mt-6" />
-          <Footer onCancel={goBack} disabled={errors.length > 0} busy={submission.submitting} />
+          <Footer onCancel={leave} disabled={errors.length > 0} busy={submission.submitting} />
         </form>
 
         <Guide>
@@ -251,6 +257,8 @@ function FreeSessionForm() {
   const [date, setDate] = useState(todayKey);
   const [marks, setMarks] = useState<SegmentMark[]>(() => initialMarks());
   const [notes, setNotes] = useState("");
+  const [clips, setClips] = useState<AudioDraft[]>([]);
+  const leave = () => { void applicationCommands.audio.discard(clips.map((c) => c.uid)); goBack(); };
   const [needHelp, setNeedHelp] = useState(false);
   const [helpText, setHelpText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -280,7 +288,7 @@ function FreeSessionForm() {
     setBusy(true);
     try {
       const target: SessionTarget = { subjectId: subjId, linkType: itemId ? "item" : "free", itemId, title: item?.title ?? (title.trim() || t("diary.freeSession")), plan: [] };
-      const id = await applicationCommands.sessions.log.execute(target, { date, notes, marks: cleanMarks(marks, isTheory), helpText: needHelp && itemId ? helpText.trim() : undefined });
+      const id = await applicationCommands.sessions.log.execute(target, { date, notes, marks: cleanMarks(marks, isTheory), helpText: needHelp && itemId ? helpText.trim() : undefined, clips });
       toast.success(t("toast.sessionLogged"), { action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${id}`) } });
       goBack();
     } catch (err) {
@@ -291,7 +299,7 @@ function FreeSessionForm() {
 
   return (
     <div className="pb-24">
-      <BackLink />
+      <BackLink onClick={leave} />
       <PageHeader title={t("logPage.free")} subtitle={t("logPage.freeSubtitle")} />
       <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
         <form onSubmit={save} className={`${panel} min-w-0`}>
@@ -327,6 +335,8 @@ function FreeSessionForm() {
             <MarksEditor marks={marks} onChange={setMarks} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label }))} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} />
           </div>
 
+          <div className={section}><ClipDrafts clips={clips} onChange={setClips} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label })) ?? []} /></div>
+
           <div className={`${section} space-y-2`}>
             <Label className="text-xs font-medium text-foreground">{t("session.notes")}</Label>
             <Textarea rows={3} maxLength={2000} aria-label={t("session.notes")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("session.notesPlaceholder")} />
@@ -334,7 +344,7 @@ function FreeSessionForm() {
 
           <HelpQuestion on={needHelp} onToggle={setNeedHelp} text={helpText} onText={setHelpText} itemTitle={item?.title} />
           <FormErrors errors={errors} className="mt-6" />
-          <Footer onCancel={goBack} disabled={errors.length > 0} busy={busy} />
+          <Footer onCancel={leave} disabled={errors.length > 0} busy={busy} />
         </form>
         <Guide />
       </div>

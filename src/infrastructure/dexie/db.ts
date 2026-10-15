@@ -5,7 +5,7 @@ import type { Subject, Technique } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
 import { withSessionContext } from "@/domain/logic/sessionContext";
-import type { Session } from "@/domain/entities/session";
+import type { Recording, Session } from "@/domain/entities/session";
 import type { Lesson, LessonFrequency, LessonRecurrence } from "@/domain/entities/lesson";
 import type { Collection, CollectionItem } from "@/domain/entities/collection";
 import type { HelpRequest } from "@/domain/ports/helpRequest";
@@ -22,6 +22,7 @@ export class VirtuosoDB extends Dexie {
   declare segments: Table<Segment, number, Draft<Segment>>;
   declare tasks: Table<Task, number, Draft<Task>>;
   declare sessions: Table<Session, number, Draft<Session>>;
+  declare recordings: Table<Recording, number, Draft<Recording>>;
   declare helpRequests: Table<HelpRequest, number, Draft<HelpRequest>>;
   declare recurrences: Table<LessonRecurrence, number, Draft<LessonRecurrence>>;
   declare lessons: Table<Lesson, number, Draft<Lesson>>;
@@ -59,6 +60,8 @@ export class VirtuosoDB extends Dexie {
       const sessions = tx.table("sessions");
       await sessions.bulkPut(withSessionContext(await sessions.toArray(), await tx.table("tasks").toArray()));
     });
+    // v15: clip metadata (exported with backups); the audio itself lives in the separate "virtuoso-audio" database.
+    this.version(15).stores({ recordings: "++id, &uid, sessionId" });
   }
 }
 

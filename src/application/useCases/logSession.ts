@@ -31,6 +31,8 @@ export class LogSessionUseCase {
         createdAt,
       });
       if (target.id !== undefined) await transaction.syncTaskDone(target.id);
+      // Audio is already on the device; its metadata commits or rolls back with the session.
+      for (const clip of input.clips ?? []) await transaction.createRecording({ ...clip, sessionId, date: input.date, createdAt });
       if (helpText) await transaction.createHelpRequest({ sessionId, taskId: target.id, itemId: target.itemId, question: helpText, createdAt });
       return sessionId;
     });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { profileService } from "@/lib/services";
+import type { ImportSummary } from "@/application/useCases/importBackup";
 import { applicationCommands } from "@/lib/applicationCommands";
 import { scheduleReminders, ensureNotificationPermission, isNative } from "@/lib/platform";
 import { getDefaultWeekStartsOn } from "@/lib/date";
@@ -109,7 +110,8 @@ export default function Profile() {
 
   const onImport = async () => {
     const result = await backup.importBackup();
-    if (result.ok && result.value) toast.success(t("toast.imported"));
+    const summary = result.ok ? (result.value as ImportSummary | null) : null;
+    if (summary) toast.success(summary.recordings ? t("toast.importedClips", { available: summary.available, missing: summary.recordings - summary.available }) : t("toast.imported"));
     else if (!result.ok) toast.error(t("errors.invalidFile"));
   };
 
@@ -443,6 +445,7 @@ export default function Profile() {
               </Button>
             ) : (
               <div className="space-y-2">
+                <p className="text-sm text-destructive">{t("profile.wipeAudio")}</p>
                 <p className="text-sm text-muted-foreground">
                   {(() => {
                     const [pre, post] = t("profile.typeDelete").split("DELETE");

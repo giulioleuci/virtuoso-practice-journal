@@ -6,6 +6,7 @@ import { FakeTaskRepository } from "./FakeTaskRepository";
 export class FakeSessionRepository implements SessionPort {
   sessions: Session[];
   helpRequests: { sessionId: number; taskId?: number; question: string }[] = [];
+  recordings: Omit<import("@/domain/entities/session").Recording, "id">[] = [];
   failHelpRequest = false;
   constructor(private readonly tasks: FakeTaskRepository, sessions: Session[] = []) { this.sessions = sessions; }
   private async syncTaskDone(taskId: number) {
@@ -22,16 +23,19 @@ export class FakeSessionRepository implements SessionPort {
   async transaction<T>(operation: (transaction: SessionLogTransaction) => Promise<T>) {
     const sessions = [...this.sessions];
     const helps = [...this.helpRequests];
+    const recordings = [...this.recordings];
     const updates = new Map(this.tasks.updated);
     try {
       return await operation({
         createSession: async (session) => { const id = this.sessions.length + 1; this.sessions.push({ ...session, id }); return id; },
         syncTaskDone: (taskId) => this.syncTaskDone(taskId),
+        createRecording: async (recording) => { this.recordings.push(recording); },
         createHelpRequest: async (request) => { if (this.failHelpRequest) throw new Error("help persistence failed"); this.helpRequests.push(request); },
       });
     } catch (error) {
       this.sessions = sessions;
       this.helpRequests = helps;
+      this.recordings = recordings;
       this.tasks.updated = updates;
       throw error;
     }

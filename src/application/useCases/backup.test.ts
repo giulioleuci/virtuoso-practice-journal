@@ -37,7 +37,7 @@ describe("backup use cases", () => {
   it("imports supported backup data selected by gateway", async () => {
     const repository = new FakeBackupRepository();
     const files = new FakeFiles(JSON.stringify({ version: 2, data: { tasks: [{ id: 1 }] } }));
-    await expect(new ImportBackupUseCase(repository, files).execute()).resolves.toBe(true);
+    await expect(new ImportBackupUseCase(repository, files).execute()).resolves.toEqual({ recordings: 0, available: 0 });
     expect(repository.imported).toEqual({ tasks: [{ id: 1 }] });
   });
 

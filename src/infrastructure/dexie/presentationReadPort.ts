@@ -89,6 +89,12 @@ export const dexiePresentationReads: PresentationReadPort = {
         if (next > 400 || await db.sessions.where("itemId").equals(itemId).and((session) => (topBpm(session.marks) ?? 0) >= next).first()) return null;
         return { reached: bpm, next };
       })() as unknown as Promise<T>;
+      case "recordings.session": return (typeof first === "number" ? db.recordings.where("sessionId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;
+      case "recordings.item": return (async () => {
+        if (typeof first !== "number") return [];
+        const ids = await db.sessions.where("itemId").equals(first).primaryKeys();
+        return ids.length ? db.recordings.where("sessionId").anyOf(ids).toArray() : [];
+      })() as unknown as Promise<T>;
       case "subjects.one": return (typeof first === "number" ? db.subjects.get(first) : Promise.resolve(undefined)) as unknown as Promise<T>;
       case "subjects.isTheory": return (typeof first === "number" ? db.subjects.get(first).then((subject) => subject?.type === "theory") : Promise.resolve(false)) as unknown as Promise<T>;
       case "profile.current": return db.profile.get("me").then((profile) => profile ?? null) as unknown as Promise<T>;

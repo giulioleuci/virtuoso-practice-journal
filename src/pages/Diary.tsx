@@ -583,8 +583,8 @@ export default function Diary() {
         <PracticeMode
           task={practiceTask}
           onClose={() => setPracticeTask(null)}
-          onFinish={({ marks }) => {
-            navigate(`/log?task=${practiceTask.id}`, { state: { prefill: { marks } } });
+          onFinish={({ marks, clips }) => {
+            navigate(`/log?task=${practiceTask.id}`, { state: { prefill: { marks, clips } } });
             setPracticeTask(null);
           }}
           onShowAnswers={
