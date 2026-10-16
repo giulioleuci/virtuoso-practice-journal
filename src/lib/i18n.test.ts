@@ -126,7 +126,7 @@ describe("fallback behavior", () => {
   it("does not return the raw key for any common key in any language", () => {
     const commonKeys = [
       "common.cancel", "common.save", "common.delete",
-      "nav.diary", "nav.library",
+      "nav.today", "nav.library",
     ];
     for (const lang of SUPPORTED_LANGS) {
       const t = makeT(lang);
@@ -146,17 +146,17 @@ describe("no raw key leakage in UI strings", () => {
     "common.cancel",
     "common.save",
     "common.delete",
-    "nav.diary",
+    "nav.today",
     "nav.library",
     "nav.lessons",
-    "nav.profile",
+    "nav.settings",
     "diary.hello",
     "tasks.newTask",
     "errors.titleRequired",
     "errors.pickSubject",
     "toast.taskAdded",
     "toast.lessonLogged",
-    "notFound.title",
+    "notFound.heading",
     "profile.settings",
   ];
 
