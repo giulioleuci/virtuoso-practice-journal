@@ -1,4 +1,4 @@
-import type { LibraryKind, NoteVal } from "./common";
+import type { LibraryKind, NoteVal, StudyStatus } from "./common";
 
 export interface LibraryItem {
   id?: number;
@@ -6,14 +6,15 @@ export interface LibraryItem {
   kind: LibraryKind;
   title: string;
   composer?: string;
+  catalog?: string;
+  notes?: string;
+  studyStatus: StudyStatus;
   startBpm?: number;
   targetBpm?: number;
   noteVal?: NoteVal;
   techniqueIds?: number[];
-  totalExercises?: number;
-  currentExercise?: number;
   tags?: string[];
-  /** Explicit "to keep" flag: the piece is permanently part of the repertoire. */
+  /** Explicit "to keep" flag: the material is permanently part of the repertoire. */
   inRepertoire?: boolean;
   /** Epoch ms when the item entered the repertoire. */
   repertoireAddedAt?: number;
@@ -32,6 +33,10 @@ export interface Segment {
   id: number;
   itemId: number;
   label: string;
+  position: number;
+  barStart?: number;
+  barEnd?: number;
+  notes?: string;
   targetBpm?: number;
   noteVal?: NoteVal;
   layers: string[];
@@ -39,3 +44,5 @@ export interface Segment {
   createdAt: number;
   deletedAt?: number;
 }
+
+export type SegmentInput = Omit<Segment, "id" | "itemId" | "createdAt" | "deletedAt"> & { id?: number };

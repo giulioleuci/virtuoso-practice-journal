@@ -1,11 +1,12 @@
-import type { ColorKey, LibraryKind } from "./common";
+import type { ColorKey, CollectionKind } from "./common";
 
 export interface Collection {
   id?: number;
-  kind: LibraryKind;
+  kind: CollectionKind;
   name: string;
   composer?: string;
   catalog?: string;
+  edition?: string;
   notes?: string;
   color?: ColorKey;
   defaultSubjectId?: number;
@@ -18,6 +19,9 @@ export interface CollectionItem {
   id: number;
   collectionId: number;
   itemId: number;
-  position?: number;
+  position: number;
+  reference?: string;
+  pageStart?: number;
+  pageEnd?: number;
   createdAt: number;
 }

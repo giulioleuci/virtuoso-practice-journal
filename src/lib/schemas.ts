@@ -20,6 +20,7 @@ export const segmentMarkSchema = segmentEntrySchema.extend({
   mood: ratingSchema.optional(),
   focus: ratingSchema.optional(),
   targetBpm: bpmSchema.optional(),
+  targetNoteVal: noteValSchema.optional(),
 });
 
 const oneEntryPerSection = (marks: { segmentId?: number }[]) => new Set(marks.map((m) => m.segmentId ?? "whole")).size === marks.length;
@@ -60,13 +61,53 @@ export const taskInputSchema = z.object({
 export type TaskInput = z.infer<typeof taskInputSchema>;
 
 export const colorKeySchema = z.enum(["terracotta", "sage", "gold", "blue", "plum", "coral", "amber", "teal", "indigo", "slate"]);
-export const libraryKindSchema = z.enum(["repertoire", "manual", "technique", "theory"]);
+export const libraryKindSchema = z.enum(["piece", "study", "technique", "exercise", "theory"]);
+
+export const collectionKindSchema = z.enum(["manual", "collection"]);
+export const studyStatusSchema = z.enum(["not_started", "in_progress", "consolidated"]);
+const completeTempo = (v: { targetBpm?: number; noteVal?: string }) => (v.targetBpm === undefined) === (v.noteVal === undefined);
+
+export const libraryItemInputSchema = z.object({
+  subjectId: z.number().int().positive(),
+  kind: libraryKindSchema,
+  title: z.string().trim().min(1).max(140),
+  composer: z.string().trim().max(120).optional(),
+  catalog: z.string().trim().max(60).optional(),
+  notes: z.string().trim().max(2000).optional(),
+  studyStatus: studyStatusSchema.default("not_started"),
+  startBpm: bpmSchema.optional(),
+  targetBpm: bpmSchema.optional(),
+  noteVal: noteValSchema.optional(),
+  techniqueIds: z.array(z.number().int().positive()).optional(),
+  tags: z.array(z.string()).optional(),
+}).refine(completeTempo, { path: ["targetBpm"], message: "BPM and note value must be set together" });
+
+export const segmentInputSchema = z.object({
+  id: z.number().int().positive().optional(),
+  label: z.string().trim().min(1).max(140),
+  position: z.number().int().nonnegative(),
+  barStart: z.number().int().nonnegative().optional(),
+  barEnd: z.number().int().nonnegative().optional(),
+  notes: z.string().trim().max(2000).optional(),
+  targetBpm: bpmSchema.optional(),
+  noteVal: noteValSchema.optional(),
+  layers: z.array(z.string()),
+  techniqueIds: z.array(z.number().int().positive()).optional(),
+}).refine(completeTempo, { path: ["targetBpm"], message: "BPM and note value must be set together" })
+  .refine(v => (v.barStart === undefined && v.barEnd === undefined) || (v.barStart !== undefined && v.barEnd !== undefined && v.barEnd >= v.barStart), { path: ["barEnd"], message: "Specify a complete, ordered bar range" });
+
+export const collectionLinkInputSchema = z.object({
+  reference: z.string().trim().max(120).optional(),
+  pageStart: z.number().int().positive().optional(),
+  pageEnd: z.number().int().positive().optional(),
+}).refine(v => v.pageEnd === undefined || (v.pageStart !== undefined && v.pageEnd >= v.pageStart), { path: ["pageEnd"], message: "Specify an ordered page range" });
 
 export const collectionInputSchema = z.object({
-  kind: libraryKindSchema,
+  kind: collectionKindSchema,
   name: z.string().trim().min(1).max(120),
   composer: z.string().trim().max(120).optional(),
   catalog: z.string().trim().max(60).optional(),
+  edition: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(2000).optional(),
   color: colorKeySchema.optional(),
   defaultSubjectId: z.number().int().positive().optional(),

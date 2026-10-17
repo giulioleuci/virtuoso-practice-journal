@@ -1,7 +1,42 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { NOTE_VALUES } from "@/domain/constants/noteValues";
-import { sessionInputSchema, taskInputSchema, flattenErrors, bpmSchema } from "./schemas";
+import { sessionInputSchema, taskInputSchema, flattenErrors, bpmSchema, libraryKindSchema, collectionKindSchema, libraryItemInputSchema, segmentInputSchema, collectionLinkInputSchema } from "./schemas";
+
+describe("study materials", () => {
+  it("accepts the five autonomous types and rejects material kinds as containers", () => {
+    expect(libraryKindSchema.options).toEqual(["piece", "study", "technique", "exercise", "theory"]);
+    expect(collectionKindSchema.safeParse("piece").success).toBe(false);
+    expect(collectionKindSchema.safeParse("manual").success).toBe(true);
+    expect(libraryItemInputSchema.parse({ subjectId: 1, kind: "study", title: " Study " }).studyStatus).toBe("not_started");
+    expect(libraryItemInputSchema.safeParse({ subjectId: 1, kind: "study", title: " " }).success).toBe(false);
+  });
+
+  it("requires complete optional tempo pairs on materials and segments", () => {
+    const item = { subjectId: 1, kind: "exercise", title: "Reading" };
+    const segment = { label: "A", position: 0, layers: [] };
+    for (const [schema, input] of [[libraryItemInputSchema, item], [segmentInputSchema, segment]] as const) {
+      expect(schema.safeParse(input).success).toBe(true);
+      expect(schema.safeParse({ ...input, targetBpm: 80 }).success).toBe(false);
+      expect(schema.safeParse({ ...input, noteVal: "quarter" }).success).toBe(false);
+      expect(schema.safeParse({ ...input, targetBpm: 80, noteVal: "quarter" }).success).toBe(true);
+    }
+  });
+
+  it("validates bar ranges including pickup and single bars", () => {
+    const segment = { label: "A", position: 0, layers: [] };
+    for (const [barStart, barEnd] of [[0, 8], [8, 8]]) expect(segmentInputSchema.safeParse({ ...segment, barStart, barEnd }).success).toBe(true);
+    for (const patch of [{ barStart: 9, barEnd: 8 }, { barStart: 1 }, { barEnd: 2 }, { barStart: -1, barEnd: 2 }, { barStart: 1.5, barEnd: 3 }, { position: -1 }, { label: " " }]) {
+      expect(segmentInputSchema.safeParse({ ...segment, ...patch }).success).toBe(false);
+    }
+  });
+
+  it("allows a single page but requires ordered positive page ranges", () => {
+    expect(collectionLinkInputSchema.safeParse({ pageStart: 3 }).success).toBe(true);
+    expect(collectionLinkInputSchema.safeParse({ reference: "Exercise 37", pageStart: 3, pageEnd: 4 }).success).toBe(true);
+    for (const input of [{ pageStart: 4, pageEnd: 3 }, { pageEnd: 4 }, { pageStart: 0 }, { pageStart: 1.5 }]) expect(collectionLinkInputSchema.safeParse(input).success).toBe(false);
+  });
+});
 
 describe("bpmSchema", () => {
   it("accepts in-range integers", () => {

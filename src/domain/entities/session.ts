@@ -6,7 +6,7 @@ export interface SessionSnapshot {
   subjectName: string;
   itemTitle?: string;
   itemComposer?: string;
-  segments?: { id: string; label: string }[];
+  segments?: { id: string; label: string; barStart?: number; barEnd?: number }[];
   collectionName?: string;
   techniqueNames?: string[];
 }

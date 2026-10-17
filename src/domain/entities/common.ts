@@ -3,7 +3,9 @@ import type { NoteVal } from "../constants/noteValues";
 export type { NoteVal };
 export type Lang = "en" | "it" | "es" | "de";
 export type SubjectType = "instrument" | "theory" | "composition" | "other";
-export type LibraryKind = "repertoire" | "manual" | "technique" | "theory";
+export type LibraryKind = "piece" | "study" | "technique" | "exercise" | "theory";
+export type CollectionKind = "manual" | "collection";
+export type StudyStatus = "not_started" | "in_progress" | "consolidated";
 export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum" | "coral" | "amber" | "teal" | "indigo" | "slate";
 export type ReminderFreq = "daily" | "weekdays" | "custom";
 
@@ -24,6 +26,7 @@ export interface SegmentMark extends SegmentEntry {
   /** 1 very low … 5 very high: how well attention held. */
   focus?: number;
   targetBpm?: number;
+  targetNoteVal?: NoteVal;
 }
 
 /** The three per-section ratings in display order; each is an integer 1-5. */
