@@ -282,7 +282,7 @@ export default function Library() {
       />
 
       <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-border max-[699px]:block">
-        <div role="tablist" className="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden no-scrollbar max-[699px]:w-full">
+        <div role="tablist" aria-label={t("library.materials")} className="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden no-scrollbar max-[699px]:w-full">
           {LIBRARY_KINDS.map(({ key, tKey }) => (
             <button
               key={key}

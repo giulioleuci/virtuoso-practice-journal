@@ -31,7 +31,7 @@ interface Props {
   onSegmentsSelected?: (ids: number[]) => void;
 }
 
-const KIND_VALS: (LibraryKind | "all")[] = ["all", "repertoire", "manual", "technique", "theory"];
+const KIND_VALS: (LibraryKind | "all")[] = ["all", "piece", "study", "technique", "exercise", "theory"];
 const LINK_TYPE_VALS: TaskLinkType[] = ["free", "item", "collection"];
 
 export function LinkTargetFields({
@@ -171,7 +171,6 @@ function ItemPicker({
               type="button"
               onClick={() => {
                 setKindFilter(val);
-                if (val !== "repertoire" && val !== "all") setCollectionFilter("all");
               }}
               className={cn(
                 "text-xs px-3 py-1.5 rounded-paper border transition-colors",
@@ -184,7 +183,7 @@ function ItemPicker({
         </div>
       </div>
 
-      {(kindFilter === "all" || kindFilter === "repertoire") && allCollections.length > 0 && (
+      {allCollections.length > 0 && (
         <MultiChipPicker
           label={t("link.filterByCollection")}
           options={allCollections.map((c) => ({ value: c.id, label: c.name }))}

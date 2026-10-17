@@ -13,7 +13,7 @@ async function hasSessions(itemId: number) {
   return taskIds.length > 0 && (await db.sessions.where("taskId").anyOf(taskIds).count()) > 0;
 }
 async function hardDelete(itemId: number) {
-  await db.transaction("rw", db.library, db.segments, db.tasks, db.collectionItems, db.performanceItems, async () => {
+  await db.transaction("rw", [db.library, db.segments, db.tasks, db.collectionItems, db.performanceItems], async () => {
     await db.segments.where("itemId").equals(itemId).delete();
     await db.tasks.where("itemId").equals(itemId).delete();
     await db.collectionItems.where("itemId").equals(itemId).delete();
@@ -26,7 +26,7 @@ export const libraryRepository = {
   get: (id: number) => db.library.get(id),
   async upsert(item: Draft<LibraryItem>, segments?: SegmentInput[], collectionIds?: number[]) {
     const data = libraryItemInputSchema.parse(item);
-    const inputs = segments?.map(segment => segmentInputSchema.parse(segment));
+    const inputs = segments?.map(segment => ({ ...segment, ...segmentInputSchema.parse(segment) }));
     const ts = now();
     return db.transaction("rw", [db.library, db.segments, db.subjects, db.techniques, db.tasks, db.sessions, db.recordings, db.collections, db.collectionItems, db.performanceItems], async () => {
       const subject = await db.subjects.get(data.subjectId);

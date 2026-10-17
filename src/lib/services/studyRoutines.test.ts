@@ -98,6 +98,19 @@ function makeConfig(
 // ---------------------------------------------------------------------------
 
 describe("studyRoutinesService.create — task generation", () => {
+  it("keeps a mixed manual as one collection activity with the routine subject", async () => {
+    const subjectId = await seedSubject();
+    const collectionId = await seedCollection(subjectId);
+    await db.collections.update(collectionId, { kind: "manual" });
+    const theory = await db.library.add({ subjectId, kind: "theory", studyStatus: "not_started", title: "Theory", createdAt: 1 });
+    const study = await db.library.add({ subjectId, kind: "study", studyStatus: "not_started", title: "Study", createdAt: 1 });
+    await db.collectionItems.bulkAdd([{ collectionId, itemId: theory, position: 0, createdAt: 1 }, { collectionId, itemId: study, position: 1, createdAt: 1 }]);
+    const id = await studyRoutinesService.create(makeConfig(subjectId, [{ type: "collection", id: collectionId }], { weeksAhead: 1 }));
+    const tasks = await db.tasks.where("studyRoutineId").equals(id).toArray();
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toMatchObject({ collectionId, subjectId, linkType: "collection", plan: [] });
+    expect(tasks[0].itemId).toBeUndefined();
+  });
   it("resolves inherited section targets and copies plans for each generated activity", async () => {
     const subjectId = await seedSubject();
     const itemId = await seedItem(subjectId);

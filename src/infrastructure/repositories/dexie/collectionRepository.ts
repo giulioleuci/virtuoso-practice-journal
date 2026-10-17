@@ -50,7 +50,7 @@ export const collectionRepository = {
     const rows = await db.collections.where("id").anyOf(links.map(link => link.collectionId)).toArray();
     return rows.filter(active).sort((a, b) => a.name.localeCompare(b.name));
   },
-  async items(collectionId: number) { return (await db.collectionItems.where("collectionId").equals(collectionId).toArray()).sort((a, b) => a.position - b.position || a.id - b.id); },
+  async items(collectionId: number): Promise<CollectionItem[]> { return (await db.collectionItems.where("collectionId").equals(collectionId).toArray()).sort((a, b) => a.position - b.position || a.id - b.id); },
   async listItems(collectionId: number) {
     const links = await this.items(collectionId);
     const rows = await db.library.bulkGet(links.map(link => link.itemId));
@@ -94,7 +94,7 @@ export const collectionRepository = {
     await db.transaction("rw", db.collections, db.collectionItems, async () => {
       await requireCollection(collectionId);
       const links = await this.items(collectionId);
-      const byItem = new Map(links.map(link => [link.itemId, link.id]));
+      const byItem = new Map<number, number>(links.map(link => [link.itemId, link.id]));
       if (itemIds.length !== links.length || new Set(itemIds).size !== itemIds.length || itemIds.some(id => !byItem.has(id))) throw new Error("collection.error.order");
       for (const [position, id] of itemIds.entries()) await db.collectionItems.update(byItem.get(id)!, { position });
     });
