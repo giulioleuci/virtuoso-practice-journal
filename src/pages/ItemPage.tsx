@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Pencil, Play } from "lucide-react";
 import type { Session } from "@/domain/entities/session";
-import { meanConfidence, topBpm } from "@/domain/logic/sessionMetrics";
+import { meanConfidence, topBpm, topMark } from "@/domain/logic/sessionMetrics";
 import { sessionLabel, tempoLabel } from "@/lib/format";
 import { formatDate, today } from "@/lib/date";
 import { subjectColorCss } from "@/lib/subjectColors";
@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useAllCollections, useCollectionLinksByItem, useItem, useSegmentsByItem, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionHeader } from "@/components/shared/SectionHeader";
@@ -45,7 +44,7 @@ export default function ItemPage() {
 
   const sorted = useMemo(() => [...(sessions ?? [])].sort((a, b) => b.date.localeCompare(a.date)), [sessions]);
   const last = sorted[0];
-  const lastBpm = sorted.map((s) => topBpm(s.marks)).find(Boolean);
+  const lastTempo = sorted.map(s => topMark(s.marks)).find(m => m?.bpm);
 
   if (item === undefined || sessions === undefined) return <div className="paper-skeleton h-40 w-full" />;
   if (!item || item.deletedAt) return <EmptyState title={t("item.notFound")} />;
@@ -94,7 +93,9 @@ export default function ItemPage() {
             <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: subjectColorCss(subject?.color, subject?.type, subject?.customColor) }} />{subject?.name}</span>
             {item.composer && <span className="italic">{item.composer}</span>}
             {item.inRepertoire && <span>{t("repertoire.title")}</span>}
-            {item.kind === "manual" && item.totalExercises && <span>{t("item.exercisePosition", { current: item.currentExercise ?? 1, total: item.totalExercises })}</span>}
+            <span>{t(`library.kind.${item.kind}`)}</span>
+            <span>{t(`library.status.${item.studyStatus}`)}</span>
+            {item.catalog && <span>{item.catalog}</span>}
           </span>
         }
         actions={<Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />{t("common.edit")}</Button>}
@@ -119,7 +120,7 @@ export default function ItemPage() {
               <SectionHeader title={t("item.studyTitle")} action={studyBtn} />
               <dl className="flex flex-wrap gap-x-10 gap-y-3">
                 <div><dt className="text-xs text-muted-foreground">{t("item.sessionsStat")}</dt><dd className="font-numeric text-xl tabular-nums">{sorted.length}</dd></div>
-                {!isTheory && <div><dt className="text-xs text-muted-foreground">{t("item.lastTempo")}</dt><dd className="font-numeric text-xl tabular-nums">{lastBpm ?? "—"}{item.targetBpm ? <span className="text-sm text-muted-foreground"> / {item.targetBpm}</span> : null}</dd></div>}
+                {!isTheory && <div><dt className="text-xs text-muted-foreground">{t("item.lastTempo")}</dt><dd className="font-numeric text-xl tabular-nums">{lastTempo?.bpm ? tempoLabel(lastTempo.noteVal, lastTempo.bpm) : "—"}{item.targetBpm ? <span className="ml-2 text-sm text-muted-foreground">{t("library.targetTempo")}: {tempoLabel(item.noteVal, item.targetBpm)}</span> : null}</dd></div>}
                 <div><dt className="text-xs text-muted-foreground">{t("item.lastSession")}</dt><dd className="font-numeric text-xl tabular-nums">{last ? formatDate(last.date, lang, "dayMonth") : "—"}</dd></div>
               </dl>
             </section>
@@ -127,7 +128,7 @@ export default function ItemPage() {
             {!isTheory && sorted.some((s) => topBpm(s.marks)) && (
               <section>
                 <SectionHeader title={t("item.tempoTrend")} action={<button type="button" onClick={() => setTab("analysis")} className="text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">{t("item.fullAnalysis")}</button>} />
-                <BpmTimelineChart sessions={sorted} targetBpm={item.targetBpm} />
+                <BpmTimelineChart sessions={sorted} targetBpm={item.targetBpm} targetNoteVal={item.noteVal} />
               </section>
             )}
 
@@ -142,17 +143,12 @@ export default function ItemPage() {
               <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("item.context")}</h3>
               <p className="text-xs text-muted-foreground">{t("item.collections")}</p>
               <p className="mb-3 text-sm">
-                {itemCollections.length ? itemCollections.map((c) => <Link key={c!.id} to={`/library/collections?kind=${item.kind}`} className="mr-3 inline-block font-medium text-primary hover:underline underline-offset-4">{c!.name}</Link>) : t("item.noCollection")}
+                {itemCollections.length ? itemCollections.map((c) => <Link key={c!.id} to={`/library/collections/${c!.id}`} className="mr-3 inline-block font-medium text-primary hover:underline underline-offset-4">{c!.name}</Link>) : t("item.noCollection")}
               </p>
               <p className="text-xs text-muted-foreground">{t("item.techniques")}</p>
               <p className="mb-3 text-sm">{techNames.length ? techNames.join(", ") : t("item.noTechniques")}</p>
-              {item.kind === "manual" && item.totalExercises && (
-                <>
-                  <p className="text-xs text-muted-foreground">{t("item.manualProgress")}</p>
-                  <p className="text-sm">{t("item.exercisePosition", { current: item.currentExercise ?? 1, total: item.totalExercises })}</p>
-                  <Progress value={((item.currentExercise ?? 1) / item.totalExercises) * 100} className="mt-2 h-1.5" />
-                </>
-              )}
+              {item.notes && <><p className="text-xs text-muted-foreground">{t("library.stableNotes")}</p><p className="whitespace-pre-line break-words text-sm">{item.notes}</p></>}
+
             </section>
             <section className="border-t border-border pt-5">
               <h3 className="mb-1 font-serif text-xl font-semibold">{t("item.questionsPrompt")}</h3>
@@ -174,8 +170,10 @@ export default function ItemPage() {
                 <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-4">
                   <div className="min-w-full flex-1 min-[700px]:min-w-0">
                     <h3 className="text-base font-medium">{s.label}</h3>
+                    {s.barStart !== undefined && <p className="text-xs text-muted-foreground">{t("segments.bars", { start: s.barStart, end: s.barEnd! })}</p>}
                     <div className="mt-1 flex flex-wrap gap-x-3 text-xs tabular-nums text-muted-foreground">
-                      {(s.targetBpm ?? item.targetBpm) && <span>{tempoLabel(s.noteVal ?? item.noteVal, (s.targetBpm ?? item.targetBpm)!)}</span>}
+                      {(s.targetBpm ?? item.targetBpm) && <span>{tempoLabel(s.targetBpm !== undefined ? s.noteVal : item.noteVal, (s.targetBpm ?? item.targetBpm)!)} · {t(s.targetBpm !== undefined ? "segments.specific" : "segments.inherited")}</span>}
+                      {s.notes && <span>{s.notes}</span>}
                       {s.layers.map((l) => <span key={l}>{l}</span>)}
                       {(s.techniqueIds ?? []).map((tid) => <span key={tid}>{techniques?.find((x) => x.id === tid)?.name}</span>)}
                     </div>

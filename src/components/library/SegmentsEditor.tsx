@@ -1,53 +1,49 @@
 import { useState } from "react";
 import { Plus, X, ArrowUp, ArrowDown } from "lucide-react";
-import type { NoteVal } from "@/domain/entities/common";
+import type { LibraryItem, SegmentInput } from "@/domain/entities/library";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { nativeSelect } from "@/components/diary/WhenFields";
+import { tempoLabel } from "@/lib/format";
 import { BpmCoupler } from "./BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
-export interface DraftSegment {
-  label: string;
-  targetBpm?: number;
-  noteVal?: NoteVal;
-  layers: string[];
-  techniqueIds?: number[];
-}
-
 interface Props {
-  segments: DraftSegment[];
-  onChange: (next: DraftSegment[]) => void;
+  segments: SegmentInput[];
+  onChange: (next: SegmentInput[]) => void;
+  itemTempo?: Pick<LibraryItem, "targetBpm" | "noteVal">;
   /** Subject-defined layers (closed vocabulary). */
   subjectLayers?: string[];
   /** Subject-defined techniques. */
   techniqueOptions?: { value: number; label: string }[];
 }
 
-export function SegmentsEditor({ segments, onChange, subjectLayers = [], techniqueOptions = [] }: Props) {
+export function SegmentsEditor({ segments, onChange, itemTempo, subjectLayers = [], techniqueOptions = [] }: Props) {
   const { t } = useI18n();
   const [draftLabel, setDraftLabel] = useState("");
 
   const addSegment = () => {
     const trimmed = draftLabel.trim();
     if (!trimmed) return;
-    onChange([...segments, { label: trimmed, layers: [], techniqueIds: [] }]);
+    onChange([...segments, { label: trimmed, position: segments.length, layers: [], techniqueIds: [] }]);
     setDraftLabel("");
   };
 
-  const update = (i: number, patch: Partial<DraftSegment>) =>
+  const update = (i: number, patch: Partial<SegmentInput>) =>
     onChange(segments.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
 
-  const remove = (i: number) => onChange(segments.filter((_, idx) => idx !== i));
+  const remove = (i: number) => onChange(segments.filter((_, idx) => idx !== i).map((s, position) => ({ ...s, position })));
 
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
     if (j < 0 || j >= segments.length) return;
     const next = segments.slice();
     [next[i], next[j]] = [next[j], next[i]];
-    onChange(next);
+    onChange(next.map((s, position) => ({ ...s, position })));
   };
 
   const layerOptions = subjectLayers.map((l) => ({ value: l, label: l }));
@@ -60,6 +56,7 @@ export function SegmentsEditor({ segments, onChange, subjectLayers = [], techniq
 
       <div className="paper-card p-2 flex gap-2 items-center">
         <Input
+          aria-label={t("segments.label")}
           value={draftLabel}
           onChange={(e) => setDraftLabel(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSegment())}
@@ -75,10 +72,13 @@ export function SegmentsEditor({ segments, onChange, subjectLayers = [], techniq
         <ul className="space-y-2">
           {segments.map((s, i) => {
             const labelInvalid = s.label.trim().length === 0;
+            const barInvalid = (s.barStart !== undefined || s.barEnd !== undefined) && (s.barStart === undefined || s.barEnd === undefined || s.barEnd < s.barStart || !Number.isInteger(s.barStart) || !Number.isInteger(s.barEnd) || s.barStart < 0);
             return (
-              <li key={i} className="paper-card p-3 space-y-3">
+              <li key={s.id ?? `new-${i}`} className="paper-card p-3 space-y-3">
                 <div className="flex items-center gap-2">
                   <Input
+                    aria-label={t("segments.label")}
+                    aria-invalid={labelInvalid}
                     value={s.label}
                     onChange={(e) => update(i, { label: e.target.value })}
                     className={cn(
@@ -95,18 +95,29 @@ export function SegmentsEditor({ segments, onChange, subjectLayers = [], techniq
                     <ArrowDown className="h-4 w-4" />
                   </button>
                   <button type="button" onClick={() => remove(i)}
+                    aria-label={`${t("common.delete")}: ${s.label}`}
                     className="text-muted-foreground hover:text-destructive p-1">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
                 {labelInvalid && <p className="text-xs text-destructive -mt-1">{t("segments.labelRequired")}</p>}
 
-                <BpmCoupler
-                  bpm={s.targetBpm}
-                  noteVal={s.noteVal}
-                  onChange={(next) => update(i, next)}
-                  label={t("segments.targetLabel")}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  {(["barStart", "barEnd"] as const).map(field => <label key={field} className="space-y-1 text-xs font-medium">
+                    {t(`segments.${field}`)}
+                    <Input type="number" inputMode="numeric" min={0} step={1} value={s[field] ?? ""} aria-invalid={barInvalid} aria-describedby={barInvalid ? `bars-${i}` : undefined} onChange={e => update(i, { [field]: e.target.value === "" ? undefined : Number(e.target.value) })} />
+                  </label>)}
+                </div>
+                {barInvalid && <p id={`bars-${i}`} role="alert" className="text-xs text-destructive">{t("segments.barRangeError")}</p>}
+                <label className="grid gap-1.5 text-xs font-medium">
+                  {t("segments.tempoSource")}
+                  <select className={nativeSelect} value={s.targetBpm !== undefined || s.noteVal !== undefined ? "specific" : "inherited"} onChange={e => update(i, e.target.value === "inherited" ? { targetBpm: undefined, noteVal: undefined } : { targetBpm: itemTempo?.targetBpm ?? 60, noteVal: itemTempo?.noteVal ?? "quarter" })}>
+                    <option value="inherited">{t("segments.inherited")}</option>
+                    <option value="specific">{t("segments.specific")}</option>
+                  </select>
+                </label>
+                {s.targetBpm !== undefined || s.noteVal !== undefined ? <BpmCoupler bpm={s.targetBpm} noteVal={s.noteVal} onChange={({ bpm, noteVal }) => update(i, { targetBpm: bpm, noteVal })} label={t("segments.targetLabel")} /> : <p className="text-sm text-muted-foreground">{itemTempo?.targetBpm !== undefined ? tempoLabel(itemTempo.noteVal, itemTempo.targetBpm) : t("segments.noInheritedTempo")}</p>}
+                <label className="grid gap-1.5 text-xs font-medium">{t("segments.notes")}<Textarea rows={2} maxLength={2000} value={s.notes ?? ""} onChange={e => update(i, { notes: e.target.value || undefined })} /></label>
 
                 <MultiChipPicker
                   label={t("tasks.layers")}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
-import type { LibraryKind } from "@/domain/entities/common";
+import type { LibraryKind, StudyStatus } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,7 @@ export default function Library() {
   const { t, lang } = useI18n();
   const libraryQuote = useMemo(() => pickQuote(LIBRARY_QUOTES, lang), [lang]);
   const navigate = useNavigate();
+  const [statusFilter, setStatusFilter] = useState<StudyStatus | "all">("all");
   const [active, setActive] = useState<LibraryKind>("piece");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<LibraryItem | null>(null);
@@ -71,6 +72,7 @@ export default function Library() {
   const filteredItems = useMemo(() => {
     let arr = items ?? [];
     if (subjectFilter !== "all") arr = arr.filter((i) => i.subjectId === Number(subjectFilter));
+    if (statusFilter !== "all") arr = arr.filter(i => i.studyStatus === statusFilter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       arr = arr.filter(
@@ -82,12 +84,12 @@ export default function Library() {
       if (sortBy === "composer") return (a.composer ?? "").localeCompare(b.composer ?? "");
       return b.createdAt - a.createdAt;
     });
-  }, [items, subjectFilter, search, sortBy]);
+  }, [items, subjectFilter, statusFilter, search, sortBy]);
 
   const PAGE_SIZE = 5;
   const [page, setPage] = useState(1);
   const [pageByGroup, setPageByGroup] = useState<Record<string, number>>({});
-  useEffect(() => { setPage(1); setPageByGroup({}); }, [active, subjectFilter, search, sortBy, groupByCollection]);
+  useEffect(() => { setPage(1); setPageByGroup({}); }, [active, subjectFilter, statusFilter, search, sortBy, groupByCollection]);
   const setGroupPage = (key: string, p: number) =>
     setPageByGroup((prev) => ({ ...prev, [key]: p }));
 
@@ -144,7 +146,7 @@ export default function Library() {
     const techNames = (it.techniqueIds ?? [])
       .map((id) => (allTechniques ?? []).find((tech) => tech.id === id)?.name)
       .filter(Boolean) as string[];
-    const hasSparkline = !!it.id && (it.kind === "repertoire" || it.kind === "technique" || it.kind === "manual");
+    const hasSparkline = !!it.id && it.kind !== "theory";
     return (
       <li key={it.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 py-[18px]">
         <div className="min-w-[calc(100%-7rem)] flex-1 min-[700px]:min-w-0">
@@ -157,10 +159,9 @@ export default function Library() {
             {it.composer && <span className="italic">{it.composer}</span>}
             {it.kind === "technique" && (it.startBpm || it.targetBpm) && <span>{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>}
             {it.kind !== "technique" && it.targetBpm && <span>{it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}</span>}
-            {it.kind === "manual" && (it.totalExercises || it.currentExercise) && (
-              <span>{it.totalExercises ? t("library.exerciseOf", { current: it.currentExercise ?? 1, total: it.totalExercises }) : t("library.exercise", { current: it.currentExercise ?? 1 })}</span>
-            )}
-            {(it.kind === "repertoire" || it.kind === "manual") && segs.length > 0 && <span>{t("library.segments", { count: segs.length })}</span>}
+            {segs.length > 0 && <span>{t("library.segments", { count: segs.length })}</span>}
+            <span>{t(`library.status.${it.studyStatus}`)}</span>
+            {it.catalog && <span>{it.catalog}</span>}
             {it.tags?.map((tag) => <span key={`tag-${tag}`}>#{tag}</span>)}
             {techNames.map((name) => <span key={name}>{name}</span>)}
           </div>
@@ -214,11 +215,11 @@ export default function Library() {
     if (!filteredItems.length) {
       return items.length === 0
         ? <FeatureEmptyState description={t("library.empty")} quote={libraryQuote} action={{ label: t("library.addToLibrary"), onClick: openCreate }} />
-        : <EmptyState icon={SearchX} title={t("library.noItemsMatch")} cta={{ label: t("states.clearFilters"), icon: RotateCcw, onClick: () => { setSearch(""); setSubjectFilter("all"); } }} />;
+        : <EmptyState icon={SearchX} title={t("library.noItemsMatch")} cta={{ label: t("states.clearFilters"), icon: RotateCcw, onClick: () => { setSearch(""); setSubjectFilter("all"); setStatusFilter("all"); } }} />;
     }
 
     if (groupByCollection) {
-      const cols = (allCollections ?? []).filter((c) => c.kind === active).slice().sort((a, b) => a.name.localeCompare(b.name));
+      const cols = (allCollections ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
       const links = allCollectionLinks ?? [];
       const filteredIds = new Set(filteredItems.map((i) => i.id));
       const itemsById = new Map(filteredItems.map((i) => [i.id, i]));
@@ -295,7 +296,7 @@ export default function Library() {
           ))}
         </div>
         <div className="flex flex-wrap pb-1 max-[699px]:mt-3">
-          <Link to={`/library/collections?kind=${active}`} className={linkCls}><FolderOpen className="h-4 w-4" />{t("library.collections")}</Link>
+          <Link to="/library/collections" className={linkCls}><FolderOpen className="h-4 w-4" />{t("library.collections")}</Link>
           <Link to="/library/repertoire" className={linkCls}><Star className="h-4 w-4" />{t("repertoire.tab")}</Link>
           <Link to="/library/repertoire?tab=performances" className={linkCls}><Flag className="h-4 w-4" />{t("library.events")}</Link>
         </div>
@@ -309,6 +310,10 @@ export default function Library() {
             <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
             {(subjects ?? []).map((s) => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
           </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={v => setStatusFilter(v as StudyStatus | "all")}>
+          <SelectTrigger aria-label={t("library.studyStatus")}><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">{t("library.allStatuses")}</SelectItem>{(["not_started", "in_progress", "consolidated"] as const).map(status => <SelectItem key={status} value={status}>{t(`library.status.${status}`)}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
           <SelectTrigger aria-label={t("library.sortRecent")}><SelectValue /></SelectTrigger>

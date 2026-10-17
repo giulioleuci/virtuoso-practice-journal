@@ -1,11 +1,9 @@
 /** Kind-specific form fields for library items, extracted from NewLibraryItemSheet
  *  to keep the parent sheet focused on layout & save orchestration. */
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { BpmCoupler } from "./BpmCoupler";
-import { SegmentsEditor, type DraftSegment } from "./SegmentsEditor";
+import { SegmentsEditor } from "./SegmentsEditor";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
-import { cn } from "@/lib/utils";
+import type { SegmentInput } from "@/domain/entities/library";
 import type { LibraryKind, NoteVal } from "@/domain/entities/common";
 import { useI18n } from "@/lib/i18n";
 
@@ -15,9 +13,7 @@ interface Props {
   startBpm?: number; setStartBpm: (v?: number) => void;
   noteVal?: NoteVal; setNoteVal: (v?: NoteVal) => void;
   techniqueIds: number[]; setTechniqueIds: (v: number[]) => void;
-  segments: DraftSegment[]; setSegments: (v: DraftSegment[]) => void;
-  totalExercises?: number; setTotalExercises: (v?: number) => void;
-  currentExercise?: number; setCurrentExercise: (v?: number) => void;
+  segments: SegmentInput[]; setSegments: (v: SegmentInput[]) => void;
   techniqueOptions: { value: number; label: string }[];
   subjectLayers: string[];
   collectionIds?: number[]; setCollectionIds?: (v: number[]) => void;
@@ -48,48 +44,9 @@ export function LibraryItemKindFields(p: Props) {
     </div>
   );
 
-  if (p.kind === "theory") {
-    return (
-      <>
-        {collectionsBlock}
-        <SegmentsEditor
-          segments={p.segments}
-          onChange={p.setSegments}
-          subjectLayers={p.subjectLayers}
-          techniqueOptions={p.techniqueOptions}
-        />
-      </>
-    );
-  }
-
   return (
     <>
-      {p.kind === "manual" && (
-        <div className="grid grid-cols-2 gap-3">
-
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">{t("library.currentExercise")}</Label>
-            <Input
-              type="number" min={1}
-              value={p.currentExercise ?? ""}
-              onChange={(e) => p.setCurrentExercise(e.target.value ? Number(e.target.value) : undefined)}
-              className="bg-card"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">{t("library.totalExercises")}</Label>
-            <Input
-              type="number" min={1}
-              value={p.totalExercises ?? ""}
-              onChange={(e) => p.setTotalExercises(e.target.value ? Number(e.target.value) : undefined)}
-              className="bg-card"
-              placeholder={t("common.optional")}
-            />
-          </div>
-        </div>
-      )}
-
-      {p.kind === "technique" ? (
+      {p.kind !== "theory" && (<>      {p.kind === "technique" ? (
         <>
           <BpmCoupler bpm={p.startBpm} noteVal={p.noteVal} onChange={(n) => { p.setStartBpm(n.bpm); p.setNoteVal(n.noteVal); }} label={t("library.startingTempo")} />
           <BpmCoupler bpm={p.targetBpm} noteVal={p.noteVal} onChange={(n) => { p.setTargetBpm(n.bpm); p.setNoteVal(n.noteVal); }} label={t("library.targetTempo")} />
@@ -97,6 +54,8 @@ export function LibraryItemKindFields(p: Props) {
       ) : (
         <BpmCoupler bpm={p.targetBpm} noteVal={p.noteVal} onChange={(n) => { p.setTargetBpm(n.bpm); p.setNoteVal(n.noteVal); }} />
       )}
+
+      </>)}
 
       <MultiChipPicker
         label={t("library.techniquesCovered")}
@@ -109,6 +68,7 @@ export function LibraryItemKindFields(p: Props) {
       {collectionsBlock}
 
       <SegmentsEditor
+        itemTempo={{ targetBpm: p.targetBpm, noteVal: p.noteVal }}
         segments={p.segments}
         onChange={p.setSegments}
         subjectLayers={p.subjectLayers}
