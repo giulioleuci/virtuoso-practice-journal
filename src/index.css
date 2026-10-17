@@ -194,6 +194,15 @@
 }
 
 @layer components {
+  .app-shell {
+    --navigation-height: 72px;
+    --floating-bottom: calc(12px + max(env(safe-area-inset-bottom), var(--keyboard-inset, 0px)) + var(--navigation-height));
+  }
+
+  @media (min-width: 700px) {
+    .app-shell { --navigation-height: 0px; }
+  }
+
   /* Outlined surface for selectable tiles and nested fields. Ordinary lists and sections stay open. */
   .paper-card {
     @apply bg-card text-card-foreground border border-border rounded-[10px];

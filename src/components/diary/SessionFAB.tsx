@@ -11,7 +11,7 @@ export function SessionFAB({ className }: { className?: string }) {
       to="/log"
       aria-label={t("diary.freeSession")}
       className={cn(
-        "fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-raised transition-transform hover:scale-105 active:scale-95 min-[700px]:bottom-8",
+        "fixed bottom-[var(--floating-bottom)] right-[max(1rem,env(safe-area-inset-right))] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-raised transition-[bottom,transform] hover:scale-105 active:scale-95",
         className,
       )}
     >

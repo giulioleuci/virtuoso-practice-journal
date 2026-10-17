@@ -147,7 +147,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
                 type="button"
                 onClick={() => setField("color", undefined)}
                 className={cn("h-9 px-3 rounded-full text-xs border", !color ? "border-foreground" : "border-input text-muted-foreground")}
-              >{t("collections.colorNone")}</button>
+              >{t("common.none")}</button>
               {COLORS.map((c) => (
                 <button
                   key={c}
@@ -172,7 +172,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
             >
               <SelectTrigger className="bg-card"><SelectValue placeholder={t("common.optional")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">{t("collections.colorNone")}</SelectItem>
+                <SelectItem value="none">{t("common.none")}</SelectItem>
                 {(subjects ?? []).map((s) => (
                   <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                 ))}

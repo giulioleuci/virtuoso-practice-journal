@@ -184,7 +184,7 @@ export default function Tasks() {
         subtitle={t(subtitle)}
         actions={
           <Button onClick={() => navigate(tab === "routines" ? "/tasks/routines/new" : "/tasks/new")}>
-            <Plus /> {tab === "routines" ? t("plan.newRoutine") : t("diary.newTask")}
+            <Plus /> {tab === "routines" ? t("plan.newRoutine") : t("tasks.newTask")}
           </Button>
         }
       />

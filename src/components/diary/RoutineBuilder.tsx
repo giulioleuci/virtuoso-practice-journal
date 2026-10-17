@@ -276,14 +276,14 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                 ))}
               </div>
               <div className="mb-3 grid gap-2 min-[560px]:grid-cols-[minmax(0,1fr)_auto_auto]">
-                <Input type="search" aria-label={t("bulk.search")} value={search} onChange={(e) => { setSearch(e.target.value); pager.reset(); }} placeholder={t("bulk.searchPlaceholder")} />
+                <Input type="search" aria-label={t("common.search")} value={search} onChange={(e) => { setSearch(e.target.value); pager.reset(); }} placeholder={t("bulk.searchPlaceholder")} />
                 <select aria-label={t("routine.kindFilter")} value={kindFilter} onChange={(e) => { setKindFilter(e.target.value); pager.reset(); }} className={nativeSelect}>
                   <option value="all">{t("routine.kindAll")}</option>
                   {kinds.map((k) => <option key={k.key} value={k.key}>{t(k.tKey)}</option>)}
                   {(collections?.length ?? 0) > 0 && <option value="collection">{t("studyRoutine.collections")}</option>}
                 </select>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button type="button" variant="outline" disabled={!active || !rows.length}><ListChecks />{t("routine.selection")}<ChevronDown /></Button></DropdownMenuTrigger>
+                  <DropdownMenuTrigger asChild><Button type="button" variant="outline" disabled={!active || !rows.length}><ListChecks />{t("common.select")}<ChevronDown /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => active && setEntries(active.id, rows.map((r) => r.entry), true)}>{t("routine.selectVisible", { n: rows.length })}</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => active && setEntries(active.id, rows.map((r) => r.entry), false)}>{t("routine.clearVisible")}</DropdownMenuItem>
@@ -473,7 +473,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
           </StateNotice>
         )}
         {isEdit && <p className="mt-6 text-xs text-muted-foreground">{t("routine.appliesFrom", { date: formatDate(today(), lang, "medium") })}</p>}
-        <div className="mt-7 flex justify-end gap-2 border-t border-border pt-5 max-[699px]:sticky max-[699px]:bottom-[calc(76px+env(safe-area-inset-bottom))] max-[699px]:bg-card max-[699px]:pb-3">
+        <div className="mt-7 flex justify-end gap-2 border-t border-border pt-5 max-[699px]:sticky max-[699px]:bottom-[var(--floating-bottom)] max-[699px]:bg-card max-[699px]:pb-3">
           <Button type="button" variant="ghost" onClick={onCancel}>{t("common.cancel")}</Button>
           <Button type="submit" disabled={errors.length > 0 || submitting}><Check />{t(isEdit ? "routine.save" : "routine.create")}</Button>
         </div>

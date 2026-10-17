@@ -302,7 +302,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
               {t("common.cancel")}
             </Button>
             <Button onClick={save} disabled={!canSave} className="flex-1">
-              {isEdit ? t("library.saveChanges") : t("library.saveToLibrary")}
+              {isEdit ? t("collections.saveChanges") : t("library.saveToLibrary")}
             </Button>
           </div>
         </SheetFooter>

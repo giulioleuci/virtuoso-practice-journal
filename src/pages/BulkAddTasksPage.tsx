@@ -116,7 +116,7 @@ export default function BulkAddTasksPage() {
             </select>
           </label>
           <label className="grid gap-1.5 text-xs font-medium">
-            {t("bulk.search")}
+            {t("common.search")}
             <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("bulk.searchPlaceholder")} />
           </label>
         </div>

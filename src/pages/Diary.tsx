@@ -248,7 +248,7 @@ export default function Diary() {
           <section>
             <WeekStrip date={date} weekStartsOn={profile?.weekStartsOn ?? getDefaultWeekStartsOn(lang)} onSelect={selectDay} />
             <SectionHeader
-              title={isToday ? t("diary.today") : formatDate(date, lang, "long")}
+              title={isToday ? t("common.today") : formatDate(date, lang, "long")}
               action={
                 <>
                   {!isToday && (
@@ -264,7 +264,7 @@ export default function Diary() {
               <span className="tabular-nums">{t("diary.doneSummary", { done: doneCount, total: totalCount })}</span>
               {!!totalCount && (
                 <Button size="sm" variant="ghost" aria-pressed={selecting} onClick={() => (selecting ? stopSelecting() : setSelecting(true))}>
-                  {selecting ? <Check /> : <CheckSquare />} {selecting ? t("diary.selectDone") : t("diary.select")}
+                  {selecting ? <Check /> : <CheckSquare />} {selecting ? t("diary.selectDone") : t("common.select")}
                 </Button>
               )}
             </div>
@@ -555,7 +555,7 @@ export default function Diary() {
         <div
           role="toolbar"
           aria-label={t("diary.selectionBar")}
-          className="fixed inset-x-3 bottom-[calc(78px+env(safe-area-inset-bottom))] z-[60] flex max-w-[760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[14px] border border-border bg-card px-3.5 py-2.5 shadow-raised min-[700px]:bottom-5 min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]"
+          className="fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] bottom-[var(--floating-bottom)] z-[60] flex max-w-[760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[14px] border border-border bg-card px-3.5 py-2.5 shadow-raised min-[700px]:bottom-[max(calc(1.25rem+env(safe-area-inset-bottom)),var(--floating-bottom))] min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]"
         >
           <span className="text-sm"><strong className="font-numeric font-semibold tabular-nums">{t("diary.selectedCount", { count: picked.length })}</strong></span>
           <span className="flex gap-1">
@@ -563,7 +563,7 @@ export default function Diary() {
             <Button size="sm" variant="ghost" onClick={() => setPickedIds([])}>{t("common.none")}</Button>
           </span>
           <span className="flex flex-wrap gap-1.5">
-            <Button size="sm" disabled={bulkBusy || !picked.length} onClick={() => runBulk(async (items) => { await tasksService.bulkSetDone(items.filter((x) => !x.done).flatMap((x) => (x.id === undefined ? [] : [x.id])), true); }, "diary.bulkDone")}>
+            <Button size="sm" disabled={bulkBusy || !picked.length} onClick={() => runBulk(async (items) => { await tasksService.bulkSetDone(items.filter((x) => !x.done).flatMap((x) => (x.id === undefined ? [] : [x.id])), true); }, "toast.tasksBulkDone")}>
               <Check />{t("diary.bulkComplete")}
             </Button>
             <Button size="sm" variant="outline" disabled={bulkBusy || !picked.length} onClick={() => runBulk(async (items) => { for (const x of items) if (!x.done) await tasksService.update(x.id!, { date: tomorrow }); }, "diary.bulkMoved")}>
@@ -573,7 +573,7 @@ export default function Diary() {
               <Archive />{t("diary.bulkArchive")}
             </Button>
             <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" disabled={bulkBusy || !picked.length} onClick={() => setConfirmBulkDelete(true)}>
-              <Trash2 />{t("diary.bulkDelete")}
+              <Trash2 />{t("common.delete")}
             </Button>
           </span>
         </div>
@@ -614,7 +614,7 @@ export default function Diary() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => runBulk(async (items) => { await tasksService.bulkRemove(items.map((x) => x.id!)); }, "diary.bulkRemoved")}
             >
-              {t("diary.bulkDelete")}
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -712,7 +712,7 @@ function EndOfDaySummary({
         <SessionIcon className="h-5 w-5 text-primary" />
         <h3 className="font-serif text-xl text-primary">{t("diary.todaySummary")}</h3>
       </div>
-      <p className="text-sm text-muted-foreground">{t("diary.totalPracticed", { count: tasks.length })}</p>
+      <p className="text-sm text-muted-foreground">{t("toast.tasksBulkDone", { count: tasks.length })}</p>
       <div className="space-y-1">
         {rows.map(({ task, last }) => (
           <div

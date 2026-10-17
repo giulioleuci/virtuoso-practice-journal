@@ -14,11 +14,11 @@ export function FloatingActions({ children, className }: { children: React.React
   const bottom = keyboard > 0 ? `${keyboard + 8}px` : navHidden ? "calc(12px + env(safe-area-inset-bottom))" : "calc(84px + env(safe-area-inset-bottom))";
   return (
     <div
-      style={{ "--bar-bottom": bottom } as React.CSSProperties}
+      style={{ "--bar-bottom": bottom, "--keyboard-bottom": `${keyboard > 0 ? keyboard + 8 : 0}px` } as React.CSSProperties}
       className={cn(
         "fixed z-[60] flex items-center justify-end gap-2 rounded-[14px] border border-border bg-card p-3 shadow-raised transition-[bottom] duration-300 ease-out",
         "bottom-[var(--bar-bottom)] left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))]",
-        "min-[700px]:bottom-5 min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]",
+        "min-[700px]:bottom-[max(calc(1.25rem+env(safe-area-inset-bottom)),var(--keyboard-bottom))] min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]",
         className,
       )}
     >

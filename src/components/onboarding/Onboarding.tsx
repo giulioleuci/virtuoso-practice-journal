@@ -229,7 +229,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         <div className="max-w-xl mx-auto flex gap-3">
           {step > 0 && (
             <Button variant="ghost" onClick={() => setStep(step - 1)} className="flex-1">
-              {t("onb.back")}
+              {t("common.back")}
             </Button>
           )}
           {step < 3 ? (

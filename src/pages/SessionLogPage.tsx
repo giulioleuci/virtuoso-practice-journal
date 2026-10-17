@@ -91,7 +91,7 @@ function BackLink({ onClick }: { onClick?: () => void }) {
   const { t } = useI18n();
   return (
     <Link to="/" onClick={onClick} className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
-      <ChevronLeft className="h-4 w-4" />{t("logPage.back")}
+      <ChevronLeft className="h-4 w-4" />{t("nav.today")}
     </Link>
   );
 }
@@ -132,7 +132,7 @@ function HelpQuestion({ on, onToggle, text, onText, itemTitle }: { on: boolean; 
       </div>
       {on && (
         <div className="mt-3 space-y-2">
-          <Textarea value={text} maxLength={1000} onChange={(e) => onText(e.target.value)} placeholder={t("session.helpPlaceholder")} rows={3} aria-label={t("session.helpPlaceholder")} />
+          <Textarea value={text} maxLength={1000} onChange={(e) => onText(e.target.value)} placeholder={t("help.questionPlaceholder")} rows={3} aria-label={t("help.questionPlaceholder")} />
           <p className="text-xs text-muted-foreground">{itemTitle ? t("logPage.helpLinked", { title: itemTitle }) : t("logPage.helpNoItem")}</p>
         </div>
       )}

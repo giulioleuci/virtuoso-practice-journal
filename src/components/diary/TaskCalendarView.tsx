@@ -92,7 +92,7 @@ export function TaskCalendarView({ subjects }: Props) {
           <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => step(-1)} aria-label={t("calendar.prevMonth")}>
             <ChevronLeft />
           </Button>
-          <Button size="sm" variant="outline" onClick={goToday}>{t("calendar.today")}</Button>
+          <Button size="sm" variant="outline" onClick={goToday}>{t("common.today")}</Button>
           <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => step(1)} aria-label={t("calendar.nextMonth")}>
             <ChevronRight />
           </Button>

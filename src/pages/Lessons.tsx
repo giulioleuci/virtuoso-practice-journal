@@ -179,7 +179,7 @@ export default function Lessons() {
                     {dot(rec.subjectId)}
                     <div className="min-w-0 flex-1">
                       <div className="break-words text-sm font-medium">{rec.teacher} · {subjectName(rec.subjectId)}</div>
-                      <div className="text-xs text-muted-foreground">{isToday ? t("lessons.today") : formatDate(date, lang)}{slot ? ` · ${slot.startTime}–${slot.endTime}` : ""}</div>
+                      <div className="text-xs text-muted-foreground">{isToday ? t("common.today") : formatDate(date, lang)}{slot ? ` · ${slot.startTime}–${slot.endTime}` : ""}</div>
                     </div>
                     <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}><NotebookPen />{t("lessons.log")}</Button>
                   </li>

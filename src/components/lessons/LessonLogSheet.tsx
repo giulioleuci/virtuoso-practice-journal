@@ -61,7 +61,7 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
+      <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl">{isEdit ? t("lesson.edit") : t("lesson.log")}</SheetTitle>
           {recurrence && <p className="text-sm text-muted-foreground italic">{t("lesson.with", { teacher: recurrence.teacher })}</p>}
@@ -69,7 +69,7 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
 
         <div className="space-y-5 mt-5">
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">{t("lesson.date")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("common.date")}</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
 

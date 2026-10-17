@@ -169,7 +169,7 @@ export default function Profile() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
             <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="truncate text-sm">{profile.name || <span className="italic text-muted-foreground">{t("profile.unnamed")}</span>}</span>
+            <span className="truncate text-sm">{profile.name || <span className="italic text-muted-foreground">{t("common.unnamed")}</span>}</span>
           </div>
           <Button type="button" size="sm" variant="outline" aria-label={t("profile.editName")} onClick={() => { setNameDraft(profile.name ?? ""); setEditingName(true); }}>
             <Pencil />{t("common.edit")}

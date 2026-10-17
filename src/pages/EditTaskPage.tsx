@@ -110,7 +110,7 @@ function EditTaskForm({ task }: { task: Task }) {
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div className="grid gap-1.5">
-            <Label className={labelCls}>{t("teacher.subject")}</Label>
+            <Label className={labelCls}>{t("common.subject")}</Label>
             <Select
               value={subjectId?.toString() ?? ""}
               onValueChange={(v) => { setSubjectId(Number(v)); setItemId(undefined); setSegmentIds([]); setCollectionId(undefined); }}
@@ -159,7 +159,7 @@ function EditTaskForm({ task }: { task: Task }) {
 
         <FormErrors errors={errors} className="mt-6" />
 
-        <div className="mt-8 flex justify-end gap-2 border-t border-border pt-5 max-[699px]:sticky max-[699px]:bottom-[calc(76px+env(safe-area-inset-bottom))] max-[699px]:bg-card max-[699px]:pb-3">
+        <div className="mt-8 flex justify-end gap-2 border-t border-border pt-5 max-[699px]:sticky max-[699px]:bottom-[var(--floating-bottom)] max-[699px]:bg-card max-[699px]:pb-3">
           <Button type="button" variant="ghost" onClick={handleCancel}>{t("common.cancel")}</Button>
           <Button type="submit" disabled={errors.length > 0}>{t("common.save")}</Button>
         </div>

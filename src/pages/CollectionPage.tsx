@@ -116,7 +116,7 @@ export default function CollectionPage() {
       <PageHeader
         title={collection.name}
         subtitle={[collection.composer, collection.catalog, collection.edition, collection.notes].filter(Boolean).join(" · ") || undefined}
-        actions={<Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />{t("collection.edit")}</Button>}
+        actions={<Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />{t("collections.editCollection")}</Button>}
       />
 
       {error && <p role="alert" className="mb-4 text-sm text-destructive">{error}</p>}
@@ -174,7 +174,7 @@ export default function CollectionPage() {
                   {item.composer && <div className="text-xs italic text-muted-foreground">{item.composer}</div>}
                   <p className="text-xs text-muted-foreground">{t(`library.kind.${item.kind}`)}</p>
                 </div>
-                <Button size="sm" disabled={busy} aria-label={t("collection.addNamed", { title: item.title })} onClick={() => add(item)}><Plus />{t("collection.add")}</Button>
+                <Button size="sm" disabled={busy} aria-label={t("collection.addNamed", { title: item.title })} onClick={() => add(item)}><Plus />{t("common.add")}</Button>
               </li>
             ))}
           </ul>

@@ -110,7 +110,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
 
         <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-5 mt-5">
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">{t("teacher.subject")}</Label>
+            <Label className="text-xs font-medium text-foreground">{t("common.subject")}</Label>
             <Select value={subjectId?.toString() ?? ""} onValueChange={(v) => setSubjectId(Number(v))}>
               <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
               <SelectContent>
@@ -123,7 +123,7 @@ export function RecurrenceSheet({ open, onOpenChange, recurrence }: Props) {
 
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">{t("teacher.teacherName")}</Label>
-            <Input value={teacher} onChange={(e) => setTeacher(e.target.value)} placeholder={t("teacher.namePlaceholder")} />
+            <Input value={teacher} onChange={(e) => setTeacher(e.target.value)} placeholder={t("common.name")} />
           </div>
 
           <div className="space-y-3">

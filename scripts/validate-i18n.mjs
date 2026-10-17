@@ -11,19 +11,13 @@
  * Usage: node scripts/validate-i18n.mjs [--allow-unused]
  * Exit code: 0 = all good, 1 = errors found.
  *
- * Supported call patterns (extracted from `src/**\/*.{ts,tsx}`):
- *   t("key.path")                     — static literal
- *   t('key.path')                     — static literal
- *   t(`key.path`)                     — static literal
- *   t(`prefix.${expr}`)               — dynamic; every en key starting with `prefix.`
- *                                       is considered referenced.
- *
- * An allow-list of key prefixes that should never be flagged as unused lives in
- * ALWAYS_USED_PREFIXES below (for keys built entirely at runtime).
+ * Uses the installed TypeScript parser to inspect literals, conditional calls,
+ * indirect key declarations and dynamic templates without scanning comments/tests.
  */
 import { readFileSync, readdirSync, statSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join, relative } from "path";
+import ts from "typescript";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
@@ -32,26 +26,18 @@ const srcDir = join(root, "src");
 
 const SUPPORTED_LANGS = ["en", "it", "es", "de"];
 
-// Prefixes that are always considered "used" — for keys assembled from
-// runtime data (enum values, DB kinds, …) that a static scan cannot follow.
-const ALWAYS_USED_PREFIXES = [
-  "library.kind.",
-  "common.days.",
-  "common.months.",
-  "intro.slide",
-];
-
 const args = new Set(process.argv.slice(2));
 const allowUnused = args.has("--allow-unused");
 
 // ---------- load translation files ----------
 const langKeys = {};
+const dictionaries = {};
 for (const lang of SUPPORTED_LANGS) {
   const json = JSON.parse(readFileSync(join(langDir, `${lang}.json`), "utf-8"));
+  dictionaries[lang] = json;
   langKeys[lang] = new Set(Object.keys(json));
 }
 const enKeys = langKeys["en"];
-const enBase = new Set([...enKeys].filter((k) => !k.endsWith("_plural")));
 
 // ---------- walk source tree ----------
 function walk(dir, out = []) {
@@ -61,7 +47,7 @@ function walk(dir, out = []) {
     if (s.isDirectory()) {
       if (entry === "node_modules" || entry === "language") continue;
       walk(p, out);
-    } else if (/\.(ts|tsx)$/.test(entry)) {
+    } else if (/\.(ts|tsx)$/.test(entry) && !/\.(test|spec)\.[^.]+$/.test(entry)) {
       out.push(p);
     }
   }
@@ -70,34 +56,46 @@ function walk(dir, out = []) {
 
 const sourceFiles = walk(srcDir);
 
-// Static: t("foo.bar"), t('foo.bar'), t(`foo.bar`)
-const STATIC_RE = /\bt\(\s*(["'`])([a-zA-Z0-9_.-]+)\1/g;
-// Dynamic template literal: t(`foo.bar.${...`
-const DYNAMIC_RE = /\bt\(\s*`([a-zA-Z0-9_.-]*?)\$\{/g;
-
 const usedStatic = new Set();
-const usedPrefixes = new Set(ALWAYS_USED_PREFIXES);
-const referencesByKey = new Map(); // key -> [file:line]
+const usedPatterns = [];
+const referencesByKey = new Map();
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 for (const file of sourceFiles) {
   const src = readFileSync(file, "utf-8");
+  const source = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
   const rel = relative(root, file);
 
-  let m;
-  STATIC_RE.lastIndex = 0;
-  while ((m = STATIC_RE.exec(src))) {
-    const key = m[2];
-    usedStatic.add(key);
-    const line = src.slice(0, m.index).split("\n").length;
-    if (!referencesByKey.has(key)) referencesByKey.set(key, []);
-    referencesByKey.get(key).push(`${rel}:${line}`);
+  function recordKey(node) {
+    if (!node) return;
+    if (ts.isStringLiteralLike(node)) {
+      usedStatic.add(node.text);
+      const line = source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
+      if (!referencesByKey.has(node.text)) referencesByKey.set(node.text, []);
+      referencesByKey.get(node.text).push(`${rel}:${line}`);
+    } else if (ts.isConditionalExpression(node)) {
+      recordKey(node.whenTrue);
+      recordKey(node.whenFalse);
+    } else if (ts.isParenthesizedExpression(node)) {
+      recordKey(node.expression);
+    }
   }
 
-  DYNAMIC_RE.lastIndex = 0;
-  while ((m = DYNAMIC_RE.exec(src))) {
-    const prefix = m[1];
-    if (prefix) usedPrefixes.add(prefix);
+  function visit(node) {
+    if (ts.isCallExpression(node)) {
+      const name = node.expression.getText(source);
+      if (name === "t") recordKey(node.arguments[0]);
+      if (name === "translate") recordKey(node.arguments[1]);
+    }
+    // Key maps and variables passed to t() are also references.
+    if (ts.isStringLiteralLike(node) && enKeys.has(node.text)) usedStatic.add(node.text);
+    if (ts.isTemplateExpression(node) && node.head.text.includes(".")) {
+      const chunks = [node.head.text, ...node.templateSpans.map((span) => span.literal.text)];
+      usedPatterns.push(new RegExp(`^${chunks.map(escapeRegex).join(".*")}$`));
+    }
+    ts.forEachChild(node, visit);
   }
+  visit(source);
 }
 
 // ---------- 1 + 2: parity check ----------
@@ -109,15 +107,13 @@ for (const lang of SUPPORTED_LANGS) {
   const missing = [];
   const extra = [];
 
-  for (const key of enBase) {
+  for (const key of enKeys) {
     if (!langSet.has(key)) {
-      const hasPluralInEn = enKeys.has(`${key}_plural`);
-      missing.push(key + (hasPluralInEn ? " (+ _plural)" : ""));
+      missing.push(key);
     }
   }
   for (const key of langSet) {
-    const base = key.endsWith("_plural") ? key.slice(0, -7) : key;
-    if (!enKeys.has(key) && !enKeys.has(base)) extra.push(key);
+    if (!enKeys.has(key)) extra.push(key);
   }
 
   if (missing.length) {
@@ -126,8 +122,18 @@ for (const lang of SUPPORTED_LANGS) {
     for (const k of missing) console.error(`  - ${k}`);
   }
   if (extra.length) {
-    console.warn(`\n[${lang}] Extra ${extra.length} key(s) not in English:`);
-    for (const k of extra) console.warn(`  + ${k}`);
+    hasErrors = true;
+    console.error(`\n[${lang}] Extra ${extra.length} key(s) not in English:`);
+    for (const k of extra) console.error(`  + ${k}`);
+  }
+  for (const key of enKeys) {
+    const value = dictionaries[lang][key];
+    if (value === undefined) continue;
+    const placeholders = (text) => [...text.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]).sort().join(",");
+    if (typeof value !== "string" || !value.trim() || placeholders(value) !== placeholders(dictionaries.en[key])) {
+      hasErrors = true;
+      console.error(`[${lang}] Invalid value or mismatched placeholders: ${key}`);
+    }
   }
   if (!missing.length && !extra.length) {
     console.log(`[${lang}] ✓ All keys present`);
@@ -138,8 +144,6 @@ for (const lang of SUPPORTED_LANGS) {
 const missingRefs = [];
 for (const key of usedStatic) {
   if (enKeys.has(key)) continue;
-  // A reference to "foo.bar" is satisfied by "foo.bar_plural" alone too.
-  if (enKeys.has(`${key}_plural`)) continue;
   missingRefs.push(key);
 }
 missingRefs.sort();
@@ -156,8 +160,8 @@ if (missingRefs.length) {
 function isReferenced(key) {
   const base = key.endsWith("_plural") ? key.slice(0, -7) : key;
   if (usedStatic.has(base) || usedStatic.has(key)) return true;
-  for (const prefix of usedPrefixes) {
-    if (key.startsWith(prefix) || base.startsWith(prefix)) return true;
+  for (const pattern of usedPatterns) {
+    if (pattern.test(key) || pattern.test(base)) return true;
   }
   return false;
 }

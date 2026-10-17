@@ -33,7 +33,7 @@ export default function Analytics() {
         title: t("analytics.title"),
         lines: [
           `${t("analytics.pdfPeriod")}: ${from ? formatDate(from, lang) : "…"} – ${to ? formatDate(to, lang) : "…"}`,
-          `${t("analytics.pdfSubject")}: ${labels.subject ?? all}`,
+          `${t("common.subject")}: ${labels.subject ?? all}`,
           `${t("progress.item")}: ${labels.item ?? t("progress.allItems")}`,
           `${t("progress.segment")}: ${labels.segment ?? t("progress.allSegments")}`,
           `${t("analytics.pdfWeeks")}: ${labels.weeks}`,

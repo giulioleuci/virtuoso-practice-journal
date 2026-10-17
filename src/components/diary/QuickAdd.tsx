@@ -140,7 +140,7 @@ export function QuickAdd({ date, subjectId: filterSubject, onAdded, collapsible 
           placeholder={t("quick.placeholder")}
           className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-base caret-primary outline-none placeholder:text-muted-foreground md:text-[0.8125rem]"
         />
-        <Button type="submit" disabled={busy || !title.trim()}>{t("quick.add")}</Button>
+        <Button type="submit" disabled={busy || !title.trim()}>{t("common.add")}</Button>
       </div>
 
       {suggestions.length > 0 && (

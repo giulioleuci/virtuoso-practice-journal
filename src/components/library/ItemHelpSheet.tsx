@@ -40,7 +40,7 @@ export function ItemQuestions({ itemId }: { itemId: number }) {
     if (!text) return;
     await helpRequestsService.answer(id, text);
     setAnswers((a) => { const c = { ...a }; delete c[id]; return c; });
-    toast.success(t("help.answerSaved"));
+    toast.success(t("toast.answerSaved"));
   };
 
   const remove = async (id: number) => {

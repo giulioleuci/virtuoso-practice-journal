@@ -21,7 +21,7 @@ interface Props {
 
 function daysAgoLabel(dateStr: string, t: (k: string, v?: Record<string, number>) => string): string {
   const todayKey = today();
-  if (dateStr === todayKey) return t("session.lastSessionToday");
+  if (dateStr === todayKey) return t("common.today");
   const diff = Math.round(
     (new Date(todayKey).getTime() - new Date(dateStr).getTime()) / 86400000
   );

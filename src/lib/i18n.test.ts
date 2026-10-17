@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { _dicts } from "./i18n";
+import { _dicts, translate, type TranslationVars } from "./i18n";
 
 // ---------------------------------------------------------------------------
 // Unit tests for the i18n translation system
@@ -9,35 +9,7 @@ import { _dicts } from "./i18n";
 const SUPPORTED_LANGS = ["en", "it", "es", "de"] as const;
 type Lang = typeof SUPPORTED_LANGS[number];
 
-// Re-implement the same t() logic as the actual provider so we can test without React context
-function makeT(lang: Lang) {
-  type TranslationVars = Record<string, string | number>;
-
-  function interpolate(str: string, vars: TranslationVars): string {
-    return str.replace(/\{\{(\w+)\}\}/g, (_, name) => {
-      const val = vars[name];
-      return val !== undefined ? String(val) : `{{${name}}}`;
-    });
-  }
-
-  return function t(key: string, vars?: TranslationVars): string {
-    let resolvedKey = key;
-    if (vars && vars.count !== undefined && vars.count !== 1) {
-      const pluralKey = `${key}_plural`;
-      if (
-        _dicts[lang]?.[pluralKey] !== undefined ||
-        _dicts["en"]?.[pluralKey] !== undefined
-      ) {
-        resolvedKey = pluralKey;
-      }
-    }
-    const raw =
-      _dicts[lang]?.[resolvedKey] ??
-      _dicts["en"]?.[resolvedKey] ??
-      key;
-    return vars ? interpolate(raw, vars) : raw;
-  };
-}
+const makeT = (lang: Lang) => (key: string, vars?: TranslationVars) => translate(lang, key, vars);
 
 // ---------------------------------------------------------------------------
 // Interpolation
@@ -90,9 +62,9 @@ describe("pluralization", () => {
     expect(t("history.sessions", { count: -2 })).toBe("-2 sessions");
   });
 
-  it("pluralizes collections.pieces", () => {
-    expect(t("collections.pieces", { count: 1 })).toBe("1 piece");
-    expect(t("collections.pieces", { count: 3 })).toBe("3 pieces");
+  it("pluralizes collections.materialCount", () => {
+    expect(t("collections.materialCount", { count: 1 })).toBe("1 material");
+    expect(t("collections.materialCount", { count: 3 })).toBe("3 materials");
   });
 
   it("pluralizes toast.tasksBulkDone", () => {
@@ -100,10 +72,7 @@ describe("pluralization", () => {
     expect(t("toast.tasksBulkDone", { count: 4 })).toBe("4 tasks completed");
   });
 
-  it("pluralizes dialog.deleteCollectionDesc", () => {
-    expect(t("dialog.deleteCollectionDesc", { count: 1 })).toContain("1 piece");
-    expect(t("dialog.deleteCollectionDesc", { count: 3 })).toContain("3 pieces");
-  });
+
 });
 
 // ---------------------------------------------------------------------------

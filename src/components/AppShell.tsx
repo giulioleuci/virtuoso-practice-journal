@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHorizontal, Printer, Settings } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -62,7 +62,13 @@ export default function AppShell({ profile }: { profile: Profile }) {
     );
 
   return (
-    <div className="min-h-screen">
+    <div
+      className="app-shell min-h-screen"
+      style={{
+        "--navigation-height": navHidden ? "0px" : undefined,
+        "--keyboard-inset": `${keyboardInset}px`,
+      } as CSSProperties}
+    >
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:bg-primary focus:p-3 focus:text-primary-foreground"
@@ -70,7 +76,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
         {t("nav.skipToContent")}
       </a>
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[195px] flex-col border-r border-border bg-background px-3 pb-5 pt-7 min-[700px]:flex min-[1151px]:w-[208px] min-[1151px]:px-5 min-[1600px]:w-[250px]">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[195px] flex-col border-r border-border bg-background px-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-[calc(1.75rem+env(safe-area-inset-top))] min-[700px]:flex min-[1151px]:w-[208px] min-[1151px]:px-5 min-[1600px]:w-[250px]">
         <NavLink to="/" className="mb-9 ml-2.5 flex items-center gap-2.5 font-serif text-[1.75rem] font-semibold tracking-tight min-[1151px]:text-[2rem]">
           <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-lg" />
           Virtuoso
@@ -126,7 +132,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
       <main
         id="main-content"
         tabIndex={-1}
-        className={cn("px-5 min-[700px]:px-7 min-[1151px]:px-9 pb-28 min-[700px]:pb-16", SIDEBAR_W)}
+        className={cn("px-5 min-[700px]:px-7 min-[1151px]:px-9 pb-[calc(7rem+env(safe-area-inset-bottom))] min-[700px]:pb-[calc(4rem+env(safe-area-inset-bottom))]", SIDEBAR_W)}
         style={{ paddingTop: "calc(1.75rem + env(safe-area-inset-top))" }}
       >
         {/* ponytail: pages not yet ported to the new design stay in a 3xl column */}

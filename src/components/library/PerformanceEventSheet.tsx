@@ -91,7 +91,7 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
       }
     >
       <div className="space-y-2">
-        <Label className="text-xs font-medium text-foreground">{t("performances.name")}</Label>
+        <Label className="text-xs font-medium text-foreground">{t("common.name")}</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("performances.namePlaceholder")} className="bg-card h-12" />
       </div>
 

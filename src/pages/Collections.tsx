@@ -65,7 +65,7 @@ export default function Collections() {
   return (
     <div className="pb-24">
       <Link to="/library" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
-        <ChevronLeft className="h-4 w-4" /> {t("collections.back")}
+        <ChevronLeft className="h-4 w-4" /> {t("nav.library")}
       </Link>
       <PageHeader
         title={t("collections.title")}

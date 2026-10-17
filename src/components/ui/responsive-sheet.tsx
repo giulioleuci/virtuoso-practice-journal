@@ -36,7 +36,7 @@ export function ResponsiveSheet({ open, onOpenChange, title, description, footer
             {description && <DrawerDescription>{description}</DrawerDescription>}
           </DrawerHeader>
           <div
-            className="flex-1 overflow-y-auto px-5 pb-4 space-y-4"
+            className={cn("min-h-0 flex-1 overflow-y-auto px-5 pb-4 space-y-4", !footer && "pb-[calc(1rem+env(safe-area-inset-bottom))]")}
             style={{ paddingBottom: keyboardInset ? keyboardInset + 16 : undefined }}
           >
             {children}

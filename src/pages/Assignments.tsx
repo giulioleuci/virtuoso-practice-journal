@@ -94,7 +94,7 @@ export default function Assignments() {
   return (
     <div className="pb-24">
       <Link to="/lessons" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
-        <ArrowLeft className="h-4 w-4" /> {t("assignments.back")}
+        <ArrowLeft className="h-4 w-4" /> {t("common.back")}
       </Link>
       <PageHeader title={t("assignments.title")} subtitle={t("assignments.description")} />
 
