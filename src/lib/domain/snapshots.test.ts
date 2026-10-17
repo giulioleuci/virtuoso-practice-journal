@@ -2,6 +2,10 @@ import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
 import { db } from "@/lib/db";
 import { buildSessionSnapshot, buildLessonSnapshot } from "./snapshots";
+import { LogSessionUseCase } from "@/application/useCases/logSession";
+import { sessionRepository } from "@/infrastructure/repositories/dexie/sessionRepository";
+import { marksFromPlan } from "@/domain/logic/plan";
+import { practiceCsv } from "@/application/useCases/exportCsv";
 
 beforeEach(async () => {
   await db.delete();
@@ -9,6 +13,20 @@ beforeEach(async () => {
 });
 
 describe("buildSessionSnapshot", () => {
+  it("preserves bar ranges and distinct target/result figures after the source changes", async () => {
+    const subjectId = await db.subjects.add({ name: "Solfeggio", type: "theory", createdAt: 1 });
+    const itemId = await db.library.add({ subjectId, kind: "exercise", studyStatus: "not_started", title: "Reading", createdAt: 1 });
+    const segmentId = await db.segments.add({ itemId, label: "Pickup", barStart: 0, barEnd: 8, position: 0, layers: [], createdAt: 1 });
+    const plan = [{ segmentId, bpm: 88, noteVal: "quarter" as const, layers: [], techniques: [] }];
+    const id = await new LogSessionUseCase(sessionRepository).execute({ subjectId, itemId, linkType: "item", title: "Reading", plan }, { date: "2026-10-17", marks: marksFromPlan(plan).map(mark => ({ ...mark, bpm: 56, noteVal: "eighth", confidence: 4 })) });
+    await db.segments.update(segmentId, { label: "Renamed", barStart: 1, barEnd: 16 });
+    const session = (await db.sessions.get(id))!;
+    expect(session.snapshot?.segments).toEqual([{ id: String(segmentId), label: "Pickup", barStart: 0, barEnd: 8 }]);
+    expect(session.marks[0]).toMatchObject({ bpm: 56, noteVal: "eighth", targetBpm: 88, targetNoteVal: "quarter" });
+    const csv = practiceCsv([session]).results.replace("\uFEFF", "").split("\r\n");
+    const row = Object.fromEntries(csv[0].split(",").map((column, i) => [column, csv[1].split(",")[i]]));
+    expect(row).toMatchObject({ bar_start: "0", bar_end: "8", target_bpm: "88", target_note_value: "quarter" });
+  });
   it("denormalizes subject, item, segments, techniques into an immutable copy", async () => {
     const subjectId = (await db.subjects.add({ name: "Violin", type: "instrument", createdAt: 1 })) as number;
     const itemId = (await db.library.add({

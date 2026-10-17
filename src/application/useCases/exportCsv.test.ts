@@ -28,7 +28,7 @@ describe("csv export", () => {
     ], "2026-10-01", "2026-10-31");
 
     expect(lines(csv.sessions)).toEqual([SESSION_COLUMNS.join(","), "7,3,2026-10-01,1,Piano,item,9,,Ballade,,,[12],ok", ""]);
-    expect(lines(csv.results)).toEqual([RESULT_COLUMNS.join(","), '7,segment,11,Intro,72,dotted-quarter,3,4,2,"[""RH""]",[4]', ""]);
+    expect(lines(csv.results)).toEqual([RESULT_COLUMNS.join(","), '7,segment,11,Intro,72,dotted-quarter,3,4,2,"[""RH""]",[4],,,,', ""]);
     expect(csv.sessions + csv.results).not.toMatch(/duration|minute|blob:|base64|file:/i);
   });
 

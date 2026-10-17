@@ -9,7 +9,7 @@ export const planSegmentIds = (plan: SegmentEntry[]): number[] => plan.flatMap((
 export const entryFor = <E extends { segmentId?: number }>(entries: E[], segmentId?: number): E | undefined => entries.find((e) => e.segmentId === segmentId);
 
 /** Marks a session would leave for a plan (a plan with no sections gives one whole-task mark), prefilled with the plan targets. */
-export const marksFromPlan = (plan: SegmentEntry[]): SegmentMark[] => (plan.length ? plan : [emptyEntry()]).map((e) => ({ ...e, targetBpm: e.bpm }));
+export const marksFromPlan = (plan: SegmentEntry[]): SegmentMark[] => (plan.length ? plan : [emptyEntry()]).map((e) => ({ ...e, targetBpm: e.bpm, targetNoteVal: e.noteVal }));
 
 /** Plan entries updated from `marks` only where the user picked it; a missing reached tempo keeps the planned one. Ratings never carry. */
 export const carryMarksToPlan = (plan: SegmentEntry[], marks: SegmentMark[], picks: { tempo: Set<number | undefined>; extras: boolean }): SegmentEntry[] =>
@@ -56,7 +56,10 @@ export const seedEntry = (defaults?: PlanDefaults, segmentId?: number): SegmentE
 /** Plan for a link selection: keeps entries already edited for sections still selected, seeds the new ones. */
 export const syncPlan = (plan: SegmentEntry[], segments: (PlanDefaults & { id: number })[], item?: PlanDefaults): SegmentEntry[] =>
   segments.length
-    ? segments.map((s) => entryFor(plan, s.id) ?? seedEntry(s, s.id))
+    ? segments.map((s) => {
+      const tempo = s.targetBpm !== undefined && s.noteVal !== undefined ? s : item;
+      return entryFor(plan, s.id) ?? seedEntry({ ...s, targetBpm: tempo?.targetBpm, noteVal: tempo?.noteVal }, s.id);
+    })
     : [entryFor(plan, undefined) ?? seedEntry(item)];
 
 /** First entry with a target tempo, for one-line task summaries. */

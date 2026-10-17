@@ -15,7 +15,7 @@ export const toCsv = (columns: readonly string[], rows: Record<string, unknown>[
   `\uFEFF${[columns.join(","), ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(","))].join("\r\n")}\r\n`;
 
 export const SESSION_COLUMNS = ["session_id", "task_id", "date", "subject_id", "subject", "content_type", "item_id", "collection_id", "title", "item_title", "collection", "not_studied_segment_ids", "notes"] as const;
-export const RESULT_COLUMNS = ["session_id", "scope", "segment_id", "segment_label", "bpm", "note_value", "confidence", "mood", "focus", "layers", "technique_ids"] as const;
+export const RESULT_COLUMNS = ["session_id", "scope", "segment_id", "segment_label", "bpm", "note_value", "confidence", "mood", "focus", "layers", "technique_ids", "bar_start", "bar_end", "target_bpm", "target_note_value"] as const;
 
 /** `sessioni.csv` (one row per session) and `risultati.csv` (one row per studied section) for sessions dated in [from, to]. */
 export function practiceCsv(sessions: Session[], from?: string, to?: string): { sessions: string; results: string } {
@@ -32,6 +32,9 @@ export function practiceCsv(sessions: Session[], from?: string, to?: string): { 
     results: toCsv(RESULT_COLUMNS, picked.flatMap((s) => s.marks.map((m) => ({
       session_id: s.id, scope: m.segmentId === undefined ? "whole" : "segment", segment_id: m.segmentId, segment_label: label(s, m.segmentId),
       bpm: m.bpm, note_value: m.bpm ? m.noteVal ?? "quarter" : undefined,
+      bar_start: s.snapshot?.segments?.find(seg => seg.id === String(m.segmentId))?.barStart,
+      bar_end: s.snapshot?.segments?.find(seg => seg.id === String(m.segmentId))?.barEnd,
+      target_bpm: m.targetBpm, target_note_value: m.targetNoteVal,
       confidence: m.confidence, mood: m.mood, focus: m.focus, layers: m.layers, technique_ids: m.techniques,
     })))),
   };

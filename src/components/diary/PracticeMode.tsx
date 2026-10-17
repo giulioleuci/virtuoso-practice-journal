@@ -148,7 +148,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
 
   const isAccent = pulse > 0 && (pulse - 1) % beatsPerBar === 0;
-  const targetGlyph = NOTE_GLYPH[noteVal ?? "quarter"];
+  const targetGlyph = NOTE_GLYPH[mark.targetNoteVal ?? "quarter"];
 
   const overlay = (
     <div role="dialog" aria-modal="true" aria-label={t("practice.practiceMode")} className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-background animate-fade-in pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { carryMarksToPlan, followUpTasks, restartFrom, sharesSection, syncPlan, tempoProposal } from "./plan";
+import { carryMarksToPlan, followUpTasks, marksFromPlan, restartFrom, sharesSection, syncPlan, tempoProposal } from "./plan";
 
 const e = (segmentId: number | undefined, bpm: number) => ({ segmentId, bpm, layers: [], techniques: [] });
 
@@ -37,6 +37,21 @@ describe("restartFrom", () => {
 });
 
 describe("syncPlan", () => {
+  it("inherits a complete material tempo and replaces it only with a complete section tempo", () => {
+    const item = { targetBpm: 88, noteVal: "quarter" as const, techniqueIds: [9] };
+    expect(syncPlan([], [{ id: 1 }], item)[0]).toEqual({ segmentId: 1, bpm: 88, noteVal: "quarter", layers: [], techniques: [] });
+    expect(syncPlan([], [{ id: 1, targetBpm: 56, noteVal: "eighth" }], item)[0]).toMatchObject({ bpm: 56, noteVal: "eighth" });
+    expect(syncPlan([], [{ id: 1, targetBpm: 56 }], item)[0]).toMatchObject({ bpm: 88, noteVal: "quarter" });
+    expect(syncPlan([], [{ id: 1 }])[0].bpm).toBeUndefined();
+    const saved = [{ segmentId: 1, bpm: 100, noteVal: "half" as const, layers: [], techniques: [] }];
+    expect(syncPlan(saved, [{ id: 1 }], item)[0]).toBe(saved[0]);
+  });
+
+  it("keeps the historical target figure when the reached figure changes", () => {
+    const [mark] = marksFromPlan([{ segmentId: 1, bpm: 88, noteVal: "quarter", layers: [], techniques: [] }]);
+    mark.noteVal = "eighth";
+    expect(mark).toMatchObject({ targetBpm: 88, targetNoteVal: "quarter", noteVal: "eighth" });
+  });
   it("keeps edited entries for still-selected sections and seeds new ones", () => {
     const edited = [{ segmentId: 1, bpm: 90, layers: ["RH"], techniques: [] }];
     const out = syncPlan(edited, [{ id: 1, targetBpm: 60 }, { id: 2, targetBpm: 70, noteVal: "eighth", layers: ["LH"], techniqueIds: [4] }]);

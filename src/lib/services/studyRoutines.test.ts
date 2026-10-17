@@ -14,6 +14,8 @@ import { db } from "@/lib/db";
 import { studyRoutinesService } from "@/lib/services/studyRoutines";
 import { planSegmentIds } from "@/domain/logic/plan";
 import type { StudyRoutineConfig } from "@/lib/schemas";
+import { generateRoutineTasks } from "@/lib/domain/studyRoutineGenerator";
+import { studyRoutineRepository } from "@/infrastructure/repositories/dexie/studyRoutineRepository";
 
 // Monday 2026-05-18 12:00 UTC
 const FAKE_NOW = new Date("2026-05-18T12:00:00.000Z");
@@ -96,6 +98,21 @@ function makeConfig(
 // ---------------------------------------------------------------------------
 
 describe("studyRoutinesService.create — task generation", () => {
+  it("resolves inherited section targets and copies plans for each generated activity", async () => {
+    const subjectId = await seedSubject();
+    const itemId = await seedItem(subjectId);
+    await db.library.update(itemId, { targetBpm: 88, noteVal: "quarter" });
+    const segmentId = await seedSegment(itemId);
+    const pool = await studyRoutineRepository.resolvePool([{ type: "segment", id: segmentId }]);
+    const resolved = pool.get(`segment:${segmentId}`)!;
+    expect(resolved.plan?.[0]).toMatchObject({ segmentId, bpm: 88, noteVal: "quarter" });
+    const tasks = generateRoutineTasks({ routine: { ...makeConfig(subjectId, [{ type: "segment", id: segmentId }]), id: 1, createdAt: 1 }, groupItems: new Map([["g1", [resolved]]]), fromDate: TODAY, createdAt: 1 });
+    expect(tasks).toHaveLength(2);
+    tasks[0].plan[0].bpm = 120;
+    tasks[0].plan[0].layers.push("RH");
+    expect(tasks[1].plan[0]).toMatchObject({ bpm: 88, noteVal: "quarter", layers: [] });
+    expect(resolved.plan?.[0].bpm).toBe(88);
+  });
   it("creates the routine record and returns its id", async () => {
     const subjectId = await seedSubject();
     const itemId = await seedItem(subjectId);

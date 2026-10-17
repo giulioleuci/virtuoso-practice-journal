@@ -3,7 +3,7 @@
  * No Dexie access — the repository resolves pool entries and collects practice
  * stats from the DB, then hands the resolved inputs here to produce the tasks.
  */
-import type { StudyPoolEntry, StudyRoutine, Task } from "@/lib/db";
+import type { StudyPoolEntry, StudyRoutine, Task, SegmentEntry } from "@/lib/db";
 import { emptyEntry } from "@/domain/logic/plan";
 import { parseDayKey, dayKey, addDays, weekKey } from "@/lib/date";
 
@@ -17,6 +17,7 @@ export interface ResolvedPoolItem {
   segmentIds?: number[];
   collectionId?: number;
   linkType: "item" | "collection";
+  plan?: SegmentEntry[];
 }
 
 /** How strongly the draw is skewed towards the items you feel least sure about. */
@@ -170,7 +171,7 @@ function buildTask(
     itemId: item.itemId,
     collectionId: item.collectionId,
     title: item.title,
-    plan: (item.segmentIds ?? []).map((id) => emptyEntry(id)),
+    plan: (item.plan ?? (item.segmentIds ?? []).map((id) => emptyEntry(id))).map(entry => ({ ...entry, layers: [...entry.layers], techniques: [...entry.techniques] })),
     done: false,
     studyRoutineId: routineId,
     createdAt,
@@ -288,6 +289,7 @@ export function generateRoutineTasks({
             title,
             itemId,
             segmentIds: segs.flatMap((s) => s.segmentIds ?? []),
+            plan: segs.flatMap(s => s.plan ?? (s.segmentIds ?? []).map(id => emptyEntry(id))),
             linkType: "item",
           },
           dateStr,

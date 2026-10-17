@@ -123,7 +123,7 @@ function SessionView({ session }: { session: Session }) {
             <Label className="text-xs font-medium text-foreground">{t("common.date")}</Label>
             <Input type="date" required aria-label={t("common.date")} value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
-          <MarksEditor marks={marks} onChange={setMarks} sections={sections} seed={(id) => emptyEntry(id)} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} requireRatings={false} />
+          <MarksEditor marks={marks} onChange={setMarks} sections={sections} seed={(id) => emptyEntry(id)} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} requireRatings={false} />
           <div className="mt-6 space-y-2 border-t border-border pt-6">
             <Label className="text-xs font-medium text-foreground">{t("session.notes")}</Label>
             <Textarea rows={3} maxLength={2000} aria-label={t("session.notes")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("session.notesPlaceholder")} />

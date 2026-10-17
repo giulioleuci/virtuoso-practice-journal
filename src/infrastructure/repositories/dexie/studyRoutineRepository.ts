@@ -9,7 +9,7 @@ import type {
   StudyRoutinePort,
 } from "@/domain/ports/studyRoutine";
 import { dayKey, getDefaultWeekStartsOn, now, parseDayKey, startOfWeek, endOfWeek, today } from "@/lib/date";
-import { planSegmentIds } from "@/domain/logic/plan";
+import { planSegmentIds, syncPlan } from "@/domain/logic/plan";
 import { meanConfidence } from "@/domain/logic/sessionMetrics";
 import {
   decayedAverage,
@@ -29,22 +29,23 @@ async function resolvePoolEntries(entries: StudyPoolEntry[]): Promise<Map<string
   ]);
   const parentIds = [...new Set(segments.map((segment) => segment.itemId))];
   const parents = parentIds.length ? await db.library.where("id").anyOf(parentIds).toArray() : [];
-  const parentTitle = new Map(parents.map((item) => [item.id, item.title]));
+  const parentById = new Map(parents.map(item => [item.id, item]));
   const result = new Map<string, ResolvedPoolItem>();
   for (const entry of unique) {
     const key = poolEntryKey(entry);
     if (entry.type === "item") {
       const item = items.find((row) => row.id === entry.id);
-      if (item) result.set(key, { key, type: "item", title: item.title, itemId: item.id, linkType: "item" });
+      if (item && !item.deletedAt) result.set(key, { key, type: "item", title: item.title, itemId: item.id, linkType: "item", plan: syncPlan([], [], item) });
     } else if (entry.type === "segment") {
       const segment = segments.find((row) => row.id === entry.id);
-      if (segment) {
-        const title = parentTitle.get(segment.itemId) ?? "—";
-        result.set(key, { key, type: "segment", title: `${title} — ${segment.label}`, parentTitle: title, itemId: segment.itemId, segmentIds: [segment.id], linkType: "item" });
+      const parent = segment && parentById.get(segment.itemId);
+      if (segment && !segment.deletedAt && parent && !parent.deletedAt) {
+        const title = parent.title;
+        result.set(key, { key, type: "segment", title: `${title} — ${segment.label}`, parentTitle: title, itemId: segment.itemId, segmentIds: [segment.id], plan: syncPlan([], [segment], parent), linkType: "item" });
       }
     } else {
       const collection = collections.find((row) => row.id === entry.id);
-      if (collection) result.set(key, { key, type: "collection", title: collection.name, collectionId: collection.id, linkType: "collection" });
+      if (collection && !collection.deletedAt) result.set(key, { key, type: "collection", title: collection.name, collectionId: collection.id, linkType: "collection" });
     }
   }
   return result;

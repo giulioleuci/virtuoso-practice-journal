@@ -20,7 +20,7 @@ export async function buildDexieSessionSnapshot(task: SessionTarget) {
     subjectName: subject?.name ?? "—",
     itemTitle: item?.title,
     itemComposer: item?.composer,
-    segments: segments.length ? segments.map((segment) => ({ id: String(segment.id), label: segment.label })) : undefined,
+    segments: segments.length ? segments.map((segment) => ({ id: String(segment.id), label: segment.label, barStart: segment.barStart, barEnd: segment.barEnd })) : undefined,
     collectionName: collection?.name,
     techniqueNames: techniques.map((technique) => technique.name),
   };

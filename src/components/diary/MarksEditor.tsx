@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 interface Option<T extends string | number> { value: T; label: string }
 
 /** One row per section: studied or not, the three ratings up front, tempo, then layers and techniques on demand. */
-export function MarksEditor({ marks, onChange, sections, seed = emptyEntry, layerOptions, techniqueOptions, isTheory, requireRatings = true }: {
+export function MarksEditor({ marks, onChange, sections, seed = emptyEntry, layerOptions, techniqueOptions, isTheory, showTempo = !isTheory, requireRatings = true }: {
   marks: SegmentMark[];
   onChange: (marks: SegmentMark[]) => void;
   /** Sections on offer; empty or missing means one whole-scope entry. */
@@ -22,6 +22,7 @@ export function MarksEditor({ marks, onChange, sections, seed = emptyEntry, laye
   layerOptions: Option<string>[];
   techniqueOptions: Option<number>[];
   isTheory: boolean;
+  showTempo?: boolean;
   /** New sessions need every rating; edits of older records do not. */
   requireRatings?: boolean;
 }) {
@@ -63,7 +64,7 @@ export function MarksEditor({ marks, onChange, sections, seed = emptyEntry, laye
                     {replaces > 0 && <p className="text-xs text-muted-foreground">{t("rating.applyReplaces", { count: replaces })}</p>}
                   </div>
                 )}
-                {!isTheory && <BpmCoupler bpm={m.bpm} noteVal={m.noteVal} onChange={({ bpm, noteVal }) => patch(id, { bpm, noteVal })} label={t("session.bpmReached")} />}
+                {showTempo && <BpmCoupler bpm={m.bpm} noteVal={m.noteVal} onChange={({ bpm, noteVal }) => patch(id, { bpm, noteVal })} label={t("session.bpmReached")} />}
                 <details open={isTheory} className="border-t border-border pt-3">
                   <summary className="cursor-pointer list-none text-[0.8125rem] font-medium text-muted-foreground hover:text-foreground">
                     {t("session.workedOn", { layers: m.layers.length, techniques: m.techniques.length })}
