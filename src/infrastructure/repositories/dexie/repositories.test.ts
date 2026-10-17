@@ -101,14 +101,14 @@ describe("Dexie repositories", () => {
 
   it("rolls back backup import when a later bulk add fails", async () => {
     const originalSubjectId = await db.subjects.add({ name: "old subject", type: "instrument", createdAt: 1 });
-    await db.library.add({ subjectId: originalSubjectId, kind: "repertoire", title: "old item", createdAt: 1 });
+    await db.library.add({ subjectId: originalSubjectId, kind: "piece", studyStatus: "not_started", title: "old item", createdAt: 1 });
     const libraryTable = db.tables.find((table) => table.name === "library");
     if (!libraryTable) throw new Error("library table missing");
     vi.spyOn(libraryTable, "bulkAdd").mockRejectedValueOnce(new Error("library import fails"));
 
     await expect(backupRepository.importAll({
       subjects: [{ name: "new subject", type: "instrument", createdAt: 2 }],
-      library: [{ subjectId: originalSubjectId, kind: "repertoire", title: "new item", createdAt: 2 }],
+      library: [{ subjectId: originalSubjectId, kind: "piece", studyStatus: "not_started", title: "new item", createdAt: 2 }],
     })).rejects.toThrow("library import fails");
 
     expect((await db.subjects.toArray()).map((subject) => subject.name)).toEqual(["old subject"]);
@@ -117,9 +117,9 @@ describe("Dexie repositories", () => {
 
   it("implements collection links port and excludes deleted library items", async () => {
     const subject = await subjectId();
-    const collectionId = await collectionRepository.create({ kind: "repertoire", name: "Set", createdAt: 1, updatedAt: 1 });
-    const activeItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "active", createdAt: 1 });
-    const deletedItem = await db.library.add({ subjectId: subject, kind: "repertoire", title: "deleted", deletedAt: 2, createdAt: 1 });
+    const collectionId = await collectionRepository.create({ kind: "collection", name: "Set", createdAt: 1, updatedAt: 1 });
+    const activeItem = await db.library.add({ subjectId: subject, kind: "piece", studyStatus: "not_started", title: "active", createdAt: 1 });
+    const deletedItem = await db.library.add({ subjectId: subject, kind: "piece", studyStatus: "not_started", title: "deleted", deletedAt: 2, createdAt: 1 });
     await db.collectionItems.bulkAdd([
       { collectionId, itemId: activeItem, createdAt: 1 },
       { collectionId, itemId: deletedItem, createdAt: 1 },
@@ -158,7 +158,7 @@ describe("Dexie repositories", () => {
 
   it("creates a study routine and generates its planned tasks", async () => {
     const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: Date.now() });
-    const itemId = await db.library.add({ subjectId, kind: "repertoire", title: "Sonata", createdAt: Date.now() });
+    const itemId = await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Sonata", createdAt: Date.now() });
 
     const id = await studyRoutineRepository.create({
       subjectId,
@@ -176,7 +176,7 @@ describe("Dexie repositories", () => {
 
   it("regeneration keeps customized future tasks and does not duplicate their slot", async () => {
     const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
-    const itemId = await db.library.add({ subjectId, kind: "repertoire", title: "Sonata", createdAt: 1 });
+    const itemId = await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Sonata", createdAt: 1 });
     const id = await studyRoutineRepository.create({
       subjectId, groups: [{ id: "g", name: "G", pool: [{ type: "item", id: itemId }] }], matrix: { "1": { g: 1 } },
       weeksAhead: 1, repetitionCap: 1, adaptivity: "uniform", startDate: "2030-01-07",

@@ -40,7 +40,7 @@ export class VirtuosoDB extends Dexie {
     this.version(3).stores({ subjects: "++id, name, type, deletedAt", library: "++id, subjectId, kind, title, deletedAt", segments: "++id, itemId, deletedAt", tasks: "++id, date, subjectId, itemId, done, deletedAt", recurrences: "++id, subjectId, deletedAt", techniques: "++id, subjectId, name, deletedAt" });
     this.version(4).stores({ collections: "++id, name, composer, defaultSubjectId, deletedAt", collectionItems: "++id, collectionId, itemId, [collectionId+itemId]" });
     this.version(5).stores({ tasks: "++id, date, subjectId, itemId, collectionId, done, deletedAt" }).upgrade(async (tx) => { await tx.table("tasks").toCollection().modify((t: Task & { segmentId?: number; segmentIds?: number[] }) => { if (t.segmentId && !t.segmentIds?.length) t.segmentIds = [t.segmentId]; delete t.segmentId; if (!t.linkType) t.linkType = t.itemId ? "item" : "free"; }); });
-    this.version(6).stores({ collections: "++id, name, kind, composer, defaultSubjectId, deletedAt" }).upgrade(async (tx) => { await tx.table("collections").toCollection().modify((c: Collection) => { if (!c.kind) c.kind = "repertoire"; }); });
+    this.version(6).stores({ collections: "++id, name, kind, composer, defaultSubjectId, deletedAt" });
     this.version(7).stores({ studyRoutines: "++id, subjectId, deletedAt", tasks: "++id, date, subjectId, itemId, collectionId, done, deletedAt, studyRoutineId" });
     this.version(8).stores({ tasks: "++id, date, subjectId, itemId, collectionId, done, deletedAt, studyRoutineId, recurrenceTaskId" });
     this.version(9).stores({});
