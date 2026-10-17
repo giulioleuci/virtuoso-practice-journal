@@ -2,9 +2,8 @@ import { useMemo, useState, useEffect } from "react";
 import { useCollectionLinks, useCollections } from "@/presentation/hooks/useEntities";
 import { Link, useSearchParams } from "react-router-dom";
 import type { Collection } from "@/domain/entities/collection";
-import type { LibraryKind } from "@/domain/entities/common";
+import type { CollectionKind } from "@/domain/entities/common";
 import { useI18n } from "@/lib/i18n";
-import { LIBRARY_KINDS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, ChevronLeft, FolderOpen, Music2 } from "lucide-react";
 import { collectionsService } from "@/lib/services";
@@ -18,9 +17,9 @@ import { toast } from "sonner";
 export default function Collections() {
   const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialKind = (searchParams.get("kind") as LibraryKind) || "repertoire";
-  const [active, setActive] = useState<LibraryKind>(
-    LIBRARY_KINDS.some((k) => k.key === initialKind) ? initialKind : "repertoire"
+  const initialKind = searchParams.get("kind");
+  const [active, setActive] = useState<CollectionKind>(
+    initialKind === "manual" ? "manual" : "collection"
   );
 
   useEffect(() => {
@@ -74,7 +73,7 @@ export default function Collections() {
       />
 
       <div role="tablist" className="mb-5 flex gap-6 overflow-x-auto overflow-y-hidden border-b border-border no-scrollbar">
-        {LIBRARY_KINDS.map(({ key, tKey }) => (
+        {(["manual", "collection"] as const).map(key => (
           <button
             key={key}
             role="tab"
@@ -82,7 +81,7 @@ export default function Collections() {
             onClick={() => setActive(key)}
             className={cn("-mb-px shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors", active === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
           >
-            {t(tKey)}
+            {t(`collections.kind.${key}`)}
           </button>
         ))}
       </div>
@@ -107,8 +106,8 @@ export default function Collections() {
               <div className="min-w-[calc(100%-2rem)] flex-1 min-[700px]:min-w-0">
                 <Link to={`/library/collections/${c.id}`} className="block break-words font-serif text-xl font-semibold leading-tight hover:underline underline-offset-4">{c.name}</Link>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
-                  {(c.composer || c.catalog) && <span className="italic">{[c.composer, c.catalog].filter(Boolean).join(" · ")}</span>}
-                  <span className="inline-flex items-center gap-1"><Music2 className="h-3 w-3" /> {t(`collections.itemsCount.${active}`, { count: countFor(c.id) })}</span>
+                  {(c.composer || c.catalog) && <span className="italic">{[c.composer, c.catalog, c.edition].filter(Boolean).join(" · ")}</span>}
+                  <span className="inline-flex items-center gap-1"><Music2 className="h-3 w-3" /> {t("collections.materialCount", { count: countFor(c.id) })}</span>
                 </div>
               </div>
               <Button asChild size="sm" variant="outline"><Link to={`/library/collections/${c.id}`}><Music2 />{t("collection.manage")}</Link></Button>

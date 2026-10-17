@@ -47,7 +47,7 @@ describe("performable materials", () => {
     const id = await libraryRepository.upsert({ subjectId, kind: "study", studyStatus: "not_started", title: "Study", createdAt: 1 });
     const item = (await db.library.get(id))!;
     await repertoireRepository.setInRepertoire(id, true);
-    const change = { ...item, inRepertoire: false, kind: "exercise" as const, title: "Changed" };
+    const change = { studyStatus: "not_started", ...item, inRepertoire: false, kind: "exercise" as const, title: "Changed" };
     await expect(libraryRepository.upsert(change)).rejects.toThrow();
     expect((await db.library.get(id))?.title).toBe("Study");
     await repertoireRepository.setInRepertoire(id, false);

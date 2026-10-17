@@ -52,7 +52,7 @@ it("exports clip metadata but no audio, and import keeps local audio, matched by
   expect(exported).not.toMatch(/"data"|base64|blob:|file:\/\//);
 
   // A backup from another device reuses session id 1 and recording id 1 for a different clip.
-  const summary = await new ImportBackupUseCase(backupRepository, files, browserAudio).importContent(JSON.stringify({ version: 3, data: {
+  const summary = await new ImportBackupUseCase(backupRepository, files, browserAudio).importContent(JSON.stringify({ version: 4, data: {
     sessions: [{ id: 1, date: "2026-10-02", marks: [], createdAt: 2 }],
     recordings: [{ id: 1, uid: OTHER, sessionId: 1, date: "2026-10-02", mimeType: "audio/webm", durationMs: 500, createdAt: 2 }],
   } }));
@@ -66,7 +66,7 @@ it("rejects recordings that carry audio payloads or point at missing sessions, w
   await db.subjects.add({ name: "Kept", type: "instrument", createdAt: 1 });
   const useCase = new ImportBackupUseCase(backupRepository, files, browserAudio);
   const base = { uid: OTHER, sessionId: 1, date: "2026-10-02", mimeType: "audio/webm", durationMs: 500, createdAt: 2 };
-  await expect(useCase.importContent(JSON.stringify({ version: 3, data: { sessions: [{ id: 1, date: "2026-10-02", marks: [], createdAt: 2 }], recordings: [{ ...base, data: "AAAA" }] } }))).rejects.toThrow();
-  await expect(useCase.importContent(JSON.stringify({ version: 3, data: { recordings: [base] } }))).rejects.toThrow(/missing session/);
+  await expect(useCase.importContent(JSON.stringify({ version: 4, data: { sessions: [{ id: 1, date: "2026-10-02", marks: [], createdAt: 2 }], recordings: [{ ...base, data: "AAAA" }] } }))).rejects.toThrow();
+  await expect(useCase.importContent(JSON.stringify({ version: 4, data: { recordings: [base] } }))).rejects.toThrow(/missing session/);
   expect(await db.subjects.count()).toBe(1);
 });

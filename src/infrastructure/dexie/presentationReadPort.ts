@@ -1,6 +1,6 @@
 import Dexie from "dexie";
 import { isPerformable } from "@/domain/logic/repertoireReview";
-import { meanConfidence, topBpm } from "@/domain/logic/sessionMetrics";
+import { meanConfidence, topBpm, topMark } from "@/domain/logic/sessionMetrics";
 import type { PresentationReadPort } from "@/application/queries/presentationReadPort";
 import { db } from "./db";
 
@@ -77,17 +77,22 @@ export const dexiePresentationReads: PresentationReadPort = {
         const [itemId, before] = parameters;
         if (typeof itemId !== "number" || typeof before !== "string") return [];
         const sessions = await db.sessions.where("itemId").equals(itemId).and((session) => session.date < before && topBpm(session.marks) !== undefined).sortBy("date");
-        return sessions.slice(-3).flatMap((session) => topBpm(session.marks) ?? []);
+        const recent = sessions.slice(-3);
+        if (new Set(recent.map(s => topMark(s.marks)?.noteVal ?? "quarter")).size > 1) return [];
+        return recent.flatMap((session) => topBpm(session.marks) ?? []);
       })() as unknown as Promise<T>;
       case "sessions.segmentHistory": return (typeof first === "number" ? db.sessions.where("itemId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;
       case "sessions.bpmSuggestion": return (async () => {
         const [itemId, before] = parameters;
         if (typeof itemId !== "number" || typeof before !== "string") return null;
         const sessions = await db.sessions.where("itemId").equals(itemId).and((session) => session.date < before && !!topBpm(session.marks)).sortBy("date");
-        const lastThree = sessions.slice(-3); const bpm = topBpm(lastThree[0]?.marks ?? []);
+        const lastThree = sessions.slice(-3);
+        const figure = topMark(lastThree[0]?.marks ?? [])?.noteVal ?? "quarter";
+        if (lastThree.some(s => (topMark(s.marks)?.noteVal ?? "quarter") !== figure) || (typeof parameters[2] === "string" && parameters[2] !== figure)) return null;
+        const bpm = topBpm(lastThree[0]?.marks ?? []);
         if (lastThree.length < 3 || bpm === undefined || !lastThree.every((session) => topBpm(session.marks) === bpm && (meanConfidence(session.marks) ?? 0) >= 4)) return null;
         const steps = [2, 3, 4, 5, 8, 10]; const step = steps.find((value) => bpm % value === 0) ?? 5; const next = bpm + step;
-        if (next > 400 || await db.sessions.where("itemId").equals(itemId).and((session) => (topBpm(session.marks) ?? 0) >= next).first()) return null;
+        if (next > 400 || await db.sessions.where("itemId").equals(itemId).and((session) => (topMark(session.marks)?.noteVal ?? "quarter") === figure && (topBpm(session.marks) ?? 0) >= next).first()) return null;
         return { reached: bpm, next };
       })() as unknown as Promise<T>;
       case "recordings.session": return (typeof first === "number" ? db.recordings.where("sessionId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;

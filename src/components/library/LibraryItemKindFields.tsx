@@ -1,5 +1,7 @@
 /** Kind-specific form fields for library items, extracted from NewLibraryItemSheet
  *  to keep the parent sheet focused on layout & save orchestration. */
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { BpmCoupler } from "./BpmCoupler";
 import { SegmentsEditor } from "./SegmentsEditor";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
@@ -48,13 +50,14 @@ export function LibraryItemKindFields(p: Props) {
     <>
       {p.kind !== "theory" && (<>      {p.kind === "technique" ? (
         <>
-          <BpmCoupler bpm={p.startBpm} noteVal={p.noteVal} onChange={(n) => { p.setStartBpm(n.bpm); p.setNoteVal(n.noteVal); }} label={t("library.startingTempo")} />
+          <label className="grid gap-1.5 text-xs font-medium">{t("library.startingTempo")}<Input type="number" inputMode="numeric" min={20} max={400} value={p.startBpm ?? ""} onChange={e => p.setStartBpm(e.target.value === "" ? undefined : Number(e.target.value))} /></label>
           <BpmCoupler bpm={p.targetBpm} noteVal={p.noteVal} onChange={(n) => { p.setTargetBpm(n.bpm); p.setNoteVal(n.noteVal); }} label={t("library.targetTempo")} />
         </>
       ) : (
         <BpmCoupler bpm={p.targetBpm} noteVal={p.noteVal} onChange={(n) => { p.setTargetBpm(n.bpm); p.setNoteVal(n.noteVal); }} />
       )}
 
+      <Button type="button" variant="ghost" size="sm" disabled={p.targetBpm === undefined && p.noteVal === undefined} onClick={() => { p.setTargetBpm(undefined); p.setNoteVal(undefined); }}>{t("library.clearTempo")}</Button>
       </>)}
 
       <MultiChipPicker

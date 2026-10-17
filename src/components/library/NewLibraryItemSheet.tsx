@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCollectionLinksByItem, useCollections, useSegmentsByItem, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
-import type { LibraryKind } from "@/domain/entities/common";
-import type { LibraryItem } from "@/domain/entities/library";
+import type { LibraryKind, StudyStatus } from "@/domain/entities/common";
+import type { LibraryItem, SegmentInput } from "@/domain/entities/library";
 import { useI18n } from "@/lib/i18n";
 import {
   Sheet,
@@ -22,8 +22,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LibraryItemKindFields } from "./LibraryItemKindFields";
-import { type DraftSegment } from "./SegmentsEditor";
-import { libraryService, collectionsService } from "@/lib/services";
+import { LIBRARY_KINDS } from "@/lib/constants";
+import { libraryItemInputSchema, segmentInputSchema } from "@/lib/schemas";
+import { Textarea } from "@/components/ui/textarea";
+import { nativeSelect } from "@/components/diary/WhenFields";
+import { libraryService } from "@/lib/services";
 import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet";
 import { toast } from "sonner";
 
@@ -31,22 +34,18 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   kind: LibraryKind;
+  collectionId?: number;
+  defaultSubjectId?: number;
   /** When provided, the sheet opens in edit mode prefilled with this item. */
   item?: LibraryItem | null;
 }
 
 
 
-const BPM_MIN = 20;
-const BPM_MAX = 400;
-
-const isValidBpm = (n: number | undefined) =>
-  n === undefined || (Number.isFinite(n) && n >= BPM_MIN && n <= BPM_MAX);
-
-export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
+export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collectionId, defaultSubjectId }: Props) {
   const { t } = useI18n();
   const isEdit = !!item?.id;
-  const editingKind = item?.kind ?? kind;
+  const [editingKind, setEditingKind] = useState<LibraryKind>(item?.kind ?? kind);
 
   const subjects = useSubjects();
   const allTechniques = useTechniques();
@@ -55,6 +54,11 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
+  const [catalog, setCatalog] = useState("");
+  const [notes, setNotes] = useState("");
+  const [studyStatus, setStudyStatus] = useState<StudyStatus>("not_started");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string>();
   
 
   const [targetBpm, setTargetBpm] = useState<number | undefined>();
@@ -62,10 +66,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const [noteVal, setNoteVal] = useState<LibraryItem["noteVal"]>();
 
   const [techniqueIds, setTechniqueIds] = useState<number[]>([]);
-  const [segments, setSegments] = useState<DraftSegment[]>([]);
-
-  const [totalExercises, setTotalExercises] = useState<number | undefined>();
-  const [currentExercise, setCurrentExercise] = useState<number | undefined>(1);
+  const [segments, setSegments] = useState<SegmentInput[]>([]);
 
   const [collectionIds, setCollectionIds] = useState<number[]>([]);
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
@@ -74,11 +75,10 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   const existingMemberships = useCollectionLinksByItem(item?.id);
   const collectionOptions = useMemo(
     () => (allCollections ?? [])
-      .filter((c) => c.kind === editingKind)
       .slice()
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((c) => ({ value: c.id, label: c.name })),
-    [allCollections, editingKind]
+    [allCollections]
   );
 
   const subjectTechniqueOptions = useMemo(
@@ -94,26 +94,30 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
   // Default subject when sheet opens / subjects load (create mode)
   useEffect(() => {
     if (open && !isEdit && subjects?.length && subjectId === undefined) {
-      setSubjectId(subjects[0].id);
+      setSubjectId(defaultSubjectId ?? subjects[0].id);
     }
-  }, [open, subjects, subjectId, isEdit]);
+  }, [open, subjects, subjectId, isEdit, defaultSubjectId]);
 
   // Prefill on edit-open
   useEffect(() => {
     if (!open) return;
+    setEditingKind(item?.kind ?? kind);
+    setSaveError(undefined);
     if (isEdit && item) {
       setSubjectId(item.subjectId);
       setTitle(item.title ?? "");
       setComposer(item.composer ?? "");
+      setCatalog(item.catalog ?? "");
+      setNotes(item.notes ?? "");
+      setStudyStatus(item.studyStatus);
       
       setTargetBpm(item.targetBpm);
       setStartBpm(item.startBpm);
       setNoteVal(item.noteVal);
       setTechniqueIds(item.techniqueIds ?? []);
-      setTotalExercises(item.totalExercises);
-      setCurrentExercise(item.currentExercise ?? 1);
+
     }
-    if (open && !isEdit) setCollectionIds([]);
+    if (open && !isEdit) setCollectionIds(collectionId === undefined ? [] : [collectionId]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isEdit, item?.id]);
 
@@ -122,6 +126,11 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     if (open && isEdit && existingSegments) {
       setSegments(
         existingSegments.map((s) => ({
+          id: s.id,
+          position: s.position,
+          barStart: s.barStart,
+          barEnd: s.barEnd,
+          notes: s.notes,
           label: s.label,
           targetBpm: s.targetBpm,
           noteVal: s.noteVal,
@@ -144,110 +153,50 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
     if (!open) {
       setTitle("");
       setComposer("");
+      setCatalog("");
+      setNotes("");
+      setStudyStatus("not_started");
+      setSaveError(undefined);
       
       setTargetBpm(undefined);
       setStartBpm(undefined);
       setNoteVal(undefined);
       setTechniqueIds([]);
       setSegments([]);
-      setTotalExercises(undefined);
-      setCurrentExercise(1);
       setSubjectId(undefined);
       setCollectionIds([]);
     }
   }, [open]);
 
-  const titleLabel = useMemo(() => {
-    if (isEdit) return t("library.editItem");
-    switch (editingKind) {
-      case "repertoire": return t("library.newPiece");
-      case "manual":     return t("library.newManual");
-      case "technique":  return t("library.newTechnique");
-      case "theory":     return t("library.newTheoryTopic");
-    }
-  }, [editingKind, isEdit, t]);
-
-  // ---- Validation ----
+  const titleLabel = isEdit ? t("library.editItem") : t("library.add");
   const errors = useMemo(() => {
-    const e: string[] = [];
-    if (!title.trim()) e.push(t("errors.titleRequired"));
-    if (subjectId === undefined) e.push(t("errors.pickSubject"));
-
-    if (!isValidBpm(targetBpm)) e.push(t("errors.bpmRange"));
-    if (!isValidBpm(startBpm)) e.push(t("errors.bpmRange"));
-
-    if (editingKind === "technique" && startBpm !== undefined && targetBpm !== undefined && startBpm > targetBpm) {
-      e.push(t("errors.bpmRange"));
+    const result: string[] = [];
+    const parsed = libraryItemInputSchema.safeParse({ subjectId, kind: editingKind, title, composer, catalog, notes, studyStatus, startBpm, targetBpm, noteVal, techniqueIds });
+    if (!parsed.success) for (const issue of parsed.error.issues) {
+      const field = issue.path[0];
+      result.push(t(field === "title" ? "errors.titleRequired" : field === "subjectId" ? "errors.pickSubject" : field === "targetBpm" && (targetBpm === undefined || noteVal === undefined) ? "library.error.tempoPair" : "library.error.fields"));
     }
-
-    if (editingKind === "manual") {
-      if (currentExercise === undefined || currentExercise < 1) e.push(t("errors.bpmRange"));
-      if (totalExercises !== undefined && totalExercises < 1) e.push(t("errors.bpmRange"));
-      if (
-        currentExercise !== undefined &&
-        totalExercises !== undefined &&
-        currentExercise > totalExercises
-      ) {
-        e.push(t("errors.bpmRange"));
-      }
-    }
-
-    if (segments.length) {
-      if (segments.some((s) => !s.label.trim())) e.push(t("errors.titleRequired"));
-      if (segments.some((s) => !isValidBpm(s.targetBpm))) e.push(t("errors.bpmRange"));
-    }
-
-    return e;
-  }, [title, subjectId, targetBpm, startBpm, editingKind, currentExercise, totalExercises, segments, t]);
-
-  const canSave = errors.length === 0;
+    if (segments.some(s => !segmentInputSchema.safeParse(s).success)) result.push(t("segments.invalid"));
+    return [...new Set(result)];
+  }, [subjectId, editingKind, title, composer, catalog, notes, studyStatus, startBpm, targetBpm, noteVal, techniqueIds, segments, t]);
+  const loading = isEdit && (existingSegments === undefined || existingMemberships === undefined);
+  const canSave = errors.length === 0 && !saving && !loading;
 
   const save = async () => {
     if (!canSave || subjectId === undefined) return;
-    const now = Date.now();
-    const base: LibraryItem = {
-      id: item?.id,
-      subjectId,
-      kind: editingKind,
-      title: title.trim(),
-      createdAt: item?.createdAt ?? now,
-    };
-
-    if (editingKind === "repertoire") {
-      base.composer = composer.trim() || undefined;
-      
-      base.targetBpm = targetBpm;
-      base.noteVal = noteVal;
-      base.techniqueIds = techniqueIds;
-    } else if (editingKind === "manual") {
-      base.composer = composer.trim() || undefined;
-      base.totalExercises = totalExercises;
-      base.currentExercise = currentExercise;
-      base.targetBpm = targetBpm;
-      base.noteVal = noteVal;
-      base.techniqueIds = techniqueIds;
-    } else if (editingKind === "technique") {
-      base.composer = composer.trim() || undefined;
-      base.startBpm = startBpm;
-      base.targetBpm = targetBpm;
-      base.noteVal = noteVal;
-      base.techniqueIds = techniqueIds;
-    }
-
-    const segmentsPayload = segments.length
-      ? segments.map((s) => ({
-          label: s.label.trim(),
-          targetBpm: s.targetBpm,
-          noteVal: s.noteVal,
-          layers: s.layers ?? [],
-          techniqueIds: s.techniqueIds ?? [],
-        }))
-      : [];
-
-    const savedId = await libraryService.upsert(base, segmentsPayload);
-    await collectionsService.setItemCollections(savedId, collectionIds);
-    toast.success(isEdit ? t("toast.updated") : t("toast.added"));
-    onOpenChange(false);
+    setSaving(true);
+    setSaveError(undefined);
+    try {
+      await libraryService.upsert({
+        ...item, subjectId, kind: editingKind, title: title.trim(), composer: composer.trim() || undefined,
+        catalog: catalog.trim() || undefined, notes: notes.trim() || undefined, studyStatus,
+        targetBpm, startBpm, noteVal, techniqueIds, createdAt: item?.createdAt ?? Date.now(),
+      }, segments, collectionIds);
+      toast.success(isEdit ? t("toast.updated") : t("toast.added"));
+      onOpenChange(false);
+    } catch (error) {
+      setSaveError(error instanceof Error && error.message.startsWith("library.error.") ? t(error.message) : t("errors.couldNotSave"));
+    } finally { setSaving(false); }
   };
 
   return (
@@ -264,6 +213,9 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5">
+          <label className="grid gap-1.5 text-xs font-medium">{t("library.materialType")}
+            <select className={nativeSelect} value={editingKind} onChange={e => setEditingKind(e.target.value as LibraryKind)}>{LIBRARY_KINDS.map(k => <option key={k.key} value={k.key}>{t(k.tKey)}</option>)}</select>
+          </label>
           {/* Subject */}
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">
@@ -273,7 +225,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
               value={subjectId !== undefined ? String(subjectId) : ""}
               onValueChange={(v) => setSubjectId(Number(v))}
             >
-              <SelectTrigger className="bg-card">
+              <SelectTrigger aria-label={t("common.subject")} className="bg-card">
                 <SelectValue placeholder={t("tasks.pickSubject")} />
               </SelectTrigger>
               <SelectContent>
@@ -292,6 +244,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
               {t("common.title")}
             </Label>
             <Input
+              aria-label={t("common.title")}
+              maxLength={140}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t(`library.placeholder.${editingKind}`)}
@@ -300,20 +254,17 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
             />
           </div>
 
-          {/* Composer / Author */}
-          {(editingKind === "repertoire" || editingKind === "manual") && (
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-foreground">
-                {editingKind === "manual" ? t("library.labelAuthor") : t("library.labelComposer")}
-              </Label>
-              <Input
-                value={composer}
-                onChange={(e) => setComposer(e.target.value)}
-                placeholder={editingKind === "manual" ? "Hanon" : "Mozart"}
-                className="bg-card"
-              />
-            </div>
-          )}
+          <details className="space-y-3">
+            <summary className="cursor-pointer text-sm font-medium">{t("library.optionalDetails")}</summary>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-xs font-medium">{t("library.authorComposer")}<Input maxLength={120} value={composer} onChange={e => setComposer(e.target.value)} /></label>
+            <label className="grid gap-1.5 text-xs font-medium">{t("library.catalog")}<Input maxLength={60} value={catalog} onChange={e => setCatalog(e.target.value)} /></label>
+          </div>
+          <label className="grid gap-1.5 text-xs font-medium">{t("library.stableNotes")}<Textarea rows={2} maxLength={2000} value={notes} onChange={e => setNotes(e.target.value)} /></label>
+          </details>
+          <label className="grid gap-1.5 text-xs font-medium">{t("library.studyStatus")}
+            <select className={nativeSelect} value={studyStatus} onChange={e => setStudyStatus(e.target.value as StudyStatus)}>{(["not_started", "in_progress", "consolidated"] as const).map(status => <option key={status} value={status}>{t(`library.status.${status}`)}</option>)}</select>
+          </label>
 
           <LibraryItemKindFields
             kind={editingKind}
@@ -323,8 +274,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
             noteVal={noteVal} setNoteVal={setNoteVal}
             techniqueIds={techniqueIds} setTechniqueIds={setTechniqueIds}
             segments={segments} setSegments={setSegments}
-            totalExercises={totalExercises} setTotalExercises={setTotalExercises}
-            currentExercise={currentExercise} setCurrentExercise={setCurrentExercise}
             techniqueOptions={subjectTechniqueOptions}
             subjectLayers={subjectLayers}
             collectionIds={collectionIds}
@@ -333,6 +282,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
             onCreateCollection={() => setNewCollectionOpen(true)}
           />
 
+          {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
           {/* Validation summary */}
           {errors.length > 0 && (
             <div className="paper-card p-3 border border-destructive/30">
@@ -361,7 +311,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item }: Props) {
         open={newCollectionOpen}
         onOpenChange={setNewCollectionOpen}
         collection={null}
-        kind={editingKind}
+        kind="collection"
         onSaved={(id) => setCollectionIds([...collectionIds, id])}
       />
     </Sheet>

@@ -38,8 +38,7 @@ export function LastSessionStrip({ task, compact = false, onRestart }: Props) {
   const todayKey = today();
 
   const lastSession = usePresentationRead<Session | null>("sessions.lastForTask", [task.id, task.itemId, todayKey]);
-  const isTheory = usePresentationRead<boolean>("subjects.isTheory", [task.subjectId]) ?? false;
-  const recentBpms = usePresentationRead<number[]>("sessions.recentBpms", [isTheory ? undefined : task.itemId, todayKey]);
+  const recentBpms = usePresentationRead<number[]>("sessions.recentBpms", [task.itemId, todayKey]);
 
   const sparklinePath = useMemo(() => {
     if (!recentBpms || recentBpms.length < 2) return null;
@@ -60,10 +59,10 @@ export function LastSessionStrip({ task, compact = false, onRestart }: Props) {
     const segs = lastSession?.snapshot?.segments;
     if (!segs?.length || !lastSession) return null;
     const rows = segs
-      .map(({ id, label }) => ({ id, label, m: lastSession.marks.find((mark) => String(mark.segmentId) === id) }))
+      .map(({ id, label, barStart, barEnd }) => ({ id, label: barStart === undefined ? label : `${label} · ${t("segments.bars", { start: barStart, end: barEnd! })}`, m: lastSession.marks.find((mark) => String(mark.segmentId) === id) }))
       .filter((r) => !!r.m);
     return rows.length ? rows : null;
-  }, [lastSession]);
+  }, [lastSession, t]);
 
   if (!lastSession) return null;
   const top = topMark(lastSession.marks);

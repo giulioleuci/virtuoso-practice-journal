@@ -6,7 +6,7 @@ import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { SegmentMark, Subject } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
-import { emptyEntry, marksFromPlan, planSegmentIds, restartFrom } from "@/domain/logic/plan";
+import { syncPlan, emptyEntry, marksFromPlan, planSegmentIds, restartFrom } from "@/domain/logic/plan";
 import { missingRatings } from "@/domain/logic/sessionMetrics";
 import type { AudioDraft } from "@/domain/ports/audio";
 import type { SessionLogInput, SessionTarget } from "@/domain/ports/session";
@@ -53,8 +53,7 @@ const markErrors = (notes: string, marks: SegmentMark[], t: ReturnType<typeof us
 };
 
 /** Marks as stored: tempo and note value only mean something outside theory subjects. */
-const cleanMarks = (marks: SegmentMark[], isTheory: boolean): SegmentMark[] =>
-  marks.map((m) => (isTheory ? { ...m, bpm: undefined, noteVal: undefined, targetBpm: undefined } : m));
+
 
 /** Adaptive routines re-plan after a log; the outcome is reported on its own, so a planning failure never touches the saved session. */
 async function refreshRoutine(routineId: number, fromDate: string, t: ReturnType<typeof useI18n>["t"], openPlan: () => void): Promise<void> {
@@ -188,15 +187,15 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   };
 
   const errors = useMemo(() => {
-    const e = markErrors(notes, cleanMarks(marks, isTheory), t);
+    const e = markErrors(notes, marks, t);
     if (needHelp && !helpText.trim()) e.push(t("session.helpDescribe"));
     return e;
-  }, [marks, notes, isTheory, needHelp, helpText, t]);
+  }, [marks, notes, needHelp, helpText, t]);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (errors.length || submission.submitting || !task.id) return;
-    const logged = cleanMarks(marks, isTheory);
+    const logged = marks;
     const ok = await submission.submit({ input: { date: task.date, notes, marks: logged, helpText: needHelp ? helpText.trim() : undefined, clips } });
     if (!ok) return void toast.error(submission.error ?? t("errors.couldNotSave"));
     if (task.studyRoutineId) void refreshRoutine(task.studyRoutineId, task.date, t, () => navigate("/tasks?tab=routines"));
@@ -211,11 +210,11 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
       <PageHeader title={t("logPage.title")} subtitle={<>{task.title}{item?.composer ? ` · ${item.composer}` : ""}</>} />
       <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
         <form onSubmit={save} className={`${panel} min-w-0`}>
-          {!isTheory && !bpmDismissed && marks.length === 1 && (
+          {(item ? item.kind !== "theory" : !isTheory) && !bpmDismissed && marks.length === 1 && (
             <div className="mb-5"><BpmSuggestion task={task} dismissed={bpmDismissed} onDismiss={() => setBpmDismissed(true)} onAccept={(bpm) => { changeMarks(marks.map((m) => ({ ...m, bpm }))); setBpmDismissed(true); }} /></div>
           )}
 
-          <MarksEditor marks={marks} onChange={changeMarks} sections={rows} seed={seed} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} />
+          <MarksEditor marks={marks} onChange={changeMarks} sections={rows} seed={seed} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} />
 
           <div className={section}><ClipDrafts clips={clips} onChange={setClips} sections={rows} /></div>
 
@@ -270,18 +269,20 @@ function FreeSessionForm() {
   const item = pieces?.find((i) => i.id === itemId);
   const itemSegments = usePresentationRead<Segment[]>("library.segments", [itemId]);
   // A piece with sections starts with none ticked; anything else is one whole-scope entry.
-  useEffect(() => { setMarks(itemSegments?.length ? [] : [emptyEntry()]); }, [itemId, itemSegments?.length]);
+  // Seed only when the selection loads or changes; changing defaults must keep the draft.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setMarks(itemSegments?.length ? [] : marksFromPlan(syncPlan([], [], item))); }, [itemId, item?.id, itemSegments?.length]);
   const { isTheory, layerOptions, techniqueOptions } = useSubjectOptions(subject);
   const minDate = useMemo(() => { const d = new Date(todayKey); d.setDate(d.getDate() - (profile?.lateRecoveryDays ?? 3)); return d.toISOString().slice(0, 10); }, [todayKey, profile?.lateRecoveryDays]);
 
   const errors = useMemo(() => {
-    const e = markErrors(notes, cleanMarks(marks, isTheory), t);
+    const e = markErrors(notes, marks, t);
     if (subjId === undefined) e.push(t("errors.pickSubject"));
     if (!date) e.push(t("session.dateRequired"));
     if (needHelp && !helpText.trim()) e.push(t("session.helpDescribe"));
     if (needHelp && !itemId) e.push(t("logPage.helpNoItem"));
     return e;
-  }, [marks, notes, isTheory, subjId, date, needHelp, helpText, itemId, t]);
+  }, [marks, notes, subjId, date, needHelp, helpText, itemId, t]);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,7 +290,7 @@ function FreeSessionForm() {
     setBusy(true);
     try {
       const target: SessionTarget = { subjectId: subjId, linkType: itemId ? "item" : "free", itemId, title: item?.title ?? (title.trim() || t("diary.freeSession")), plan: [] };
-      const id = await applicationCommands.sessions.log.execute(target, { date, notes, marks: cleanMarks(marks, isTheory), helpText: needHelp && itemId ? helpText.trim() : undefined, clips });
+      const id = await applicationCommands.sessions.log.execute(target, { date, notes, marks: marks, helpText: needHelp && itemId ? helpText.trim() : undefined, clips });
       toast.success(t("toast.sessionLogged"), { action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${id}`) } });
       goBack();
     } catch (err) {
@@ -333,7 +334,7 @@ function FreeSessionForm() {
           </div>
 
           <div className={section}>
-            <MarksEditor marks={marks} onChange={setMarks} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label }))} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} />
+            <MarksEditor marks={marks} onChange={setMarks} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label }))} seed={(id) => marksFromPlan(syncPlan([], itemSegments?.filter(s => s.id === id) ?? [], item))[0]} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} />
           </div>
 
           <div className={section}><ClipDrafts clips={clips} onChange={setClips} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label })) ?? []} /></div>

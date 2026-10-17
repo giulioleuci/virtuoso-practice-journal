@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Pencil, Play } from "lucide-react";
 import type { Session } from "@/domain/entities/session";
-import { meanConfidence, topBpm, topMark } from "@/domain/logic/sessionMetrics";
+import { meanConfidence, topBpm } from "@/domain/logic/sessionMetrics";
 import { sessionLabel, tempoLabel } from "@/lib/format";
 import { formatDate, today } from "@/lib/date";
 import { subjectColorCss } from "@/lib/subjectColors";
@@ -44,7 +44,7 @@ export default function ItemPage() {
 
   const sorted = useMemo(() => [...(sessions ?? [])].sort((a, b) => b.date.localeCompare(a.date)), [sessions]);
   const last = sorted[0];
-  const lastTempo = sorted.map(s => topMark(s.marks)).find(m => m?.bpm);
+  const lastTempo = sorted.find(s => s.marks.some(m => m.bpm))?.marks;
 
   if (item === undefined || sessions === undefined) return <div className="paper-skeleton h-40 w-full" />;
   if (!item || item.deletedAt) return <EmptyState title={t("item.notFound")} />;
@@ -120,7 +120,7 @@ export default function ItemPage() {
               <SectionHeader title={t("item.studyTitle")} action={studyBtn} />
               <dl className="flex flex-wrap gap-x-10 gap-y-3">
                 <div><dt className="text-xs text-muted-foreground">{t("item.sessionsStat")}</dt><dd className="font-numeric text-xl tabular-nums">{sorted.length}</dd></div>
-                {!isTheory && <div><dt className="text-xs text-muted-foreground">{t("item.lastTempo")}</dt><dd className="font-numeric text-xl tabular-nums">{lastTempo?.bpm ? tempoLabel(lastTempo.noteVal, lastTempo.bpm) : "—"}{item.targetBpm ? <span className="ml-2 text-sm text-muted-foreground">{t("library.targetTempo")}: {tempoLabel(item.noteVal, item.targetBpm)}</span> : null}</dd></div>}
+                {!isTheory && <div><dt className="text-xs text-muted-foreground">{t("item.lastTempo")}</dt><dd className="font-numeric text-xl tabular-nums">{lastTempo ? sessionLabel(lastTempo.map(mark => ({ ...mark, confidence: undefined }))) : "—"}{item.targetBpm ? <span className="ml-2 text-sm text-muted-foreground">{t("library.targetTempo")}: {tempoLabel(item.noteVal, item.targetBpm)}</span> : null}</dd></div>}
                 <div><dt className="text-xs text-muted-foreground">{t("item.lastSession")}</dt><dd className="font-numeric text-xl tabular-nums">{last ? formatDate(last.date, lang, "dayMonth") : "—"}</dd></div>
               </dl>
             </section>

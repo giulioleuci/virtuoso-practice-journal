@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useSubjects } from "@/presentation/hooks/useEntities";
 import type { Collection } from "@/domain/entities/collection";
-import type { ColorKey, LibraryKind } from "@/domain/entities/common";
+import type { ColorKey, CollectionKind } from "@/domain/entities/common";
 import { useI18n } from "@/lib/i18n";
 import { useSheetForm } from "@/hooks/useSheetForm";
 import {
@@ -23,21 +24,22 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   collection?: Collection | null;
   /** Kind to assign on create. Ignored when editing (uses collection.kind). */
-  kind?: LibraryKind;
+  kind?: CollectionKind;
   onSaved?: (id: number) => void;
 }
 
 export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSaved }: Props) {
   const { t } = useI18n();
   const isEdit = !!collection?.id;
-  const effectiveKind: LibraryKind = collection?.kind ?? kind ?? "repertoire";
-  const showComposerLike = effectiveKind === "repertoire" || effectiveKind === "manual";
+  const [effectiveKind, setEffectiveKind] = useState<CollectionKind>(collection?.kind ?? kind ?? "collection");
+  const showComposerLike = true;
   const subjects = useSubjects();
 
   interface FormValues {
     name: string;
     composer: string;
     catalog: string;
+    edition: string;
     notes: string;
     color?: ColorKey;
     defaultSubjectId?: number;
@@ -47,24 +49,28 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
     kind: effectiveKind,
     name: v.name.trim(),
     composer: showComposerLike ? (v.composer.trim() || undefined) : undefined,
-    catalog: showComposerLike ? (v.catalog.trim() || undefined) : undefined,
+    catalog: v.catalog.trim() || undefined,
+    edition: v.edition.trim() || undefined,
     notes: v.notes.trim() || undefined,
     color: v.color,
     defaultSubjectId: v.defaultSubjectId,
   });
 
-  const { values, setField, canSave, submit } = useSheetForm<FormValues>({
+  const { values, setField, canSave, submit, submitting } = useSheetForm<FormValues>({
     open,
     resetKey: collection?.id,
-    initial: { name: "", composer: "", catalog: "", notes: "", color: undefined, defaultSubjectId: undefined },
-    prefill: () => ({
+    initial: { name: "", composer: "", catalog: "", edition: "", notes: "", color: undefined, defaultSubjectId: undefined },
+    prefill: () => {
+      setEffectiveKind(collection?.kind ?? kind ?? "collection");
+      return ({
       name: collection?.name ?? "",
       composer: collection?.composer ?? "",
       catalog: collection?.catalog ?? "",
+      edition: collection?.edition ?? "",
       notes: collection?.notes ?? "",
       color: collection?.color,
       defaultSubjectId: collection?.defaultSubjectId,
-    }),
+    }); },
     validate: (v) => ({ ok: collectionInputSchema.safeParse(toInput(v)).success }),
     onSubmit: async (v) => {
       const input = toInput(v);
@@ -80,11 +86,11 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
         }
         onOpenChange(false);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : t("errors.couldNotSave"));
+        toast.error(e instanceof Error && e.message.startsWith("collection.error.") ? t(e.message) : t("errors.couldNotSave"));
       }
     },
   });
-  const { name, composer, catalog, notes, color, defaultSubjectId } = values;
+  const { name, composer, catalog, edition, notes, color, defaultSubjectId } = values;
   const save = submit;
 
   return (
@@ -100,9 +106,16 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5">
+          <label className="grid gap-1.5 text-xs font-medium">{t("collections.kind")}
+            <select className="h-11 rounded-md border border-input bg-card px-3 text-base" value={effectiveKind} onChange={e => setEffectiveKind(e.target.value as CollectionKind)}>
+              {(["manual", "collection"] as const).map(k => <option key={k} value={k}>{t(`collections.kind.${k}`)}</option>)}
+            </select>
+          </label>
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">{t("common.name")}</Label>
             <Input
+              aria-label={t("common.name")}
+              maxLength={120}
               value={name}
               onChange={(e) => setField("name", e.target.value)}
               placeholder={t(`collections.namePlaceholder.${effectiveKind}`)}
@@ -126,6 +139,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
             </div>
           )}
 
+          <label className="grid gap-1.5 text-xs font-medium">{t("collections.edition")}<Input maxLength={120} value={edition} onChange={e => setField("edition", e.target.value)} /></label>
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">{t("collections.labelColor")}</Label>
             <div className="flex flex-wrap gap-2">
@@ -175,7 +189,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
         <SheetFooter className="px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background/80 backdrop-blur">
           <div className="flex gap-3 w-full">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1">{t("common.cancel")}</Button>
-            <Button onClick={save} disabled={!canSave} className="flex-1">
+            <Button onClick={save} disabled={!canSave || submitting} className="flex-1">
               {isEdit ? t("collections.saveChanges") : t("collections.createCollection")}
             </Button>
           </div>

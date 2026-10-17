@@ -9,7 +9,7 @@ export class ExportBackupUseCase {
   ) {}
 
   async createContent(exportedAt = this.clock()): Promise<string> {
-    return JSON.stringify({ version: 3, exportedAt, data: await this.backups.exportAll() }, null, 2);
+    return JSON.stringify({ version: 4, exportedAt, data: await this.backups.exportAll() }, null, 2);
   }
 
   async execute(): Promise<void> {

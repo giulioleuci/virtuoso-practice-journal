@@ -24,6 +24,8 @@ export function BpmSparkline({ itemId, weeks = 8 }: Props) {
     today.setHours(0, 0, 0, 0);
     const buckets: (number | null)[] = Array(weeks).fill(null);
 
+    if (new Set((sessions ?? []).flatMap(s => s.marks.filter(m => m.bpm !== undefined).map(m => m.noteVal ?? "quarter"))).size > 1) return { points: [], max: 0, min: 0 };
+
     for (const s of sessions ?? []) {
       const bpm = topBpm(s.marks);
       if (!bpm) continue;

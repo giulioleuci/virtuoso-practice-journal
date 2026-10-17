@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLibraryByKind, useSubjects } from "@/presentation/hooks/useEntities";
+import { usePerformableLibrary, useSubjects } from "@/presentation/hooks/useEntities";
 import type { PerformanceEvent, PerformanceKind } from "@/domain/entities/performance";
 import { useI18n } from "@/lib/i18n";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
@@ -25,7 +25,7 @@ interface Props {
 export function PerformanceEventSheet({ open, onOpenChange, event, programme }: Props) {
   const { t } = useI18n();
   const subjects = useSubjects();
-  const pieces = useLibraryByKind("repertoire");
+  const pieces = usePerformableLibrary();
   const isEdit = !!event?.id;
 
   const [name, setName] = useState("");
@@ -33,6 +33,7 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
   const [date, setDate] = useState(today());
   const [venue, setVenue] = useState("");
   const [subjectId, setSubjectId] = useState<number | undefined>();
+  const [saving, setSaving] = useState(false);
   const [itemIds, setItemIds] = useState<number[]>([]);
 
   useEffect(() => {
@@ -54,7 +55,9 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
   const canSave = name.trim().length > 0 && !!date;
 
   const save = async () => {
-    if (!canSave) return;
+    if (!canSave || saving) return;
+    setSaving(true);
+    try {
     const id = await performancesService.upsertEvent({
       id: event?.id,
       name: name.trim(),
@@ -67,6 +70,8 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
     await performancesService.setEventItems(id, itemIds);
     toast.success(isEdit ? t("toast.updated") : t("toast.added"));
     onOpenChange(false);
+    } catch (error) { toast.error(error instanceof Error && /^(library|performances)\.error\./.test(error.message) ? t(error.message) : t("errors.couldNotSave")); }
+    finally { setSaving(false); }
   };
 
   const toggle = (id: number) =>
@@ -81,7 +86,7 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
       footer={
         <div className="flex gap-3 w-full">
           <Button variant="ghost" className="flex-1" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
-          <Button className="flex-1" disabled={!canSave} onClick={save}>{t("common.save")}</Button>
+          <Button className="flex-1" disabled={!canSave || saving} onClick={save}>{t("common.save")}</Button>
         </div>
       }
     >

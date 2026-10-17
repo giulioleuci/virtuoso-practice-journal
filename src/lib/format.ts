@@ -17,7 +17,7 @@ export function planTempoLabel(plan: SegmentEntry[]): string | undefined {
 
 /** One-line result of a session: top tempo and mean confidence, e.g. "♩ = 96 · ★ 4". */
 export function sessionLabel(marks: SegmentMark[]): string {
-  const top = topMark(marks);
+  const tempos = [...new Set(marks.filter(m => m.bpm !== undefined).map(m => m.noteVal ?? "quarter"))].map(note => topMark(marks.filter(m => (m.noteVal ?? "quarter") === note))).flatMap(mark => mark?.bpm ? [tempoLabel(mark.noteVal, mark.bpm)] : []);
   const confidence = meanConfidence(marks);
-  return [top?.bpm ? tempoLabel(top.noteVal, top.bpm) : undefined, confidence ? confidenceLabel(confidence) : undefined].filter(Boolean).join(" · ");
+  return [...tempos, confidence ? confidenceLabel(confidence) : undefined].filter(Boolean).join(" · ");
 }

@@ -31,13 +31,13 @@ export const libraryRepository = {
     return db.transaction("rw", [db.library, db.segments, db.subjects, db.techniques, db.tasks, db.sessions, db.recordings, db.collections, db.collectionItems, db.performanceItems], async () => {
       const subject = await db.subjects.get(data.subjectId);
       if (!subject || !active(subject)) throw new Error("library.error.subject");
-      const techniqueIds = [...new Set([...(data.techniqueIds ?? []), ...(inputs?.flatMap(segment => segment.techniqueIds ?? []) ?? [])])];
+      const existing = item.id === undefined ? [] : await db.segments.where("itemId").equals(item.id).toArray();
+      const techniqueIds = [...new Set([...(data.techniqueIds ?? []), ...(inputs ?? existing.filter(active)).flatMap(segment => segment.techniqueIds ?? [])])];
       const techniques = await db.techniques.bulkGet(techniqueIds);
       if (techniques.some(technique => !technique || !active(technique) || technique.subjectId !== data.subjectId)) throw new Error("library.error.techniques");
       const previous = item.id === undefined ? undefined : await db.library.get(item.id);
       if (item.id !== undefined && (!previous || !active(previous))) throw new Error("library.error.missing");
       if (!isPerformable(data.kind) && (item.inRepertoire || previous?.inRepertoire || (item.id !== undefined && await db.performanceItems.where("itemId").equals(item.id).count() > 0))) throw new Error("library.error.performable");
-      const existing = item.id === undefined ? [] : await db.segments.where("itemId").equals(item.id).toArray();
       const byId = new Map(existing.map(segment => [segment.id, segment]));
       const ids = inputs?.flatMap(segment => segment.id === undefined ? [] : [segment.id]) ?? [];
       if (new Set(ids).size !== ids.length || ids.some(id => !byId.has(id))) throw new Error("library.error.segment");
@@ -49,7 +49,7 @@ export const libraryRepository = {
           const [tasks, sessions, recordings] = await Promise.all([db.tasks.where("itemId").equals(id).toArray(), db.sessions.toArray(), db.recordings.toArray()]);
           const referenced = new Set([
             ...tasks.flatMap(task => task.plan.map(entry => entry.segmentId)),
-            ...sessions.flatMap(session => [...session.marks.map(mark => mark.segmentId), ...(session.notStudied ?? [])]),
+            ...sessions.flatMap(session => [...session.marks.map(mark => mark.segmentId), ...(session.notStudied ?? []), ...(session.snapshot?.segments ?? []).map(segment => Number(segment.id))]),
             ...recordings.map(recording => recording.segmentId),
           ]);
           for (const segment of removed) {

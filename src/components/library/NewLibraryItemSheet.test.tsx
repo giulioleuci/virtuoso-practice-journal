@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-imports -- Integration test exercises persistence through the real UI. */
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";

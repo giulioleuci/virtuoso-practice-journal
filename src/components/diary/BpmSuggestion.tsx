@@ -1,4 +1,5 @@
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { firstTempo } from "@/domain/logic/plan";
 import type { Task } from "@/domain/entities/task";
 import { useI18n } from "@/lib/i18n";
 import { today } from "@/lib/date";
@@ -20,7 +21,7 @@ export function BpmSuggestion({ task, onAccept, dismissed, onDismiss }: Props) {
   const { t } = useI18n();
   const todayKey = today();
 
-  const suggestion = usePresentationRead<{ reached: number; next: number } | null>("sessions.bpmSuggestion", [task.itemId, todayKey]);
+  const suggestion = usePresentationRead<{ reached: number; next: number } | null>("sessions.bpmSuggestion", [task.itemId, todayKey, firstTempo(task.plan)?.noteVal ?? "quarter"]);
 
   if (!suggestion || dismissed) return null;
 

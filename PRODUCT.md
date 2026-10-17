@@ -23,7 +23,10 @@ Used at the instrument (hands busy, phone or tablet) and in lessons (fast typing
 
 ## Capabilities and Constraints
 - Tempo is expressed as a note value = bpm. Note values include whole, half, quarter, eighth, sixteenth plus dotted half/quarter/eighth for compound meters.
-- Migrations preserve data: no wipe shortcuts.
+- Study materials have five types: piece, study, technical exercise, exercise and theory content. Manuals and collections are separate containers with mixed, ordered indexes and per-link references/pages; materials retain one identity and history across containers.
+- Segments have stable IDs, positions, optional bar ranges and either a complete tempo override or the material’s tempo. New plans resolve defaults; saved plans and historical targets/results keep their own values and figures. Study status changes only explicitly.
+- Pieces and studies may enter repertoire and performance programmes.
+- Backups use version 4 and validate references before atomic import. There are no production contents to convert: update fixtures directly and reject incompatible backup formats. Demo replacement remains an explicit user action; no startup reset.
 - Three per-section star ratings (1-5): mood, focus, confidence. Confidence is required for a new session; mood and focus are optional context only; confidence alone feeds routine weighting. No quality scale, no per-layer or per-technique scores.
 
 ## Product Principles

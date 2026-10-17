@@ -140,10 +140,10 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
     const next: StudyGroup[] =
       kind === "mixed"
         ? [
-            { id: genId(), name: t("routine.groupTechnique"), pool: of("technique", "manual") },
-            { id: genId(), name: t("routine.groupRepertoire"), pool: of("repertoire") },
+            { id: genId(), name: t("routine.groupTechnique"), pool: of("technique", "exercise", "theory") },
+            { id: genId(), name: t("routine.groupRepertoire"), pool: of("piece", "study") },
           ]
-        : [{ id: genId(), name: t("routine.groupDaily"), pool: of("repertoire").length ? of("repertoire") : all.map(itemEntry) }];
+        : [{ id: genId(), name: t("routine.groupDaily"), pool: of("piece", "study").length ? of("piece", "study") : all.map(itemEntry) }];
     setGroups(next);
     setMatrix(Object.fromEntries(WEEKDAYS.map((d) => [String(d), Object.fromEntries(next.map((g) => [g.id, 1]))])));
   };

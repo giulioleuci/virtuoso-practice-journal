@@ -65,9 +65,9 @@ export async function seedGuitarSampleData() {
 
   // ---------- Libreria: tecnica (scale) ----------
   const addSegments = async (itemId: number, labels: string[], targetBpm: number) => {
-    for (const label of labels) {
+    for (const [position, label] of labels.entries()) {
       await db.segments.add({
-        itemId,
+        itemId, position,
         label,
         targetBpm,
         noteVal: "quarter",
@@ -81,7 +81,7 @@ export async function seedGuitarSampleData() {
 
   const scaleMaggioriId = (await db.library.add({
     subjectId: chitarraId,
-    kind: "technique",
+    kind: "technique", studyStatus: "not_started",
     title: "Scale maggiori",
     targetBpm: 100,
     noteVal: "quarter",
@@ -92,7 +92,7 @@ export async function seedGuitarSampleData() {
 
   const scaleMinoriMelId = (await db.library.add({
     subjectId: chitarraId,
-    kind: "technique",
+    kind: "technique", studyStatus: "not_started",
     title: "Scale minori melodiche",
     targetBpm: 100,
     noteVal: "quarter",
@@ -103,7 +103,7 @@ export async function seedGuitarSampleData() {
 
   const scaleMinoriArmId = (await db.library.add({
     subjectId: chitarraId,
-    kind: "technique",
+    kind: "technique", studyStatus: "not_started",
     title: "Scale minori armoniche",
     targetBpm: 100,
     noteVal: "quarter",
@@ -112,28 +112,26 @@ export async function seedGuitarSampleData() {
   })) as number;
   await addSegments(scaleMinoriArmId, NOTES_IT.map((n) => `${n} minore arm.`), 100);
 
-  // ---------- Libreria: manuale ----------
-  const giulianiId = (await db.library.add({
-    subjectId: chitarraId,
-    kind: "manual",
-    title: "120 Arpeggi Op. 1",
-    composer: "Giuliani M.",
-    totalExercises: 120,
-    currentExercise: 1,
-    targetBpm: 60,
-    noteVal: "quarter",
-    techniqueIds: [tArpeggio, tToccoLibero, tTremolo, tLegatoAsc, tLegatoDisc],
-    createdAt: now - 45 * D,
-  })) as number;
-  await addSegments(
-    giulianiId,
-    Array.from({ length: 120 }, (_, i) => `Arp. ${i + 1}`),
-    60,
-  );
+  // Each printed exercise has its own material identity; the manual keeps its index.
+  const manualId = await db.collections.add({ kind: "manual", name: "120 Arpeggi Op. 1", composer: "Mauro Giuliani", edition: "Edizione per lo studio", defaultSubjectId: chitarraId, createdAt: now, updatedAt: now });
+  const arpeggioId = await db.library.add({ subjectId: chitarraId, kind: "technique", studyStatus: "not_started", title: "Arpeggio n. 1", composer: "Mauro Giuliani", catalog: "Op. 1 n. 1", targetBpm: 60, noteVal: "quarter", techniqueIds: [tArpeggio, tToccoLibero, tTremolo, tLegatoAsc, tLegatoDisc], createdAt: now });
+  const studyId = await db.library.add({ subjectId: chitarraId, kind: "study", studyStatus: "not_started", title: "Studio in Do maggiore", composer: "Mauro Giuliani", targetBpm: 80, noteVal: "quarter", createdAt: now });
+  const theoryId = await db.library.add({ subjectId: chitarraId, kind: "theory", studyStatus: "not_started", title: "Indicazioni sul tocco e sul rilassamento", notes: "Leggere prima degli arpeggi.", createdAt: now });
+  await db.library.add({ subjectId: chitarraId, kind: "piece", studyStatus: "not_started", title: "Lágrima", composer: "Francisco Tárrega", createdAt: now });
+  await db.library.add({ subjectId: armoniaId, kind: "exercise", studyStatus: "not_started", title: "Basso da armonizzare n. 1", createdAt: now });
+  await db.segments.bulkAdd([
+    { itemId: studyId, label: "Prima frase", position: 0, barStart: 1, barEnd: 8, layers: [], createdAt: now },
+    { itemId: studyId, label: "Passaggio legato", position: 1, barStart: 4, barEnd: 6, targetBpm: 56, noteVal: "quarter", layers: [], createdAt: now },
+  ]);
+  await db.collectionItems.bulkAdd([
+    { collectionId: manualId, itemId: theoryId, position: 0, reference: "Introduzione", pageStart: 1, createdAt: now },
+    { collectionId: manualId, itemId: arpeggioId, position: 1, reference: "Arpeggio 1", pageStart: 3, createdAt: now },
+    { collectionId: manualId, itemId: studyId, position: 2, reference: "Studio", pageStart: 8, pageEnd: 9, createdAt: now },
+  ]);
 
   // ---------- Raccolta: Scale ----------
   const raccoltaId = (await db.collections.add({
-    kind: "technique",
+    kind: "collection",
     name: "Scale",
     defaultSubjectId: chitarraId,
     createdAt: now - 50 * D,

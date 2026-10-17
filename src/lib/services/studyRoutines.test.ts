@@ -46,16 +46,16 @@ async function seedSubject(): Promise<number> {
 }
 
 async function seedItem(subjectId: number, title = "Sonata"): Promise<number> {
-  return (await db.library.add({
+  return (await db.library.add({ studyStatus: "not_started",
     subjectId,
-    kind: "repertoire" as const,
+    kind: "piece",
     title,
     createdAt: Date.now(),
   })) as number;
 }
 
 async function seedSegment(itemId: number, label = "Exposition"): Promise<number> {
-  return (await db.segments.add({
+  return (await db.segments.add({ position: 0,
     itemId,
     label,
     layers: [],
@@ -65,7 +65,7 @@ async function seedSegment(itemId: number, label = "Exposition"): Promise<number
 
 async function seedCollection(subjectId: number, name = "Studies"): Promise<number> {
   return (await db.collections.add({
-    kind: "repertoire" as const,
+    kind: "collection",
     name,
     defaultSubjectId: subjectId,
     createdAt: Date.now(),

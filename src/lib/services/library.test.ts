@@ -3,8 +3,54 @@ import "fake-indexeddb/auto";
 import { db } from "@/lib/db";
 import { libraryService } from "@/lib/services/library";
 import { collectionsService } from "@/lib/services/collections";
+import { backupService } from "@/lib/services/backup";
+import { performanceRepository } from "@/infrastructure/repositories/dexie/performanceRepository";
 
 describe("stable material identities", () => {
+  it("validates retained section skills when a caller omits the section payload", async () => {
+    const subjectId = await seedSubject();
+    const other = await db.subjects.add({ name: "Other", type: "instrument", createdAt: 1 });
+    const techniqueId = await db.techniques.add({ subjectId, name: "Legato", createdAt: 1 });
+    const itemId = await libraryService.upsert({ subjectId, kind: "exercise", studyStatus: "in_progress", title: "Exercise", createdAt: 1 }, [{ label: "A", position: 0, layers: [], techniqueIds: [techniqueId] }]);
+    await expect(libraryService.upsert({ ...(await db.library.get(itemId))!, subjectId: other })).rejects.toThrow();
+    expect((await db.library.get(itemId))?.subjectId).toBe(subjectId);
+  });
+  it("round trips archived performable materials without losing their existing programs", async () => {
+    const subjectId = await seedSubject();
+    const itemId = await libraryService.upsert({ subjectId, kind: "study", studyStatus: "consolidated", title: "Study", createdAt: 1 });
+    const eventId = await performanceRepository.upsertEvent({ name: "Recital", kind: "concert", date: "2026-10-17", createdAt: 1 });
+    await performanceRepository.setEventItems(eventId, [itemId]);
+    await db.sessions.add({ subjectId, itemId, linkType: "item", date: "2026-10-17", marks: [{ layers: [], techniques: [], confidence: 4 }], createdAt: 1 });
+    await libraryService.remove(itemId);
+    const links = await db.performanceItems.toArray();
+    await backupService.importAll(await backupService.exportAll());
+    expect(await db.performanceItems.toArray()).toEqual(links);
+    expect((await db.library.get(itemId))?.deletedAt).toBeTypeOf("number");
+  });
+
+  it("keeps snapshot-only segments after edited free-session results stop referring to them", async () => {
+    const subjectId = await seedSubject();
+    const item = { subjectId, kind: "study" as const, studyStatus: "in_progress" as const, title: "Study", createdAt: 1 };
+    const id = await libraryService.upsert(item, [{ label: "A", position: 0, layers: [] }]);
+    const [segment] = await db.segments.toArray();
+    const sessionId = await db.sessions.add({ subjectId, itemId: id, linkType: "item", date: "2026-10-17", marks: [{ layers: [], techniques: [], confidence: 4 }], snapshot: { taskTitle: "Study", subjectName: "Piano", segments: [{ id: String(segment.id), label: "A" }] }, createdAt: 1 });
+    await libraryService.upsert({ ...item, id }, []);
+    expect((await db.segments.get(segment.id))?.deletedAt).toBeTypeOf("number");
+    await backupService.importAll(await backupService.exportAll());
+    expect((await db.sessions.get(sessionId))?.snapshot?.segments?.[0].label).toBe("A");
+  });
+
+  it("round trips unchanged historical subject references after a material changes subject", async () => {
+    const subjectId = await seedSubject();
+    const other = await db.subjects.add({ name: "Solfeggio", type: "theory", createdAt: 1 });
+    const itemId = await libraryService.upsert({ subjectId, kind: "exercise", studyStatus: "in_progress", title: "Reading", createdAt: 1 });
+    const taskId = await db.tasks.add({ subjectId, itemId, title: "Reading", date: "2026-10-17", plan: [], done: true, createdAt: 1 });
+    const sessionId = await db.sessions.add({ taskId, subjectId, itemId, linkType: "item", date: "2026-10-17", marks: [{ layers: [], techniques: [], confidence: 4 }], createdAt: 1 });
+    await libraryService.upsert({ ...(await db.library.get(itemId))!, subjectId: other });
+    await backupService.importAll(await backupService.exportAll());
+    expect((await db.tasks.get(taskId))?.subjectId).toBe(subjectId);
+    expect((await db.sessions.get(sessionId))?.subjectId).toBe(subjectId);
+  });
   it("preserves omitted segments, stable IDs, dates, saved plans and session/recording references", async () => {
     const subjectId = await seedSubject();
     const item = { subjectId, kind: "study" as const, studyStatus: "not_started" as const, title: "Study", createdAt: 1 };

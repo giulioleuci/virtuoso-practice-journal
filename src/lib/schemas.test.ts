@@ -8,12 +8,12 @@ describe("study materials", () => {
     expect(libraryKindSchema.options).toEqual(["piece", "study", "technique", "exercise", "theory"]);
     expect(collectionKindSchema.safeParse("piece").success).toBe(false);
     expect(collectionKindSchema.safeParse("manual").success).toBe(true);
-    expect(libraryItemInputSchema.parse({ subjectId: 1, kind: "study", title: " Study " }).studyStatus).toBe("not_started");
-    expect(libraryItemInputSchema.safeParse({ subjectId: 1, kind: "study", title: " " }).success).toBe(false);
+    expect(libraryItemInputSchema.parse({ studyStatus: "not_started", subjectId: 1, kind: "study", title: " Study " }).studyStatus).toBe("not_started");
+    expect(libraryItemInputSchema.safeParse({ studyStatus: "not_started", subjectId: 1, kind: "study", title: " " }).success).toBe(false);
   });
 
   it("requires complete optional tempo pairs on materials and segments", () => {
-    const item = { subjectId: 1, kind: "exercise", title: "Reading" };
+    const item = { studyStatus: "not_started", subjectId: 1, kind: "exercise", title: "Reading" };
     const segment = { label: "A", position: 0, layers: [] };
     for (const [schema, input] of [[libraryItemInputSchema, item], [segmentInputSchema, segment]] as const) {
       expect(schema.safeParse(input).success).toBe(true);

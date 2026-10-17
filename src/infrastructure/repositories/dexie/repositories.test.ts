@@ -121,8 +121,8 @@ describe("Dexie repositories", () => {
     const activeItem = await db.library.add({ subjectId: subject, kind: "piece", studyStatus: "not_started", title: "active", createdAt: 1 });
     const deletedItem = await db.library.add({ subjectId: subject, kind: "piece", studyStatus: "not_started", title: "deleted", deletedAt: 2, createdAt: 1 });
     await db.collectionItems.bulkAdd([
-      { collectionId, itemId: activeItem, createdAt: 1 },
-      { collectionId, itemId: deletedItem, createdAt: 1 },
+      { position: 0, collectionId, itemId: activeItem, createdAt: 1 },
+      { position: 0, collectionId, itemId: deletedItem, createdAt: 1 },
     ]);
     expect((await collectionRepository.items(collectionId)).map((link) => link.itemId)).toEqual([activeItem, deletedItem]);
     expect((await collectionRepository.listItems(collectionId)).map((item) => item.title)).toEqual(["active"]);

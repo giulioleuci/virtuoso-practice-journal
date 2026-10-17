@@ -53,6 +53,7 @@ export interface ResolvedStudyPoolItem {
   segmentIds?: number[];
   collectionId?: number;
   linkType: "item" | "collection";
+  plan?: import("../entities/common").SegmentEntry[];
 }
 
 export interface StudyRoutineGenerationPort {

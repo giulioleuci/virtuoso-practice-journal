@@ -29,11 +29,11 @@ describe("buildSessionSnapshot", () => {
   });
   it("denormalizes subject, item, segments, techniques into an immutable copy", async () => {
     const subjectId = (await db.subjects.add({ name: "Violin", type: "instrument", createdAt: 1 })) as number;
-    const itemId = (await db.library.add({
-      subjectId, kind: "repertoire", title: "Caprice 24", composer: "Paganini", createdAt: 2,
+    const itemId = (await db.library.add({ studyStatus: "not_started",
+      subjectId, kind: "piece", title: "Caprice 24", composer: "Paganini", createdAt: 2,
     })) as number;
-    const seg1 = (await db.segments.add({ itemId, label: "Theme", layers: [], createdAt: 3 })) as number;
-    const seg2 = (await db.segments.add({ itemId, label: "Var I", layers: [], createdAt: 4 })) as number;
+    const seg1 = (await db.segments.add({ position: 0, itemId, label: "Theme", layers: [], createdAt: 3 })) as number;
+    const seg2 = (await db.segments.add({ position: 0, itemId, label: "Var I", layers: [], createdAt: 4 })) as number;
     const tech = (await db.techniques.add({ subjectId, name: "Spiccato", createdAt: 5 })) as number;
 
     const snap = await buildSessionSnapshot({
@@ -62,7 +62,7 @@ describe("buildSessionSnapshot", () => {
   it("includes collection name when task is collection-linked", async () => {
     const subjectId = (await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 })) as number;
     const collectionId = (await db.collections.add({
-      kind: "repertoire", name: "Études Op. 10", createdAt: 1, updatedAt: 1,
+      kind: "collection", name: "Études Op. 10", createdAt: 1, updatedAt: 1,
     })) as number;
     const snap = await buildSessionSnapshot({
       title: "Op. 10 No. 1", date: "2025-01-01", subjectId, collectionId,
@@ -75,8 +75,8 @@ describe("buildSessionSnapshot", () => {
 describe("buildLessonSnapshot", () => {
   it("captures subject + teacher + frequency + piece titles", async () => {
     const subjectId = (await db.subjects.add({ name: "Cello", type: "instrument", createdAt: 1 })) as number;
-    const itemId = (await db.library.add({
-      subjectId, kind: "repertoire", title: "Bach Suite 1", createdAt: 2,
+    const itemId = (await db.library.add({ studyStatus: "not_started",
+      subjectId, kind: "piece", title: "Bach Suite 1", createdAt: 2,
     })) as number;
 
     const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(

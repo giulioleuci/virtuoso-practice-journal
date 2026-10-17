@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import type { NoteVal } from "@/domain/entities/common";
 import type { Session } from "@/domain/entities/session";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
@@ -10,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 interface Props {
   sessions: Session[];
   targetBpm?: number;
+  targetNoteVal?: NoteVal;
   /** Chart only the marks of this section. */
   segmentId?: number;
 }
@@ -18,7 +20,7 @@ interface Props {
  * Interactive tempo timeline for a single piece: a BPM line over time with a
  * scrubber that reveals the confidence and notes logged on that date.
  */
-export function BpmTimelineChart({ sessions, targetBpm, segmentId }: Props) {
+export function BpmTimelineChart({ sessions, targetBpm, targetNoteVal, segmentId }: Props) {
   const { t, lang } = useI18n();
 
   const points = useMemo(
@@ -28,8 +30,10 @@ export function BpmTimelineChart({ sessions, targetBpm, segmentId }: Props) {
         .sort((a, b) => a.date.localeCompare(b.date))
         .flatMap((session) => {
           const marks = segmentId === undefined ? session.marks : session.marks.filter((m) => m.segmentId === segmentId);
-          const top = topMark(marks);
-          return top?.bpm ? [{ date: session.date, bpm: top.bpm, noteVal: top.noteVal, confidence: meanConfidence(marks), label: formatDate(session.date, lang, "dayMonth"), session }] : [];
+          return [...new Set(marks.filter(m => m.bpm !== undefined).map(m => m.noteVal ?? "quarter"))].flatMap(figure => {
+            const top = topMark(marks.filter(m => (m.noteVal ?? "quarter") === figure));
+            return top?.bpm ? [{ date: session.date, bpm: top.bpm, noteVal: top.noteVal, confidence: meanConfidence(marks), label: formatDate(session.date, lang, "dayMonth"), session }] : [];
+          });
         }),
     [sessions, lang, segmentId],
   );
@@ -46,18 +50,22 @@ export function BpmTimelineChart({ sessions, targetBpm, segmentId }: Props) {
 
   const active = points[Math.min(index, points.length - 1)];
   const first = points[0];
+  const comparable = (active.noteVal ?? "quarter") === (first.noteVal ?? "quarter");
+  const sameTargetFigure = (active.noteVal ?? "quarter") === (targetNoteVal ?? "quarter");
+  const mixedFigures = new Set(points.map(p => p.noteVal ?? "quarter")).size > 1;
   const delta = active.bpm - first.bpm;
   const maxBpm = Math.max(targetBpm ?? 0, ...points.map((point) => point.bpm));
 
   return (
     <div className="space-y-3">
-      <div className="h-40">
+      {targetBpm !== undefined && <p className="text-xs text-muted-foreground">{t("library.targetTempo")}: {tempoLabel(targetNoteVal, targetBpm)}</p>}
+      {mixedFigures ? <ul className="divide-y divide-border">{points.map(point => <li key={`${point.session.id}:${point.noteVal ?? "quarter"}`} className="flex justify-between gap-3 py-2 text-sm tabular-nums"><span>{point.label}</span><span>{tempoLabel(point.noteVal, point.bpm)}</span></li>)}</ul> : <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points} margin={{ left: -18, right: 8, top: 8, bottom: 0 }}>
             <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" interval="preserveStartEnd" />
             <YAxis domain={[0, Math.ceil((maxBpm + 10) / 10) * 10]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" width={38} />
-            {targetBpm ? (
+            {targetBpm && sameTargetFigure ? (
               <ReferenceLine y={targetBpm} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" />
             ) : null}
             <ReferenceLine x={active.label} stroke="hsl(var(--primary))" strokeWidth={1.5} />
@@ -72,7 +80,7 @@ export function BpmTimelineChart({ sessions, targetBpm, segmentId }: Props) {
             />
           </LineChart>
         </ResponsiveContainer>
-      </div>
+      </div>}
 
       {points.length > 1 && (
         <Slider
@@ -93,8 +101,8 @@ export function BpmTimelineChart({ sessions, targetBpm, segmentId }: Props) {
           </span>
         </div>
         <p className="text-xs text-muted-foreground tabular-nums">
-          {t("drilldown.sinceStart").replace("{delta}", `${delta >= 0 ? "+" : ""}${delta}`)}
-          {targetBpm ? ` · ${t("drilldown.ofTarget").replace("{pct}", String(Math.round((active.bpm / targetBpm) * 100)))}` : ""}
+          {comparable ? t("drilldown.sinceStart").replace("{delta}", `${delta >= 0 ? "+" : ""}${delta}`) : ""}
+          {targetBpm && sameTargetFigure ? ` · ${t("drilldown.ofTarget").replace("{pct}", String(Math.round((active.bpm / targetBpm) * 100)))}` : ""}
         </p>
         {active.confidence !== undefined && <p className="text-xs tabular-nums">{confidenceLabel(active.confidence)}</p>}
         {active.session.notes ? (

@@ -28,7 +28,7 @@ import { usePagination } from "@/hooks/usePagination";
 type GroupKey = "task" | "day" | "item" | "segment";
 type SortDir = "newest" | "oldest";
 const PAGE_SIZE = 15;
-const KINDS: ("all" | LibraryKind)[] = ["all", "repertoire", "manual", "technique", "theory"];
+const KINDS: ("all" | LibraryKind)[] = ["all", "piece", "study", "technique", "exercise", "theory"];
 
 export default function History() {
   const { t, lang } = useI18n();
@@ -80,6 +80,7 @@ export default function History() {
       const collection = s.collectionId ? collectionById.get(s.collectionId) : undefined;
       const segIds = s.marks.flatMap((m) => (m.segmentId === undefined ? [] : [m.segmentId]));
       const seg = segIds.length ? segById.get(segIds[0]) : undefined;
+      const historical = s.snapshot?.segments?.find(segment => segment.id === String(segIds[0]));
       let key: string, label: string, sub: string | undefined;
       switch (groupBy) {
         case "task":
@@ -96,8 +97,8 @@ export default function History() {
           else { key = `i:${item?.id ?? "none"}`; label = item?.title ?? t("history.noItem"); }
           break;
         case "segment":
-          key = `s:${seg?.id ?? "none"}`;
-          label = seg?.label ?? t("history.noSegment");
+          key = `s:${segIds[0] ?? "none"}`;
+          label = historical?.label ?? seg?.label ?? t("history.noSegment");
           sub = item?.title ?? collection?.name;
           break;
       }

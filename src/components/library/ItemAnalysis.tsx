@@ -4,8 +4,8 @@ import type { Lang } from "@/domain/entities/common";
 import type { Session } from "@/domain/entities/session";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useI18n } from "@/lib/i18n";
-import { tempoLabel } from "@/lib/format";
-import { meanConfidence, topBpm } from "@/domain/logic/sessionMetrics";
+import { BpmTimelineChart } from "./BpmTimelineChart";
+import { meanConfidence } from "@/domain/logic/sessionMetrics";
 import { TrendIcon, ChartIcon } from "@/lib/icons";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { weeklySessionCounts } from "@/lib/domain/analytics";
@@ -85,16 +85,6 @@ export function ItemAnalysis({ itemId }: { itemId: number }) {
 
   const isTheory = item?.kind === "theory";
 
-  const bpmPoints = useMemo((): ChartPoint[] => {
-    const points: ChartPoint[] = [];
-    for (const s of sessions ?? []) {
-      const bpm = topBpm(s.marks);
-      if (bpm == null) continue;
-      points.push({ x: points.length, y: bpm, label: formatDay(s.date, lang) });
-    }
-    return points;
-  }, [sessions, lang]);
-
   const confidencePoints = useMemo((): ChartPoint[] => {
     const points: ChartPoint[] = [];
     for (const s of sessions ?? []) {
@@ -125,22 +115,13 @@ export function ItemAnalysis({ itemId }: { itemId: number }) {
 
   return (
     <div className="grid gap-x-8 gap-y-6 min-[900px]:grid-cols-2">
-      {!isTheory && bpmPoints.length > 0 && (
+      {!isTheory && sessions?.some(s => s.marks.some(m => m.bpm !== undefined)) && (
         <section className={panel}>
           <div className="flex items-center gap-2">
             <TrendIcon className="h-4 w-4 text-primary" />
             <h3 className="font-serif text-xl font-semibold">{t("analysis.bpmTrend")}</h3>
-            {item.targetBpm && (
-              <span className="ml-auto text-xs text-muted-foreground">
-                {t("analysis.target")}: {tempoLabel(item.noteVal, item.targetBpm)}
-              </span>
-            )}
           </div>
-          <LineChart points={bpmPoints} target={item.targetBpm} color="hsl(var(--key-terracotta))" />
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{bpmPoints[0]?.label}</span>
-            <span>{bpmPoints[bpmPoints.length - 1]?.label}</span>
-          </div>
+          <BpmTimelineChart sessions={sessions ?? []} targetBpm={item.targetBpm} targetNoteVal={item.noteVal} />
         </section>
       )}
 

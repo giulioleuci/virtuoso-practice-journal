@@ -66,7 +66,7 @@ function SessionView({ session }: { session: Session }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const snap = session.snapshot;
-  const sections = (snap?.segments ?? []).map((s) => ({ id: Number(s.id), label: s.label }));
+  const sections = (snap?.segments ?? []).map((s) => ({ id: Number(s.id), label: s.barStart === undefined ? s.label : `${s.label} · ${t("segments.bars", { start: s.barStart, end: s.barEnd! })}` }));
   const layerOptions = isTheory
     ? THEORY_LAYERS.map((l) => ({ value: l as string, label: t(`library.mastery.${l}`) }))
     : (subject?.layers ?? []).map((l) => ({ value: l, label: l }));
@@ -145,6 +145,7 @@ function SessionView({ session }: { session: Session }) {
                     {m.segmentId !== undefined && <div className="text-sm font-medium">{sections.find((s) => s.id === m.segmentId)?.label}</div>}
                     <div className="flex flex-wrap gap-x-4 text-sm tabular-nums">
                       {m.bpm ? <span>{tempoLabel(m.noteVal, m.bpm)}</span> : null}
+                      {m.targetBpm !== undefined && <span className="text-muted-foreground">{t("library.targetTempo")}: {tempoLabel(m.targetNoteVal, m.targetBpm)}</span>}
                       {RATING_KEYS.map((key) => (
                         <span key={key}>{key === "confidence" ? t("session.confidenceLabel") : t(`rating.${key}`)} {m[key] ?? "—"}</span>
                       ))}

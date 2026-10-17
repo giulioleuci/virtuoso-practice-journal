@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import type { NoteVal } from "@/domain/entities/common";
 import type { Session } from "@/domain/entities/session";
 import { formatDate } from "@/lib/date";
 import { confidenceLabel, tempoLabel } from "@/lib/format";
@@ -15,7 +16,7 @@ import { SectionHeader } from "@/components/shared/SectionHeader";
  * Chronological history of every session that rated one section of a library item
  * (via the session mark with that `segmentId`): tempo chart plus one row per session.
  */
-export function SegmentHistory({ itemId, segmentId, targetBpm }: { itemId: number; segmentId: number; targetBpm?: number }) {
+export function SegmentHistory({ itemId, segmentId, targetBpm, targetNoteVal }: { itemId: number; segmentId: number; targetBpm?: number; targetNoteVal?: NoteVal }) {
   const { t, lang } = useI18n();
   const techniques = useTechniques();
   const all = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
@@ -31,7 +32,7 @@ export function SegmentHistory({ itemId, segmentId, targetBpm }: { itemId: numbe
       {sessions.some((s) => s.marks.some((m) => m.segmentId === segmentId && m.bpm)) && (
         <section>
           <SectionHeader title={t("segment.tempo")} />
-          <BpmTimelineChart sessions={sessions} segmentId={segmentId} targetBpm={targetBpm} />
+          <BpmTimelineChart sessions={sessions} segmentId={segmentId} targetBpm={targetBpm} targetNoteVal={targetNoteVal} />
         </section>
       )}
 
@@ -43,6 +44,7 @@ export function SegmentHistory({ itemId, segmentId, targetBpm }: { itemId: numbe
           <ul className="divide-y divide-border border-t border-border">
             {sessions.map((s) => {
               const m = s.marks.find((mark) => mark.segmentId === segmentId)!;
+              const historical = s.snapshot?.segments?.find(segment => segment.id === String(segmentId));
               return (
                 <li key={s.id} className="py-3.5">
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -52,6 +54,8 @@ export function SegmentHistory({ itemId, segmentId, targetBpm }: { itemId: numbe
                     {m.focus != null && <span className="text-xs tabular-nums text-muted-foreground">{t("rating.focus")} {m.focus}</span>}
                     {m.confidence != null && <span className="text-xs tabular-nums text-muted-foreground">{confidenceLabel(m.confidence)}</span>}
                   </div>
+                  {historical?.barStart !== undefined && <p className="text-xs text-muted-foreground">{historical.label} · {t("segments.bars", { start: historical.barStart, end: historical.barEnd! })}</p>}
+                  {m.targetBpm !== undefined && <p className="text-xs text-muted-foreground">{t("library.targetTempo")}: {tempoLabel(m.targetNoteVal, m.targetBpm)}</p>}
                   {(!!m.layers.length || !!m.techniques.length) && (
                     <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
                       {m.layers.map((l) => <span key={l}>{l}</span>)}
