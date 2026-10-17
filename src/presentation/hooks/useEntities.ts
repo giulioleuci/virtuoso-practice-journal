@@ -1,5 +1,5 @@
 /** Named presentation DTO adapters. Persistence stays behind application ports. */
-import type { LibraryKind, Subject, Technique } from "@/domain/entities/common";
+import type { CollectionKind, LibraryKind, Subject, Technique } from "@/domain/entities/common";
 import type { Collection, CollectionItem } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Session } from "@/domain/entities/session";
@@ -18,8 +18,8 @@ const useRead = <T>(operation: string, parameters: readonly unknown[] = []) =>
 export const useSubjects = () => useRead<Subject[]>("subjects.active");
 export const useTechniques = () => useRead<Technique[]>("techniques.active");
 export const useLibrary = () => useRead<LibraryItem[]>("library.active");
-/** Library items whose `kind` is repertoire (sheet music pieces). */
-export const useRepertoireKind = () => useRead<LibraryItem[]>("library.repertoire");
+/** Pieces and studies available for performance programmes. */
+export const usePerformableLibrary = () => useRead<LibraryItem[]>("library.performable");
 /** Items the user explicitly flagged as "to keep" in the performing repertoire. */
 export const useRepertoire = () => useRead<LibraryItem[]>("repertoire.active");
 export const useLibraryByKind = (kind?: LibraryKind) => useRead<LibraryItem[]>("library.byKind", [kind]);
@@ -33,7 +33,7 @@ export const useRecurrences = () => useRead<LessonRecurrence[]>("recurrences.act
 export const useLessons = () => useRead<Lesson[]>("lessons.all");
 export const useAssignments = () => useRead<Assignment[]>("assignments.all");
 export const useHelpRequests = () => useRead<HelpRequest[]>("helpRequests.all");
-export const useCollections = (kind?: LibraryKind) => useRead<Collection[]>("collections.active", [kind]);
+export const useCollections = (kind?: CollectionKind) => useRead<Collection[]>("collections.active", [kind]);
 export const useCollectionLinks = () => useRead<CollectionItem[]>("collectionLinks.all");
 export const useCollectionLinksByItem = (itemId?: number) => useRead<CollectionItem[]>("collectionLinks.item", [itemId]);
 export const useAllTasks = () => useRead<Task[]>("tasks.all");

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
 import { today } from "@/lib/date";
 import { RotateCcw, SearchX, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Flag, Layers, LineChart, Play, Star } from "lucide-react";
+import { isPerformable } from "@/domain/logic/repertoireReview";
 import { repertoireService } from "@/lib/services/performances";
 
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,7 @@ export default function Library() {
   const { t, lang } = useI18n();
   const libraryQuote = useMemo(() => pickQuote(LIBRARY_QUOTES, lang), [lang]);
   const navigate = useNavigate();
-  const [active, setActive] = useState<LibraryKind>("repertoire");
+  const [active, setActive] = useState<LibraryKind>("piece");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -192,7 +193,7 @@ export default function Library() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => openEdit(it)}><Pencil className="mr-2 h-4 w-4" /> {t("common.edit")}</DropdownMenuItem>
               <DropdownMenuItem onClick={() => it.id && navigate(`/library/item/${it.id}?tab=analysis`)}><LineChart className="mr-2 h-4 w-4" /> {t("library.analysis.menu")}</DropdownMenuItem>
-              {it.kind === "repertoire" && (
+              {isPerformable(it.kind) && (
                 <DropdownMenuItem onClick={() => toggleRepertoire(it)}>
                   <Star className={cn("mr-2 h-4 w-4", it.inRepertoire && "fill-current text-primary")} />
                   {it.inRepertoire ? t("repertoire.remove") : t("repertoire.add")}

@@ -1,4 +1,5 @@
 /** Spaced-review scheduling for pieces kept in the performing repertoire. */
+import type { LibraryKind } from "../entities/common";
 import type { LibraryItem } from "../entities/library";
 import { addDays, dayKey, parseDayKey } from "@/lib/date";
 
@@ -52,3 +53,5 @@ export function daysUntilReview(item: Pick<LibraryItem, "nextReviewAt">, todayKe
   const ms = parseDayKey(item.nextReviewAt).getTime() - parseDayKey(todayKey).getTime();
   return Math.round(ms / 86_400_000);
 }
+
+export const isPerformable = (kind: LibraryKind): boolean => kind === "piece" || kind === "study";

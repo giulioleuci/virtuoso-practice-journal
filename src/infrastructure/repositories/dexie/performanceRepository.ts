@@ -2,7 +2,7 @@ import { db } from "@/infrastructure/dexie/db";
 import type { Draft } from "@/domain/entities/common";
 import type { PerformanceEvent } from "@/domain/entities/performance";
 import type { PerformancePort, RepertoirePort } from "@/domain/ports/performance";
-import { enterRepertoire, scheduleNextReview } from "@/domain/logic/repertoireReview";
+import { enterRepertoire, isPerformable, scheduleNextReview } from "@/domain/logic/repertoireReview";
 import { now, today } from "@/lib/date";
 
 const active = <T extends { deletedAt?: number }>(row: T) => !row.deletedAt;
@@ -24,13 +24,18 @@ export const performanceRepository = {
     });
   },
   async setEventItems(eventId: number, itemIds: number[]) {
-    await db.transaction("rw", db.performanceItems, async () => {
+    await db.transaction("rw", db.performanceItems, db.performances, db.library, async () => {
+      const event = await db.performances.get(eventId);
+      const ids = [...new Set(itemIds)];
+      const items = await db.library.bulkGet(ids);
+      if (!event || !active(event)) throw new Error("performances.error.missing");
+      if (items.some(item => !item || !active(item) || !isPerformable(item.kind))) throw new Error("performances.error.material");
       const existing = await db.performanceItems.where("eventId").equals(eventId).toArray();
       const keep = new Set(itemIds);
       const removals = existing.filter((link) => !keep.has(link.itemId)).flatMap((link) => link.id === undefined ? [] : [link.id]);
       if (removals.length) await db.performanceItems.bulkDelete(removals);
       const present = new Set(existing.map((link) => link.itemId));
-      const additions = itemIds.filter((itemId) => !present.has(itemId));
+      const additions = ids.filter((itemId) => !present.has(itemId));
       if (additions.length) await db.performanceItems.bulkAdd(additions.map((itemId) => ({ eventId, itemId, createdAt: now() })));
     });
   },
@@ -38,11 +43,12 @@ export const performanceRepository = {
 
 export const repertoireRepository = {
   async setInRepertoire(itemId: number, inRepertoire: boolean) {
-    if (!inRepertoire) {
-      await db.library.update(itemId, { inRepertoire: false, nextReviewAt: undefined });
-      return;
-    }
-    await db.library.update(itemId, enterRepertoire(today(), now()));
+    await db.transaction("rw", db.library, async () => {
+      const item = await db.library.get(itemId);
+      if (!item || !active(item)) throw new Error("library.error.missing");
+      if (inRepertoire && !isPerformable(item.kind)) throw new Error("performances.error.material");
+      await db.library.update(itemId, inRepertoire ? enterRepertoire(today(), now()) : { inRepertoire: false, nextReviewAt: undefined });
+    });
   },
   async markReviewed(itemId: number, outcome: "good" | "ok" | "poor" = "good") {
     const item = await db.library.get(itemId);

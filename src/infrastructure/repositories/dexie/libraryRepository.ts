@@ -2,6 +2,7 @@ import { db } from "@/infrastructure/dexie/db";
 import type { Draft } from "@/domain/entities/common";
 import type { LibraryItem, Segment, SegmentInput } from "@/domain/entities/library";
 import type { LibraryPort } from "@/domain/ports/library";
+import { isPerformable } from "@/domain/logic/repertoireReview";
 import { now } from "@/lib/date";
 import { libraryItemInputSchema, segmentInputSchema } from "@/lib/schemas";
 import { collectionRepository } from "./collectionRepository";
@@ -27,7 +28,7 @@ export const libraryRepository = {
     const data = libraryItemInputSchema.parse(item);
     const inputs = segments?.map(segment => segmentInputSchema.parse(segment));
     const ts = now();
-    return db.transaction("rw", [db.library, db.segments, db.subjects, db.techniques, db.tasks, db.sessions, db.recordings, db.collections, db.collectionItems], async () => {
+    return db.transaction("rw", [db.library, db.segments, db.subjects, db.techniques, db.tasks, db.sessions, db.recordings, db.collections, db.collectionItems, db.performanceItems], async () => {
       const subject = await db.subjects.get(data.subjectId);
       if (!subject || !active(subject)) throw new Error("library.error.subject");
       const techniqueIds = [...new Set([...(data.techniqueIds ?? []), ...(inputs?.flatMap(segment => segment.techniqueIds ?? []) ?? [])])];
@@ -35,6 +36,7 @@ export const libraryRepository = {
       if (techniques.some(technique => !technique || !active(technique) || technique.subjectId !== data.subjectId)) throw new Error("library.error.techniques");
       const previous = item.id === undefined ? undefined : await db.library.get(item.id);
       if (item.id !== undefined && (!previous || !active(previous))) throw new Error("library.error.missing");
+      if (!isPerformable(data.kind) && (item.inRepertoire || previous?.inRepertoire || (item.id !== undefined && await db.performanceItems.where("itemId").equals(item.id).count() > 0))) throw new Error("library.error.performable");
       const existing = item.id === undefined ? [] : await db.segments.where("itemId").equals(item.id).toArray();
       const byId = new Map(existing.map(segment => [segment.id, segment]));
       const ids = inputs?.flatMap(segment => segment.id === undefined ? [] : [segment.id]) ?? [];

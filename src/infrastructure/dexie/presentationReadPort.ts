@@ -1,4 +1,5 @@
 import Dexie from "dexie";
+import { isPerformable } from "@/domain/logic/repertoireReview";
 import { meanConfidence, topBpm } from "@/domain/logic/sessionMetrics";
 import type { PresentationReadPort } from "@/application/queries/presentationReadPort";
 import { db } from "./db";
@@ -29,13 +30,13 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "subjects.active": return db.subjects.filter(active).toArray() as unknown as Promise<T>;
       case "techniques.active": return db.techniques.filter(active).toArray() as unknown as Promise<T>;
       case "library.active": return db.library.filter(active).toArray() as unknown as Promise<T>;
-      case "library.repertoire": return db.library.where("kind").equals("repertoire").filter(active).toArray() as unknown as Promise<T>;
-      case "repertoire.active": return db.library.filter((row) => active(row) && !!row.inRepertoire).toArray() as unknown as Promise<T>;
+      case "library.performable": return db.library.filter(row => active(row) && isPerformable(row.kind)).toArray() as unknown as Promise<T>;
+      case "repertoire.active": return db.library.filter((row) => active(row) && isPerformable(row.kind) && !!row.inRepertoire).toArray() as unknown as Promise<T>;
       case "performances.active": return db.performances.filter(active).toArray() as unknown as Promise<T>;
       case "performances.links": return db.performanceItems.toArray() as unknown as Promise<T>;
       case "library.byKind": return (typeof first === "string" ? db.library.where("kind").equals(first).filter(active).toArray() : Promise.resolve([])) as unknown as Promise<T>;
       case "library.item": return (typeof first === "number" ? db.library.get(first) : Promise.resolve(undefined)) as unknown as Promise<T>;
-      case "library.segments": return (typeof first === "number" ? db.segments.where("itemId").equals(first).filter(active).toArray() : Promise.resolve([])) as unknown as Promise<T>;
+      case "library.segments": return (typeof first === "number" ? db.segments.where("itemId").equals(first).filter(active).sortBy("position") : Promise.resolve([])) as unknown as Promise<T>;
       case "segments.active": return db.segments.filter(active).toArray() as unknown as Promise<T>;
       case "tasks.active": return db.tasks.filter(active).toArray() as unknown as Promise<T>;
       case "tasks.all": return db.tasks.toArray() as unknown as Promise<T>;
@@ -112,7 +113,7 @@ export const dexiePresentationReads: PresentationReadPort = {
       case "helpRequests.openCount": return db.helpRequests.filter((request) => !request.resolved).count() as unknown as Promise<T>;
       case "collections.active": return db.collections.filter((row) => active(row) && (!first || row.kind === first)).toArray() as unknown as Promise<T>;
       case "collections.all": return db.collections.toArray() as unknown as Promise<T>;
-      case "collections.items": return (typeof first === "number" ? db.collectionItems.where("collectionId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;
+      case "collections.items": return (typeof first === "number" ? db.collectionItems.where("collectionId").equals(first).sortBy("position") : Promise.resolve([])) as unknown as Promise<T>;
       case "collections.one": return (typeof first === "number" ? db.collections.get(first) : Promise.resolve(undefined)) as unknown as Promise<T>;
       case "collectionLinks.all": return db.collectionItems.toArray() as unknown as Promise<T>;
       case "collectionLinks.item": return (typeof first === "number" ? db.collectionItems.where("itemId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;
