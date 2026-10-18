@@ -43,7 +43,6 @@ export default defineConfig(({ mode }) => ({
           if (!id.includes("node_modules")) return undefined;
           if (id.includes("react-router") || id.includes("scheduler") || id.match(/node_modules\/react(-dom)?\//)) return "vendor-react";
           if (id.includes("@radix-ui") || id.includes("vaul") || id.includes("cmdk") || id.includes("sonner")) return "vendor-ui";
-          if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
           if (id.includes("dexie")) return "vendor-dexie";
           if (id.includes("react-hook-form") || id.includes("@hookform") || id.includes("zod")) return "vendor-forms";
           return undefined;

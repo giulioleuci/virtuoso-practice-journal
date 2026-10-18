@@ -19,7 +19,7 @@ class FakeFiles implements BackupFileGateway {
 }
 const valid = (): BackupData => ({
   subjects: [{ id: 1, name: "Piano", type: "instrument", createdAt: 1 }],
-  library: [{ id: 1, subjectId: 1, kind: "study", title: "Study", studyStatus: "in_progress", catalog: "Op. 1", notes: "Keep", inRepertoire: true, targetBpm: 88, noteVal: "quarter", createdAt: 1 }],
+  library: [{ id: 1, subjectId: 1, kind: "study", title: "Study", catalog: "Op. 1", notes: "Keep", inRepertoire: true, isFavorite: true, targetBpm: 88, noteVal: "quarter", createdAt: 1 }],
   segments: [{ id: 1, itemId: 1, label: "A", position: 0, layers: [], barStart: 0, barEnd: 8, createdAt: 1 }],
   collections: [{ id: 1, kind: "manual", name: "Method", edition: "2026", createdAt: 1, updatedAt: 1 }],
   collectionItems: [{ id: 1, collectionId: 1, itemId: 1, position: 0, reference: "Ex. 37", pageStart: 5, pageEnd: 6, createdAt: 1 }],
@@ -44,6 +44,13 @@ describe("backup use cases", () => {
     await new ImportBackupUseCase(repository, new FakeFiles(content)).execute();
     expect(repository.imported).toEqual(data);
   });
+  it("drops obsolete study status from older v4 backups and keeps the remaining fields", async () => {
+    const data = valid();
+    const repository = new FakeBackupRepository();
+    const legacy = { ...data, library: data.library.map(item => ({ ...item as object, studyStatus: "consolidated" })) };
+    await new ImportBackupUseCase(repository, new FakeFiles()).importContent(JSON.stringify({ version: 4, data: legacy }));
+    expect(repository.imported).toEqual(data);
+  });
   it.each([undefined, 1, 2, 3, 99])("rejects incompatible version %s without mutations", async version => {
     const repository = new FakeBackupRepository();
     await expect(new ImportBackupUseCase(repository, new FakeFiles()).importContent(JSON.stringify({ version, data: {} }))).rejects.toThrow();
@@ -56,6 +63,7 @@ describe("backup use cases", () => {
     ["duplicate membership", (d: BackupData) => { d.collectionItems.push({ ...d.collectionItems[0] as object, id: 2 }); }],
     ["invalid bar range", (d: BackupData) => { d.segments[0] = { ...d.segments[0] as object, barEnd: -1 }; }],
     ["incomplete target", (d: BackupData) => { d.library[0] = { ...d.library[0] as object, noteVal: undefined }; }],
+    ["invalid favorite", (d: BackupData) => { d.library[0] = { ...d.library[0] as object, isFavorite: "yes" }; }],
     ["non-performable repertoire", (d: BackupData) => { d.library[0] = { ...d.library[0] as object, kind: "exercise" }; d.performanceItems = []; }],
     ["non-performable programme", (d: BackupData) => { d.library[0] = { ...d.library[0] as object, kind: "exercise", inRepertoire: false }; }],
     ["foreign section in plan", (d: BackupData) => { d.segments[0] = { ...d.segments[0] as object, itemId: 2 }; d.library.push({ ...d.library[0] as object, id: 2 }); }],

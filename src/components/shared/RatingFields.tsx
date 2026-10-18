@@ -1,20 +1,25 @@
-import { RATING_KEYS, type SegmentMark } from "@/domain/entities/common";
+import type { SegmentMark } from "@/domain/entities/common";
+import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { RatingScale } from "./RatingScale";
 
 /** Mood, focus and confidence of one section as stars. Confidence is required for a new session, mood and focus never are. */
-export function RatingFields({ mark, onChange, requireRatings = true }: { mark: SegmentMark; onChange: (patch: Partial<SegmentMark>) => void; requireRatings?: boolean }) {
+export function RatingFields({ mark, onChange, requireRatings = true, showErrors = false, children }: { mark: SegmentMark; onChange: (patch: Partial<SegmentMark>) => void; requireRatings?: boolean; showErrors?: boolean; children?: ReactNode }) {
   const { t } = useI18n();
+  const scale = (key: "confidence" | "mood" | "focus") => {
+    const labels = [1, 2, 3, 4, 5].map((n) => t(`rating.${key}.${n}`));
+    return <RatingScale key={key} label={key === "confidence" ? t("session.confidenceLabel") : t(`rating.${key}`)} question={t(`rating.${key}Question`)} labels={labels} value={mark[key]}
+      onChange={(value) => onChange({ [key]: value })} unanswered={t("rating.unanswered")}
+      scaleHint={t("rating.scaleHint", { low: labels[0], high: labels[4] })} clearLabel={t("rating.clear")} required={requireRatings && key === "confidence"} showError={showErrors} />;
+  };
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {RATING_KEYS.map((key) => {
-        const labels = [1, 2, 3, 4, 5].map((n) => t(`rating.${key}.${n}`));
-        return (
-          <RatingScale key={key} label={key === "confidence" ? t("session.confidenceLabel") : t(`rating.${key}`)} question={t(`rating.${key}Question`)} labels={labels} value={mark[key]}
-            onChange={(value) => onChange({ [key]: value } as Partial<SegmentMark>)} unanswered={t("rating.unanswered")}
-            scaleHint={t("rating.scaleHint", { low: labels[0], high: labels[4] })} clearLabel={t("rating.clear")} required={requireRatings && key === "confidence"} />
-        );
-      })}
+    <div className="space-y-4">
+      {scale("confidence")}
+      {children}
+      <details className="border-t border-border pt-3">
+        <summary className="min-h-11 cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">{t("rating.optionalContext")}</summary>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">{scale("mood")}{scale("focus")}</div>
+      </details>
     </div>
   );
 }

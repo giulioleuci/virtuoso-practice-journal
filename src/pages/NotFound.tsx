@@ -11,7 +11,7 @@ const NotFound = () => {
   const { pathname } = useLocation();
   return (
     <div className="pb-24">
-      <PageHeader title={t("notFound.heading")} subtitle={pathname} />
+      <PageHeader title={t("notFound.heading")}  />
       <EmptyState icon={Compass} title={t("notFound.body")} hint={t("notFound.message")} />
       <div className="mt-4 flex justify-center">
         <Button asChild><Link to="/">{t("notFound.returnHome")}</Link></Button>

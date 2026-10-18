@@ -30,7 +30,7 @@ export default function SegmentPage() {
       </Link>
       <PageHeader
         title={segment.label}
-        subtitle={`${item.title} · ${t("segment.subtitle")}`}
+
         actions={
           <Button onClick={() => navigate("/tasks/new", { state: { date: today(), prefill: { itemId, itemTitle: item.title, itemSubjectId: item.subjectId, segmentIds: [segmentId] } } })}>
             <Play />{t("library.practiceThis")}

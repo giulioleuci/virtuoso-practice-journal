@@ -22,6 +22,7 @@ const loadHistory = () => import("./History");
 const loadAnalytics = () => import("./Analytics");
 const loadPrintSummary = () => import("./PrintSummary");
 const loadProfile = () => import("./Profile");
+const loadStudySetup = () => import("./StudySetup");
 const Collections = lazy(loadCollections);
 const Repertoire = lazy(loadRepertoire);
 const Assignments = lazy(loadAssignments);
@@ -29,9 +30,10 @@ const History = lazy(loadHistory);
 const Analytics = lazy(loadAnalytics);
 const PrintSummary = lazy(loadPrintSummary);
 const Profile = lazy(loadProfile);
+const StudySetup = lazy(loadStudySetup);
 if (typeof window !== "undefined") {
   setTimeout(() => {
-    [loadCollections, loadRepertoire, loadAssignments, loadHistory, loadAnalytics, loadPrintSummary, loadProfile,
+    [loadCollections, loadRepertoire, loadAssignments, loadHistory, loadAnalytics, loadPrintSummary, loadProfile, loadStudySetup,
       () => import("./NewTaskPage"), () => import("./EditTaskPage"), () => import("./RoutinePage"), () => import("./ItemPage"),
     ].forEach((load) => void load().catch(() => undefined));
   }, 1500);
@@ -116,6 +118,7 @@ const Index = () => {
           <Route path="print/weekly" element={<Suspense fallback={<Fallback />}><PrintSummary /></Suspense>} />
           <Route path="*" element={<NotFound />} />
           <Route path="profile" element={<Suspense fallback={<Fallback />}><Profile /></Suspense>} />
+          <Route path="study-setup/:id?" element={<Suspense fallback={<Fallback />}><StudySetup /></Suspense>} />
         </Route>
       </Routes>
 

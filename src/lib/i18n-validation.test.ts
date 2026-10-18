@@ -44,6 +44,14 @@ it("preserves indirect keys and both branches of conditional calls", async () =>
   expect(result.status, result.stderr).toBe(0);
 });
 
+it("rejects missing keys selected indirectly from a map", async () => {
+  const result = await validate('const subtitle = { tasks: "plan.subtitle", routines: "plan.subtitleRoutines", calendar: "plan.subtitleCalendar" }[tab]; t(subtitle);', {});
+  expect(result.status).toBe(1);
+  for (const key of ["plan.subtitle", "plan.subtitleRoutines", "plan.subtitleCalendar"]) {
+    expect(result.stderr).toContain(key);
+  }
+});
+
 it("does not let test references or template prefixes hide unused keys", async () => {
   const result = await validate('t(`item.${id}.title`);', {
     "item.one.title": "Title", "item.one.body": "Body", "common.unused": "Unused",

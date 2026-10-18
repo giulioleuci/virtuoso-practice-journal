@@ -27,6 +27,7 @@ async function resolvePoolEntries(entries: StudyPoolEntry[]): Promise<Map<string
     ids("segment").length ? db.segments.where("id").anyOf(ids("segment")).toArray() : [],
     ids("collection").length ? db.collections.where("id").anyOf(ids("collection")).toArray() : [],
   ]);
+  const itemSegments = ids("item").length ? await db.segments.where("itemId").anyOf(ids("item")).filter((segment) => !segment.deletedAt).toArray() : [];
   const parentIds = [...new Set(segments.map((segment) => segment.itemId))];
   const parents = parentIds.length ? await db.library.where("id").anyOf(parentIds).toArray() : [];
   const parentById = new Map(parents.map(item => [item.id, item]));
@@ -35,7 +36,12 @@ async function resolvePoolEntries(entries: StudyPoolEntry[]): Promise<Map<string
     const key = poolEntryKey(entry);
     if (entry.type === "item") {
       const item = items.find((row) => row.id === entry.id);
-      if (item && !item.deletedAt) result.set(key, { key, type: "item", title: item.title, itemId: item.id, linkType: "item", plan: syncPlan([], [], item) });
+      if (item && !item.deletedAt) {
+        const sections = itemSegments.filter((segment) => segment.itemId === item.id).map((segment): ResolvedPoolItem => ({
+          key: `segment:${segment.id}`, type: "segment", title: `${item.title} — ${segment.label}`, parentTitle: item.title, itemId: item.id, segmentIds: [segment.id], plan: syncPlan([], [segment], item), linkType: "item",
+        }));
+        result.set(key, { key, type: "item", title: item.title, itemId: item.id, linkType: "item", plan: syncPlan([], [], item), sections });
+      }
     } else if (entry.type === "segment") {
       const segment = segments.find((row) => row.id === entry.id);
       const parent = segment && parentById.get(segment.itemId);

@@ -10,7 +10,7 @@ beforeEach(async () => {
 
 async function seedItem(title: string, kind: "piece" | "theory" = "piece") {
   return (await db.library.add({
-    subjectId: 1, kind, studyStatus: "not_started", title, createdAt: Date.now(),
+    subjectId: 1, kind, title, createdAt: Date.now(),
   })) as number;
 }
 

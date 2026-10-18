@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCollectionLinksByItem, useCollections, useSegmentsByItem, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
-import type { LibraryKind, StudyStatus } from "@/domain/entities/common";
+import type { LibraryKind } from "@/domain/entities/common";
 import type { LibraryItem, SegmentInput } from "@/domain/entities/library";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -56,7 +56,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
   const [composer, setComposer] = useState("");
   const [catalog, setCatalog] = useState("");
   const [notes, setNotes] = useState("");
-  const [studyStatus, setStudyStatus] = useState<StudyStatus>("not_started");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>();
   
@@ -109,7 +108,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
       setComposer(item.composer ?? "");
       setCatalog(item.catalog ?? "");
       setNotes(item.notes ?? "");
-      setStudyStatus(item.studyStatus);
       
       setTargetBpm(item.targetBpm);
       setStartBpm(item.startBpm);
@@ -155,7 +153,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
       setComposer("");
       setCatalog("");
       setNotes("");
-      setStudyStatus("not_started");
       setSaveError(undefined);
       
       setTargetBpm(undefined);
@@ -171,14 +168,14 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
   const titleLabel = isEdit ? t("library.editItem") : t("library.add");
   const errors = useMemo(() => {
     const result: string[] = [];
-    const parsed = libraryItemInputSchema.safeParse({ subjectId, kind: editingKind, title, composer, catalog, notes, studyStatus, startBpm, targetBpm, noteVal, techniqueIds });
+    const parsed = libraryItemInputSchema.safeParse({ subjectId, kind: editingKind, title, composer, catalog, notes, startBpm, targetBpm, noteVal, techniqueIds });
     if (!parsed.success) for (const issue of parsed.error.issues) {
       const field = issue.path[0];
       result.push(t(field === "title" ? "errors.titleRequired" : field === "subjectId" ? "errors.pickSubject" : field === "targetBpm" && (targetBpm === undefined || noteVal === undefined) ? "library.error.tempoPair" : "library.error.fields"));
     }
     if (segments.some(s => !segmentInputSchema.safeParse(s).success)) result.push(t("segments.invalid"));
     return [...new Set(result)];
-  }, [subjectId, editingKind, title, composer, catalog, notes, studyStatus, startBpm, targetBpm, noteVal, techniqueIds, segments, t]);
+  }, [subjectId, editingKind, title, composer, catalog, notes, startBpm, targetBpm, noteVal, techniqueIds, segments, t]);
   const loading = isEdit && (existingSegments === undefined || existingMemberships === undefined);
   const canSave = errors.length === 0 && !saving && !loading;
 
@@ -189,7 +186,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
     try {
       await libraryService.upsert({
         ...item, subjectId, kind: editingKind, title: title.trim(), composer: composer.trim() || undefined,
-        catalog: catalog.trim() || undefined, notes: notes.trim() || undefined, studyStatus,
+        catalog: catalog.trim() || undefined, notes: notes.trim() || undefined,
         targetBpm, startBpm, noteVal, techniqueIds, createdAt: item?.createdAt ?? Date.now(),
       }, segments, collectionIds);
       toast.success(isEdit ? t("toast.updated") : t("toast.added"));
@@ -214,7 +211,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5">
           <label className="grid gap-1.5 text-xs font-medium">{t("library.materialType")}
-            <select className={nativeSelect} value={editingKind} onChange={e => setEditingKind(e.target.value as LibraryKind)}>{LIBRARY_KINDS.map(k => <option key={k.key} value={k.key}>{t(k.tKey)}</option>)}</select>
+            <Select value={editingKind} onValueChange={(value) => setEditingKind(value as LibraryKind)} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>{LIBRARY_KINDS.map(k => <SelectItem key={k.key} value={String(k.key)}>{t(k.tKey)}</SelectItem>)}</SelectContent></Select>
           </label>
           {/* Subject */}
           <div className="space-y-2">
@@ -262,9 +259,6 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
           </div>
           <label className="grid gap-1.5 text-xs font-medium">{t("library.stableNotes")}<Textarea rows={2} maxLength={2000} value={notes} onChange={e => setNotes(e.target.value)} /></label>
           </details>
-          <label className="grid gap-1.5 text-xs font-medium">{t("library.studyStatus")}
-            <select className={nativeSelect} value={studyStatus} onChange={e => setStudyStatus(e.target.value as StudyStatus)}>{(["not_started", "in_progress", "consolidated"] as const).map(status => <option key={status} value={status}>{t(`library.status.${status}`)}</option>)}</select>
-          </label>
 
           <LibraryItemKindFields
             kind={editingKind}

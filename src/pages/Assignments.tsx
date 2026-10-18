@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
 import { useActiveTasks, useAssignments, useLessons, useSubjects } from "@/presentation/hooks/useEntities";
 import { Link, useNavigate } from "react-router-dom";
@@ -67,10 +68,10 @@ function PlanHomework({ assignment, subjectId }: { assignment: Assignment; subje
         <Button size="sm" disabled={!days.length || busy} onClick={create}><Plus />{t("assignments.create", { count: Math.max(1, days.length) })}</Button>
         <Button size="sm" variant="ghost" onClick={() => navigate("/tasks/new", { state: { date: today(), prefill: { subjectId, title: assignment.text, assignmentId: assignment.id } } })}>{t("assignments.moreOptions")}</Button>
         {!!openTasks.length && (
-          <select aria-label={t("assignments.linkExisting")} value="" className={cn(nativeSelect, "max-w-[16rem]")} onChange={(e) => e.target.value && void lessonsService.linkTask(assignment.id, Number(e.target.value))}>
-            <option value="">{t("assignments.linkExisting")}</option>
-            {openTasks.map((task) => <option key={task.id} value={task.id}>{formatDate(task.date, lang)} · {task.title}</option>)}
-          </select>
+          <Select value={String("") || "__none"} onValueChange={(value) => (value === "__none" ? "" : value) && void lessonsService.linkTask(assignment.id, Number((value === "__none" ? "" : value)))} ><SelectTrigger aria-label={t("assignments.linkExisting")} className={cn(nativeSelect, "max-w-[16rem]")}><SelectValue /></SelectTrigger><SelectContent>
+            <SelectItem value="__none">{t("assignments.linkExisting")}</SelectItem>
+            {openTasks.map((task) => <SelectItem key={task.id} value={String(task.id)}>{formatDate(task.date, lang)} · {task.title}</SelectItem>)}
+          </SelectContent></Select>
         )}
       </div>
     </div>
@@ -96,7 +97,7 @@ export default function Assignments() {
       <Link to="/lessons" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
         <ArrowLeft className="h-4 w-4" /> {t("common.back")}
       </Link>
-      <PageHeader title={t("assignments.title")} subtitle={t("assignments.description")} />
+      <PageHeader title={t("assignments.title")}  />
 
       {pending.length === 0 ? (
         <EmptyState title={t("assignments.allCaughtUp")} hint={t("assignments.noneWaiting")} />

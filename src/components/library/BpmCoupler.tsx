@@ -23,7 +23,7 @@ export function BpmCoupler({ bpm, noteVal, onChange, label }: Props) {
       title={t(`note.${n}`)}
       onClick={() => onChange({ bpm, noteVal: n })}
       className={cn(
-        "h-10 min-w-9 flex-1 rounded-md px-1 text-lg leading-none transition-colors",
+        "h-11 min-w-0 flex-1 rounded-md px-1 text-lg leading-none transition-colors",
         noteVal === n ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent",
       )}
     >
@@ -44,7 +44,7 @@ export function BpmCoupler({ bpm, noteVal, onChange, label }: Props) {
             onChange={(e) => onChange({ bpm: e.target.value ? Number(e.target.value) : undefined, noteVal })}
             placeholder="—"
             aria-label={label ?? t("library.targetTempo")}
-            className="h-10 w-20 border-0 bg-transparent px-0 font-serif text-2xl tabular-nums focus-visible:ring-0"
+            className="h-10 w-16 border-0 bg-transparent px-0 font-serif text-2xl tabular-nums focus-visible:ring-0"
           />
           <span className="text-xs text-muted-foreground">BPM</span>
         </div>

@@ -27,6 +27,19 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+          subtle: "hsl(var(--success-subtle))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          subtle: "hsl(var(--warning-subtle))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          subtle: "hsl(var(--info-subtle))",
+        },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",

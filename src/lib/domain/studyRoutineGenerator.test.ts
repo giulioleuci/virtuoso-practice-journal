@@ -101,6 +101,20 @@ describe("generateRoutineTasks", () => {
   });
 });
 
+describe("whole item asked for more entries than the pool holds", () => {
+  it("draws that many sections into one task", () => {
+    const seg = (id: number): ResolvedPoolItem => ({
+      key: `segment:${id}`, type: "segment", title: `P — s${id}`, parentTitle: "P",
+      itemId: 42, segmentIds: [id], linkType: "item",
+    });
+    const whole: ResolvedPoolItem = { key: "item:42", type: "item", title: "P", itemId: 42, linkType: "item", sections: [seg(1), seg(2), seg(3), seg(4)] };
+    const r = routine({ matrix: { "1": { g1: 3 } } });
+    const tasks = generateRoutineTasks({ routine: r, groupItems: new Map([["g1", [whole]]]), stats: null, fromDate: "2026-05-18", createdAt: 0 });
+    expect(tasks).toHaveLength(1);
+    expect(planSegmentIds(tasks[0].plan)).toHaveLength(3);
+  });
+});
+
 describe("adaptive weighting", () => {
   it("weights recent ratings more than older ones", () => {
     // Newest-first: the latest rating pulls the average towards itself.

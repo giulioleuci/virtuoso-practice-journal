@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
 import { ChevronLeft, Check, FolderOpen, ListMusic } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -10,7 +11,8 @@ import { tasksService } from "@/lib/services";
 import { today } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+
+import { FilterPanel } from "@/components/shared/FilterPanel";
 import { WhenFields, nativeSelect } from "@/components/diary/WhenFields";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -31,6 +33,7 @@ export default function BulkAddTasksPage() {
   const links = useCollectionLinks();
 
   const [subjectId, setSubjectId] = useState<number | undefined>(Number(params.get("subject")) || undefined);
+  const [repertoireOnly, setRepertoireOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [itemIds, setItemIds] = useState<Set<number>>(new Set());
   const [segKeys, setSegKeys] = useState<Set<string>>(new Set());
@@ -42,8 +45,8 @@ export default function BulkAddTasksPage() {
   const subject = subjectId ?? subjects?.[0]?.id;
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (library ?? []).filter((i) => i.subjectId === subject && (!q || `${i.title} ${i.composer ?? ""}`.toLowerCase().includes(q)));
-  }, [library, subject, query]);
+    return (library ?? []).filter((i) => i.subjectId === subject && (!repertoireOnly || i.inRepertoire) && (!q || `${i.title} ${i.composer ?? ""}`.toLowerCase().includes(q)));
+  }, [library, subject, query, repertoireOnly]);
   const kinds = LIBRARY_KINDS.filter((k) => items.some((i) => i.kind === k.key));
   const collectionIdsByItem = useMemo(() => {
     const map = new Map<number, number[]>();
@@ -103,7 +106,7 @@ export default function BulkAddTasksPage() {
     <div className="pb-24">
       <PageHeader
         title={t("bulk.title")}
-        subtitle={t("bulk.subtitle")}
+
         actions={<Button asChild variant="outline"><Link to="/tasks/new"><ChevronLeft />{t("bulk.back")}</Link></Button>}
       />
 
@@ -111,14 +114,15 @@ export default function BulkAddTasksPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1.5 text-xs font-medium">
             {t("common.subject")}
-            <select value={subject} onChange={(e) => { setSubjectId(Number(e.target.value)); setItemIds(new Set()); setSegKeys(new Set()); }} className={nativeSelect}>
-              {subjects?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <Select value={String(subject ?? "")} onValueChange={(value) => { setSubjectId(Number(value)); setItemIds(new Set()); setSegKeys(new Set()); }} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+              {subjects?.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+            </SelectContent></Select>
           </label>
-          <label className="grid gap-1.5 text-xs font-medium">
-            {t("common.search")}
-            <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("bulk.searchPlaceholder")} />
-          </label>
+          <FilterPanel search={{ value: query, onChange: setQuery, placeholder: t("bulk.searchPlaceholder") }}
+            filters={repertoireOnly ? [{ key: "repertoire", label: t("repertoire.title"), onRemove: () => setRepertoireOnly(false) }] : []}
+            onReset={() => { setQuery(""); setRepertoireOnly(false); }} resultCount={library === undefined ? undefined : items.length}>
+            <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={repertoireOnly} onCheckedChange={on => setRepertoireOnly(on === true)} />{t("repertoire.title")}</label>
+          </FilterPanel>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">

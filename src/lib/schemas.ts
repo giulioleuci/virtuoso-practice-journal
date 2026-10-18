@@ -64,7 +64,6 @@ export const colorKeySchema = z.enum(["terracotta", "sage", "gold", "blue", "plu
 export const libraryKindSchema = z.enum(["piece", "study", "technique", "exercise", "theory"]);
 
 export const collectionKindSchema = z.enum(["manual", "collection"]);
-export const studyStatusSchema = z.enum(["not_started", "in_progress", "consolidated"]);
 const completeTempo = (v: { targetBpm?: number; noteVal?: string }) => (v.targetBpm === undefined) === (v.noteVal === undefined);
 
 export const libraryItemInputSchema = z.object({
@@ -74,12 +73,12 @@ export const libraryItemInputSchema = z.object({
   composer: z.string().trim().max(120).optional(),
   catalog: z.string().trim().max(60).optional(),
   notes: z.string().trim().max(2000).optional(),
-  studyStatus: studyStatusSchema.default("not_started"),
   startBpm: bpmSchema.optional(),
   targetBpm: bpmSchema.optional(),
   noteVal: noteValSchema.optional(),
   techniqueIds: z.array(z.number().int().positive()).optional(),
   tags: z.array(z.string()).optional(),
+  isFavorite: z.boolean().optional(),
 }).refine(completeTempo, { path: ["targetBpm"], message: "BPM and note value must be set together" });
 
 export const segmentInputSchema = z.object({

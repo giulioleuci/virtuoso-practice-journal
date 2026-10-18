@@ -17,13 +17,13 @@ export function Pager({
   if (totalPages <= 1) return null;
   return (
     <div className={cn("flex items-center justify-center gap-3 pt-2", className)}>
-      <Button size="sm" variant="ghost" disabled={page <= 0} onClick={() => onChange(page - 1)} aria-label="Previous page">
+      <Button type="button" size="sm" variant="ghost" disabled={page <= 0} onClick={() => onChange(page - 1)} aria-label="Previous page">
         <ChevronLeft className="h-4 w-4" />
       </Button>
       <span className="text-xs text-muted-foreground tabular-nums">
         {page + 1} / {totalPages}
       </span>
-      <Button size="sm" variant="ghost" disabled={page >= totalPages - 1} onClick={() => onChange(page + 1)} aria-label="Next page">
+      <Button type="button" size="sm" variant="ghost" disabled={page >= totalPages - 1} onClick={() => onChange(page + 1)} aria-label="Next page">
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>

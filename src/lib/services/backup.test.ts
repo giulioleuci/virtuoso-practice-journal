@@ -11,7 +11,7 @@ beforeEach(async () => {
 describe("backupService export / import", () => {
   it("round-trips every table", async () => {
     const subjectId = (await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 })) as number;
-    await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Sonata", createdAt: 2 });
+    await db.library.add({ subjectId, kind: "piece", title: "Sonata", createdAt: 2 });
 
     const json = await backupService.exportAll();
     const parsed = JSON.parse(json);
@@ -50,7 +50,7 @@ describe("backupService export / import", () => {
 
   it("round-trips per-section marks on sessions", async () => {
     const subjectId = (await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 })) as number;
-    const itemId = (await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Sonata", createdAt: 2 })) as number;
+    const itemId = (await db.library.add({ subjectId, kind: "piece", title: "Sonata", createdAt: 2 })) as number;
     const taskId = (await db.tasks.add({
       date: "2026-01-01", subjectId, itemId, title: "Sonata mvt 1", plan: [], done: true, createdAt: 3,
     })) as number;

@@ -7,21 +7,22 @@ import type { Session } from "@/domain/entities/session";
 import { subjectColorCss } from "@/lib/subjectColors";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
+
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowDownUp, RotateCcw, SearchX } from "lucide-react";
+
+import { SearchX } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 
 import { PageHeader } from "@/components/shared/PageHeader";
+import { FilterPanel, FilterDateRange, FilterSelect } from "@/components/shared/FilterPanel";
 import { ProgressTabs } from "@/components/shared/ProgressTabs";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pager } from "@/components/shared/Pager";
-import { planSegmentIds } from "@/domain/logic/plan";
+
 import { sessionLabel } from "@/lib/format";
 import { usePagination } from "@/hooks/usePagination";
 
@@ -130,91 +131,45 @@ export default function History() {
     setPage(0);
   }, [searchParams, setPage]);
 
+  const changeDate = (field: "from" | "to", value: string) => {
+    if (field === "from") setFrom(value); else setTo(value);
+    setPage(0);
+    setSearchParams(params => { const next = new URLSearchParams(params); if (value) next.set(field, value); else next.delete(field); return next; });
+  };
+  const resetFilters = () => {
+    setFrom(""); setTo(""); setSubjectFilter("all"); setKindFilter("all"); setSortDir("newest"); setPage(0);
+    setSearchParams(params => { const next = new URLSearchParams(params); next.delete("from"); next.delete("to"); return next; });
+  };
+
   return (
     <div className="pb-24">
-      <SessionFAB />
-      <PageHeader title={t("nav.progress")} subtitle={t("history.sessions", { count: filteredSessions.length })} />
+      <PageHeader title={t("nav.progress")} actions={<SessionFAB />} />
       <ProgressTabs />
 
-      <Tabs className="mb-4" value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setPage(0); }}>
-        <TabsList className="w-full">
-          <TabsTrigger value="day" className="flex-1">{t("history.groupDay")}</TabsTrigger>
-          <TabsTrigger value="task" className="flex-1">{t("history.groupTask")}</TabsTrigger>
-          <TabsTrigger value="item" className="flex-1">{t("history.groupItem")}</TabsTrigger>
-          <TabsTrigger value="segment" className="flex-1">{t("history.groupSegment")}</TabsTrigger>
+      <Tabs className="mb-4" value={groupBy} onValueChange={value => { setGroupBy(value as GroupKey); setPage(0); }}>
+        <TabsList className="flex h-auto w-full flex-wrap">
+          <TabsTrigger value="day" className="min-h-11 flex-1">{t("history.groupDay")}</TabsTrigger>
+          <TabsTrigger value="task" className="min-h-11 flex-1">{t("history.groupTask")}</TabsTrigger>
+          <TabsTrigger value="item" className="min-h-11 flex-1">{t("history.groupItem")}</TabsTrigger>
+          <TabsTrigger value="segment" className="min-h-11 flex-1">{t("history.groupSegment")}</TabsTrigger>
         </TabsList>
       </Tabs>
-
-      <div className="mb-3 grid gap-2 sm:grid-cols-2 min-[1000px]:grid-cols-4">
-        <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(0); }}>
-          <SelectTrigger><SelectValue placeholder={t("common.subject")} /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("history.allSubjects")}</SelectItem>
-            {(subjects ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={kindFilter} onValueChange={(v) => { setKindFilter(v as typeof kindFilter); setPage(0); }}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {KINDS.map((k) => (
-              <SelectItem key={k} value={k} className="capitalize">
-                {k === "all" ? t("history.allKinds") : t(`library.kind.${k}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Input
-          type="date"
-          value={from}
-          onChange={(e) => {
-            const v = e.target.value;
-            setFrom(v);
-            setPage(0);
-            setSearchParams((p) => {
-              if (v) p.set("from", v);
-              else p.delete("from");
-              return p;
-            });
-          }}
-          placeholder={t("common.from")}
-        />
-        <Input
-          type="date"
-          value={to}
-          onChange={(e) => {
-            const v = e.target.value;
-            setTo(v);
-            setPage(0);
-            setSearchParams((p) => {
-              if (v) p.set("to", v);
-              else p.delete("to");
-              return p;
-            });
-          }}
-          placeholder={t("common.to")}
-        />
-      </div>
-      {(from || to) && (
-        <button
-          onClick={() => { setFrom(""); setTo(""); setSearchParams({}); }}
-          className="text-xs text-primary hover:underline"
-        >
-          {t("history.clearFilter", { from: from || "…", to: to || "…" })}
-        </button>
-      )}
-
-      <div className="flex justify-end">
-        <Button size="sm" variant="ghost" onClick={() => setSortDir((d) => d === "newest" ? "oldest" : "newest")}>
-          <ArrowDownUp className="h-4 w-4 mr-1" /> {sortDir === "newest" ? t("history.newestFirst") : t("history.oldestFirst")}
-        </Button>
-      </div>
-
+      <FilterPanel filters={[
+        ...(subjectFilter !== "all" ? [{ key: "subject", label: `${t("common.subject")}: ${subjectMap.get(Number(subjectFilter))?.name ?? subjectFilter}`, onRemove: () => { setSubjectFilter("all"); setPage(0); } }] : []),
+        ...(kindFilter !== "all" ? [{ key: "kind", label: t(`library.kind.${kindFilter}`), onRemove: () => { setKindFilter("all"); setPage(0); } }] : []),
+        ...(from ? [{ key: "from", label: `${t("common.from")}: ${formatDate(from, lang)}`, onRemove: () => changeDate("from", "") }] : []),
+        ...(to ? [{ key: "to", label: `${t("common.to")}: ${formatDate(to, lang)}`, onRemove: () => changeDate("to", "") }] : []),
+        ...(sortDir !== "newest" ? [{ key: "sort", label: t("history.oldestFirst"), onRemove: () => { setSortDir("newest"); setPage(0); } }] : []),
+      ]} onReset={resetFilters} resultCount={sessions === undefined ? undefined : filteredSessions.length}>
+        <FilterSelect label={t("common.subject")} value={subjectFilter} onChange={value => { setSubjectFilter(value); setPage(0); }} options={[{ value: "all", label: t("history.allSubjects") }, ...(subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))]} />
+        <FilterSelect label={t("link.filterByKind")} value={kindFilter} onChange={value => { setKindFilter(value); setPage(0); }} options={KINDS.map(k => ({ value: k, label: k === "all" ? t("history.allKinds") : t(`library.kind.${k}`) }))} />
+        <FilterSelect label={t("link.sortBy")} value={sortDir} onChange={value => { setSortDir(value); setPage(0); }} options={[{ value: "newest", label: t("history.newestFirst") }, { value: "oldest", label: t("history.oldestFirst") }]} />
+        <FilterDateRange from={from} to={to} onFromChange={value => changeDate("from", value)} onToChange={value => changeDate("to", value)} />
+      </FilterPanel>
       {sessions === undefined ? (
         <ListSkeleton />
       ) : pageGroups.length === 0 ? (
-        <EmptyState icon={SearchX} title={t("history.noSessionsMatch")} cta={{ label: t("states.clearFilters"), icon: RotateCcw, onClick: () => { setFrom(""); setTo(""); setSearchParams({}); setSubjectFilter("all"); setKindFilter("all"); setPage(0); } }} />
+        <EmptyState icon={SearchX} title={t("history.noSessionsMatch")} />
       ) : (
         <Accordion type="multiple" className="border-t border-border">
           {pageGroups.map((g, i) => (

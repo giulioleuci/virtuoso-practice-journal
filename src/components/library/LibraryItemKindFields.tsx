@@ -28,7 +28,7 @@ export function LibraryItemKindFields(p: Props) {
 
   const collectionsBlock = p.setCollectionIds && (
     <div className="space-y-2">
-      <MultiChipPicker
+      <MultiChipPicker selectionSummary
         label={t("library.collections")}
         options={p.collectionOptions ?? []}
         value={p.collectionIds ?? []}
@@ -60,7 +60,7 @@ export function LibraryItemKindFields(p: Props) {
       <Button type="button" variant="ghost" size="sm" disabled={p.targetBpm === undefined && p.noteVal === undefined} onClick={() => { p.setTargetBpm(undefined); p.setNoteVal(undefined); }}>{t("library.clearTempo")}</Button>
       </>)}
 
-      <MultiChipPicker
+      <MultiChipPicker selectionSummary
         label={t("library.techniquesCovered")}
         options={p.techniqueOptions}
         value={p.techniqueIds}

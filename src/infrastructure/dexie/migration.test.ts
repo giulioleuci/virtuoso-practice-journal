@@ -13,7 +13,7 @@ const V13 = {
   studyRoutines: "++id, subjectId, deletedAt", performances: "++id, date, subjectId, deletedAt", performanceItems: "++id, eventId, itemId, [eventId+itemId]",
 };
 
-it("v14 back-fills session references from their task, keeps orphans and wipes nothing", async () => {
+it("upgrades session references and removes only obsolete study status", async () => {
   const legacy = new Dexie("virtuoso");
   legacy.version(13).stores(V13);
   await legacy.open();
@@ -22,6 +22,7 @@ it("v14 back-fills session references from their task, keeps orphans and wipes n
     { id: 1, taskId: 1, date: "2026-10-01", notes: "kept", marks: [{ layers: [], techniques: [], confidence: 4 }], createdAt: 1 },
     { id: 2, taskId: 99, date: "2026-10-02", marks: [], snapshot: { taskTitle: "Gone", subjectName: "Piano" }, createdAt: 2 },
   ]);
+  await legacy.table("library").add({ id: 3, subjectId: 7, kind: "piece", title: "Ballade", studyStatus: "consolidated", isFavorite: true, inRepertoire: true, createdAt: 1 });
   legacy.close();
 
   const { db } = await import("./db");
@@ -31,6 +32,7 @@ it("v14 back-fills session references from their task, keeps orphans and wipes n
   expect((await db.sessions.get(1))?.marks[0].mood).toBeUndefined();
   expect(await db.sessions.get(2)).toMatchObject({ taskId: 99, snapshot: { taskTitle: "Gone" } });
   expect((await db.sessions.get(2))?.subjectId).toBeUndefined();
+  expect(await db.library.get(3)).toEqual({ id: 3, subjectId: 7, kind: "piece", title: "Ballade", isFavorite: true, inRepertoire: true, createdAt: 1 });
   expect(await db.tasks.count()).toBe(1);
   expect(await db.sessions.where("itemId").equals(3).count()).toBe(1);
 });

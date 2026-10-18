@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useRef, useState } from "react";
 import { Mic, Square, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,23 +32,49 @@ export function AudioNotice() {
  * Explicit record/stop; a finished clip is already stored on the device when `onClip` receives it.
  * `compact` is an icon-only button for tight headers: no section picker, clips go to `segmentId`.
  */
-export function Recorder({ sections, onClip, compact, segmentId: fixedSegmentId }: { sections: Section[]; onClip: (clip: AudioDraft) => void | Promise<void>; compact?: boolean; segmentId?: number }) {
+export function Recorder({ sections, onClip, compact, segmentId: fixedSegmentId, onRecordingChange }: { sections: Section[]; onClip: (clip: AudioDraft) => void | Promise<void>; compact?: boolean; segmentId?: number; onRecordingChange?: (recording: boolean) => void }) {
   const { t } = useI18n();
   const [recording, setRecording] = useState(false);
   const [picked, setPicked] = useState<number | undefined>();
   const segmentId = compact ? fixedSegmentId : picked;
+  const active = useRef(false);
+  const starting = useRef(false);
+  const recordedSegment = useRef<number>();
+  const mounted = useRef(true);
+  const onClipRef = useRef(onClip);
+  onClipRef.current = onClip;
   const fail = (error: unknown) => toast.error(t(`audio.error.${error instanceof AudioError ? error.code : "unsupported"}`));
   const stop = async (interrupted = false) => {
-    setRecording(false);
+    if (!active.current) return;
+    active.current = false;
     try {
       const clip = await applicationCommands.audio.stop();
-      await onClip({ ...clip, segmentId });
+      await onClipRef.current({ ...clip, segmentId: recordedSegment.current });
       if (interrupted) toast(t("audio.error.interrupted"));
     } catch (error) { fail(error); }
+    finally { setRecording(false); onRecordingChange?.(false); }
   };
   const start = async () => {
-    try { await applicationCommands.audio.start(() => void stop(true)); setRecording(true); } catch (error) { fail(error); }
+    if (starting.current || active.current) return;
+    starting.current = true;
+    recordedSegment.current = segmentId;
+    onRecordingChange?.(true);
+    try {
+      await applicationCommands.audio.start(() => void stop(true));
+      active.current = true;
+      if (!mounted.current) { await stop(true); return; }
+      setRecording(true);
+    } catch (error) { onRecordingChange?.(false); fail(error); }
+    finally { starting.current = false; }
   };
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  useEffect(() => {
+    mounted.current = true;
+    const interrupt = () => { if (document.visibilityState === "hidden") void stopRef.current(true); };
+    document.addEventListener("visibilitychange", interrupt);
+    return () => { mounted.current = false; document.removeEventListener("visibilitychange", interrupt); void stopRef.current(true); };
+  }, []);
   if (compact) {
     return recording ? (
       <div className="flex items-center gap-2">
@@ -55,17 +82,17 @@ export function Recorder({ sections, onClip, compact, segmentId: fixedSegmentId 
         <span role="status" className="sr-only">{t("audio.recording")}</span>
       </div>
     ) : (
-      <Button type="button" size="icon" variant="ghost" className="h-11 w-11" onClick={() => void start()} aria-label={t("audio.record")}><Mic /></Button>
+      <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => void start()} aria-label={t("audio.record")}><Mic /></Button>
     );
   }
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         {sections.length > 0 && (
-          <select aria-label={t("audio.segment")} value={segmentId ?? ""} disabled={recording} onChange={(e) => setPicked(e.target.value ? Number(e.target.value) : undefined)} className={nativeSelect}>
-            <option value="">{t("audio.noSegment")}</option>
-            {sections.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </select>
+          <Select value={String(segmentId ?? "") || "__none"} onValueChange={(value) => setPicked((value === "__none" ? "" : value) ? Number((value === "__none" ? "" : value)) : undefined)} disabled={recording}><SelectTrigger aria-label={t("audio.segment")} disabled={recording} className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+            <SelectItem value="__none">{t("audio.noSegment")}</SelectItem>
+            {sections.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.label}</SelectItem>)}
+          </SelectContent></Select>
         )}
         {recording
           ? <Button type="button" variant="destructive" onClick={() => void stop()}><Square />{t("audio.stop")}</Button>
@@ -93,12 +120,12 @@ export function ClipPlayer({ uid, label }: { uid: string; label: string }) {
 }
 
 /** Clips of a session being logged: stored on the device, saved with the session, discarded explicitly. */
-export function ClipDrafts({ clips, onChange, sections }: { clips: AudioDraft[]; onChange: (clips: AudioDraft[]) => void; sections: Section[] }) {
+export function ClipDrafts({ clips, onChange, sections, onRecordingChange }: { clips: AudioDraft[]; onChange: (clips: AudioDraft[]) => void; sections: Section[]; onRecordingChange?: (recording: boolean) => void }) {
   const { t } = useI18n();
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium">{t("audio.title")}</h3>
-      <Recorder sections={sections} onClip={(clip) => onChange([...clips, clip])} />
+      <h2 className="text-sm font-medium">{t("audio.title")}</h2>
+      <Recorder sections={sections} onClip={(clip) => onChange([...clips, clip])} onRecordingChange={onRecordingChange} />
       <ClipDraftList clips={clips} onChange={onChange} sections={sections} />
     </div>
   );

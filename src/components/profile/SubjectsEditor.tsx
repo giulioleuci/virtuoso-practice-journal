@@ -1,17 +1,32 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
-import type { ColorKey, Subject, SubjectType } from "@/domain/entities/common";
+import type { Subject, SubjectType, Technique } from "@/domain/entities/common";
 import { subjectsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
 import { COLOR_KEYS, getSubjectColor, subjectColorCss } from "@/lib/subjectColors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StateNotice } from "@/components/shared/StateNotice";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, X, Trash2, Piano, BookOpen, ChevronDown, Layers, Wrench, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ChevronRight, MoreHorizontal, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -19,500 +34,588 @@ export function SubjectsEditor() {
   const { t } = useI18n();
   const subjects = useSubjects();
   const techniques = useTechniques();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const listPosition = useRef(0);
+  const previousId = useRef(id);
+  const heading = useRef<HTMLDivElement>(null);
 
-  const instruments = (subjects ?? []).filter((s) => s.type === "instrument");
-  const theory = (subjects ?? []).filter((s) => s.type === "theory");
+  useLayoutEffect(() => {
+    if (id !== previousId.current) {
+      window.scrollTo(0, id ? 0 : listPosition.current);
+      heading.current?.focus({ preventScroll: true });
+      previousId.current = id;
+    }
+  }, [id]);
+
+  const back = () => {
+    if (location.state?.fromStudySetup) navigate(-1);
+    else navigate("/study-setup", { replace: true });
+  };
+
+  if (!subjects || !techniques)
+    return (
+      <div aria-label={t("common.loading")} role="status" className="space-y-4">
+        <div className="paper-skeleton h-20" />
+        <div className="paper-skeleton h-40" />
+      </div>
+    );
+  const subject = subjects.find((s) => String(s.id) === id);
 
   return (
-    <section className="space-y-5">
-      <header className="px-1">
-        <h2 className="font-serif text-xl">{t("subjects.title")}</h2>
-        <p className="text-xs text-muted-foreground italic mt-1">{t("subjects.desc")}</p>
-      </header>
-
-      <SubjectGroup
-        icon={<Piano className="h-4 w-4" />}
-        title={t("onb.subjects.instruments")}
-        addLabel={t("onb.subjects.addInstrument")}
-        placeholder={t("onb.subjects.newInstrument")}
-        type="instrument"
-        items={instruments}
-        techniques={techniques ?? []}
-        all={subjects ?? []}
-      />
-
-      <SubjectGroup
-        icon={<BookOpen className="h-4 w-4" />}
-        title={t("onb.subjects.theory")}
-        addLabel={t("onb.subjects.addTheory")}
-        placeholder={t("onb.subjects.newTheory")}
-        type="theory"
-        items={theory}
-        techniques={techniques ?? []}
-        all={subjects ?? []}
-      />
-    </section>
+    <div ref={heading} tabIndex={-1} className="min-w-0 pb-8 focus:outline-none [&_h1]:break-words">
+      {id ? (
+        <>
+          <Button
+            variant="ghost"
+            onClick={back}
+            className="mb-4 min-h-11 max-w-full justify-start whitespace-normal px-0 text-left text-muted-foreground"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+            {t("nav.studySetup")}
+          </Button>
+          {subject ? (
+            <SubjectDetail
+              key={subject.id}
+              subject={subject}
+              all={subjects}
+              techniques={techniques.filter((tech) => tech.subjectId === subject.id)}
+              onDeleted={() => navigate("/study-setup", { replace: true })}
+            />
+          ) : (
+            <StateNotice>{t("subjects.notFound")}</StateNotice>
+          )}
+        </>
+      ) : (
+        <>
+          <PageHeader title={t("nav.studySetup")}  />
+          <div className="space-y-8">
+            <SubjectGroup
+              title={t("onb.subjects.instruments")}
+              addLabel={t("onb.subjects.addInstrument")}
+              type="instrument"
+              items={subjects.filter((s) => s.type === "instrument")}
+              techniques={techniques}
+              all={subjects}
+              onOpen={() => {
+                listPosition.current = window.scrollY;
+              }}
+            />
+            <SubjectGroup
+              title={t("onb.subjects.theory")}
+              addLabel={t("onb.subjects.addTheory")}
+              type="theory"
+              items={subjects.filter((s) => s.type === "theory")}
+              techniques={techniques}
+              all={subjects}
+              onOpen={() => {
+                listPosition.current = window.scrollY;
+              }}
+            />
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
 function SubjectGroup({
-  icon, title, addLabel, placeholder, type, items, techniques, all,
+  title,
+  addLabel,
+  type,
+  items,
+  techniques,
+  all,
+  onOpen,
 }: {
-  icon: React.ReactNode;
   title: string;
   addLabel: string;
-  placeholder: string;
   type: SubjectType;
   items: Subject[];
-  techniques: { id?: number; subjectId: number; name: string }[];
+  techniques: Technique[];
   all: Subject[];
+  onOpen: () => void;
 }) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [openId, setOpenId] = useState<number | null>(null);
 
-  const submit = async () => {
-    const name = draft.trim();
-    if (!name) { setAdding(false); return; }
-    if (all.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
-      toast.error(t("errors.subjectExists")); return;
-    }
+  const submit = async (name: string) => {
+    if (all.some((s) => s.name.toLocaleLowerCase() === name.toLocaleLowerCase()))
+      throw new Error(t("errors.subjectExists"));
     const id = await subjectsService.create(name, type);
-    setDraft(""); setAdding(false);
-    setOpenId(typeof id === "number" ? id : null);
+    onOpen();
+    navigate(`/study-setup/${id}`, { state: { fromStudySetup: true } });
   };
 
   return (
-    <div className="space-y-3 border-t border-border pt-4">
-      <div className="flex items-center gap-2 text-muted-foreground px-1">
-        {icon}
-        <h3 className="text-xs uppercase tracking-widest">{title}</h3>
-        <span className="text-xs ml-auto tabular-nums">{items.length}</span>
-      </div>
-
-      <div className="space-y-2">
-        {items.map((s) => (
-          <SubjectCard
-            key={s.id}
-            subject={s}
-            techniques={techniques.filter((tech) => tech.subjectId === s.id)}
-            open={openId === s.id}
-            onToggle={() => setOpenId(openId === s.id ? null : s.id ?? null)}
-          />
+    <section aria-label={title}>
+      <h2 className="mb-2 flex items-center justify-between font-serif text-2xl font-semibold">
+        {title}
+        <span className="font-numeric text-sm font-normal text-muted-foreground">{items.length}</span>
+      </h2>
+      <ul className="divide-y divide-border border-y border-border">
+        {items.map((subject) => (
+          <li key={subject.id}>
+            <Link
+              to={`/study-setup/${subject.id}`}
+              state={{ fromStudySetup: true }}
+              onClick={onOpen}
+              className="flex min-h-[76px] items-center gap-3 rounded-md py-4 pr-2 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span
+                className="h-3 w-3 shrink-0 rounded-full"
+                style={{
+                  backgroundColor: subjectColorCss(subject.color, subject.type, subject.customColor),
+                }}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block break-words font-serif text-xl leading-snug">{subject.name}</span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  {t("subjects.layers")}:{" "}
+                  {subject.type === "theory" ? THEORY_LAYERS.length : (subject.layers ?? []).length} ·{" "}
+                  {t("subjects.techniques")}:{" "}
+                  {techniques.filter((tech) => tech.subjectId === subject.id).length}
+                </span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+            </Link>
+          </li>
         ))}
-        {!items.length && !adding && (
-          <p className="text-xs italic text-muted-foreground py-1 px-1">—</p>
+      </ul>
+      {!items.length && <p className="py-3 text-sm text-muted-foreground">{t("common.noneDefinedYet")}</p>}
+      <div className="mt-3">
+        {adding ? (
+          <InlineEdit label={addLabel} onSave={submit} onCancel={() => setAdding(false)} adding />
+        ) : (
+          <Button variant="outline" className="min-h-11 w-full justify-start" onClick={() => setAdding(true)}>
+            <Plus className="mr-2 h-4 w-4" aria-hidden />
+            {addLabel}
+          </Button>
         )}
       </div>
-
-      {adding ? (
-        <div className="flex gap-2">
-          <Input
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); submit(); }
-              if (e.key === "Escape") { setAdding(false); setDraft(""); }
-            }}
-            placeholder={placeholder}
-            className="h-11"
-          />
-          <Button size="default" onClick={submit} className="h-11 px-4">{t("common.add")}</Button>
-          <Button size="icon" variant="ghost" onClick={() => { setAdding(false); setDraft(""); }} className="h-11 w-11 shrink-0" aria-label={t("common.close")}>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-      ) : (
-        <Button
-          variant="ghost"
-          onClick={() => setAdding(true)}
-          className="w-full justify-center h-11 border border-dashed border-border/60 text-muted-foreground hover:text-foreground"
-        >
-          <Plus className="h-4 w-4 mr-2" />{addLabel}
-        </Button>
-      )}
-    </div>
+    </section>
   );
 }
 
-function InlineEdit({ value, onSave, onCancel, placeholder, size = "sm" }: {
-  value: string;
-  onSave: (v: string) => void;
-  onCancel: () => void;
-  placeholder?: string;
-  size?: "sm" | "md";
-}) {
-  const [draft, setDraft] = useState(value);
-  const h = size === "md" ? "h-10" : "h-9";
-  const btnH = size === "md" ? "h-10 w-10" : "h-9 w-9";
-  return (
-    <div className="flex items-center gap-1.5 w-full">
-      <Input
-        autoFocus
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") { e.preventDefault(); if (draft.trim()) onSave(draft.trim()); }
-          if (e.key === "Escape") onCancel();
-        }}
-        placeholder={placeholder}
-        className={cn("text-sm flex-1", h)}
-      />
-      <button
-        onClick={() => { if (draft.trim()) onSave(draft.trim()); }}
-        className={cn("rounded-md hover:bg-accent text-primary inline-flex items-center justify-center shrink-0", btnH)}
-        aria-label="save"
-      >
-        <Check className="h-4 w-4" />
-      </button>
-      <button
-        onClick={onCancel}
-        className={cn("rounded-md hover:bg-accent text-muted-foreground inline-flex items-center justify-center shrink-0", btnH)}
-        aria-label="cancel"
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-function Chip({
-  label, onEdit, onRemove,
+function InlineEdit({
+  value = "",
+  label,
+  onSave,
+  onCancel,
+  adding = false,
 }: {
+  value?: string;
   label: string;
-  onEdit?: () => void;
-  onRemove?: () => void;
-}) {
-  return (
-    <div className="inline-flex items-stretch rounded-full bg-accent/70 overflow-hidden h-8 max-w-full">
-      <span className="px-3 inline-flex items-center text-xs truncate">{label}</span>
-      {onEdit && (
-        <button
-          onClick={onEdit}
-          className="px-2 inline-flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-primary border-l border-background/60"
-          aria-label="edit"
-        >
-          <Pencil className="h-3 w-3" />
-        </button>
-      )}
-      {onRemove && (
-        <button
-          onClick={onRemove}
-          className="px-2 inline-flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-destructive border-l border-background/60"
-          aria-label="remove"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      )}
-    </div>
-  );
-}
-
-function SectionHeader({ icon, label, count }: { icon: React.ReactNode; label: string; count?: number }) {
-  return (
-    <div className="flex items-center gap-1.5 text-muted-foreground">
-      {icon}
-      <span className="text-xs uppercase tracking-widest">{label}</span>
-      {count !== undefined && <span className="text-xs tabular-nums ml-auto">{count}</span>}
-    </div>
-  );
-}
-
-function SubjectCard({
-  subject, techniques, open, onToggle,
-}: {
-  subject: Subject;
-  techniques: { id?: number; subjectId: number; name: string }[];
-  open: boolean;
-  onToggle: () => void;
+  onSave: (value: string) => Promise<void>;
+  onCancel: () => void;
+  adding?: boolean;
 }) {
   const { t } = useI18n();
-  const [layerDraft, setLayerDraft] = useState("");
-  const [techDraft, setTechDraft] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  return (
+    <form
+      className="space-y-3 py-2"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        if (!draft.trim() || saving) return;
+        setSaving(true);
+        setError("");
+        try {
+          await onSave(draft.trim());
+        } catch (cause) {
+          setError(
+            cause instanceof Error && cause.message === t("errors.subjectExists")
+              ? cause.message
+              : t("errors.couldNotSave")
+          );
+        } finally {
+          setSaving(false);
+        }
+      }}
+    >
+      <Input
+        autoFocus
+        aria-label={label}
+        value={draft}
+        disabled={saving}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && !saving) onCancel();
+        }}
+        className="h-12"
+      />
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={saving || !draft.trim()} className="min-h-11">
+          {saving ? t("common.loading") : adding ? t("common.add") : t("common.save")}
+        </Button>
+        <Button type="button" variant="ghost" disabled={saving} onClick={onCancel} className="min-h-11">
+          {t("common.cancel")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function OptionRow({
+  label,
+  onSave,
+  onRemove,
+  disabled,
+}: {
+  label: string;
+  onSave: (value: string) => Promise<void>;
+  onRemove: () => void;
+  disabled: boolean;
+}) {
+  const { t } = useI18n();
+  const [editing, setEditing] = useState(false);
+  return (
+    <li className="border-b border-border">
+      {editing ? (
+        <InlineEdit
+          value={label}
+          label={t("common.name")}
+          onSave={async (value) => {
+            await onSave(value);
+            setEditing(false);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <div className="flex items-center gap-2">
+          <button
+            disabled={disabled}
+            onClick={() => setEditing(true)}
+            className="min-h-12 min-w-0 flex-1 break-words rounded-md py-3 text-left text-base hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          >
+            {label}
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={disabled}
+                className="h-11 w-11 shrink-0"
+                aria-label={`${t("common.more")}: ${label}`}
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="min-h-11 text-destructive focus:text-destructive"
+                onSelect={onRemove}
+              >
+                <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+                {t("common.remove")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+    </li>
+  );
+}
+
+function SubjectDetail({
+  subject,
+  all,
+  techniques,
+  onDeleted,
+}: {
+  subject: Subject;
+  all: Subject[];
+  techniques: Technique[];
+  onDeleted: () => void;
+}) {
+  const { t } = useI18n();
   const [editingName, setEditingName] = useState(false);
-  const [editingLayer, setEditingLayer] = useState<string | null>(null);
-  const [editingTechId, setEditingTechId] = useState<number | null>(null);
-
-  const layerCount = subject.type === "theory" ? THEORY_LAYERS.length : (subject.layers ?? []).length;
-
-  const doDelete = async () => {
-    if (!subject.id) return;
-    await subjectsService.remove(subject.id);
-    toast.success(t("toast.subjectDeleted"));
-    setConfirmDelete(false);
-  };
-
-  const saveName = async (newName: string) => {
-    if (!subject.id) return;
-    await subjectsService.rename(subject.id, newName);
-    setEditingName(false);
-  };
-
-  const addLayer = async () => {
-    const v = layerDraft.trim();
-    if (!v || !subject.id) return;
-    await subjectsService.addLayer(subject.id, v);
-    setLayerDraft("");
-  };
-
-  const removeLayer = async (l: string) => {
-    if (!subject.id) return;
-    await subjectsService.removeLayer(subject.id, l);
-  };
-
-  const saveLayer = async (oldName: string, newName: string) => {
-    if (!subject.id) return;
-    await subjectsService.renameLayer(subject.id, oldName, newName);
-    setEditingLayer(null);
-  };
-
-  const addTechnique = async () => {
-    const v = techDraft.trim();
-    if (!v || !subject.id) return;
-    if (techniques.some((tech) => tech.name.toLowerCase() === v.toLowerCase())) return;
-    await subjectsService.addTechnique(subject.id, v);
-    setTechDraft("");
-  };
-
-  const saveTechnique = async (id: number, newName: string) => {
-    await subjectsService.renameTechnique(id, newName);
-    setEditingTechId(null);
-  };
-
+  const [adding, setAdding] = useState<"layer" | "technique" | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const layers =
+    subject.type === "theory" ? THEORY_LAYERS.map((l) => t(`library.mastery.${l}`)) : subject.layers ?? [];
   const dotColor = subjectColorCss(subject.color, subject.type, subject.customColor);
+  const id = subject.id!;
+
+  const update = async (action: () => Promise<void>) => {
+    setSaving(true);
+    setError("");
+    try {
+      await action();
+    } catch {
+      setError(t("errors.couldNotSave"));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div className="rounded-lg border border-border/60 bg-background/40 overflow-hidden">
-      {/* Header row — always visible, large tap target */}
-      <div className="flex items-stretch">
-        <button
-          onClick={onToggle}
-          className="flex-1 flex items-center gap-3 p-3.5 text-left hover:bg-accent/40 active:bg-accent/60 transition-colors min-w-0"
-          aria-expanded={open}
-        >
-          <span
-            className="h-4 w-4 rounded-full shrink-0 ring-1 ring-border/40"
-            style={{ backgroundColor: dotColor }}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="font-serif text-base truncate leading-tight">{subject.name}</div>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1 flex items-center gap-3">
-              <span className="inline-flex items-center gap-1"><Layers className="h-3 w-3" />{layerCount}</span>
-              <span className="inline-flex items-center gap-1"><Wrench className="h-3 w-3" />{techniques.length}</span>
-            </div>
-          </div>
-          <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform shrink-0", open && "rotate-180")} />
-        </button>
-      </div>
+    <>
+      <PageHeader
+        title={subject.name}
 
-      {open && (
-        <div className="border-t border-border/40 divide-y divide-border/40">
-          {/* Name */}
-          <div className="p-3 space-y-2">
-            <SectionHeader icon={<Pencil className="h-3 w-3" />} label={t("subjects.editSubjectName")} />
-            {editingName ? (
-              <InlineEdit
-                value={subject.name}
-                onSave={saveName}
-                onCancel={() => setEditingName(false)}
-                size="md"
-              />
-            ) : (
-              <button
-                onClick={() => setEditingName(true)}
-                className="w-full flex items-center gap-2 px-3 h-10 rounded-md bg-background/60 border border-border/40 hover:bg-accent/40 text-left"
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={saving}
+                className="h-11 w-11"
+                aria-label={t("subjects.actions")}
               >
-                <span className="font-serif text-base flex-1 min-w-0 truncate">{subject.name}</span>
-                <Pencil className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              </button>
-            )}
-          </div>
-
-          {/* Layers */}
-          <div className="p-3 space-y-2.5">
-            <SectionHeader
-              icon={<Layers className="h-3 w-3" />}
-              label={t("subjects.layers")}
-              count={layerCount}
-            />
-            {subject.type === "theory" ? (
-              <>
-                <div className="flex flex-wrap gap-1.5">
-                  {THEORY_LAYERS.map((l) => (
-                    <Chip key={l} label={t(`library.mastery.${l}`)} />
-                  ))}
-                </div>
-                <p className="text-xs italic text-muted-foreground">{t("subjects.theoryLayersFixed")}</p>
-              </>
-            ) : (
-              <>
-                <div className="flex flex-wrap gap-1.5">
-                  {(subject.layers ?? []).map((l) => (
-                    editingLayer === l ? (
-                      <div key={l} className="w-full">
-                        <InlineEdit
-                          value={l}
-                          onSave={(v) => saveLayer(l, v)}
-                          onCancel={() => setEditingLayer(null)}
-                        />
-                      </div>
-                    ) : (
-                      <Chip
-                        key={l}
-                        label={l}
-                        onEdit={() => setEditingLayer(l)}
-                        onRemove={() => removeLayer(l)}
-                      />
-                    )
-                  ))}
-                  {!(subject.layers ?? []).length && (
-                    <span className="text-xs italic text-muted-foreground">{t("subjects.layersHint")}</span>
-                  )}
-                </div>
-                <div className="flex gap-1.5">
-                  <Input
-                    value={layerDraft}
-                    onChange={(e) => setLayerDraft(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLayer())}
-                    placeholder={t("subjects.addLayer")}
-                    className="h-10 text-sm"
-                  />
-                  <Button size="icon" variant="outline" onClick={addLayer} className="h-10 w-10 shrink-0" aria-label={t("common.add")}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Techniques */}
-          <div className="p-3 space-y-2.5">
-            <SectionHeader
-              icon={<Wrench className="h-3 w-3" />}
-              label={t("subjects.techniques")}
-              count={techniques.length}
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {techniques.map((tech) => (
-                editingTechId === tech.id ? (
-                  <div key={tech.id} className="w-full">
-                    <InlineEdit
-                      value={tech.name}
-                      onSave={(v) => tech.id != null && saveTechnique(tech.id, v)}
-                      onCancel={() => setEditingTechId(null)}
-                    />
-                  </div>
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem className="min-h-11" onSelect={() => setEditingName(true)}>
+                <Pencil className="mr-2 h-4 w-4" aria-hidden />
+                {t("subjects.editSubjectName")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="min-h-11 text-destructive focus:text-destructive"
+                onSelect={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+                {t("subjects.deleteSubject")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
+      {editingName && (
+        <InlineEdit
+          label={t("subjects.editSubjectName")}
+          value={subject.name}
+          onCancel={() => setEditingName(false)}
+          onSave={async (name) => {
+            if (all.some((s) => s.id !== id && s.name.toLocaleLowerCase() === name.toLocaleLowerCase()))
+              throw new Error(t("errors.subjectExists"));
+            await subjectsService.rename(id, name);
+            setEditingName(false);
+          }}
+        />
+      )}
+      {error && (
+        <StateNotice tone="error" className="mb-4">
+          {error}
+        </StateNotice>
+      )}
+      <Accordion type="single" collapsible onValueChange={() => setAdding(null)}>
+        <AccordionItem value="layers">
+          <AccordionTrigger
+            className="min-h-[76px] gap-4 text-left hover:no-underline"
+            aria-label={`${t("subjects.layers")}: ${layers.length}`}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-base">
+                {t("subjects.layers")}{" "}
+                <span className="ml-2 font-numeric text-sm text-muted-foreground">{layers.length}</span>
+              </span>
+              <span className="mt-1 line-clamp-2 break-words text-sm font-normal text-muted-foreground">
+                {layers.length ? layers.join(", ") : t("subjects.layersHint")}
+              </span>
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {subject.type === "theory" ? t("subjects.theoryLayersFixed") : t("subjects.layersHelp")}
+            </p>
+            <ul>
+              {layers.map((layer) =>
+                subject.type === "theory" ? (
+                  <li key={layer} className="break-words border-b border-border py-3 text-base">
+                    {layer}
+                  </li>
                 ) : (
-                  <Chip
-                    key={tech.id}
-                    label={tech.name}
-                    onEdit={() => tech.id != null && setEditingTechId(tech.id)}
-                    onRemove={() => tech.id && subjectsService.removeTechnique(tech.id)}
+                  <OptionRow
+                    key={layer}
+                    label={layer}
+                    disabled={saving}
+                    onSave={(name) => subjectsService.renameLayer(id, layer, name)}
+                    onRemove={() => void update(() => subjectsService.removeLayer(id, layer))}
                   />
                 )
-              ))}
-              {!techniques.length && (
-                <span className="text-xs italic text-muted-foreground">{t("subjects.techniquesHint")}</span>
               )}
-            </div>
-            <div className="flex gap-1.5">
-              <Input
-                value={techDraft}
-                onChange={(e) => setTechDraft(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTechnique())}
-                placeholder={t("subjects.addTechnique")}
-                className="h-10 text-sm"
+            </ul>
+            {subject.type !== "theory" &&
+              (adding === "layer" ? (
+                <InlineEdit
+                  label={t("subjects.addLayer")}
+                  adding
+                  onCancel={() => setAdding(null)}
+                  onSave={async (name) => {
+                    await subjectsService.addLayer(id, name);
+                    setAdding(null);
+                  }}
+                />
+              ) : (
+                <Button variant="outline" className="min-h-11" onClick={() => setAdding("layer")}>
+                  <Plus className="mr-2 h-4 w-4" aria-hidden />
+                  {t("subjects.addLayer")}
+                </Button>
+              ))}
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="techniques">
+          <AccordionTrigger
+            className="min-h-[76px] gap-4 text-left hover:no-underline"
+            aria-label={`${t("subjects.techniques")}: ${techniques.length}`}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-base">
+                {t("subjects.techniques")}{" "}
+                <span className="ml-2 font-numeric text-sm text-muted-foreground">{techniques.length}</span>
+              </span>
+              <span className="mt-1 line-clamp-2 break-words text-sm font-normal text-muted-foreground">
+                {techniques.length
+                  ? techniques.map((tech) => tech.name).join(", ")
+                  : t("subjects.techniquesHint")}
+              </span>
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-3">
+            {!techniques.length && (
+              <p className="text-sm text-muted-foreground">{t("subjects.techniquesHint")}</p>
+            )}
+            <ul>
+              {techniques.map((tech) => (
+                <OptionRow
+                  key={tech.id}
+                  label={tech.name}
+                  disabled={saving}
+                  onSave={(name) => subjectsService.renameTechnique(tech.id, name)}
+                  onRemove={() => void update(() => subjectsService.removeTechnique(tech.id))}
+                />
+              ))}
+            </ul>
+            {adding === "technique" ? (
+              <InlineEdit
+                label={t("subjects.addTechnique")}
+                adding
+                onCancel={() => setAdding(null)}
+                onSave={async (name) => {
+                  if (!techniques.some((tech) => tech.name.toLocaleLowerCase() === name.toLocaleLowerCase()))
+                    await subjectsService.addTechnique(id, name);
+                  setAdding(null);
+                }}
               />
-              <Button size="icon" variant="outline" onClick={addTechnique} className="h-10 w-10 shrink-0" aria-label={t("common.add")}>
-                <Plus className="h-4 w-4" />
+            ) : (
+              <Button variant="outline" className="min-h-11" onClick={() => setAdding("technique")}>
+                <Plus className="mr-2 h-4 w-4" aria-hidden />
+                {t("subjects.addTechnique")}
               </Button>
-            </div>
-          </div>
-
-          {/* Color */}
-          <div className="p-3 space-y-2.5">
-            <SectionHeader icon={<span className="h-3 w-3 rounded-full" style={{ backgroundColor: dotColor }} />} label={t("subjects.colorLabel")} />
-            <div className="grid grid-cols-6 gap-2.5">
-              {COLOR_KEYS.map((ck) => {
-                const selected = !subject.customColor && getSubjectColor(subject.color, subject.type) === ck;
+            )}
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="appearance">
+          <AccordionTrigger className="min-h-[76px] gap-4 text-left hover:no-underline">
+            <span className="flex flex-1 items-center gap-3 text-base">
+              <span
+                className="h-4 w-4 shrink-0 rounded-full"
+                style={{ backgroundColor: dotColor }}
+                aria-hidden
+              />
+              {t("subjects.appearance")}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-4 px-1">
+            <p className="text-sm text-muted-foreground">{t("subjects.colorLabel")}</p>
+            <div className="grid max-w-sm grid-cols-4 gap-3 min-[380px]:grid-cols-5">
+              {COLOR_KEYS.map((color) => {
+                const selected =
+                  !subject.customColor && getSubjectColor(subject.color, subject.type) === color;
                 return (
                   <button
-                    key={ck}
-                    onClick={() => subject.id && subjectsService.setColor(subject.id, ck as ColorKey)}
+                    key={color}
+                    disabled={saving}
+                    onClick={() => void update(() => subjectsService.setColor(id, color))}
                     className={cn(
-                      "aspect-square w-full rounded-full transition-all flex items-center justify-center",
-                      selected ? "ring-2 ring-offset-2 ring-offset-background ring-foreground" : "active:scale-95"
+                      "flex h-12 w-12 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50",
+                      selected && "ring-2 ring-foreground ring-offset-2 ring-offset-background"
                     )}
-                    style={{ backgroundColor: `hsl(var(--key-${ck}))` }}
-                    aria-label={ck}
+                    style={{ backgroundColor: `hsl(var(--key-${color}))` }}
+                    aria-label={t(`subjects.color.${color}`)}
                     aria-pressed={selected}
                   >
-                    {selected && <Check className="h-4 w-4 text-background mix-blend-difference" />}
+                    {selected && (
+                      <Check className="h-5 w-5 text-white" aria-hidden />
+                    )}
                   </button>
                 );
               })}
-              <label
-                className={cn(
-                  "relative aspect-square w-full rounded-full cursor-pointer transition-all overflow-hidden border border-border/60",
-                  subject.customColor ? "ring-2 ring-offset-2 ring-offset-background ring-foreground" : "active:scale-95"
-                )}
-                style={
-                  subject.customColor
-                    ? { backgroundColor: subject.customColor }
-                    : { background: "conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ec4899, #ef4444)" }
-                }
-                aria-label={t("subjects.customColor")}
-                title={t("subjects.customColor")}
-              >
-                <input
-                  type="color"
-                  value={subject.customColor ?? "#a0522d"}
-                  onChange={(e) => subject.id && subjectsService.setCustomColor(subject.id, e.target.value)}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  aria-label={t("subjects.customColor")}
-                />
-              </label>
             </div>
+            <label className="flex min-h-12 w-fit cursor-pointer items-center gap-3 text-sm">
+              <input
+                type="color"
+                disabled={saving}
+                value={subject.customColor ?? "#a0522d"}
+                onChange={(e) => void update(() => subjectsService.setCustomColor(id, e.target.value))}
+                className="h-12 w-12 cursor-pointer rounded border border-border bg-card p-1"
+              />
+              {t("subjects.customColor")}
+            </label>
             {subject.customColor && (
-              <button
-                onClick={() => subject.id && subjectsService.setCustomColor(subject.id, undefined)}
-                className="text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"
+              <Button
+                variant="ghost"
+                disabled={saving}
+                className="min-h-11"
+                onClick={() => void update(() => subjectsService.setCustomColor(id, undefined))}
               >
                 {t("common.reset")}
-              </button>
+              </Button>
             )}
-          </div>
-
-          {/* Delete */}
-          <div className="p-3">
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmDelete(true)}
-              className="w-full h-11 text-destructive/80 hover:text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />{t("subjects.deleteSubject")}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      <AlertDialog
+        open={confirmDelete}
+        onOpenChange={(open) => {
+          if (!saving) setConfirmDelete(open);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("dialog.deleteSubject", { name: subject.name })}</AlertDialogTitle>
             <AlertDialogDescription>{t("dialog.deleteSubjectDesc")}</AlertDialogDescription>
           </AlertDialogHeader>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={doDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t("common.delete")}
-            </AlertDialogAction>
+            <AlertDialogCancel disabled={saving} className="min-h-11">{t("common.cancel")}</AlertDialogCancel>
+            <Button
+              disabled={saving}
+              variant="destructive"
+              className="min-h-11"
+              onClick={() =>
+                void update(async () => {
+                  await subjectsService.remove(id);
+                  toast.success(t("toast.subjectDeleted"));
+                  onDeleted();
+                })
+              }
+            >
+              {saving ? t("common.loading") : t("common.delete")}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

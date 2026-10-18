@@ -2,8 +2,8 @@ import { db } from "@/infrastructure/dexie/db";
 import type { Draft } from "@/domain/entities/common";
 import type { PerformanceEvent } from "@/domain/entities/performance";
 import type { PerformancePort, RepertoirePort } from "@/domain/ports/performance";
-import { enterRepertoire, isPerformable, scheduleNextReview } from "@/domain/logic/repertoireReview";
-import { now, today } from "@/lib/date";
+import { isPerformable } from "@/domain/logic/repertoireReview";
+import { now } from "@/lib/date";
 
 const active = <T extends { deletedAt?: number }>(row: T) => !row.deletedAt;
 
@@ -47,12 +47,7 @@ export const repertoireRepository = {
       const item = await db.library.get(itemId);
       if (!item || !active(item)) throw new Error("library.error.missing");
       if (inRepertoire && !isPerformable(item.kind)) throw new Error("performances.error.material");
-      await db.library.update(itemId, inRepertoire ? enterRepertoire(today(), now()) : { inRepertoire: false, nextReviewAt: undefined });
+      await db.library.update(itemId, { inRepertoire, repertoireAddedAt: inRepertoire ? item.repertoireAddedAt ?? now() : item.repertoireAddedAt });
     });
-  },
-  async markReviewed(itemId: number, outcome: "good" | "ok" | "poor" = "good") {
-    const item = await db.library.get(itemId);
-    if (!item) return;
-    await db.library.update(itemId, scheduleNextReview(item, today(), outcome));
   },
 } satisfies RepertoirePort;

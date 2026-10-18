@@ -55,6 +55,8 @@ function walk(dir, out = []) {
 }
 
 const sourceFiles = walk(srcDir);
+const program = ts.createProgram(sourceFiles, { noResolve: true, noLib: true });
+const checker = program.getTypeChecker();
 
 const usedStatic = new Set();
 const usedPatterns = [];
@@ -62,12 +64,13 @@ const referencesByKey = new Map();
 const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 for (const file of sourceFiles) {
-  const src = readFileSync(file, "utf-8");
-  const source = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
+  const source = program.getSourceFile(file);
   const rel = relative(root, file);
+  const visitedKeys = new Set();
 
   function recordKey(node) {
-    if (!node) return;
+    if (!node || visitedKeys.has(node)) return;
+    visitedKeys.add(node);
     if (ts.isStringLiteralLike(node)) {
       usedStatic.add(node.text);
       const line = source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
@@ -77,6 +80,19 @@ for (const file of sourceFiles) {
       recordKey(node.whenTrue);
       recordKey(node.whenFalse);
     } else if (ts.isParenthesizedExpression(node)) {
+      recordKey(node.expression);
+    } else if (ts.isIdentifier(node)) {
+      const declaration = checker.getSymbolAtLocation(node)?.valueDeclaration;
+      if (declaration && ts.isVariableDeclaration(declaration)) recordKey(declaration.initializer);
+    } else if (ts.isElementAccessExpression(node)) {
+      recordKey(node.expression);
+    } else if (ts.isObjectLiteralExpression(node)) {
+      for (const property of node.properties) {
+        if (ts.isPropertyAssignment(property)) recordKey(property.initializer);
+      }
+    } else if (ts.isArrayLiteralExpression(node)) {
+      for (const element of node.elements) recordKey(element);
+    } else if (ts.isAsExpression(node) || ts.isSatisfiesExpression(node)) {
       recordKey(node.expression);
     }
   }

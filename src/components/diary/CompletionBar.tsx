@@ -50,10 +50,10 @@ export function CompletionBar({ task, onClose, onUndo, onLog }: { task: Task; on
       )}
     >
       <div aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-secondary">
-        <div className="h-full origin-left bg-primary" style={{ transform: `scaleX(${Math.max(0, left) / peak.current})` }} />
+        <div className="h-full origin-left bg-success" style={{ transform: `scaleX(${Math.max(0, left) / peak.current})` }} />
       </div>
       <div className="flex items-center justify-between gap-3">
-        <span className="min-w-0 flex-1 truncate text-sm"><strong className="font-semibold">{t("rate.completed", { title: task.title })}</strong></span>
+        <span className="min-w-0 flex-1 truncate text-sm text-success"><strong className="font-semibold">{t("rate.completed", { title: task.title })}</strong></span>
         <span className="flex shrink-0 items-center gap-1">
           <span className="hidden text-xs text-muted-foreground tabular-nums sm:inline" aria-live="off">
             {writing ? t("rate.paused") : t("rate.closesIn", { s: Math.ceil(left / 1000) })}
@@ -62,7 +62,8 @@ export function CompletionBar({ task, onClose, onUndo, onLog }: { task: Task; on
           <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={t("common.close")} onClick={onClose}><X /></Button>
         </span>
       </div>
-      <button type="button" onClick={onLog} className="inline-flex w-fit items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+      <p className="text-xs text-muted-foreground">{t("rate.completeHint")}</p>
+      <button type="button" onClick={onLog} className="inline-flex min-h-11 w-fit items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
         {t("rate.logResults")} <ChevronRight className="h-4 w-4" />
       </button>
       {task.itemId !== undefined && (

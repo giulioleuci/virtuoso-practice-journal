@@ -10,7 +10,7 @@ beforeEach(async () => { await db.delete(); await db.open(); });
 
 describe("performable materials", () => {
   it.each(["piece", "study", "technique", "exercise", "theory"] as LibraryKind[])("enforces eligibility for %s at the write boundary", async kind => {
-    const itemId = await db.library.add({ subjectId: 1, kind, studyStatus: "not_started", title: kind, createdAt: 1 });
+    const itemId = await db.library.add({ subjectId: 1, kind, title: kind, createdAt: 1 });
     const eventId = await db.performances.add({ name: "Recital", kind: "concert", date: "2026-10-17", createdAt: 1 });
     if (kind === "piece" || kind === "study") {
       expect(isPerformable(kind)).toBe(true);
@@ -18,6 +18,9 @@ describe("performable materials", () => {
       expect(await db.performanceItems.count()).toBe(1);
       await repertoireRepository.setInRepertoire(itemId, true);
       expect((await db.library.get(itemId))?.inRepertoire).toBe(true);
+      expect(await db.library.get(itemId)).not.toHaveProperty("nextReviewAt");
+      expect(await db.library.get(itemId)).not.toHaveProperty("reviewIntervalDays");
+      expect(await db.tasks.count()).toBe(0);
     } else {
       expect(isPerformable(kind)).toBe(false);
       await expect(repertoireRepository.setInRepertoire(itemId, true)).rejects.toThrow();
@@ -27,8 +30,8 @@ describe("performable materials", () => {
   });
 
   it("rejects missing/archived references and rolls back replacement of a program", async () => {
-    const study = await db.library.add({ subjectId: 1, kind: "study", studyStatus: "not_started", title: "Study", createdAt: 1 });
-    const exercise = await db.library.add({ subjectId: 1, kind: "exercise", studyStatus: "not_started", title: "Exercise", createdAt: 1 });
+    const study = await db.library.add({ subjectId: 1, kind: "study", title: "Study", createdAt: 1 });
+    const exercise = await db.library.add({ subjectId: 1, kind: "exercise", title: "Exercise", createdAt: 1 });
     const event = await db.performances.add({ name: "Recital", kind: "concert", date: "2026-10-17", createdAt: 1 });
     await performanceRepository.setEventItems(event, [study]);
     const previous = await db.performanceItems.toArray();
@@ -44,10 +47,10 @@ describe("performable materials", () => {
 
   it("blocks incompatible type changes until repertoire and program links are explicitly removed", async () => {
     const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
-    const id = await libraryRepository.upsert({ subjectId, kind: "study", studyStatus: "not_started", title: "Study", createdAt: 1 });
+    const id = await libraryRepository.upsert({ subjectId, kind: "study", title: "Study", createdAt: 1 });
     const item = (await db.library.get(id))!;
     await repertoireRepository.setInRepertoire(id, true);
-    const change = { studyStatus: "not_started", ...item, inRepertoire: false, kind: "exercise" as const, title: "Changed" };
+    const change = { ...item, inRepertoire: false, kind: "exercise" as const, title: "Changed" };
     await expect(libraryRepository.upsert(change)).rejects.toThrow();
     expect((await db.library.get(id))?.title).toBe("Study");
     await repertoireRepository.setInRepertoire(id, false);

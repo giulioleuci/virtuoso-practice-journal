@@ -2,6 +2,7 @@ import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check, ChevronRight, Circle } from "lucide-react";
 
+import { ScrollList } from "@/components/shared/ScrollList";
 import { cn } from "@/lib/utils";
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
@@ -40,7 +41,7 @@ DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayNam
 const DropdownMenuSubContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
->(({ className, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => (
   <DropdownMenuPrimitive.SubContent
     ref={ref}
     className={cn(
@@ -48,14 +49,14 @@ const DropdownMenuSubContent = React.forwardRef<
       className,
     )}
     {...props}
-  />
+  ><ScrollList className="max-h-[min(16rem,calc(var(--radix-dropdown-menu-content-available-height,100dvh)_-_3rem))]">{children}</ScrollList></DropdownMenuPrimitive.SubContent>
 ));
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
 
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
+>(({ className, children, sideOffset = 4, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
     <DropdownMenuPrimitive.Content
       ref={ref}
@@ -65,7 +66,7 @@ const DropdownMenuContent = React.forwardRef<
         className,
       )}
       {...props}
-    />
+    ><ScrollList className="max-h-[min(16rem,calc(var(--radix-dropdown-menu-content-available-height,100dvh)_-_3rem))]">{children}</ScrollList></DropdownMenuPrimitive.Content>
   </DropdownMenuPrimitive.Portal>
 ));
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;

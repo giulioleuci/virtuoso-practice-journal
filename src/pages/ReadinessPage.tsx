@@ -41,7 +41,7 @@ export default function ReadinessPage() {
       <Link to={`/library/events/${eventId}`} className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
         <ChevronLeft className="h-4 w-4" />{t("readiness.back")}
       </Link>
-      <PageHeader title={t("readiness.title", { title: item.title })} subtitle={t("readiness.subtitle")} />
+      <PageHeader title={t("readiness.title", { title: item.title })}  />
 
       <p className="mb-8 text-sm tabular-nums text-muted-foreground">{coverage(ev)}</p>
 

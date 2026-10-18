@@ -8,7 +8,7 @@ describe("study materials", () => {
     expect(libraryKindSchema.options).toEqual(["piece", "study", "technique", "exercise", "theory"]);
     expect(collectionKindSchema.safeParse("piece").success).toBe(false);
     expect(collectionKindSchema.safeParse("manual").success).toBe(true);
-    expect(libraryItemInputSchema.parse({ studyStatus: "not_started", subjectId: 1, kind: "study", title: " Study " }).studyStatus).toBe("not_started");
+    expect(libraryItemInputSchema.parse({ studyStatus: "consolidated", subjectId: 1, kind: "study", title: " Study " })).toEqual({ subjectId: 1, kind: "study", title: "Study" });
     expect(libraryItemInputSchema.safeParse({ studyStatus: "not_started", subjectId: 1, kind: "study", title: " " }).success).toBe(false);
   });
 

@@ -14,6 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
+import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -31,7 +32,7 @@ interface Props {
   onSegmentsSelected?: (ids: number[]) => void;
 }
 
-const KIND_VALS: (LibraryKind | "all")[] = ["all", "piece", "study", "technique", "exercise", "theory"];
+const KIND_VALS: (LibraryKind | "all" | "repertoire")[] = ["all", "repertoire", "piece", "study", "technique", "exercise", "theory"];
 const LINK_TYPE_VALS: TaskLinkType[] = ["free", "item", "collection"];
 
 export function LinkTargetFields({
@@ -45,9 +46,6 @@ export function LinkTargetFields({
   const allCollectionItems = useCollectionLinks();
   const segments = usePresentationRead<Segment[]>("library.segments", [itemId]);
 
-  // Filter state local to "item" mode
-  const kindFilterKey = `kindFilter:${subjectId ?? 0}`;
-  const colFilterKey = `colFilter:${subjectId ?? 0}`;
 
   return (
     <div className="space-y-4">
@@ -75,7 +73,7 @@ export function LinkTargetFields({
       </div>
 
       {linkType === "item" && (
-        <ItemPicker
+        <ItemPicker key={subjectId}
           subjectId={subjectId}
           library={library ?? []}
           allCollections={allCollections ?? []}
@@ -133,8 +131,9 @@ function ItemPicker({
   setItemId: (id: number | undefined) => void;
 }) {
   const { t } = useI18n();
-  const [kindFilter, setKindFilter] = useState<LibraryKind | "all">("all");
+  const [kindFilter, setKindFilter] = useState<LibraryKind | "all" | "repertoire">("all");
   const [collectionFilter, setCollectionFilter] = useState<number | "all">("all");
+  const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"title" | "composer">("title");
 
   const items = useMemo(() => {
@@ -147,7 +146,8 @@ function ItemPicker({
     const colSet = collectionFilter !== "all" ? byCol.get(collectionFilter) ?? new Set<number>() : null;
     const filtered = library.filter((l) => {
       if (l.subjectId !== subjectId) return false;
-      if (kindFilter !== "all" && l.kind !== kindFilter) return false;
+      if (search.trim() && !`${l.title} ${l.composer ?? ""} ${l.catalog ?? ""}`.toLowerCase().includes(search.trim().toLowerCase())) return false;
+      if (kindFilter === "repertoire" ? !l.inRepertoire : kindFilter !== "all" && l.kind !== kindFilter) return false;
       if (colSet && !colSet.has(l.id)) return false;
       return true;
     });
@@ -158,60 +158,20 @@ function ItemPicker({
       }
       return a.title.localeCompare(b.title);
     });
-  }, [library, subjectId, kindFilter, collectionFilter, sortBy, allCollectionItems]);
+  }, [library, subjectId, kindFilter, collectionFilter, sortBy, allCollectionItems, search]);
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-foreground">{t("link.filterByKind")}</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {KIND_VALS.map((val) => (
-            <button
-              key={val}
-              type="button"
-              onClick={() => {
-                setKindFilter(val);
-              }}
-              className={cn(
-                "text-xs px-3 py-1.5 rounded-paper border transition-colors",
-                kindFilter === val
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:text-foreground"
-              )}
-            >{val === "all" ? t("common.all") : t(`library.kind.${val}`)}</button>
-          ))}
-        </div>
-      </div>
-
-      {allCollections.length > 0 && (
-        <MultiChipPicker
-          label={t("link.filterByCollection")}
-          options={allCollections.map((c) => ({ value: c.id, label: c.name }))}
-          value={collectionFilter === "all" ? [] : [collectionFilter]}
-          onChange={(next) => setCollectionFilter(next.length ? next[next.length - 1] : "all")}
-          placeholder={t("link.allCollections")}
-        />
-      )}
-
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-foreground">{t("link.sortBy")}</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {(["title", "composer"] as const).map((val) => (
-            <button
-              key={val}
-              type="button"
-              onClick={() => setSortBy(val)}
-              className={cn(
-                "text-xs px-3 py-1.5 rounded-paper border transition-colors",
-                sortBy === val
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:text-foreground"
-              )}
-            >{val === "title" ? t("common.title") : t("link.sortByComposerAuthor")}</button>
-          ))}
-        </div>
-      </div>
-
+      <FilterPanel search={{ value: search, onChange: setSearch, placeholder: t("library.searchTitleComposer") }}
+        filters={[
+          ...(kindFilter !== "all" ? [{ key: "kind", label: kindFilter === "repertoire" ? t("repertoire.title") : t(`library.kind.${kindFilter}`), onRemove: () => setKindFilter("all") }] : []),
+          ...(collectionFilter !== "all" ? [{ key: "collection", label: allCollections.find(c => c.id === collectionFilter)?.name ?? String(collectionFilter), onRemove: () => setCollectionFilter("all") }] : []),
+          ...(sortBy !== "title" ? [{ key: "sort", label: t("link.sortByComposerAuthor"), onRemove: () => setSortBy("title") }] : []),
+        ]} onReset={() => { setSearch(""); setKindFilter("all"); setCollectionFilter("all"); setSortBy("title"); }} resultCount={items.length}>
+        <FilterSelect label={t("link.filterByKind")} value={kindFilter} onChange={setKindFilter} options={KIND_VALS.map(value => ({ value, label: value === "all" ? t("common.all") : value === "repertoire" ? t("repertoire.title") : t(`library.kind.${value}`) }))} />
+        {allCollections.length > 0 && <FilterSelect label={t("link.filterByCollection")} value={String(collectionFilter)} onChange={value => setCollectionFilter(value === "all" ? "all" : Number(value))} options={[{ value: "all", label: t("link.allCollections") }, ...allCollections.map(c => ({ value: String(c.id), label: c.name }))]} />}
+        <FilterSelect label={t("link.sortBy")} value={sortBy} onChange={setSortBy} options={[{ value: "title", label: t("common.title") }, { value: "composer", label: t("link.sortByComposerAuthor") }]} />
+      </FilterPanel>
       <div className="space-y-2">
         <Label className="text-xs font-medium text-foreground">{t("link.item")}</Label>
         <Select

@@ -11,5 +11,4 @@ export interface PerformancePort {
 
 export interface RepertoirePort {
   setInRepertoire(itemId: number, inRepertoire: boolean): Promise<void>;
-  markReviewed(itemId: number, outcome?: "good" | "ok" | "poor"): Promise<void>;
 }

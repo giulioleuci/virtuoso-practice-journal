@@ -5,7 +5,6 @@ export type Lang = "en" | "it" | "es" | "de";
 export type SubjectType = "instrument" | "theory" | "composition" | "other";
 export type LibraryKind = "piece" | "study" | "technique" | "exercise" | "theory";
 export type CollectionKind = "manual" | "collection";
-export type StudyStatus = "not_started" | "in_progress" | "consolidated";
 export type ColorKey = "terracotta" | "sage" | "gold" | "blue" | "plum" | "coral" | "amber" | "teal" | "indigo" | "slate";
 export type ReminderFreq = "daily" | "weekdays" | "custom";
 

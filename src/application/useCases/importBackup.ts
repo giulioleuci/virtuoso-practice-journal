@@ -46,7 +46,11 @@ export class ImportBackupUseCase {
     }
     const subjects = (data.subjects ?? []).map(value => row.extend({ name: z.string().min(1), type: z.enum(["instrument", "theory", "composition", "other"]) }).parse(value));
     const techniques = (data.techniques ?? []).map(value => row.extend({ subjectId: id, name: z.string().min(1) }).parse(value));
-    const items = (data.library ?? []).map(value => ({ ...row.extend({ inRepertoire: z.boolean().optional() }).parse(value), ...libraryItemInputSchema.parse(value) }));
+    const items = (data.library ?? []).map(value => {
+      const current = row.extend({ inRepertoire: z.boolean().optional() }).parse(value);
+      delete current.studyStatus;
+      return { ...current, ...libraryItemInputSchema.parse(current) };
+    });
     const segments = (data.segments ?? []).map(value => ({ ...row.extend({ itemId: id }).parse(value), ...segmentInputSchema.parse(value) }));
     const collections = (data.collections ?? []).map(value => ({ ...row.extend({ updatedAt: z.number() }).parse(value), ...collectionInputSchema.parse(value) }));
     const links = (data.collectionItems ?? []).map(value => ({ ...row.extend({ collectionId: id, itemId: id, position: z.number().int().nonnegative() }).parse(value), ...collectionLinkInputSchema.parse(value) }));

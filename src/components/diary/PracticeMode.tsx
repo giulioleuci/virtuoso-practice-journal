@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { NOTE_VALUES } from "@/domain/constants/noteValues";
@@ -11,7 +12,8 @@ import type { Task } from "@/domain/entities/task";
 import type { AudioDraft } from "@/domain/ports/audio";
 import { entryFor, marksFromPlan, planSegmentIds } from "@/domain/logic/plan";
 import { useTechniques } from "@/presentation/hooks/useEntities";
-import { applicationCommands } from "@/lib/applicationCommands";
+import { useSessionDraft } from "@/presentation/hooks/useSessionDraft";
+import { taskDraftScope } from "@/lib/sessionDrafts";
 import { useI18n } from "@/lib/i18n";
 import { today } from "@/lib/date";
 import { NOTE_GLYPH } from "@/lib/constants";
@@ -45,22 +47,21 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
 
   // One mark per section: the metronome shows and edits the tempo of the current one.
-  const [marks, setMarks] = useState<SegmentMark[]>(() => marksFromPlan(task.plan));
+  const { draft, update, storageFailed, restored } = useSessionDraft(taskDraftScope(task), { marks: marksFromPlan(task.plan), notes: "", clips: [], needHelp: false, helpText: "" });
+  const marks = draft.marks.length ? draft.marks : marksFromPlan(task.plan);
+  const { clips } = draft;
+  const setMarks = (value: SegmentMark[]) => update({ marks: value });
+  const setClips = (value: AudioDraft[] | ((all: AudioDraft[]) => AudioDraft[])) => update({ clips: typeof value === "function" ? value(clips) : value });
   const [current, setCurrent] = useState(0);
-  const [clips, setClips] = useState<AudioDraft[]>([]);
-  // Closing without finishing discards the drafts; finishing hands them to the log form.
-  const onClose = () => { void applicationCommands.audio.discard(clips.map((c) => c.uid)); closeOverlay(); };
-  const mark = marks[current];
+  const [recording, setRecording] = useState(false);
+  const returnFocus = useRef(document.activeElement as HTMLElement | null);
+  const onClose = () => { if (!storageFailed || window.confirm(t("draft.leaveWarning"))) closeOverlay(); };
+  const mark = marks[current] ?? marks[0] ?? marksFromPlan(task.plan)[0];
   const bpm = mark.bpm ?? DEFAULT_BPM;
   const noteVal = mark.noteVal;
-  const patchMark = (patch: Partial<SegmentMark>) => setMarks((all) => all.map((m, i) => (i === current ? { ...m, ...patch } : m)));
+  const patchMark = (patch: Partial<SegmentMark>) => setMarks(marks.map((m, i) => (i === current ? { ...m, ...patch } : m)));
   const setBpm = (next: number | ((b: number) => number)) => patchMark({ bpm: typeof next === "function" ? next(bpm) : next });
   const setNoteVal = (nv: SegmentMark["noteVal"]) => patchMark({ noteVal: nv });
-  // Confidence is the last scale: choosing it moves on to the next section; mood and focus are optional.
-  const rate = (patch: Partial<SegmentMark>) => {
-    patchMark(patch);
-    if (patch.confidence !== undefined && current < marks.length - 1) setCurrent(current + 1);
-  };
   const focusTechniques = mark.techniques.map((id) => techniques?.find((x) => x.id === id)?.name).filter(Boolean) as string[];
 
   // Seed the starting tempo once the last session loads: its reached tempo and note
@@ -69,13 +70,14 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   useEffect(() => {
     if (seededRef.current || lastSession === undefined) return;
     seededRef.current = true;
-    setMarks((all) => all.map((m) => {
+    update({ marks: marks.map((m) => {
+      if (restored && m.bpm !== undefined) return m;
       const prev = lastSession ? entryFor(lastSession.marks, m.segmentId) : undefined;
       if (prev?.bpm !== undefined) return { ...m, bpm: prev.bpm, noteVal: prev.noteVal ?? m.noteVal };
       if (m.targetBpm) return { ...m, bpm: Math.max(30, Math.round(m.targetBpm / 2)), noteVal: m.noteVal ?? "quarter" };
       return { ...m, bpm: m.bpm ?? DEFAULT_BPM, noteVal: m.noteVal ?? "quarter" };
-    }));
-  }, [lastSession]);
+    }) });
+  }, [lastSession, marks, restored, update]);
 
   // Metronome
   const [meterOn, setMeterOn] = useState(false);
@@ -144,19 +146,23 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     };
   }, []);
 
-  const finish = () => onFinish({ marks, clips });
+  const finish = () => { if (!recording) { update({ marks, clips }); onFinish({ marks, clips }); } };
 
 
   const isAccent = pulse > 0 && (pulse - 1) % beatsPerBar === 0;
   const targetGlyph = NOTE_GLYPH[mark.targetNoteVal ?? "quarter"];
 
-  const overlay = (
-    <div role="dialog" aria-modal="true" aria-label={t("practice.practiceMode")} className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-background animate-fade-in pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-5 pb-28 pt-6 min-[700px]:px-9">
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+    <DialogPortal>
+    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background" />
+    <DialogPrimitive.Content aria-describedby={undefined} onInteractOutside={(event) => event.preventDefault()} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }} className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-background animate-fade-in pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-5 pb-44 pt-6 min-[700px]:px-9 min-[700px]:pb-28">
         <header className="mb-4 flex items-start justify-between gap-4">
-          <h1 className="font-serif text-[2.25rem] font-semibold leading-[1.15] tracking-tight">{t("practice.practiceMode")}</h1>
-          <Button size="icon" variant="ghost" className="h-11 w-11" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
+          <DialogTitle asChild className="min-w-0 break-words font-serif text-[2.25rem] font-semibold leading-[1.15] tracking-tight"><h1>{t("practice.practiceMode")}</h1></DialogTitle>
+          <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
         </header>
+        <p role={storageFailed ? "alert" : "status"} className={`mb-4 text-xs ${storageFailed ? "text-destructive" : "text-muted-foreground"}`}>{t(storageFailed ? "draft.storageFailed" : "draft.kept")}</p>
 
         {/* Piece context: compact and secondary to the metronome. */}
         <div className="mb-6 space-y-1.5">
@@ -170,7 +176,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             <ol className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground" aria-label={t("practice.segmentsLabel")}>
               {marks.map((m, i) => (
                 <li key={m.segmentId ?? i}>
-                  <button type="button" aria-current={i === current} onClick={() => setCurrent(i)} className={cn("inline-flex min-h-6 items-center gap-1", i === current ? "font-semibold text-primary" : "hover:text-foreground")}>
+                  <button type="button" aria-current={i === current} onClick={() => setCurrent(i)} className={cn("inline-flex min-h-11 items-center gap-1", i === current ? "font-semibold text-primary" : "hover:text-foreground")}>
                     <span className="break-words">{segments?.find((sg) => sg.id === m.segmentId)?.label}</span>
                     {m.confidence !== undefined && <span className="inline-flex items-center gap-0.5 tabular-nums"><Check className="h-3 w-3" />{m.confidence}</span>}
                   </button>
@@ -195,8 +201,8 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
         {/* Metronome: the main element. */}
         <section className="min-w-0 rounded-[16px] bg-card p-6 shadow-soft min-[700px]:p-9" aria-label={t("practice.metronome")}>
-          <div className="flex items-center justify-between gap-3">
-            <Recorder sections={[]} segmentId={mark.segmentId} compact onClip={(clip) => setClips((c) => [...c, clip])} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Recorder sections={[]} segmentId={mark.segmentId} compact onClip={(clip) => setClips((c) => [...c, clip])} onRecordingChange={setRecording} />
             <div className="flex items-center gap-2">
               <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => setMuted((m) => !m)} aria-label={muted ? t("practice.unmute") : t("practice.mute")}>
                 {muted ? <VolumeX /> : <Volume2 />}
@@ -224,8 +230,8 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("practice.bpmUnit")}</p>
           </div>
 
-          <div className="relative h-32 overflow-hidden border-b border-border" aria-hidden="true">
-            <div className={cn("metronome-pendulum absolute bottom-2 left-1/2 h-28 w-1 rounded-full bg-primary", meterOn && "metronome-pendulum-running")}
+          <div className="relative h-20 overflow-hidden border-b border-border min-[700px]:h-32" aria-hidden="true">
+            <div className={cn("metronome-pendulum absolute bottom-2 left-1/2 h-16 w-1 rounded-full bg-primary min-[700px]:h-28", meterOn && "metronome-pendulum-running")}
               style={{ animationDuration: `${120000 / bpm}ms` }}>
               <span className={cn("absolute -left-2.5 -top-1 h-6 w-6 rounded-full border-2 border-primary", isAccent ? "bg-primary" : "bg-background")} />
             </div>
@@ -259,9 +265,30 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             </div>
           </div>
 
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
+            <div role="group" aria-label={t("practice.beatsPerBar")} className="flex max-w-full flex-wrap items-center justify-center gap-0.5">
+              <span className="w-full text-center text-[0.6875rem] text-muted-foreground/70">{t("practice.beatsPerBar")}</span>
+              {[1, 2, 3, 4, 6].map((n) => (
+                <button key={n} type="button" aria-pressed={beatsPerBar === n} onClick={() => setBeatsPerBar(n)}
+                  className={cn("h-11 w-11 rounded-lg text-sm tabular-nums", beatsPerBar === n ? "bg-secondary text-foreground" : "text-muted-foreground/70 hover:bg-secondary/40")}>
+                  {n}
+                </button>
+              ))}
+            </div>
+            <div role="group" aria-label={t("practice.noteLabel")} className="flex flex-wrap items-center justify-center gap-0.5">
+              <span className="w-full text-center text-[0.6875rem] text-muted-foreground/70">{t("practice.noteLabel")}</span>
+              {NOTE_VALUES.map((nv) => (
+                <button key={nv} type="button" aria-pressed={noteVal === nv} onClick={() => setNoteVal(nv)} title={t(`note.${nv}`)} aria-label={t(`note.${nv}`)}
+                  className={cn("h-11 min-w-11 rounded-lg px-1 text-base leading-none", noteVal === nv ? "bg-secondary text-foreground" : "text-muted-foreground/70 hover:bg-secondary/40")}>
+                  {NOTE_GLYPH[nv]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-6 border-t border-border pt-5">
             {marks.length > 1 && current < marks.length - 1 && <p className="mb-2 text-xs font-medium">{t("practice.rateNext")}</p>}
-            <RatingFields mark={mark} onChange={rate} />
+            <RatingFields mark={mark} onChange={patchMark} />
           </div>
 
           {clips.length > 0 && (
@@ -270,37 +297,15 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               <ClipDraftList clips={clips} onChange={setClips} sections={segments?.map((s) => ({ id: s.id, label: s.label })) ?? []} />
             </div>
           )}
-
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-border pt-5">
-            <div role="group" aria-label={t("practice.beatsPerBar")} className="flex items-center gap-1">
-              <span className="mr-1 text-xs text-muted-foreground">{t("practice.beatsPerBar")}</span>
-              {[1, 2, 3, 4, 6].map((n) => (
-                <button key={n} type="button" aria-pressed={beatsPerBar === n} onClick={() => setBeatsPerBar(n)}
-                  className={cn("h-10 w-10 rounded-lg text-sm tabular-nums", beatsPerBar === n ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
-                  {n}
-                </button>
-              ))}
-            </div>
-            <div role="group" aria-label={t("practice.noteLabel")} className="flex flex-wrap items-center gap-1">
-              <span className="mr-1 text-xs text-muted-foreground">{t("practice.noteLabel")}</span>
-              {NOTE_VALUES.map((nv) => (
-                <button key={nv} type="button" aria-pressed={noteVal === nv} onClick={() => setNoteVal(nv)} title={t(`note.${nv}`)} aria-label={t(`note.${nv}`)}
-                  className={cn("h-10 min-w-10 rounded-lg px-1 text-lg leading-none", noteVal === nv ? "bg-primary text-primary-foreground" : "hover:bg-secondary/40")}>
-                  {NOTE_GLYPH[nv]}
-                </button>
-              ))}
-            </div>
-          </div>
         </section>
 
-        {/* Overlay has no nav or sidebar: sit on the system bar alone, above the overlay (z-100). */}
-        <FloatingActions className="z-[110] bottom-[calc(12px+env(safe-area-inset-bottom))] min-[700px]:left-8 min-[1151px]:left-8 min-[1600px]:left-8">
-          <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
-          <Button onClick={finish}>{t("practice.finishLog")}</Button>
+        <FloatingActions className="mx-auto max-w-[760px] flex-wrap bottom-[calc(12px+env(safe-area-inset-bottom))] max-[699px]:[&>button]:w-full min-[700px]:left-8 min-[1151px]:left-8 min-[1600px]:left-8">
+          <Button variant="ghost" onClick={onClose}>{t("draft.leave")}</Button>
+          <Button disabled={recording} onClick={finish}>{t("practice.finishLog")}</Button>
         </FloatingActions>
       </div>
-    </div>
+    </DialogPrimitive.Content>
+    </DialogPortal>
+    </Dialog>
   );
-
-  return createPortal(overlay, document.body);
 }

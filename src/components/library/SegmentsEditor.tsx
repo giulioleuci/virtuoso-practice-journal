@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { Plus, X, ArrowUp, ArrowDown } from "lucide-react";
 import type { LibraryItem, SegmentInput } from "@/domain/entities/library";
@@ -10,6 +11,8 @@ import { tempoLabel } from "@/lib/format";
 import { BpmCoupler } from "./BpmCoupler";
 import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 import { cn } from "@/lib/utils";
+import { Pager } from "@/components/shared/Pager";
+import { usePagination } from "@/hooks/usePagination";
 import { useI18n } from "@/lib/i18n";
 
 interface Props {
@@ -24,12 +27,14 @@ interface Props {
 
 export function SegmentsEditor({ segments, onChange, itemTempo, subjectLayers = [], techniqueOptions = [] }: Props) {
   const { t } = useI18n();
+  const pager = usePagination(segments, 5);
   const [draftLabel, setDraftLabel] = useState("");
 
   const addSegment = () => {
     const trimmed = draftLabel.trim();
     if (!trimmed) return;
     onChange([...segments, { label: trimmed, position: segments.length, layers: [], techniqueIds: [] }]);
+    pager.setPage(Math.floor(segments.length / 5));
     setDraftLabel("");
   };
 
@@ -69,12 +74,17 @@ export function SegmentsEditor({ segments, onChange, itemTempo, subjectLayers = 
       </div>
 
       {segments.length > 0 && (
-        <ul className="space-y-2">
-          {segments.map((s, i) => {
+        <>
+        <ul className="border-t border-border">
+          {pager.pageItems.map((s, offset) => {
+            const i = pager.page * 5 + offset;
             const labelInvalid = s.label.trim().length === 0;
             const barInvalid = (s.barStart !== undefined || s.barEnd !== undefined) && (s.barStart === undefined || s.barEnd === undefined || s.barEnd < s.barStart || !Number.isInteger(s.barStart) || !Number.isInteger(s.barEnd) || s.barStart < 0);
             return (
-              <li key={s.id ?? `new-${i}`} className="paper-card p-3 space-y-3">
+              <li key={s.id ?? `new-${i}`} className="border-b border-border py-3">
+                <details>
+                  <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">{s.label || t("segments.labelRequired")}</summary>
+                  <div className="space-y-3 pt-2">
                 <div className="flex items-center gap-2">
                   <Input
                     aria-label={t("segments.label")}
@@ -111,10 +121,10 @@ export function SegmentsEditor({ segments, onChange, itemTempo, subjectLayers = 
                 {barInvalid && <p id={`bars-${i}`} role="alert" className="text-xs text-destructive">{t("segments.barRangeError")}</p>}
                 <label className="grid gap-1.5 text-xs font-medium">
                   {t("segments.tempoSource")}
-                  <select className={nativeSelect} value={s.targetBpm !== undefined || s.noteVal !== undefined ? "specific" : "inherited"} onChange={e => update(i, e.target.value === "inherited" ? { targetBpm: undefined, noteVal: undefined } : { targetBpm: itemTempo?.targetBpm ?? 60, noteVal: itemTempo?.noteVal ?? "quarter" })}>
-                    <option value="inherited">{t("segments.inherited")}</option>
-                    <option value="specific">{t("segments.specific")}</option>
-                  </select>
+                  <Select value={s.targetBpm !== undefined || s.noteVal !== undefined ? "specific" : "inherited"} onValueChange={(value) => update(i, value === "inherited" ? { targetBpm: undefined, noteVal: undefined } : { targetBpm: itemTempo?.targetBpm ?? 60, noteVal: itemTempo?.noteVal ?? "quarter" })} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+                    <SelectItem value="inherited">{t("segments.inherited")}</SelectItem>
+                    <SelectItem value="specific">{t("segments.specific")}</SelectItem>
+                  </SelectContent></Select>
                 </label>
                 {s.targetBpm !== undefined || s.noteVal !== undefined ? <BpmCoupler bpm={s.targetBpm} noteVal={s.noteVal} onChange={({ bpm, noteVal }) => update(i, { targetBpm: bpm, noteVal })} label={t("segments.targetLabel")} /> : <p className="text-sm text-muted-foreground">{itemTempo?.targetBpm !== undefined ? tempoLabel(itemTempo.noteVal, itemTempo.targetBpm) : t("segments.noInheritedTempo")}</p>}
                 <label className="grid gap-1.5 text-xs font-medium">{t("segments.notes")}<Textarea rows={2} maxLength={2000} value={s.notes ?? ""} onChange={e => update(i, { notes: e.target.value || undefined })} /></label>
@@ -128,6 +138,7 @@ export function SegmentsEditor({ segments, onChange, itemTempo, subjectLayers = 
                 />
 
                 <MultiChipPicker
+                  selectionSummary
                   label={t("tasks.techniques")}
                   options={techniqueOptions}
                   value={s.techniqueIds ?? []}
@@ -135,10 +146,14 @@ export function SegmentsEditor({ segments, onChange, itemTempo, subjectLayers = 
                   emptyHint={t("library.addTechniquesHint2")}
                 />
 
+                  </div>
+                </details>
               </li>
             );
           })}
         </ul>
+        <Pager page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} />
+        </>
       )}
     </div>
   );

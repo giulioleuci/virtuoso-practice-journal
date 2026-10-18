@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { profileService } from "@/lib/services";
 import type { ImportSummary } from "@/application/useCases/importBackup";
@@ -17,7 +18,6 @@ import {
   Bell, Languages, BookMarked, User, Info, FileSpreadsheet,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { SubjectsEditor } from "@/components/profile/SubjectsEditor";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { nativeSelect } from "@/components/diary/WhenFields";
 import { AudioNotice } from "@/components/diary/Recorder";
@@ -120,10 +120,10 @@ export default function Profile() {
 
   return (
     <div className="pb-8">
-      <PageHeader title={t("nav.settings")} subtitle={t("settings.subtitle")} />
+      <PageHeader title={t("nav.settings")}  />
       <div className="grid gap-8 min-[901px]:grid-cols-[210px_minmax(0,1fr)]">
         <nav aria-label={t("settings.navLabel")} className="flex gap-1 overflow-x-auto no-scrollbar min-[901px]:sticky min-[901px]:top-6 min-[901px]:flex-col min-[901px]:self-start">
-          {[["preferences", t("settings.preferences")], ["subjects", t("settings.subjects")], ["practice", t("profile.settings")], ["data", t("profile.data")], ["advanced", t("profile.dev")]].map(([id, label]) => (
+          {[["preferences", t("settings.preferences")], ["practice", t("profile.settings")], ["data", t("profile.data")], ["advanced", t("profile.dev")]].map(([id, label]) => (
             <a key={id} href={`#settings-${id}`} className="shrink-0 rounded-lg px-3 py-2 max-[900px]:whitespace-nowrap text-[0.8125rem] font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground">{label}</a>
           ))}
         </nav>
@@ -183,19 +183,15 @@ export default function Profile() {
             <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-sm truncate">{t("onb.lang")}</span>
           </div>
-          <select
-            value={lang}
-            onChange={async (e) => {
-              const v = e.target.value as typeof lang;
+          <Select value={lang} onValueChange={async (value) => {
+              const v = value as typeof lang;
               setLang(v);
               await update({ lang: v });
-            }}
-            className={nativeSelect}
-          >
+            }} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
             {SUPPORTED_LANGS.map((l) => (
-              <option key={l.code} value={l.code}>{l.label}</option>
+              <SelectItem key={l.code} value={String(l.code)}>{l.label}</SelectItem>
             ))}
-          </select>
+          </SelectContent></Select>
         </div>
 
         <div className="h-px bg-border" />
@@ -343,11 +339,6 @@ export default function Profile() {
         )}
       </section>
 
-      <section id="settings-subjects" className="scroll-mt-6">
-        <h2 className="mb-3 font-serif text-2xl font-semibold">{t("settings.subjects")}</h2>
-        <SubjectsEditor />
-      </section>
-
       {/* Grouped collapsibles */}
       
         <section id="settings-practice" className="scroll-mt-6 space-y-3 ">
@@ -369,15 +360,11 @@ export default function Profile() {
               />
             </Row>
             <Row label={t("profile.weekStartsOn")}>
-              <select
-                value={profile.weekStartsOn ?? getDefaultWeekStartsOn(lang)}
-                onChange={(e) => update({ weekStartsOn: Number(e.target.value) })}
-                className={`${nativeSelect} w-36`}
-              >
+              <Select value={String(profile.weekStartsOn ?? getDefaultWeekStartsOn(lang) ?? "")} onValueChange={(value) => update({ weekStartsOn: Number(value) })} ><SelectTrigger className={`${nativeSelect} w-36`}><SelectValue /></SelectTrigger><SelectContent>
                 {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                  <option key={i} value={i}>{t(`weekday.${i}`)}</option>
+                  <SelectItem key={i} value={String(i)}>{t(`weekday.${i}`)}</SelectItem>
                 ))}
-              </select>
+              </SelectContent></Select>
             </Row>
             <Row label={t("profile.graceDay")}>
               <Switch checked={profile.graceDay} onCheckedChange={(v) => update({ graceDay: v })} />

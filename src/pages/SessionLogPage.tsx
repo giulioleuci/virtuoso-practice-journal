@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, MessageSquareQuote } from "lucide-react";
@@ -15,7 +16,10 @@ import { presentationQueries } from "@/application/queries/presentationQueryServ
 import { applicationCommands } from "@/lib/applicationCommands";
 import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
-import { flattenErrors, newSessionInputSchema } from "@/lib/schemas";
+import { flattenErrors, newSessionInputSchema, segmentMarkSchema } from "@/lib/schemas";
+import { taskDraftScope } from "@/lib/sessionDrafts";
+import { useSessionDraft } from "@/presentation/hooks/useSessionDraft";
+import { SessionDraftActions } from "@/components/diary/SessionDraftActions";
 import { routineAdaptivity } from "@/lib/domain/studyRoutineGenerator";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useSessionSubmission } from "@/presentation/hooks/usePresentationControllers";
@@ -38,11 +42,19 @@ import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
 
 type Prefill = { marks?: SegmentMark[]; notes?: string; clips?: AudioDraft[] };
 const marksDraftKey = (taskId: number) => `virtuoso-marks-${taskId}`;
-const panel = "rounded-[14px] bg-card p-6 shadow-soft";
+const panel = "max-w-3xl rounded-[14px] bg-card p-6 shadow-soft";
 const section = "mt-6 border-t border-border pt-6";
 
-const initialMarks = (task?: Task | null, prefill?: Prefill): SegmentMark[] =>
-  prefill?.marks ?? marksFromPlan(task?.plan ?? []);
+const initialMarks = (task?: Task | null, prefill?: Prefill): SegmentMark[] => {
+  if (prefill?.marks) return prefill.marks;
+  if (task?.id) {
+    try {
+      const old = segmentMarkSchema.array().safeParse(JSON.parse(localStorage.getItem(marksDraftKey(task.id)) ?? "null"));
+      if (old.success) return old.data as SegmentMark[];
+    } catch { /* A corrupt legacy draft must not prevent logging. */ }
+  }
+  return marksFromPlan(task?.plan ?? []);
+};
 
 /** Blocking problems of a new session: something studied, every studied section fully rated, valid fields. */
 const markErrors = (notes: string, marks: SegmentMark[], t: ReturnType<typeof useI18n>["t"]) => {
@@ -75,6 +87,10 @@ export default function SessionLogPage() {
   const taskId = params.get("task") ? Number(params.get("task")) : undefined;
   const prefill = (location.state as { prefill?: Prefill } | null)?.prefill;
   const task = useTask(taskId);
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (prefill && task) navigate(location.pathname + location.search, { replace: true, state: null });
+  }, [prefill, task, navigate, location.pathname, location.search]);
 
   if (taskId === undefined) return <FreeSessionForm />;
   if (task === undefined) return <div className="paper-skeleton h-40 w-full" />;
@@ -90,31 +106,18 @@ function useGoBack() {
 function BackLink({ onClick }: { onClick?: () => void }) {
   const { t } = useI18n();
   return (
-    <Link to="/" onClick={onClick} className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+    <Link to="/" onClick={onClick ? (event) => { event.preventDefault(); onClick(); } : undefined} className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
       <ChevronLeft className="h-4 w-4" />{t("nav.today")}
     </Link>
   );
 }
 
-function Guide({ children }: { children?: React.ReactNode }) {
-  const { t } = useI18n();
-  return (
-    <aside className="min-w-0 space-y-6">
-      <section>
-        <h2 className="mb-1 font-serif text-xl font-semibold">{t("logPage.guideTitle")}</h2>
-        <p className="text-sm text-muted-foreground">{t("logPage.guideBody")}</p>
-      </section>
-      {children}
-    </aside>
-  );
-}
-
-function Footer({ onCancel, disabled, busy }: { onCancel: () => void; disabled: boolean; busy: boolean }) {
+function Footer({ onCancel, busy, recording }: { onCancel: () => void; busy: boolean; recording: boolean }) {
   const { t } = useI18n();
   return (
     <FloatingActions>
-      <Button type="button" variant="ghost" onClick={onCancel}>{t("common.cancel")}</Button>
-      <Button type="submit" disabled={disabled || busy}>{busy ? t("logPage.saving") : t("session.saveSession")}</Button>
+      <Button type="button" variant="ghost" disabled={busy} onClick={onCancel}>{t("draft.leave")}</Button>
+      <Button type="submit" disabled={recording || busy}>{busy ? t("logPage.saving") : t("session.saveSession")}</Button>
     </FloatingActions>
   );
 }
@@ -159,16 +162,16 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   const goBack = useGoBack();
   const navigate = useNavigate();
   const savedId = useRef<number>();
-  const [marks, setMarks] = useState<SegmentMark[]>(() => {
-    if (prefill?.marks) return prefill.marks;
-    try { const saved = task.id ? JSON.parse(localStorage.getItem(marksDraftKey(task.id)) ?? "null") : null; if (Array.isArray(saved)) return saved; } catch { /* ignore */ }
-    return initialMarks(task);
-  });
-  const [notes, setNotes] = useState(prefill?.notes ?? "");
-  const [clips, setClips] = useState<AudioDraft[]>(prefill?.clips ?? []);
-  const leave = () => { void applicationCommands.audio.discard(clips.map((c) => c.uid)); goBack(); };
-  const [needHelp, setNeedHelp] = useState(false);
-  const [helpText, setHelpText] = useState("");
+  const { draft, update, clear, storageFailed } = useSessionDraft(taskDraftScope(task), { marks: initialMarks(task), notes: "", clips: [], needHelp: false, helpText: "" }, prefill);
+  const { marks, notes, clips, needHelp, helpText } = draft;
+  const changeMarks = (marks: SegmentMark[]) => update({ marks });
+  const [attempted, setAttempted] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const leave = () => { if (!storageFailed || window.confirm(t("draft.leaveWarning"))) goBack(); };
+  const discard = async () => {
+    try { await applicationCommands.audio.discard(clips.map(c => c.uid)); clear(); localStorage.removeItem(marksDraftKey(task.id!)); goBack(); }
+    catch { toast.error(t("errors.couldNotSave")); }
+  };
   const [bpmDismissed, setBpmDismissed] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
   const subject = usePresentationRead<Subject | undefined>("subjects.one", [task.subjectId]);
@@ -181,11 +184,6 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   const seed = (id: number) => marksFromPlan(task.plan).find((m) => m.segmentId === id) ?? emptyEntry(id);
   const submission = useSessionSubmission(async ({ input }: { input: SessionLogInput }) => { savedId.current = await applicationCommands.sessions.log.execute(task, input); });
 
-  const changeMarks = (next: SegmentMark[]) => {
-    setMarks(next);
-    try { localStorage.setItem(marksDraftKey(task.id!), JSON.stringify(next)); } catch { /* ignore */ }
-  };
-
   const errors = useMemo(() => {
     const e = markErrors(notes, marks, t);
     if (needHelp && !helpText.trim()) e.push(t("session.helpDescribe"));
@@ -194,48 +192,54 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (errors.length || submission.submitting || !task.id) return;
+    setAttempted(true);
+    if (errors.length || recording || submission.submitting || !task.id) return;
     const logged = marks;
     const ok = await submission.submit({ input: { date: task.date, notes, marks: logged, helpText: needHelp ? helpText.trim() : undefined, clips } });
     if (!ok) return void toast.error(submission.error ?? t("errors.couldNotSave"));
     if (task.studyRoutineId) void refreshRoutine(task.studyRoutineId, task.date, t, () => navigate("/tasks?tab=routines"));
-    try { localStorage.removeItem(marksDraftKey(task.id)); } catch { /* ignore */ }
-    toast.success(t("toast.sessionLogged"), { action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${savedId.current}`) } });
+    clear();
+    try { localStorage.removeItem(marksDraftKey(task.id)); } catch { /* Session is already saved. */ }
+    toast.success(t("toast.sessionLogged"), { description: task.title, action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${savedId.current}`) } });
     goBack();
   };
 
   return (
     <div className="pb-24">
       <BackLink onClick={leave} />
-      <PageHeader title={t("logPage.title")} subtitle={<>{task.title}{item?.composer ? ` · ${item.composer}` : ""}</>} />
-      <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
+      <PageHeader title={t("logPage.title")}  />
+      <div className="-mt-3 mb-5 space-y-1">
+        <p className="break-words text-base font-semibold">{task.title}</p>
+        {item && item.title !== task.title && <p className="break-words text-sm text-muted-foreground">{item.title}</p>}
+        {task.executionNotes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.executionNotes}</p>}
+      </div>
+      <SessionDraftActions storageFailed={storageFailed} onDiscard={discard} disabled={recording || submission.submitting} />
+      <div>
+        {task.itemId && answeredCount > 0 && (
+          <button type="button" onClick={() => setShowAnswers(true)} className="mb-4 inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+            <MessageSquareQuote className="h-4 w-4" />{t("teacherAnswers.openLabel")} <span className="tabular-nums opacity-70">· {answeredCount}</span>
+          </button>
+        )}
         <form onSubmit={save} className={`${panel} min-w-0`}>
           {(item ? item.kind !== "theory" : !isTheory) && !bpmDismissed && marks.length === 1 && (
             <div className="mb-5"><BpmSuggestion task={task} dismissed={bpmDismissed} onDismiss={() => setBpmDismissed(true)} onAccept={(bpm) => { changeMarks(marks.map((m) => ({ ...m, bpm }))); setBpmDismissed(true); }} /></div>
           )}
 
-          <MarksEditor marks={marks} onChange={changeMarks} sections={rows} seed={seed} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} />
+          <LastSessionStrip task={task} onRestart={(previous) => changeMarks(restartFrom(marks, previous))} />
+          <div className="mt-4"><MarksEditor marks={marks} onChange={changeMarks} sections={rows} seed={seed} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} showErrors={attempted} /></div>
 
-          <div className={section}><ClipDrafts clips={clips} onChange={setClips} sections={rows} /></div>
+          <div className={section}><ClipDrafts clips={clips} onChange={(clips) => update({ clips })} sections={rows} onRecordingChange={setRecording} /></div>
 
           <div className={`${section} space-y-2`}>
             <Label className="text-xs font-medium text-foreground">{t("session.notes")}</Label>
-            <Textarea rows={3} maxLength={2000} aria-label={t("session.notes")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("session.notesPlaceholder")} />
+            <Textarea rows={3} maxLength={2000} aria-label={t("session.notes")} value={notes} onChange={(e) => update({ notes: e.target.value })} placeholder={t("session.notesPlaceholder")} />
           </div>
 
-          <HelpQuestion on={needHelp} onToggle={setNeedHelp} text={helpText} onText={setHelpText} itemTitle={item?.title} />
-          <FormErrors errors={errors} className="mt-6" />
-          <Footer onCancel={leave} disabled={errors.length > 0} busy={submission.submitting} />
+          <HelpQuestion on={needHelp} onToggle={(needHelp) => update({ needHelp })} text={helpText} onText={(helpText) => update({ helpText })} itemTitle={item?.title} />
+          <FormErrors errors={attempted ? errors : []} className="mt-6" />
+          <Footer onCancel={leave} busy={submission.submitting} recording={recording} />
         </form>
 
-        <Guide>
-          <LastSessionStrip task={task} onRestart={(previous) => changeMarks(restartFrom(marks, previous))} />
-          {task.itemId && answeredCount > 0 && (
-            <button type="button" onClick={() => setShowAnswers(true)} className="inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
-              <MessageSquareQuote className="h-4 w-4" />{t("teacherAnswers.openLabel")} <span className="tabular-nums opacity-70">· {answeredCount}</span>
-            </button>
-          )}
-        </Guide>
       </div>
       {task.itemId && <TeacherAnswersSheet open={showAnswers} onOpenChange={setShowAnswers} itemId={task.itemId} itemTitle={item?.title ?? task.title} />}
     </div>
@@ -251,16 +255,15 @@ function FreeSessionForm() {
   const subjects = useSubjects();
   const profile = useProfile();
   const todayKey = today();
-  const [subjectId, setSubjectId] = useState<number | undefined>();
-  const [itemId, setItemId] = useState<number | undefined>();
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(todayKey);
-  const [marks, setMarks] = useState<SegmentMark[]>(() => initialMarks());
-  const [notes, setNotes] = useState("");
-  const [clips, setClips] = useState<AudioDraft[]>([]);
-  const leave = () => { void applicationCommands.audio.discard(clips.map((c) => c.uid)); goBack(); };
-  const [needHelp, setNeedHelp] = useState(false);
-  const [helpText, setHelpText] = useState("");
+  const { draft, update, clear, storageFailed, restored } = useSessionDraft("free", { marks: initialMarks(), notes: "", clips: [], needHelp: false, helpText: "", title: "", date: todayKey });
+  const { subjectId, itemId, marks, notes, clips, needHelp, helpText, title = "", date = todayKey } = draft;
+  const [attempted, setAttempted] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const leave = () => { if (!storageFailed || window.confirm(t("draft.leaveWarning"))) goBack(); };
+  const discard = async () => {
+    try { await applicationCommands.audio.discard(clips.map(c => c.uid)); clear(); goBack(); }
+    catch { toast.error(t("errors.couldNotSave")); }
+  };
   const [busy, setBusy] = useState(false);
 
   const subject = subjects?.find((s) => s.id === (subjectId ?? subjects?.[0]?.id));
@@ -268,10 +271,13 @@ function FreeSessionForm() {
   const pieces = usePresentationRead<LibraryItem[]>("library.subject", [subjId]);
   const item = pieces?.find((i) => i.id === itemId);
   const itemSegments = usePresentationRead<Segment[]>("library.segments", [itemId]);
-  // A piece with sections starts with none ticked; anything else is one whole-scope entry.
-  // Seed only when the selection loads or changes; changing defaults must keep the draft.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setMarks(itemSegments?.length ? [] : marksFromPlan(syncPlan([], [], item))); }, [itemId, item?.id, itemSegments?.length]);
+  const seededSelection = useRef({ itemId, ready: restored });
+  useEffect(() => {
+    if (seededSelection.current.ready && seededSelection.current.itemId === itemId) return;
+    if (itemId !== undefined && (itemSegments === undefined || !item)) return;
+    seededSelection.current = { itemId, ready: true };
+    update({ marks: itemSegments?.length ? [] : marksFromPlan(syncPlan([], [], item)) });
+  }, [itemId, item, itemSegments, update]);
   const { isTheory, layerOptions, techniqueOptions } = useSubjectOptions(subject);
   const minDate = useMemo(() => { const d = new Date(todayKey); d.setDate(d.getDate() - (profile?.lateRecoveryDays ?? 3)); return d.toISOString().slice(0, 10); }, [todayKey, profile?.lateRecoveryDays]);
 
@@ -286,12 +292,14 @@ function FreeSessionForm() {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (errors.length || busy || subjId === undefined) return;
+    setAttempted(true);
+    if (errors.length || recording || busy || subjId === undefined) return;
     setBusy(true);
     try {
       const target: SessionTarget = { subjectId: subjId, linkType: itemId ? "item" : "free", itemId, title: item?.title ?? (title.trim() || t("diary.freeSession")), plan: [] };
       const id = await applicationCommands.sessions.log.execute(target, { date, notes, marks: marks, helpText: needHelp && itemId ? helpText.trim() : undefined, clips });
-      toast.success(t("toast.sessionLogged"), { action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${id}`) } });
+      clear();
+      toast.success(t("toast.sessionLogged"), { description: target.title, action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${id}`) } });
       goBack();
     } catch (err) {
       toast.error((err as Error).message || t("errors.couldNotSave"));
@@ -302,53 +310,53 @@ function FreeSessionForm() {
   return (
     <div className="pb-24">
       <BackLink onClick={leave} />
-      <PageHeader title={t("logPage.free")} subtitle={t("logPage.freeSubtitle")} />
-      <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
+      <PageHeader title={t("logPage.free")}  />
+      <SessionDraftActions storageFailed={storageFailed} onDiscard={discard} disabled={recording || busy} />
+      <div>
         <form onSubmit={save} className={`${panel} min-w-0`}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label className="text-xs font-medium text-foreground">{t("logPage.dateLabel")}</Label>
-              <Input type="date" required aria-label={t("logPage.dateLabel")} value={date} min={minDate} max={todayKey} onChange={(e) => setDate(e.target.value)} />
+              <Input type="date" required aria-label={t("logPage.dateLabel")} value={date} min={minDate} max={todayKey} onChange={(e) => update({ date: e.target.value })} />
             </div>
             {(subjects?.length ?? 0) > 1 && (
               <label className="grid gap-1.5 text-xs font-medium">
                 {t("common.subject")}
-                <select value={subjId ?? ""} onChange={(e) => { setSubjectId(Number(e.target.value)); setItemId(undefined); }} className={nativeSelect}>
-                  {subjects?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <Select value={String(subjId ?? "")} onValueChange={(value) => update({ subjectId: Number(value), itemId: undefined })} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+                  {subjects?.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                </SelectContent></Select>
               </label>
             )}
             <label className="grid gap-1.5 text-xs font-medium">
               {t("logPage.itemOptional")}
-              <select value={itemId ?? ""} onChange={(e) => setItemId(e.target.value ? Number(e.target.value) : undefined)} className={nativeSelect}>
-                <option value="">{t("logPage.noItem")}</option>
-                {pieces?.map((i) => <option key={i.id} value={i.id}>{i.title}</option>)}
-              </select>
+              <Select value={itemId === undefined ? "__none" : String(itemId)} onValueChange={(value) => update({ itemId: value === "__none" ? undefined : Number(value) })} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+                <SelectItem value="__none">{t("logPage.noItem")}</SelectItem>
+                {pieces?.map((i) => <SelectItem key={i.id} value={String(i.id)}>{i.title}</SelectItem>)}
+              </SelectContent></Select>
             </label>
             {!itemId && (
               <label className="grid gap-1.5 text-xs font-medium">
                 {t("logPage.titleLabel")}
-                <Input value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} placeholder={t("diary.freeSession")} />
+                <Input value={title} maxLength={160} onChange={(e) => update({ title: e.target.value })} placeholder={t("diary.freeSession")} />
               </label>
             )}
           </div>
 
           <div className={section}>
-            <MarksEditor marks={marks} onChange={setMarks} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label }))} seed={(id) => marksFromPlan(syncPlan([], itemSegments?.filter(s => s.id === id) ?? [], item))[0]} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} />
+            <MarksEditor marks={marks} onChange={(marks) => update({ marks })} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label }))} seed={(id) => marksFromPlan(syncPlan([], itemSegments?.filter(s => s.id === id) ?? [], item))[0]} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} showErrors={attempted} />
           </div>
 
-          <div className={section}><ClipDrafts clips={clips} onChange={setClips} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label })) ?? []} /></div>
+          <div className={section}><ClipDrafts clips={clips} onChange={(clips) => update({ clips })} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label })) ?? []} onRecordingChange={setRecording} /></div>
 
           <div className={`${section} space-y-2`}>
             <Label className="text-xs font-medium text-foreground">{t("session.notes")}</Label>
-            <Textarea rows={3} maxLength={2000} aria-label={t("session.notes")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("session.notesPlaceholder")} />
+            <Textarea rows={3} maxLength={2000} aria-label={t("session.notes")} value={notes} onChange={(e) => update({ notes: e.target.value })} placeholder={t("session.notesPlaceholder")} />
           </div>
 
-          <HelpQuestion on={needHelp} onToggle={setNeedHelp} text={helpText} onText={setHelpText} itemTitle={item?.title} />
-          <FormErrors errors={errors} className="mt-6" />
-          <Footer onCancel={leave} disabled={errors.length > 0} busy={busy} />
+          <HelpQuestion on={needHelp} onToggle={(needHelp) => update({ needHelp })} text={helpText} onText={(helpText) => update({ helpText })} itemTitle={item?.title} />
+          <FormErrors errors={attempted ? errors : []} className="mt-6" />
+          <Footer onCancel={leave} busy={busy} recording={recording} />
         </form>
-        <Guide />
       </div>
     </div>
   );

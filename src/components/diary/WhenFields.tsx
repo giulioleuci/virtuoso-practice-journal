@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { REPEAT_PRESETS, type RepeatPreset, type When } from "@/lib/domain/taskPresets";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
@@ -31,9 +32,9 @@ export function WhenFields({ when, custom, repeat, onWhen, onCustom, onRepeat }:
       </fieldset>
       <label className="grid gap-1.5 text-xs font-medium">
         {t("quick.repeat")}
-        <select value={repeat} onChange={(e) => onRepeat(e.target.value as RepeatPreset)} className={nativeSelect}>
-          {REPEAT_PRESETS.map((p) => <option key={p} value={p}>{t(`quick.repeat.${p}`)}</option>)}
-        </select>
+        <Select value={repeat} onValueChange={(value) => onRepeat(value as RepeatPreset)} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+          {REPEAT_PRESETS.map((p) => <SelectItem key={p} value={String(p)}>{t(`quick.repeat.${p}`)}</SelectItem>)}
+        </SelectContent></Select>
       </label>
     </>
   );

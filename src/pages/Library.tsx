@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LIBRARY_QUOTES, pickQuote } from "@/lib/quotes";
-import type { LibraryKind, StudyStatus } from "@/domain/entities/common";
+import type { LibraryKind } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NOTE_GLYPH, LIBRARY_KINDS } from "@/lib/constants";
 import { today } from "@/lib/date";
-import { RotateCcw, SearchX, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, ArrowDownUp, FolderOpen, Flag, Layers, LineChart, Play, Star } from "lucide-react";
+import { SearchX, Plus, Pencil, Trash2, MessageCircleQuestion, MoreVertical, FolderOpen, Flag, Layers, LineChart, Play, Star, BookmarkCheck } from "lucide-react";
 import { isPerformable } from "@/domain/logic/repertoireReview";
 import { repertoireService } from "@/lib/services/performances";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NewLibraryItemSheet } from "@/components/library/NewLibraryItemSheet";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
@@ -23,6 +24,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { FeatureEmptyState } from "@/components/shared/FeatureEmptyState";
 import { Pager } from "@/components/shared/Pager";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { useCollectionLinks, useCollections, useHelpRequests, useLibraryByKind, useSegments, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { subjectColorCss } from "@/lib/subjectColors";
@@ -44,17 +46,23 @@ export default function Library() {
   const { t, lang } = useI18n();
   const libraryQuote = useMemo(() => pickQuote(LIBRARY_QUOTES, lang), [lang]);
   const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState<StudyStatus | "all">("all");
   const [active, setActive] = useState<LibraryKind>("piece");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [helpItem, setHelpItem] = useState<LibraryItem | null>(null);
-  
+
   const [search, setSearch] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"recent" | "title" | "composer">("recent");
+  const [sortBy, setSortBy] = useState<"recent" | "title" | "titleDesc" | "composer">("recent");
+  const [favoritesFirst, setFavoritesFirst] = useState(true);
+  const [repertoireFirst, setRepertoireFirst] = useState(true);
+  const [repertoireOnly, setRepertoireOnly] = useState(false);
   const [groupByCollection, setGroupByCollection] = useState(false);
+  const [composerFilter, setComposerFilter] = useState("all");
+  const [collectionFilter, setCollectionFilter] = useState("all");
+  const [techniqueFilter, setTechniqueFilter] = useState("all");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const allHelp = useHelpRequests();
   const allTechniques = useTechniques();
   const subjects = useSubjects();
@@ -72,24 +80,34 @@ export default function Library() {
   const filteredItems = useMemo(() => {
     let arr = items ?? [];
     if (subjectFilter !== "all") arr = arr.filter((i) => i.subjectId === Number(subjectFilter));
-    if (statusFilter !== "all") arr = arr.filter(i => i.studyStatus === statusFilter);
+    if (composerFilter !== "all") arr = arr.filter(i => i.composer === composerFilter);
+    if (collectionFilter !== "all") {
+      const ids = new Set((allCollectionLinks ?? []).filter(link => link.collectionId === Number(collectionFilter)).map(link => link.itemId));
+      arr = arr.filter(i => ids.has(i.id!));
+    }
+    if (techniqueFilter !== "all") arr = arr.filter(i => i.techniqueIds?.includes(Number(techniqueFilter)));
+    if (favoritesOnly) arr = arr.filter(i => i.isFavorite);
+    if (repertoireOnly) arr = arr.filter(i => i.inRepertoire);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       arr = arr.filter(
-        (i) => i.title.toLowerCase().includes(q) || (i.composer ?? "").toLowerCase().includes(q)
+        (i) => [i.title, i.composer, i.catalog, i.notes, ...(i.tags ?? [])].filter(Boolean).join(" ").toLowerCase().includes(q)
       );
     }
     return [...arr].sort((a, b) => {
-      if (sortBy === "title") return a.title.localeCompare(b.title);
+      if (repertoireFirst && !!a.inRepertoire !== !!b.inRepertoire) return a.inRepertoire ? -1 : 1;
+      if (favoritesFirst && !!a.isFavorite !== !!b.isFavorite) return a.isFavorite ? -1 : 1;
+      if (sortBy === "titleDesc") return b.title.localeCompare(a.title, lang);
+      if (sortBy === "title") return a.title.localeCompare(b.title, lang);
       if (sortBy === "composer") return (a.composer ?? "").localeCompare(b.composer ?? "");
       return b.createdAt - a.createdAt;
     });
-  }, [items, subjectFilter, statusFilter, search, sortBy]);
+  }, [items, subjectFilter, search, sortBy, favoritesFirst, repertoireFirst, repertoireOnly, composerFilter, collectionFilter, techniqueFilter, favoritesOnly, allCollectionLinks, lang]);
 
   const PAGE_SIZE = 5;
   const [page, setPage] = useState(1);
   const [pageByGroup, setPageByGroup] = useState<Record<string, number>>({});
-  useEffect(() => { setPage(1); setPageByGroup({}); }, [active, subjectFilter, statusFilter, search, sortBy, groupByCollection]);
+  useEffect(() => { setPage(1); setPageByGroup({}); }, [active, subjectFilter, search, sortBy, groupByCollection, favoritesFirst, repertoireFirst, repertoireOnly, composerFilter, collectionFilter, techniqueFilter, favoritesOnly]);
   const setGroupPage = (key: string, p: number) =>
     setPageByGroup((prev) => ({ ...prev, [key]: p }));
 
@@ -152,7 +170,13 @@ export default function Library() {
         <div className="min-w-[calc(100%-7rem)] flex-1 min-[700px]:min-w-0">
           <h3 className="font-serif text-[1.375rem] font-semibold leading-tight break-words">
             <Link to={`/library/item/${it.id}`} className="hover:underline underline-offset-4">{it.title}</Link>
-            {it.inRepertoire && <Star className="ml-1.5 inline-block h-4 w-4 fill-current align-middle text-primary" aria-label={t("repertoire.title")} />}
+          <Button size="icon" variant="ghost" className="ml-1.5 inline-flex h-11 w-11 align-middle" aria-pressed={!!it.isFavorite} aria-label={`${t(it.isFavorite ? "library.removeFavorite" : "library.addFavorite")}: ${it.title}`} onClick={async () => {
+            try { await libraryService.upsert({ ...it, isFavorite: !it.isFavorite }); }
+            catch { toast.error(t("quick.failed")); }
+          }}>
+            <Star className={cn(it.isFavorite && "fill-current text-primary")} />
+          </Button>
+            {it.inRepertoire && <BookmarkCheck className="ml-1.5 inline-block h-4 w-4 fill-current align-middle text-primary" aria-label={t("repertoire.title")} />}
           </h3>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
             <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectColorCss(subject?.color, subject?.type, subject?.customColor) }} title={subject?.name} role="img" aria-label={subject?.name} />
@@ -160,7 +184,6 @@ export default function Library() {
             {it.kind === "technique" && (it.startBpm || it.targetBpm) && <span>{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>}
             {it.kind !== "technique" && it.targetBpm && <span>{it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}</span>}
             {segs.length > 0 && <span>{t("library.segments", { count: segs.length })}</span>}
-            <span>{t(`library.status.${it.studyStatus}`)}</span>
             {it.catalog && <span>{it.catalog}</span>}
             {it.tags?.map((tag) => <span key={`tag-${tag}`}>#{tag}</span>)}
             {techNames.map((name) => <span key={name}>{name}</span>)}
@@ -168,6 +191,7 @@ export default function Library() {
         </div>
         {hasSparkline && <div className="hidden opacity-80 min-[700px]:block"><BpmSparkline itemId={it.id!} /></div>}
         <div className="ml-auto flex shrink-0 items-center gap-1">
+
           <Button
             size="sm"
             className="min-h-11 sm:min-h-0"
@@ -196,7 +220,7 @@ export default function Library() {
               <DropdownMenuItem onClick={() => it.id && navigate(`/library/item/${it.id}?tab=analysis`)}><LineChart className="mr-2 h-4 w-4" /> {t("library.analysis.menu")}</DropdownMenuItem>
               {isPerformable(it.kind) && (
                 <DropdownMenuItem onClick={() => toggleRepertoire(it)}>
-                  <Star className={cn("mr-2 h-4 w-4", it.inRepertoire && "fill-current text-primary")} />
+                  <BookmarkCheck className={cn("mr-2 h-4 w-4", it.inRepertoire && "fill-current text-primary")} />
                   {it.inRepertoire ? t("repertoire.remove") : t("repertoire.add")}
                 </DropdownMenuItem>
               )}
@@ -215,22 +239,19 @@ export default function Library() {
     if (!filteredItems.length) {
       return items.length === 0
         ? <FeatureEmptyState description={t("library.empty")} quote={libraryQuote} action={{ label: t("library.addToLibrary"), onClick: openCreate }} />
-        : <EmptyState icon={SearchX} title={t("library.noItemsMatch")} cta={{ label: t("states.clearFilters"), icon: RotateCcw, onClick: () => { setSearch(""); setSubjectFilter("all"); setStatusFilter("all"); } }} />;
+        : <EmptyState icon={SearchX} title={t("library.noItemsMatch")} />;
     }
 
     if (groupByCollection) {
       const cols = (allCollections ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
       const links = allCollectionLinks ?? [];
       const filteredIds = new Set(filteredItems.map((i) => i.id));
-      const itemsById = new Map(filteredItems.map((i) => [i.id, i]));
       const inAnyCollection = new Set<number>();
       const groups = cols.map((c) => {
         const ids = links.filter((l) => l.collectionId === c.id).map((l) => l.itemId).filter((id) => filteredIds.has(id));
         ids.forEach((id) => inAnyCollection.add(id));
-        const groupItems = ids
-          .map((id) => itemsById.get(id))
-          .filter((item): item is LibraryItem => item !== undefined)
-          .sort((a, b) => a.title.localeCompare(b.title));
+        const groupIds = new Set(ids);
+        const groupItems = filteredItems.filter((item) => groupIds.has(item.id));
         return { key: `c-${c.id}`, title: c.name, collection: c, items: groupItems };
       });
       const uncollected = filteredItems.filter((i) => !inAnyCollection.has(i.id));
@@ -238,8 +259,8 @@ export default function Library() {
       return (
         <div className="space-y-8">
           {all.map((g) => {
-            const p = pageByGroup[g.key] ?? 1;
             const totalPages = Math.max(1, Math.ceil(g.items.length / PAGE_SIZE));
+            const p = Math.min(pageByGroup[g.key] ?? 1, totalPages);
             return (
               <section key={g.key}>
                 <SectionHeader
@@ -277,7 +298,7 @@ export default function Library() {
     <div className="pb-24">
       <PageHeader
         title={t("nav.library")}
-        subtitle={LIBRARY_KINDS.map((k) => t(k.tKey)).join(", ")}
+
         actions={<Button onClick={openCreate}><Plus /> {t("library.add")}</Button>}
       />
 
@@ -297,37 +318,39 @@ export default function Library() {
         </div>
         <div className="flex flex-wrap pb-1 max-[699px]:mt-3">
           <Link to="/library/collections" className={linkCls}><FolderOpen className="h-4 w-4" />{t("library.collections")}</Link>
-          <Link to="/library/repertoire" className={linkCls}><Star className="h-4 w-4" />{t("repertoire.tab")}</Link>
+          <Link to="/library/repertoire" className={linkCls}><BookmarkCheck className="h-4 w-4" />{t("repertoire.tab")}</Link>
           <Link to="/library/repertoire?tab=performances" className={linkCls}><Flag className="h-4 w-4" />{t("library.events")}</Link>
         </div>
       </div>
 
-      <div className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_200px_200px_auto]">
-        <Input type="search" aria-label={t("library.searchTitleComposer")} placeholder={t("library.searchTitleComposer")} value={search} onChange={(e) => setSearch(e.target.value)} />
-        <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-          <SelectTrigger aria-label={t("common.subject")}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
-            {(subjects ?? []).map((s) => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={v => setStatusFilter(v as StudyStatus | "all")}>
-          <SelectTrigger aria-label={t("library.studyStatus")}><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">{t("library.allStatuses")}</SelectItem>{(["not_started", "in_progress", "consolidated"] as const).map(status => <SelectItem key={status} value={status}>{t(`library.status.${status}`)}</SelectItem>)}</SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-          <SelectTrigger aria-label={t("library.sortRecent")}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="recent"><span className="inline-flex items-center gap-2"><ArrowDownUp className="h-3 w-3" /> {t("library.sortRecent")}</span></SelectItem>
-            <SelectItem value="title">{t("library.sortTitle")}</SelectItem>
-            <SelectItem value="composer">{t("library.sortComposer")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant={groupByCollection ? "secondary" : "outline"} aria-pressed={groupByCollection} onClick={() => setGroupByCollection((v) => !v)}>
-          <Layers /> {groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}
-        </Button>
-      </div>
-
+      <FilterPanel
+        search={{ value: search, onChange: setSearch, placeholder: t("library.searchTitleComposer") }}
+        resultCount={items === undefined ? undefined : filteredItems.length}
+        filters={[
+          ...(subjectFilter !== "all" ? [{ key: "subject", label: `${t("common.subject")}: ${subjectMap.get(Number(subjectFilter))?.name ?? subjectFilter}`, onRemove: () => setSubjectFilter("all") }] : []),
+          ...(composerFilter !== "all" ? [{ key: "composer", label: `${t("collection.author")}: ${composerFilter}`, onRemove: () => setComposerFilter("all") }] : []),
+          ...(collectionFilter !== "all" ? [{ key: "collection", label: `${t("link.collection")}: ${allCollections?.find(c => c.id === Number(collectionFilter))?.name ?? collectionFilter}`, onRemove: () => setCollectionFilter("all") }] : []),
+          ...(techniqueFilter !== "all" ? [{ key: "technique", label: allTechniques?.find(tech => tech.id === Number(techniqueFilter))?.name ?? techniqueFilter, onRemove: () => setTechniqueFilter("all") }] : []),
+          ...(favoritesOnly ? [{ key: "favorites", label: t("filters.favoritesOnly"), onRemove: () => setFavoritesOnly(false) }] : []),
+          ...(repertoireOnly ? [{ key: "repertoire", label: t("repertoire.title"), onRemove: () => setRepertoireOnly(false) }] : []),
+          ...(sortBy !== "recent" ? [{ key: "sort", label: t({ title: "library.sortTitle", titleDesc: "library.sortTitleDesc", composer: "library.sortComposer" }[sortBy]), onRemove: () => setSortBy("recent") }] : []),
+          ...(favoritesFirst ? [{ key: "favoritesFirst", label: t("library.favoritesFirst"), onRemove: () => setFavoritesFirst(false) }] : []),
+          ...(repertoireFirst ? [{ key: "repertoireFirst", label: t("library.repertoireFirst"), onRemove: () => setRepertoireFirst(false) }] : []),
+          ...(groupByCollection ? [{ key: "group", label: t("library.groupedByCollection"), onRemove: () => setGroupByCollection(false) }] : []),
+        ]}
+        onReset={() => { setSearch(""); setSubjectFilter("all"); setComposerFilter("all"); setCollectionFilter("all"); setTechniqueFilter("all"); setFavoritesOnly(false); setRepertoireOnly(false); setFavoritesFirst(true); setRepertoireFirst(true); setSortBy("recent"); setGroupByCollection(false); }}
+      >
+        <FilterSelect label={t("common.subject")} value={subjectFilter} onChange={setSubjectFilter} options={[{ value: "all", label: t("library.allSubjects") }, ...(subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))]} />
+        <FilterSelect label={t("collection.author")} value={composerFilter} onChange={setComposerFilter} options={[{ value: "all", label: t("collection.allAuthors") }, ...Array.from(new Set((items ?? []).map(i => i.composer).filter((v): v is string => !!v))).sort((a, b) => a.localeCompare(b, lang)).map(value => ({ value, label: value }))]} />
+        <FilterSelect label={t("link.filterByCollection")} value={collectionFilter} onChange={setCollectionFilter} options={[{ value: "all", label: t("link.allCollections") }, ...(allCollections ?? []).map(c => ({ value: String(c.id), label: c.name }))]} />
+        <FilterSelect label={t("filters.technique")} value={techniqueFilter} onChange={setTechniqueFilter} options={[{ value: "all", label: t("common.all") }, ...(allTechniques ?? []).map(tech => ({ value: String(tech.id), label: tech.name }))]} />
+        <FilterSelect label={t("link.sortBy")} value={sortBy} onChange={setSortBy} options={[{ value: "recent", label: t("library.sortRecent") }, { value: "title", label: t("library.sortTitle") }, { value: "titleDesc", label: t("library.sortTitleDesc") }, { value: "composer", label: t("library.sortComposer") }]} />
+        <Button type="button" variant={groupByCollection ? "secondary" : "outline"} className="min-h-11" aria-pressed={groupByCollection} onClick={() => setGroupByCollection(v => !v)}><Layers />{groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}</Button>
+        <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={favoritesOnly} onCheckedChange={on => setFavoritesOnly(on === true)} />{t("filters.favoritesOnly")}</label>
+        <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={repertoireOnly} onCheckedChange={on => setRepertoireOnly(on === true)} />{t("repertoire.title")}</label>
+        <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={favoritesFirst} onCheckedChange={on => setFavoritesFirst(on === true)} />{t("library.favoritesFirst")}</label>
+        <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={repertoireFirst} onCheckedChange={on => setRepertoireFirst(on === true)} />{t("library.repertoireFirst")}</label>
+      </FilterPanel>
       {list}
 
       <NewLibraryItemSheet

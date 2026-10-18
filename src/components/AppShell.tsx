@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHorizontal, Printer, Settings } from "lucide-react";
+import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHorizontal, Printer, Settings, SlidersHorizontal } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
@@ -27,6 +27,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
     { to: "/analytics", label: t("nav.progress"), icon: BarChart3, also: ["/history"] },
   ];
   const secondary = [
+    { to: "/study-setup", label: t("nav.studySetup"), icon: SlidersHorizontal },
     { to: "/print/weekly", label: t("nav.weeklySummary"), icon: Printer },
     { to: "/profile", label: t("nav.settings"), icon: Settings },
   ];

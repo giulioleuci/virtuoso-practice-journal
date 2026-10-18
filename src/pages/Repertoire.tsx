@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CalendarDays, CheckCircle2, ChevronLeft, MoreVertical, Music4, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, ChevronLeft, MoreVertical, Music4, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { usePerformanceEvents, usePerformanceLinks, useRepertoire } from "@/presentation/hooks/useEntities";
 import { useReadiness } from "@/presentation/hooks/useReadiness";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { PerformanceEvent } from "@/domain/entities/performance";
 import type { PieceEvidence } from "@/domain/logic/readiness";
-import { daysUntilReview, isReviewDue } from "@/domain/logic/repertoireReview";
 import { useI18n } from "@/lib/i18n";
 import { formatDate, parseDayKey, today } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PerformanceEventSheet } from "@/components/library/PerformanceEventSheet";
 import { performancesService, repertoireService } from "@/lib/services/performances";
@@ -35,22 +35,23 @@ export default function Repertoire() {
 
   const [params] = useSearchParams();
   const [tab, setTab] = useState<Tab>(params.get("tab") === "performances" ? "performances" : "repertoire");
+  const [search, setSearch] = useState("");
+  const [composer, setComposer] = useState("all");
+  const [period, setPeriod] = useState("all");
+  const [eventKind, setEventKind] = useState("all");
   const [eventSheet, setEventSheet] = useState<{ open: boolean; event: PerformanceEvent | null }>({ open: false, event: null });
 
   const sortedItems = useMemo(
-    () => (items ?? []).slice().sort((a, b) => (a.nextReviewAt ?? "").localeCompare(b.nextReviewAt ?? "")),
-    [items]
+    () => (items ?? []).filter(i => (composer === "all" || i.composer === composer) && (!search.trim() || `${i.title} ${i.composer ?? ""} ${i.catalog ?? ""}`.toLowerCase().includes(search.trim().toLowerCase()))).sort((a, b) => a.title.localeCompare(b.title)),
+    [items, search, composer]
   );
   const sortedEvents = useMemo(
-    () => (events ?? []).slice().sort((a, b) => a.date.localeCompare(b.date)),
-    [events]
+    () => (events ?? []).filter(event => (eventKind === "all" || event.kind === eventKind) &&
+      (period === "all" || (period === "upcoming" ? event.date >= todayKey : event.date < todayKey)) &&
+      (!search.trim() || `${event.name} ${event.venue ?? ""}`.toLowerCase().includes(search.trim().toLowerCase())))
+      .sort((a, b) => a.date.localeCompare(b.date)),
+    [events, search, eventKind, period, todayKey]
   );
-
-  const markReviewed = async (item: LibraryItem) => {
-    if (item.id === undefined) return;
-    await repertoireService.markReviewed(item.id);
-    toast.success(t("repertoire.reviewed"));
-  };
 
   const removeFromRepertoire = async (item: LibraryItem) => {
     if (item.id === undefined) return;
@@ -80,7 +81,7 @@ export default function Repertoire() {
             key={key}
             role="tab"
             aria-selected={tab === key}
-            onClick={() => setTab(key)}
+            onClick={() => { setTab(key); setSearch(""); }}
             className={`-mb-px border-b-2 pb-2 text-sm font-medium transition-colors ${tab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
             {key === "repertoire" ? t("repertoire.tab") : t("performances.tab")}
@@ -88,14 +89,23 @@ export default function Repertoire() {
         ))}
       </div>
 
+      <FilterPanel search={{ value: search, onChange: setSearch, placeholder: tab === "repertoire" ? t("library.searchTitleComposer") : t("filters.searchEvents") }}
+        filters={tab === "repertoire" ? (composer === "all" ? [] : [{ key: "composer", label: `${t("collection.author")}: ${composer}`, onRemove: () => setComposer("all") }]) : [
+          ...(eventKind !== "all" ? [{ key: "kind", label: t(`performances.kind.${eventKind}`), onRemove: () => setEventKind("all") }] : []),
+          ...(period !== "all" ? [{ key: "period", label: t(period === "upcoming" ? "filters.upcoming" : "performances.past"), onRemove: () => setPeriod("all") }] : []),
+        ]} onReset={() => { setSearch(""); setComposer("all"); setEventKind("all"); setPeriod("all"); }} resultCount={tab === "repertoire" ? (items === undefined ? undefined : sortedItems.length) : (events === undefined ? undefined : sortedEvents.length)}>
+        {tab === "repertoire" ? <FilterSelect label={t("collection.author")} value={composer} onChange={setComposer} options={[{ value: "all", label: t("collection.allAuthors") }, ...Array.from(new Set((items ?? []).map(i => i.composer).filter((v): v is string => !!v))).sort((a, b) => a.localeCompare(b, lang)).map(value => ({ value, label: value }))]} /> : <>
+          <FilterSelect label={t("link.filterByKind")} value={eventKind} onChange={setEventKind} options={[{ value: "all", label: t("common.all") }, ...Array.from(new Set((events ?? []).map(event => event.kind))).map(value => ({ value, label: t(`performances.kind.${value}`) }))]} />
+          <FilterSelect label={t("analytics.pdfPeriod")} value={period} onChange={setPeriod} options={[{ value: "all", label: t("common.all") }, { value: "upcoming", label: t("filters.upcoming") }, { value: "past", label: t("performances.past") }]} />
+        </>}
+      </FilterPanel>
+
       {tab === "repertoire" && (
-        sortedItems.length === 0 ? (
+        sortedItems.length === 0 && !!items?.length ? <EmptyState title={t("common.noResults")} /> : sortedItems.length === 0 ? (
           <EmptyState icon={Music4} title={t("repertoire.emptyTitle")} hint={t("repertoire.emptyBody")} />
         ) : (
           <ul className="divide-y divide-border border-t border-border">
             {sortedItems.map((item) => {
-              const due = isReviewDue(item, todayKey);
-              const days = daysUntilReview(item, todayKey);
               const ev = evidenceFor(item);
               return (
                 <li key={item.id} className="space-y-2.5 py-4">
@@ -111,9 +121,6 @@ export default function Repertoire() {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => markReviewed(item)}>
-                          <CheckCircle2 className="h-4 w-4 mr-2" /> {t("repertoire.markReviewed")}
-                        </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => removeFromRepertoire(item)}>
                           <Trash2 className="h-4 w-4 mr-2" /> {t("repertoire.remove")}
                         </DropdownMenuItem>
@@ -121,17 +128,9 @@ export default function Repertoire() {
                     </DropdownMenu>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap text-xs">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${due ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
-                      <CalendarDays className="h-3 w-3" />
-                      {due
-                        ? t("repertoire.reviewDue")
-                        : t("repertoire.reviewIn").replace("{days}", String(days ?? 0))}
-                    </span>
-                    {item.nextReviewAt && (
-                      <span className="text-muted-foreground tabular-nums">{formatDate(item.nextReviewAt, lang, "dayMonth")}</span>
-                    )}
-                  </div>
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/tasks/new" state={{ date: todayKey, prefill: { itemId: item.id, itemTitle: item.title, itemSubjectId: item.subjectId } }}><Play />{t("library.practiceThis")}</Link>
+                  </Button>
 
                   <p className="text-xs tabular-nums text-muted-foreground">
                     {coverage(ev)}{ev.toDo.length ? ` · ${t("evidence.programmeToDo", { count: ev.toDo.length })}` : ""}
@@ -144,7 +143,7 @@ export default function Repertoire() {
       )}
 
       {tab === "performances" && (
-        sortedEvents.length === 0 ? (
+        sortedEvents.length === 0 && !!events?.length ? <EmptyState title={t("common.noResults")} /> : sortedEvents.length === 0 ? (
           <EmptyState icon={CalendarDays} title={t("performances.emptyTitle")} hint={t("performances.emptyBody")} cta={{ label: t("performances.new"), onClick: () => setEventSheet({ open: true, event: null }) }} />
         ) : (
           <ul className="divide-y divide-border border-t border-border">

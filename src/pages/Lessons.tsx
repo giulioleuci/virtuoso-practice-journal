@@ -151,7 +151,7 @@ export default function Lessons() {
     <div className="pb-24">
       <PageHeader
         title={t("nav.lessons")}
-        subtitle={t("lessons.subtitle")}
+
         actions={<Button onClick={openNew}><Plus /> {t("lessons.addRecurrence")}</Button>}
       />
 

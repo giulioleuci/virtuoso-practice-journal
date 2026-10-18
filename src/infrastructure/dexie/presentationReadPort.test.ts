@@ -16,10 +16,10 @@ describe("dexie presentation reads", () => {
   });
   it("offers studies and pieces to programs and filters repertoire by both eligibility and flag", async () => {
     await db.library.bulkAdd([
-      { subjectId: 1, kind: "piece", studyStatus: "not_started", title: "Piece", createdAt: 1 },
-      { subjectId: 1, kind: "study", studyStatus: "not_started", title: "Study", inRepertoire: true, createdAt: 1 },
-      { subjectId: 1, kind: "exercise", studyStatus: "not_started", title: "Exercise", inRepertoire: true, createdAt: 1 },
-      { subjectId: 1, kind: "study", studyStatus: "not_started", title: "Archived", deletedAt: 2, createdAt: 1 },
+      { subjectId: 1, kind: "piece", title: "Piece", createdAt: 1 },
+      { subjectId: 1, kind: "study", title: "Study", inRepertoire: true, createdAt: 1 },
+      { subjectId: 1, kind: "exercise", title: "Exercise", inRepertoire: true, createdAt: 1 },
+      { subjectId: 1, kind: "study", title: "Archived", deletedAt: 2, createdAt: 1 },
     ]);
     expect((await dexiePresentationReads.read<{ title: string }[]>("library.performable")).map(i => i.title)).toEqual(["Piece", "Study"]);
     expect((await dexiePresentationReads.read<{ title: string }[]>("repertoire.active")).map(i => i.title)).toEqual(["Study"]);

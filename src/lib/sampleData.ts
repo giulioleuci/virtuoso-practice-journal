@@ -72,7 +72,7 @@ export async function seedSampleData() {
   // ---------- Library ----------
   // Repertoire (4)
   const chopinBallade = (await db.library.add({
-    subjectId: pianoId, kind: "piece", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "piece",
     title: "Ballade No. 1 in G minor, Op. 23", composer: "Chopin",
 targetBpm: 76, noteVal: "quarter",
     techniqueIds: [tPedal, tArpeggios, tOctaves, tVoicing],
@@ -80,7 +80,7 @@ targetBpm: 76, noteVal: "quarter",
   })) as number;
 
   const bachWtcCsh = (await db.library.add({
-    subjectId: pianoId, kind: "piece", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "piece",
     title: "WTC I — Prelude & Fugue in C# minor, BWV 849", composer: "Bach",
 targetBpm: 60, noteVal: "quarter",
     techniqueIds: [tNoPedal, tLegato, tVoicing],
@@ -88,7 +88,7 @@ targetBpm: 60, noteVal: "quarter",
   })) as number;
 
   const beethoven110 = (await db.library.add({
-    subjectId: pianoId, kind: "piece", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "piece",
     title: "Sonata Op. 110 in A♭ major", composer: "Beethoven",
 targetBpm: 92, noteVal: "quarter",
     techniqueIds: [tPedal, tLegato, tVoicing],
@@ -96,7 +96,7 @@ targetBpm: 92, noteVal: "quarter",
   })) as number;
 
   const nocturne9_2 = (await db.library.add({
-    subjectId: pianoId, kind: "piece", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "piece",
     title: "Nocturne in E♭ major, Op. 9 No. 2", composer: "Chopin",
 targetBpm: 132, noteVal: "eighth",
     techniqueIds: [tPedal, tLegato, tTrills],
@@ -104,7 +104,7 @@ targetBpm: 132, noteVal: "eighth",
   })) as number;
 
   const nocturne9_1 = (await db.library.add({
-    subjectId: pianoId, kind: "piece", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "piece",
     title: "Nocturne in B♭ minor, Op. 9 No. 1", composer: "Chopin",
 targetBpm: 116, noteVal: "eighth",
     techniqueIds: [tPedal, tLegato, tVoicing],
@@ -112,7 +112,7 @@ targetBpm: 116, noteVal: "eighth",
   })) as number;
 
   const wtcCmaj = (await db.library.add({
-    subjectId: pianoId, kind: "piece", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "piece",
     title: "WTC I — Prelude & Fugue in C major, BWV 846", composer: "Bach",
 targetBpm: 72, noteVal: "quarter",
     techniqueIds: [tNoPedal, tLegato, tVoicing],
@@ -120,7 +120,7 @@ targetBpm: 72, noteVal: "quarter",
   })) as number;
 
   const beethoven109 = (await db.library.add({
-    subjectId: pianoId, kind: "piece", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "piece",
     title: "Sonata Op. 109 in E major", composer: "Beethoven",
 targetBpm: 84, noteVal: "quarter",
     techniqueIds: [tPedal, tLegato, tVoicing, tTrills],
@@ -129,7 +129,7 @@ targetBpm: 84, noteVal: "quarter",
 
   // Manuals (4)
   const hanon = (await db.library.add({
-    subjectId: pianoId, kind: "technique", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "technique",
     title: "Hanon — Exercise 18", composer: "Hanon",
     targetBpm: 108, noteVal: "sixteenth",
     techniqueIds: [tNoPedal, tLegato],
@@ -137,7 +137,7 @@ targetBpm: 84, noteVal: "quarter",
   })) as number;
 
   const cortot = (await db.library.add({
-    subjectId: pianoId, kind: "technique", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "technique",
     title: "Cortot — Finger equality", composer: "Cortot",
     targetBpm: 80, noteVal: "eighth",
     techniqueIds: [tArpeggios, tTrills],
@@ -145,7 +145,7 @@ targetBpm: 84, noteVal: "quarter",
   })) as number;
 
   const czerny740 = (await db.library.add({
-    subjectId: pianoId, kind: "study", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "study",
     title: "Czerny — Study No. 5, Op. 740", composer: "Czerny",
     targetBpm: 120, noteVal: "sixteenth",
     techniqueIds: [tLegato, tStaccato, tArpeggios],
@@ -153,7 +153,7 @@ targetBpm: 84, noteVal: "quarter",
   })) as number;
 
   const piston = (await db.library.add({
-    subjectId: harmonyId, kind: "exercise", studyStatus: "in_progress",
+    subjectId: harmonyId, kind: "exercise",
     title: "Piston — Figured bass, Chapter 12", composer: "Walter Piston",
     techniqueIds: [tFigured, tChorale],
     createdAt: now - 70 * D,
@@ -161,7 +161,7 @@ targetBpm: 84, noteVal: "quarter",
 
   // Technique items (extra, not counted toward minimums)
   const scales = (await db.library.add({
-    subjectId: pianoId, kind: "technique", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "technique",
     title: "24 scales — major & minor (4 octaves, hands together)",
     startBpm: 80, targetBpm: 132, noteVal: "sixteenth",
     techniqueIds: [tLegato, tStaccato],
@@ -192,7 +192,7 @@ targetBpm: 84, noteVal: "quarter",
 
 
   const arpeggios = (await db.library.add({
-    subjectId: pianoId, kind: "technique", studyStatus: "in_progress",
+    subjectId: pianoId, kind: "technique",
     title: "Dominant 7th arpeggios — all keys",
     startBpm: 70, targetBpm: 120, noteVal: "sixteenth",
     techniqueIds: [tArpeggios],
@@ -201,28 +201,28 @@ targetBpm: 84, noteVal: "quarter",
 
   // Theory (4)
   const secDom = (await db.library.add({
-    subjectId: harmonyId, kind: "theory", studyStatus: "not_started",
+    subjectId: harmonyId, kind: "theory",
     title: "Secondary dominants & tonicization",
     techniqueIds: [tChorale, tModulation],
     createdAt: now - 50 * D,
   })) as number;
 
   const modMix = (await db.library.add({
-    subjectId: harmonyId, kind: "theory", studyStatus: "not_started",
+    subjectId: harmonyId, kind: "theory",
     title: "Modal mixture & Neapolitan",
     techniqueIds: [tChorale],
     createdAt: now - 30 * D,
   })) as number;
 
   const speciesCpt = (await db.library.add({
-    subjectId: harmonyId, kind: "theory", studyStatus: "not_started",
+    subjectId: harmonyId, kind: "theory",
     title: "Species counterpoint — first & second species",
     techniqueIds: [tCounter, tChorale],
     createdAt: now - 45 * D,
   })) as number;
 
   const augSixth = (await db.library.add({
-    subjectId: harmonyId, kind: "theory", studyStatus: "not_started",
+    subjectId: harmonyId, kind: "theory",
     title: "Augmented sixth chords (It / Fr / Ger)",
     techniqueIds: [tChorale, tModulation],
     createdAt: now - 20 * D,
@@ -263,7 +263,7 @@ targetBpm: 84, noteVal: "quarter",
   const colCortot = await db.collections.add({ kind: "manual", name: "Rational Principles of Pianoforte Technique", composer: "Cortot", defaultSubjectId: pianoId, createdAt: now, updatedAt: now });
   const colPiston = await db.collections.add({ kind: "manual", name: "Harmony", composer: "Walter Piston", defaultSubjectId: harmonyId, createdAt: now, updatedAt: now });
   const colDaily = await db.collections.add({ kind: "collection", name: "Daily studies", defaultSubjectId: pianoId, createdAt: now, updatedAt: now });
-  const pianoTheory = await db.library.add({ subjectId: pianoId, kind: "theory", studyStatus: "not_started", title: "Articulation and relaxed touch", notes: "Read before practicing the study.", createdAt: now });
+  const pianoTheory = await db.library.add({ subjectId: pianoId, kind: "theory", title: "Articulation and relaxed touch", notes: "Read before practicing the study.", createdAt: now });
   await db.collectionItems.bulkAdd([
     { collectionId: colHanon, itemId: hanon, position: 0, reference: "Exercise 18", pageStart: 12, pageEnd: 13, createdAt: now },
     { collectionId: colCortot, itemId: cortot, position: 0, reference: "Chapter 1", pageStart: 5, createdAt: now },
@@ -281,24 +281,9 @@ targetBpm: 84, noteVal: "quarter",
     { collectionId: colCzerny,       itemId: czerny740,   position: 1, createdAt: now },
   ]);
 
-  // ---------- Repertoire ("to keep" pieces with spaced reviews) ----------
-  // Mix of states: overdue, due today, and comfortably scheduled.
-  const repertoirePlan: { itemId: number; addedDaysAgo: number; intervalDays: number; lastReviewedDaysAgo: number }[] = [
-    { itemId: czerny740, addedDaysAgo: 30, intervalDays: 7, lastReviewedDaysAgo: 2 },
-    { itemId: nocturne9_2,   addedDaysAgo: 200, intervalDays: 30, lastReviewedDaysAgo: 40 }, // overdue
-    { itemId: wtcCmaj,       addedDaysAgo: 220, intervalDays: 60, lastReviewedDaysAgo: 60 }, // due today
-    { itemId: beethoven110,  addedDaysAgo: 150, intervalDays: 14, lastReviewedDaysAgo: 9 },  // due in 5 days
-    { itemId: chopinBallade, addedDaysAgo: 80,  intervalDays: 7,  lastReviewedDaysAgo: 2 },  // due in 5 days
-    { itemId: bachWtcCsh,    addedDaysAgo: 55,  intervalDays: 90, lastReviewedDaysAgo: 10 }, // far out
-  ];
-  for (const plan of repertoirePlan) {
-    await db.library.update(plan.itemId, {
-      inRepertoire: true,
-      repertoireAddedAt: now - plan.addedDaysAgo * D,
-      reviewIntervalDays: plan.intervalDays,
-      lastReviewedAt: dayKey(addDays(todayDate, -plan.lastReviewedDaysAgo)),
-      nextReviewAt: dayKey(addDays(todayDate, plan.intervalDays - plan.lastReviewedDaysAgo)),
-    });
+  // ---------- Repertoire ----------
+  for (const itemId of [czerny740, nocturne9_2, wtcCmaj, beethoven110, chopinBallade, bachWtcCsh]) {
+    await db.library.update(itemId, { inRepertoire: true, repertoireAddedAt: now });
   }
 
   // ---------- Performance events + programmes ----------

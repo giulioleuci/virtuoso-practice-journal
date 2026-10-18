@@ -3,7 +3,7 @@ import type { Task } from "@/domain/entities/task";
 import type { StudyRoutine } from "@/domain/ports/studyRoutine";
 import { useActiveTasks, useStudyRoutines, useSubjects } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
-import { formatDate, today } from "@/lib/date";
+import { formatDate } from "@/lib/date";
 import type { Lang } from "@/domain/entities/common";
 import { studyRoutinesService, tasksService } from "@/lib/services";
 import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
@@ -11,17 +11,15 @@ import { NOTE_GLYPH } from "@/lib/constants";
 import { subjectColorCss } from "@/lib/subjectColors";
 
 
-import { Input } from "@/components/ui/input";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+
+
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Check, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, RefreshCw, SearchX, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { QuickAdd } from "@/components/diary/QuickAdd";
+import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
 
 import { TaskCalendarView } from "@/components/diary/TaskCalendarView";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -175,13 +173,12 @@ export default function Tasks() {
     return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectColorCss(s?.color, s?.type, s?.customColor) }} title={s?.name} role="img" aria-label={s?.name} />;
   };
   const setTab = (next: Tab) => { setParams(next === "tasks" ? {} : { tab: next }, { replace: true }); setPage(0); };
-  const subtitle = { tasks: "plan.subtitle", series: "plan.subtitle", routines: "plan.subtitleRoutines", calendar: "plan.subtitleCalendar" }[tab];
 
   return (
     <div className="pb-24">
       <PageHeader
         title={t("nav.plan")}
-        subtitle={t(subtitle)}
+
         actions={
           <Button onClick={() => navigate(tab === "routines" ? "/tasks/routines/new" : "/tasks/new")}>
             <Plus /> {tab === "routines" ? t("plan.newRoutine") : t("tasks.newTask")}
@@ -237,30 +234,23 @@ export default function Tasks() {
         )
       ) : (
         <>
-          {tab === "tasks" && <QuickAdd date={today()} subjectId={subjectFilter === "all" ? null : Number(subjectFilter)} onAdded={() => undefined} />}
-          <div className="my-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_200px_200px]">
-            <Input type="search" aria-label={t("tasks.searchByTitle")} placeholder={t("tasks.searchByTitle")} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
-            <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(0); }}>
-              <SelectTrigger aria-label={t("common.subject")}><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("library.allSubjects")}</SelectItem>
-                {(subjects ?? []).map((s) => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(0); }}>
-              <SelectTrigger aria-label={t("plan.status")}><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("common.all")}</SelectItem>
-                <SelectItem value="active">{t("plan.statusOpen")}</SelectItem>
-                <SelectItem value="done">{t("common.done")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterPanel
+            search={{ value: q, onChange: value => { setQ(value); setPage(0); }, placeholder: t("tasks.searchByTitle") }}
+            filters={[
+              ...(subjectFilter !== "all" ? [{ key: "subject", label: `${t("common.subject")}: ${subjectName(Number(subjectFilter))}`, onRemove: () => { setSubjectFilter("all"); setPage(0); } }] : []),
+              ...(filter !== "all" ? [{ key: "status", label: t(filter === "active" ? "plan.statusOpen" : "common.done"), onRemove: () => { setFilter("all"); setPage(0); } }] : []),
+            ]}
+            onReset={() => { setQ(""); setSubjectFilter("all"); setFilter("all"); setPage(0); }}
+            resultCount={tasks === undefined ? undefined : filtered.length}
+          >
+            <FilterSelect label={t("common.subject")} value={subjectFilter} onChange={value => { setSubjectFilter(value); setPage(0); }} options={[{ value: "all", label: t("library.allSubjects") }, ...(subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))]} />
+            <FilterSelect label={t("plan.status")} value={filter} onChange={value => { setFilter(value); setPage(0); }} options={[{ value: "all", label: t("common.all") }, { value: "active", label: t("plan.statusOpen") }, { value: "done", label: t("common.done") }]} />
+          </FilterPanel>
 
           {tasks === undefined ? (
             <ListSkeleton />
           ) : pageItems.length === 0 ? (
-            <EmptyState icon={SearchX} title={t("plan.noMatch")} hint={t("plan.noMatchHint")} cta={{ label: t("states.clearFilters"), icon: RotateCcw, onClick: () => { setQ(""); setSubjectFilter("all"); setFilter("all"); } }} />
+            <EmptyState icon={SearchX} title={t("plan.noMatch")} hint={t("plan.noMatchHint")} />
           ) : (
             <ul className="divide-y divide-border border-t border-border">
               {pageItems.map((task) => (

@@ -59,7 +59,7 @@ export default function EventPage() {
       </Link>
       <PageHeader
         title={event.name}
-        subtitle={[t(`performances.kind.${event.kind}`), formatDate(event.date, lang, "long"), event.venue, daysLeft > 0 ? t("event.timeLeft", { count: daysLeft }) : t("event.concluded")].filter(Boolean).join(" · ")}
+
         actions={
           <>
             <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />{t("event.editProgramme")}</Button>

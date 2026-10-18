@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Props {
   open: boolean;
@@ -27,6 +28,7 @@ export function ItemQuestions({ itemId }: { itemId: number }) {
 
   const [draft, setDraft] = useState("");
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const addQuestion = async () => {
     if (!draft.trim()) return;
@@ -45,6 +47,7 @@ export function ItemQuestions({ itemId }: { itemId: number }) {
 
   const remove = async (id: number) => {
     await helpRequestsService.remove(id);
+    setDeleteId(null);
   };
 
   const sorted = (reqs ?? []).sort((a, b) => Number(a.resolved) - Number(b.resolved) || b.createdAt - a.createdAt);
@@ -98,7 +101,7 @@ export function ItemQuestions({ itemId }: { itemId: number }) {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="p-0">
-                      {r.answer ? (
+                      {r.answer && !isAnswering ? (
                         <div className="px-4 py-3 bg-accent/30 space-y-1.5">
                           <div className="text-xs uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
                             <MessageSquareQuote className="h-3.5 w-3.5" />
@@ -144,17 +147,17 @@ export function ItemQuestions({ itemId }: { itemId: number }) {
 
                       {/* Action bar */}
                       <div className="flex items-stretch border-t border-border/50 divide-x divide-border/50">
-                        {!r.answer && !isAnswering && (
+                        {!isAnswering && (
                           <button
-                            onClick={() => setAnswers((a) => ({ ...a, [r.id!]: "" }))}
+                            onClick={() => setAnswers((a) => ({ ...a, [r.id!]: r.answer ?? "" }))}
                             className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary hover:bg-primary/10 active:bg-primary/15"
                           >
                             <MessageSquareQuote className="h-3.5 w-3.5" />
-                            {t("recap.recordAnswer")}
+                            {r.answer ? t("recap.editAnswer") : t("recap.recordAnswer")}
                           </button>
                         )}
                         <button
-                          onClick={() => r.id && remove(r.id)}
+                          onClick={() => r.id !== undefined && setDeleteId(r.id)}
                           className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -167,6 +170,18 @@ export function ItemQuestions({ itemId }: { itemId: number }) {
               })}
             </Accordion>
           )}
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("help.deleteQuestion")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("help.deleteQuestionDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteId !== null && remove(deleteId)}>{t("common.delete")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

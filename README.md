@@ -31,7 +31,7 @@ Ispirato alla semplicità di **Google Tasks**, Virtuoso eleva il concetto di "co
 -   **Task Intelligenti:** Un compito può essere trasformato in un task operativo collegato direttamente a un brano della tua *Library* o a una *Collection* specifica.
 -   **Scoping:** I task supportano tre modalità: free-form (testo libero), link a un item della libreria (con opzione per singolo movimento/segmento) o link a una collezione di esercizi.
 
-### 📚 La Tua Biblioteca Musicale
+### 📚 La Tua Libreria Musicale
 -   **Library & Segments:** Gestisci il tuo repertorio dividendo i brani in sezioni (es. Esposizione, Sviluppo, Coda) per uno studio mirato.
 -   **Mastery Tracking:** Monitora il livello di padronanza e i progressi dei BPM nel tempo con sparkline grafici.
 

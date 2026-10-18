@@ -62,6 +62,9 @@ export class VirtuosoDB extends Dexie {
     });
     // v15: clip metadata (exported with backups); the audio itself lives in the separate "virtuoso-audio" database.
     this.version(15).stores({ recordings: "++id, &uid, sessionId" });
+    this.version(16).stores({}).upgrade(async tx => {
+      await tx.table("library").toCollection().modify(item => { delete item.studyStatus; });
+    });
   }
 }
 

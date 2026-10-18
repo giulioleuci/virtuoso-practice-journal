@@ -20,7 +20,7 @@ export default function RoutinePage() {
     <div className="pb-24">
       <PageHeader
         title={t(id ? "routine.editTitle" : "routine.newTitle")}
-        subtitle={t("routine.subtitle")}
+
         actions={<Button asChild variant="outline"><Link to="/tasks?tab=routines"><ChevronLeft />{t("routine.back")}</Link></Button>}
       />
       {id === undefined ? (

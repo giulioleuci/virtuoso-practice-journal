@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Book, Pencil, Plus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -166,9 +167,9 @@ export function QuickAdd({ date, subjectId: filterSubject, onAdded, collapsible 
         {(subjects?.length ?? 0) > 1 && !picked && (
           <label className="grid min-w-40 gap-1.5 text-xs font-medium">
             {t("common.subject")}
-            <select value={effectiveSubject} onChange={(e) => setSubjectId(Number(e.target.value))} className={nativeSelect}>
-              {subjects?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <Select value={String(effectiveSubject ?? "")} onValueChange={(value) => setSubjectId(Number(value))} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+              {subjects?.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+            </SelectContent></Select>
           </label>
         )}
         <div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-2 max-[699px]:ml-0">

@@ -54,6 +54,7 @@ export interface ResolvedStudyPoolItem {
   collectionId?: number;
   linkType: "item" | "collection";
   plan?: import("../entities/common").SegmentEntry[];
+  sections?: ResolvedStudyPoolItem[];
 }
 
 export interface StudyRoutineGenerationPort {

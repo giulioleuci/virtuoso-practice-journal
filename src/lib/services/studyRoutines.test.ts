@@ -46,7 +46,7 @@ async function seedSubject(): Promise<number> {
 }
 
 async function seedItem(subjectId: number, title = "Sonata"): Promise<number> {
-  return (await db.library.add({ studyStatus: "not_started",
+  return (await db.library.add({
     subjectId,
     kind: "piece",
     title,
@@ -102,8 +102,8 @@ describe("studyRoutinesService.create — task generation", () => {
     const subjectId = await seedSubject();
     const collectionId = await seedCollection(subjectId);
     await db.collections.update(collectionId, { kind: "manual" });
-    const theory = await db.library.add({ subjectId, kind: "theory", studyStatus: "not_started", title: "Theory", createdAt: 1 });
-    const study = await db.library.add({ subjectId, kind: "study", studyStatus: "not_started", title: "Study", createdAt: 1 });
+    const theory = await db.library.add({ subjectId, kind: "theory", title: "Theory", createdAt: 1 });
+    const study = await db.library.add({ subjectId, kind: "study", title: "Study", createdAt: 1 });
     await db.collectionItems.bulkAdd([{ collectionId, itemId: theory, position: 0, createdAt: 1 }, { collectionId, itemId: study, position: 1, createdAt: 1 }]);
     const id = await studyRoutinesService.create(makeConfig(subjectId, [{ type: "collection", id: collectionId }], { weeksAhead: 1 }));
     const tasks = await db.tasks.where("studyRoutineId").equals(id).toArray();

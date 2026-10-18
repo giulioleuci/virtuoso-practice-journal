@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-imports -- Integration test exercises persistence through the real UI. */
 import "fake-indexeddb/auto";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { db } from "@/lib/db";
@@ -11,22 +11,60 @@ import { collectionsService } from "@/lib/services/collections";
 import CollectionPage from "./CollectionPage";
 
 const t = (key: string, vars?: Record<string, string | number>) => translate("it", key, vars);
-beforeEach(async () => { await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads); });
+beforeEach(async () => { Element.prototype.scrollIntoView = vi.fn(); await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads); });
 
 describe("CollectionPage", () => {
+  it("paginates library candidates, resets filters and keeps a valid page after adding the last candidate", async () => {
+    const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
+    const collectionId = await collectionsService.create({ kind: "collection", name: "Collection" });
+    await db.library.bulkAdd(Array.from({ length: 11 }, (_, index) => ({
+      subjectId, kind: "piece" as const,
+      title: `Material ${String(index + 1).padStart(2, "0")}`,
+      composer: index < 6 ? "Author A" : "Author B", createdAt: 1,
+    })));
+    render(<I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}><MemoryRouter initialEntries={[`/library/collections/${collectionId}`]}><Routes><Route path="/library/collections/:id" element={<CollectionPage />} /></Routes></MemoryRouter></I18nContext.Provider>);
+    await screen.findByText("1 / 3");
+    expect(screen.getAllByRole("button", { name: /^Aggiungi Material/ })).toHaveLength(5);
+    expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByText("Material 06")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Material" } });
+    expect(screen.getByText("1 / 3")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    fireEvent.click(screen.getByRole("button", { name: /Filtri/ }));
+    fireEvent.keyDown(screen.getByLabelText(t("collection.author")), { key: "ArrowDown" });
+    fireEvent.keyDown(screen.getByRole("option", { name: "Author A" }), { key: "Enter" });
+    expect(screen.getByText("1 / 2")).toBeInTheDocument();
+    expect(screen.getByText("Material 01")).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByLabelText(t("collection.author")), { key: "ArrowDown" });
+    fireEvent.keyDown(screen.getAllByRole("option")[0], { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByText("3 / 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: t("collection.addNamed", { title: "Material 11" }) }));
+    await screen.findByRole("link", { name: "Material 11" });
+    expect(screen.getByText("2 / 2")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^Aggiungi Material/ })).toHaveLength(5);
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "missing" } });
+    expect(screen.getByText(t("collection.noCandidates"))).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next page" })).not.toBeInTheDocument();
+  });
+
   it("shows a mixed index in persisted order and edits link metadata without copying or deleting material", async () => {
     const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
     const collectionId = await collectionsService.create({ kind: "manual", name: "Method", edition: "2026" });
     const ids = await db.library.bulkAdd([
-      { subjectId, kind: "theory", studyStatus: "not_started", title: "Z theory", createdAt: 1 },
-      { subjectId, kind: "study", studyStatus: "not_started", title: "A study", createdAt: 1 },
-      { subjectId, kind: "exercise", studyStatus: "not_started", title: "B exercise", createdAt: 1 },
+      { subjectId, kind: "theory", title: "Z theory", createdAt: 1 },
+      { subjectId, kind: "study", title: "A study", createdAt: 1 },
+      { subjectId, kind: "exercise", title: "B exercise", createdAt: 1 },
     ], { allKeys: true });
     await collectionsService.addItems(collectionId, [ids[0], ids[1]]);
     render(<I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}><MemoryRouter initialEntries={[`/library/collections/${collectionId}`]}><Routes><Route path="/library/collections/:id" element={<CollectionPage />} /></Routes></MemoryRouter></I18nContext.Provider>);
     await waitFor(() => expect(screen.getByRole("link", { name: "Z theory" })).toBeInTheDocument());
     expect(screen.getAllByRole("link").filter(link => /theory|study/.test(link.textContent ?? "")).map(link => link.textContent)).toEqual(["Z theory", "A study"]);
     const row = within(screen.getByRole("link", { name: "Z theory" }).closest("li")!);
+    expect(row.queryByRole("button", { name: `${t("common.edit")} Z theory` })).not.toBeInTheDocument();
     fireEvent.click(row.getByRole("button", { name: t("segments.moveDown") }));
     await waitFor(async () => expect((await collectionsService.items(collectionId)).map(link => link.itemId)).toEqual([ids[1], ids[0]]));
     fireEvent.click(row.getByRole("button", { name: t("collection.editLink") }));

@@ -107,9 +107,9 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5">
           <label className="grid gap-1.5 text-xs font-medium">{t("collections.kind")}
-            <select className="h-11 rounded-md border border-input bg-card px-3 text-base" value={effectiveKind} onChange={e => setEffectiveKind(e.target.value as CollectionKind)}>
-              {(["manual", "collection"] as const).map(k => <option key={k} value={k}>{t(`collections.kind.${k}`)}</option>)}
-            </select>
+            <Select value={effectiveKind} onValueChange={(value) => setEffectiveKind(value as CollectionKind)} ><SelectTrigger className="h-11 rounded-md border border-input bg-card px-3 text-base"><SelectValue /></SelectTrigger><SelectContent>
+              {(["manual", "collection"] as const).map(k => <SelectItem key={k} value={String(k)}>{t(`collections.kind.${k}`)}</SelectItem>)}
+            </SelectContent></Select>
           </label>
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">{t("common.name")}</Label>

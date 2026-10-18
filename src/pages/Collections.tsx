@@ -11,6 +11,9 @@ import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet";
+import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
+import { Pager } from "@/components/shared/Pager";
+import { usePagination } from "@/hooks/usePagination";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -36,6 +39,8 @@ export default function Collections() {
     [allCollections, active]
   );
 
+  const [search, setSearch] = useState("");
+  const [composer, setComposer] = useState("all");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Collection | null>(null);
 
@@ -60,7 +65,11 @@ export default function Collections() {
     });
   };
 
-  const sorted = collections.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const sorted = collections.filter(c => (composer === "all" || c.composer === composer) &&
+    (!search.trim() || `${c.name} ${c.composer ?? ""} ${c.catalog ?? ""} ${c.edition ?? ""}`.toLowerCase().includes(search.trim().toLowerCase())))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const pager = usePagination(sorted, 5);
 
   return (
     <div className="pb-24">
@@ -78,7 +87,7 @@ export default function Collections() {
             key={key}
             role="tab"
             aria-selected={active === key}
-            onClick={() => setActive(key)}
+            onClick={() => { setActive(key); setComposer("all"); pager.reset(); }}
             className={cn("-mb-px shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors", active === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
           >
             {t(`collections.kind.${key}`)}
@@ -86,8 +95,16 @@ export default function Collections() {
         ))}
       </div>
 
+      <FilterPanel search={{ value: search, onChange: value => { setSearch(value); pager.reset(); }, placeholder: t("library.searchTitleComposer") }}
+        filters={composer === "all" ? [] : [{ key: "composer", label: `${t("collection.author")}: ${composer}`, onRemove: () => { setComposer("all"); pager.reset(); } }]}
+        onReset={() => { setSearch(""); setComposer("all"); pager.reset(); }} resultCount={allCollections === undefined ? undefined : sorted.length}>
+        <FilterSelect label={t("collection.author")} value={composer} onChange={value => { setComposer(value); pager.reset(); }} options={[{ value: "all", label: t("collection.allAuthors") }, ...Array.from(new Set(collections.map(c => c.composer).filter((v): v is string => !!v))).sort((a, b) => a.localeCompare(b)).map(value => ({ value, label: value }))]} />
+      </FilterPanel>
+
       {allCollections === undefined ? (
         <div className="space-y-2"><div className="paper-skeleton h-20" /><div className="paper-skeleton h-20" /></div>
+      ) : !sorted.length && collections.length > 0 ? (
+        <EmptyState title={t("common.noResults")} />
       ) : !sorted.length ? (
         <EmptyState
           icon={FolderOpen}
@@ -96,7 +113,7 @@ export default function Collections() {
         />
       ) : (
         <ul className="divide-y divide-border border-t border-border">
-          {sorted.map((c) => (
+          {pager.pageItems.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-4">
               <span
                 className="h-3 w-3 shrink-0 rounded-full"
@@ -117,6 +134,8 @@ export default function Collections() {
           ))}
         </ul>
       )}
+
+      <Pager page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} />
 
       <NewCollectionSheet
         open={editorOpen}

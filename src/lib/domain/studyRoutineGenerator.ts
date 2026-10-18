@@ -18,6 +18,8 @@ export interface ResolvedPoolItem {
   collectionId?: number;
   linkType: "item" | "collection";
   plan?: SegmentEntry[];
+  /** Whole-item entries: its sections, drawn instead when a day asks for more entries than the pool holds. */
+  sections?: ResolvedPoolItem[];
 }
 
 /** How strongly the draw is skewed towards the items you feel least sure about. */
@@ -242,7 +244,8 @@ export function generateRoutineTasks({
 
       for (const [groupId, count] of Object.entries(groupCounts)) {
         if (count <= 0) continue;
-        const items = groupItems.get(groupId) ?? [];
+        let items = groupItems.get(groupId) ?? [];
+        if (count > items.length) items = items.flatMap((item) => item.sections?.length ? item.sections : [item]);
         if (!items.length) continue;
 
         const cap = capForGroup(groupId);

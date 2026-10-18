@@ -11,13 +11,13 @@ describe("stable material identities", () => {
     const subjectId = await seedSubject();
     const other = await db.subjects.add({ name: "Other", type: "instrument", createdAt: 1 });
     const techniqueId = await db.techniques.add({ subjectId, name: "Legato", createdAt: 1 });
-    const itemId = await libraryService.upsert({ subjectId, kind: "exercise", studyStatus: "in_progress", title: "Exercise", createdAt: 1 }, [{ label: "A", position: 0, layers: [], techniqueIds: [techniqueId] }]);
+    const itemId = await libraryService.upsert({ subjectId, kind: "exercise", title: "Exercise", createdAt: 1 }, [{ label: "A", position: 0, layers: [], techniqueIds: [techniqueId] }]);
     await expect(libraryService.upsert({ ...(await db.library.get(itemId))!, subjectId: other })).rejects.toThrow();
     expect((await db.library.get(itemId))?.subjectId).toBe(subjectId);
   });
   it("round trips archived performable materials without losing their existing programs", async () => {
     const subjectId = await seedSubject();
-    const itemId = await libraryService.upsert({ subjectId, kind: "study", studyStatus: "consolidated", title: "Study", createdAt: 1 });
+    const itemId = await libraryService.upsert({ subjectId, kind: "study", title: "Study", createdAt: 1 });
     const eventId = await performanceRepository.upsertEvent({ name: "Recital", kind: "concert", date: "2026-10-17", createdAt: 1 });
     await performanceRepository.setEventItems(eventId, [itemId]);
     await db.sessions.add({ subjectId, itemId, linkType: "item", date: "2026-10-17", marks: [{ layers: [], techniques: [], confidence: 4 }], createdAt: 1 });
@@ -30,7 +30,7 @@ describe("stable material identities", () => {
 
   it("keeps snapshot-only segments after edited free-session results stop referring to them", async () => {
     const subjectId = await seedSubject();
-    const item = { subjectId, kind: "study" as const, studyStatus: "in_progress" as const, title: "Study", createdAt: 1 };
+    const item = { subjectId, kind: "study" as const, title: "Study", createdAt: 1 };
     const id = await libraryService.upsert(item, [{ label: "A", position: 0, layers: [] }]);
     const [segment] = await db.segments.toArray();
     const sessionId = await db.sessions.add({ subjectId, itemId: id, linkType: "item", date: "2026-10-17", marks: [{ layers: [], techniques: [], confidence: 4 }], snapshot: { taskTitle: "Study", subjectName: "Piano", segments: [{ id: String(segment.id), label: "A" }] }, createdAt: 1 });
@@ -43,7 +43,7 @@ describe("stable material identities", () => {
   it("round trips unchanged historical subject references after a material changes subject", async () => {
     const subjectId = await seedSubject();
     const other = await db.subjects.add({ name: "Solfeggio", type: "theory", createdAt: 1 });
-    const itemId = await libraryService.upsert({ subjectId, kind: "exercise", studyStatus: "in_progress", title: "Reading", createdAt: 1 });
+    const itemId = await libraryService.upsert({ subjectId, kind: "exercise", title: "Reading", createdAt: 1 });
     const taskId = await db.tasks.add({ subjectId, itemId, title: "Reading", date: "2026-10-17", plan: [], done: true, createdAt: 1 });
     const sessionId = await db.sessions.add({ taskId, subjectId, itemId, linkType: "item", date: "2026-10-17", marks: [{ layers: [], techniques: [], confidence: 4 }], createdAt: 1 });
     await libraryService.upsert({ ...(await db.library.get(itemId))!, subjectId: other });
@@ -53,7 +53,7 @@ describe("stable material identities", () => {
   });
   it("preserves omitted segments, stable IDs, dates, saved plans and session/recording references", async () => {
     const subjectId = await seedSubject();
-    const item = { subjectId, kind: "study" as const, studyStatus: "not_started" as const, title: "Study", createdAt: 1 };
+    const item = { subjectId, kind: "study" as const, title: "Study", createdAt: 1 };
     const id = await libraryService.upsert(item, [{ label: "A", position: 0, layers: [], barStart: 1, barEnd: 8 }]);
     const [segment] = await db.segments.where("itemId").equals(id).toArray();
     const taskId = await db.tasks.add({ subjectId, itemId: id, title: "Study", date: "2026-10-17", plan: [{ segmentId: segment.id, layers: [], techniques: [] }], done: true, createdAt: 1 });
@@ -74,7 +74,7 @@ describe("stable material identities", () => {
 
   it("rejects foreign and duplicate segment IDs without partial updates", async () => {
     const subjectId = await seedSubject();
-    const item = { subjectId, kind: "study" as const, studyStatus: "not_started" as const, title: "Original", createdAt: 1 };
+    const item = { subjectId, kind: "study" as const, title: "Original", createdAt: 1 };
     const a = await libraryService.upsert(item, [{ label: "A", position: 0, layers: [] }]);
     const b = await libraryService.upsert(item);
     const [segment] = await db.segments.toArray();
@@ -86,7 +86,7 @@ describe("stable material identities", () => {
 
   it("creates and links atomically and preserves metadata on unchanged memberships", async () => {
     const subjectId = await seedSubject();
-    const item = { subjectId, kind: "exercise" as const, studyStatus: "not_started" as const, title: "Exercise", createdAt: 1 };
+    const item = { subjectId, kind: "exercise" as const, title: "Exercise", createdAt: 1 };
     await expect(libraryService.upsert(item, [{ label: "A", position: 0, layers: [] }], [999])).rejects.toThrow();
     expect(await db.library.count()).toBe(0);
     expect(await db.segments.count()).toBe(0);
@@ -123,8 +123,8 @@ describe("libraryService.list", () => {
   it("returns all non-deleted items", async () => {
     const subjectId = await seedSubject();
     await db.library.bulkAdd([
-      { subjectId, kind: "piece", studyStatus: "not_started", title: "Sonata", createdAt: 1 },
-      { subjectId, kind: "technique", studyStatus: "not_started", title: "Scales", createdAt: 2 },
+      { subjectId, kind: "piece", title: "Sonata", createdAt: 1 },
+      { subjectId, kind: "technique", title: "Scales", createdAt: 2 },
     ]);
     const items = await libraryService.list();
     expect(items).toHaveLength(2);
@@ -132,8 +132,8 @@ describe("libraryService.list", () => {
 
   it("excludes soft-deleted items", async () => {
     const subjectId = await seedSubject();
-    await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Archived", createdAt: 1, deletedAt: Date.now() });
-    await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Active", createdAt: 2 });
+    await db.library.add({ subjectId, kind: "piece", title: "Archived", createdAt: 1, deletedAt: Date.now() });
+    await db.library.add({ subjectId, kind: "piece", title: "Active", createdAt: 2 });
     const items = await libraryService.list();
     expect(items).toHaveLength(1);
     expect(items[0].title).toBe("Active");
@@ -151,7 +151,7 @@ describe("libraryService.list", () => {
 describe("libraryService.get", () => {
   it("returns the item by id", async () => {
     const subjectId = await seedSubject();
-    const id = (await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Concerto", createdAt: 1 })) as number;
+    const id = (await db.library.add({ subjectId, kind: "piece", title: "Concerto", createdAt: 1 })) as number;
     const item = await libraryService.get(id);
     expect(item).toBeDefined();
     expect(item!.title).toBe("Concerto");
@@ -169,7 +169,7 @@ describe("libraryService.get", () => {
 describe("libraryService.upsert — create", () => {
   it("adds the item and returns its id", async () => {
     const subjectId = await seedSubject();
-    const id = await libraryService.upsert({ subjectId, kind: "piece", studyStatus: "not_started", title: "Étude", createdAt: 0 });
+    const id = await libraryService.upsert({ subjectId, kind: "piece", title: "Étude", createdAt: 0 });
     expect(typeof id).toBe("number");
     const item = await db.library.get(id);
     expect(item).toBeDefined();
@@ -179,7 +179,7 @@ describe("libraryService.upsert — create", () => {
   it("creates associated segments", async () => {
     const subjectId = await seedSubject();
     const id = await libraryService.upsert(
-      { subjectId, kind: "piece", studyStatus: "not_started", title: "Sonata", createdAt: 0 },
+      { subjectId, kind: "piece", title: "Sonata", createdAt: 0 },
       [
         { position: 0, label: "Movement I", layers: [] },
         { position: 0, label: "Movement II", layers: [] },
@@ -192,7 +192,7 @@ describe("libraryService.upsert — create", () => {
 
   it("creates item with no segments when none provided", async () => {
     const subjectId = await seedSubject();
-    const id = await libraryService.upsert({ subjectId, kind: "technique", studyStatus: "not_started", title: "Arpeggios", createdAt: 0 });
+    const id = await libraryService.upsert({ subjectId, kind: "technique", title: "Arpeggios", createdAt: 0 });
     expect(await db.segments.where("itemId").equals(id).count()).toBe(0);
   });
 });
@@ -204,22 +204,22 @@ describe("libraryService.upsert — create", () => {
 describe("libraryService.upsert — update", () => {
   it("updates an existing item in-place", async () => {
     const subjectId = await seedSubject();
-    const id = (await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Old title", createdAt: 1 })) as number;
-    await libraryService.upsert({ id, subjectId, kind: "piece", studyStatus: "not_started", title: "New title", createdAt: 1 });
+    const id = (await db.library.add({ subjectId, kind: "piece", title: "Old title", createdAt: 1 })) as number;
+    await libraryService.upsert({ id, subjectId, kind: "piece", title: "New title", createdAt: 1 });
     const item = await db.library.get(id);
     expect(item!.title).toBe("New title");
   });
 
   it("replaces existing segments when updating", async () => {
     const subjectId = await seedSubject();
-    const id = (await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Suite", createdAt: 1 })) as number;
+    const id = (await db.library.add({ subjectId, kind: "piece", title: "Suite", createdAt: 1 })) as number;
     await db.segments.bulkAdd([
       { itemId: id, position: 0, label: "Old I", layers: [], createdAt: 1 },
       { itemId: id, position: 0, label: "Old II", layers: [], createdAt: 2 },
     ]);
 
     await libraryService.upsert(
-      { id, subjectId, kind: "piece", studyStatus: "not_started", title: "Suite", createdAt: 1 },
+      { id, subjectId, kind: "piece", title: "Suite", createdAt: 1 },
       [{ position: 0, label: "New I", layers: [] }],
     );
 
@@ -230,10 +230,10 @@ describe("libraryService.upsert — update", () => {
 
   it("clears all segments when updating with empty array", async () => {
     const subjectId = await seedSubject();
-    const id = (await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Work", createdAt: 1 })) as number;
+    const id = (await db.library.add({ subjectId, kind: "piece", title: "Work", createdAt: 1 })) as number;
     await db.segments.add({ itemId: id, position: 0, label: "Seg", layers: [], createdAt: 1 });
 
-    await libraryService.upsert({ id, subjectId, kind: "piece", studyStatus: "not_started", title: "Work", createdAt: 1 }, []);
+    await libraryService.upsert({ id, subjectId, kind: "piece", title: "Work", createdAt: 1 }, []);
 
     expect(await db.segments.where("itemId").equals(id).count()).toBe(0);
   });
@@ -246,7 +246,7 @@ describe("libraryService.upsert — update", () => {
 describe("libraryService.remove", () => {
   it("hard-deletes an item that has no practice sessions", async () => {
     const subjectId = await seedSubject();
-    const id = (await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Unused", createdAt: 1 })) as number;
+    const id = (await db.library.add({ subjectId, kind: "piece", title: "Unused", createdAt: 1 })) as number;
     const result = await libraryService.remove(id);
     expect(result).toBe("hard");
     expect(await db.library.get(id)).toBeUndefined();
@@ -254,7 +254,7 @@ describe("libraryService.remove", () => {
 
   it("soft-deletes an item that has at least one session in history", async () => {
     const subjectId = await seedSubject();
-    const itemId = (await db.library.add({ subjectId, kind: "piece", studyStatus: "not_started", title: "Practiced", createdAt: 1 })) as number;
+    const itemId = (await db.library.add({ subjectId, kind: "piece", title: "Practiced", createdAt: 1 })) as number;
     const taskId = (await db.tasks.add({
       subjectId,
       itemId,
@@ -276,7 +276,7 @@ describe("libraryService.remove", () => {
   it("also removes associated segments when hard-deleting", async () => {
     const subjectId = await seedSubject();
     const id = await libraryService.upsert(
-      { subjectId, kind: "piece", studyStatus: "not_started", title: "With segments", createdAt: 0 },
+      { subjectId, kind: "piece", title: "With segments", createdAt: 0 },
       [{ position: 0, label: "Movement I", layers: [] }],
     );
     await libraryService.remove(id);
@@ -294,7 +294,7 @@ describe("libraryService — round-trip integration", () => {
     const subjectId = await seedSubject();
 
     const id = await libraryService.upsert(
-      { subjectId, kind: "piece", studyStatus: "not_started", title: "Symphony", createdAt: 0 },
+      { subjectId, kind: "piece", title: "Symphony", createdAt: 0 },
       [{ position: 0, label: "Allegro", layers: [] }, { position: 0, label: "Andante", layers: [] }],
     );
 
@@ -302,7 +302,7 @@ describe("libraryService — round-trip integration", () => {
     expect(await db.segments.where("itemId").equals(id).count()).toBe(2);
 
     await libraryService.upsert(
-      { id, subjectId, kind: "piece", studyStatus: "not_started", title: "Symphony No. 5", createdAt: 0 },
+      { id, subjectId, kind: "piece", title: "Symphony No. 5", createdAt: 0 },
       [{ position: 0, label: "Allegro con brio", layers: [] }],
     );
     expect((await db.library.get(id))!.title).toBe("Symphony No. 5");
@@ -316,8 +316,8 @@ describe("libraryService — round-trip integration", () => {
 
   it("list correctly reflects creates and soft-deletes", async () => {
     const subjectId = await seedSubject();
-    const id1 = await libraryService.upsert({ subjectId, kind: "piece", studyStatus: "not_started", title: "Piece A", createdAt: 0 });
-    const id2 = await libraryService.upsert({ subjectId, kind: "piece", studyStatus: "not_started", title: "Piece B", createdAt: 0 });
+    const id1 = await libraryService.upsert({ subjectId, kind: "piece", title: "Piece A", createdAt: 0 });
+    const id2 = await libraryService.upsert({ subjectId, kind: "piece", title: "Piece B", createdAt: 0 });
 
     expect((await libraryService.list()).map((i) => i.title).sort()).toEqual(["Piece A", "Piece B"]);
 

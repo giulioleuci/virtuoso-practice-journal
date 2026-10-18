@@ -7,8 +7,9 @@ import { formatDate, dayKey } from "@/lib/date";
 import type { ProgressFilterLabels } from "@/components/diary/ProgressDashboard";
 import { useSessionsInRange } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
-import { Input } from "@/components/ui/input";
+
 import { PageHeader } from "@/components/shared/PageHeader";
+import { FilterPanel, FilterDateRange } from "@/components/shared/FilterPanel";
 import { ProgressTabs } from "@/components/shared/ProgressTabs";
 import { StatsDashboard } from "@/components/diary/StatsDashboard";
 import { ProgressDashboard } from "@/components/diary/ProgressDashboard";
@@ -53,7 +54,7 @@ export default function Analytics() {
     <div ref={ref} className="pb-24">
       <PageHeader
         title={t("nav.progress")}
-        subtitle={t("analytics.subtitle")}
+
         actions={
           <Button data-pdf-ignore="true" variant="outline" onClick={exportPdf} disabled={busy} aria-label={t("analytics.exportPdf")}>
             {busy ? <Loader2 className="animate-spin" /> : <FileDown />}
@@ -63,16 +64,12 @@ export default function Analytics() {
       />
       <ProgressTabs />
 
-      <div className="mb-4 grid max-w-md grid-cols-2 gap-2">
-        <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} placeholder={t("common.from")} />
-        <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} placeholder={t("common.to")} />
-      </div>
-      {(from || to) && (
-        <button onClick={() => { setFrom(""); setTo(""); }} className="mb-4 text-xs text-primary hover:underline">
-          {t("history.clearFilter", { from: from || "…", to: to || "…" })}
-        </button>
-      )}
-
+      <FilterPanel filters={[
+        ...(from ? [{ key: "from", label: `${t("common.from")}: ${formatDate(from, lang)}`, onRemove: () => setFrom("") }] : []),
+        ...(to ? [{ key: "to", label: `${t("common.to")}: ${formatDate(to, lang)}`, onRemove: () => setTo("") }] : []),
+      ]} onReset={() => { setFrom(""); setTo(""); }}>
+        <FilterDateRange from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
+      </FilterPanel>
       <StatsDashboard from={from || undefined} to={to || undefined} sessions={sessions ?? []} />
 
       <ProgressDashboard from={from || undefined} to={to || undefined} onFiltersChange={onFilters} />

@@ -88,16 +88,7 @@ export default function ItemPage() {
       </Link>
       <PageHeader
         title={item.title}
-        subtitle={
-          <span className="flex flex-wrap items-center gap-x-3">
-            <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: subjectColorCss(subject?.color, subject?.type, subject?.customColor) }} />{subject?.name}</span>
-            {item.composer && <span className="italic">{item.composer}</span>}
-            {item.inRepertoire && <span>{t("repertoire.title")}</span>}
-            <span>{t(`library.kind.${item.kind}`)}</span>
-            <span>{t(`library.status.${item.studyStatus}`)}</span>
-            {item.catalog && <span>{item.catalog}</span>}
-          </span>
-        }
+
         actions={<Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />{t("common.edit")}</Button>}
       />
 
@@ -140,7 +131,7 @@ export default function ItemPage() {
 
           <aside className="min-w-0 space-y-6">
             <section>
-              <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("item.context")}</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t("item.context")}</h3>
               <p className="text-xs text-muted-foreground">{t("item.collections")}</p>
               <p className="mb-3 text-sm">
                 {itemCollections.length ? itemCollections.map((c) => <Link key={c!.id} to={`/library/collections/${c!.id}`} className="mr-3 inline-block font-medium text-primary hover:underline underline-offset-4">{c!.name}</Link>) : t("item.noCollection")}
@@ -149,11 +140,6 @@ export default function ItemPage() {
               <p className="mb-3 text-sm">{techNames.length ? techNames.join(", ") : t("item.noTechniques")}</p>
               {item.notes && <><p className="text-xs text-muted-foreground">{t("library.stableNotes")}</p><p className="whitespace-pre-line break-words text-sm">{item.notes}</p></>}
 
-            </section>
-            <section className="border-t border-border pt-5">
-              <h3 className="mb-1 font-serif text-xl font-semibold">{t("item.questionsPrompt")}</h3>
-              <p className="mb-2 text-xs text-muted-foreground">{t("item.questionsHint")}</p>
-              <button type="button" onClick={() => setTab("questions")} className="text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">{t("item.tab.questions")}</button>
             </section>
           </aside>
         </div>

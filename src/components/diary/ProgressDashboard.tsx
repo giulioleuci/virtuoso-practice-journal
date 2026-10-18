@@ -5,11 +5,11 @@ import type { Session } from "@/domain/entities/session";
 import type { Task } from "@/domain/entities/task";
 import type { Subject } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { weeklyProgress, type ProgressWeek } from "@/domain/logic/progress";
 import { useI18n } from "@/lib/i18n";
 import { dayKey } from "@/lib/date";
-import { cn } from "@/lib/utils";
+import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
 
 const WEEK_OPTIONS = [4, 12, 26] as const;
 
@@ -45,44 +45,23 @@ export function ProgressDashboard({ from, to, onFiltersChange }: { from?: string
     [sessions, tasks, subjectId, itemId, segmentId, from, to, weeks],
   );
 
-  const chip = (active: boolean) =>
-    cn("min-h-9 px-3 rounded-full text-xs border whitespace-nowrap transition-colors", active ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border");
-
   return (
     <section className="space-y-4">
       <div className="space-y-1">
         <h3 className="font-serif text-2xl">{t("progress.title")}</h3>
         <p className="text-sm text-muted-foreground">{t("progress.subtitle")}</p>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        <button className={chip(subjectId == null)} onClick={() => pickSubject(undefined)}>{t("common.all")}</button>
-        {(subjects ?? []).map((s) => (
-          <button key={s.id} className={chip(subjectId === s.id)} onClick={() => pickSubject(s.id)}>{s.name}</button>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <Select value={itemId != null ? String(itemId) : "all"} onValueChange={(v) => { setItemId(v === "all" ? undefined : Number(v)); setSegmentId(undefined); }}>
-          <SelectTrigger aria-label={t("progress.item")}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("progress.allItems")}</SelectItem>
-            {items.map((i) => <SelectItem key={i.id} value={String(i.id)}>{i.title}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {itemId != null && itemSegments.length > 0 && (
-          <Select value={segmentId != null ? String(segmentId) : "all"} onValueChange={(v) => setSegmentId(v === "all" ? undefined : Number(v))}>
-            <SelectTrigger aria-label={t("progress.segment")}><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("progress.allSegments")}</SelectItem>
-              {itemSegments.map((x) => <SelectItem key={x.id} value={String(x.id)}>{x.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-      <div className="flex gap-2">
-        {WEEK_OPTIONS.map((n) => (
-          <button key={n} className={chip(weeks === n)} onClick={() => setWeeks(n)}>{t("progress.weeks", { count: n })}</button>
-        ))}
-      </div>
+      <FilterPanel filters={[
+        ...(subjectId != null ? [{ key: "subject", label: `${t("common.subject")}: ${subjects?.find(s => s.id === subjectId)?.name ?? subjectId}`, onRemove: () => pickSubject(undefined) }] : []),
+        ...(itemId != null ? [{ key: "item", label: library?.find(i => i.id === itemId)?.title ?? String(itemId), onRemove: () => { setItemId(undefined); setSegmentId(undefined); } }] : []),
+        ...(segmentId != null ? [{ key: "segment", label: segments?.find(s => s.id === segmentId)?.label ?? String(segmentId), onRemove: () => setSegmentId(undefined) }] : []),
+        ...(weeks !== 12 ? [{ key: "weeks", label: t("progress.weeks", { count: weeks }), onRemove: () => setWeeks(12) }] : []),
+      ]} onReset={() => { pickSubject(undefined); setWeeks(12); }}>
+        <FilterSelect label={t("common.subject")} value={subjectId == null ? "all" : String(subjectId)} onChange={value => pickSubject(value === "all" ? undefined : Number(value))} options={[{ value: "all", label: t("library.allSubjects") }, ...(subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))]} />
+        <FilterSelect label={t("progress.item")} value={itemId == null ? "all" : String(itemId)} onChange={value => { setItemId(value === "all" ? undefined : Number(value)); setSegmentId(undefined); }} options={[{ value: "all", label: t("progress.allItems") }, ...items.map(i => ({ value: String(i.id), label: i.title }))]} />
+        {itemId != null && itemSegments.length > 0 && <FilterSelect label={t("progress.segment")} value={segmentId == null ? "all" : String(segmentId)} onChange={value => setSegmentId(value === "all" ? undefined : Number(value))} options={[{ value: "all", label: t("progress.allSegments") }, ...itemSegments.map(s => ({ value: String(s.id), label: s.label }))]} />}
+        <FilterSelect label={t("analytics.pdfWeeks")} value={String(weeks)} onChange={value => setWeeks(Number(value))} options={WEEK_OPTIONS.map(n => ({ value: String(n), label: t("progress.weeks", { count: n }) }))} />
+      </FilterPanel>
       <ChartCard title={t("progress.confidence")} data={data} dataKey="confidence" kind="line" domain={[1, 5]} />
       <ChartCard title={t("progress.mood")} data={data} dataKey="mood" kind="line" domain={[1, 5]} />
       <ChartCard title={t("progress.focus")} data={data} dataKey="focus" kind="line" domain={[1, 5]} />

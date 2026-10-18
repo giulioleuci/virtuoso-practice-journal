@@ -108,7 +108,7 @@ function SessionView({ session }: { session: Session }) {
       </Link>
       <PageHeader
         title={snap?.taskTitle ?? task?.title ?? t("session.sessionTitle")}
-        subtitle={editing ? t("sessionPage.editSubtitle") : formatDate(session.date, lang, "long")}
+
         actions={!editing && (
           <>
             <Button variant="outline" onClick={() => setEditing(true)}><Pencil />{t("common.edit")}</Button>
