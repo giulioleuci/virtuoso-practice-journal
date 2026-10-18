@@ -1,6 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Check, ChevronDown, Copy, ListChecks, Minus, MoreHorizontal, Plus, Trash2, Wand2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, Copy, ListChecks, Minus, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { StudyGroup, StudyPoolEntry, StudyRoutine } from "@/domain/ports/studyRoutine";
@@ -29,6 +29,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { StateNotice } from "@/components/shared/StateNotice";
 import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
+import { FloatingActions } from "@/components/shared/FloatingActions";
 
 import { nativeSelect } from "./WhenFields";
 
@@ -138,7 +139,6 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
         return { ...g, pool: on ? [...rest, ...entries] : rest };
       }),
     );
-  const itemEntry = (i: LibraryItem): StudyPoolEntry => ({ type: "item", id: i.id! });
   const moveGroup = (id: string, by: -1 | 1) =>
     setGroups((prev) => {
       const i = prev.findIndex((g) => g.id === id), j = i + by;
@@ -157,25 +157,6 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
     setCollectionId(undefined);
     setOpenSections(null);
     setGroups((prev) => prev.map((g) => ({ ...g, pool: [] })));
-  };
-
-  const applyTemplate = (kind: "mixed" | "daily" | "reset") => {
-    if (kind === "reset") {
-      setGroups([]);
-      setMatrix({});
-      return;
-    }
-    const all = library ?? [];
-    const of = (...ks: string[]) => all.filter((i) => ks.includes(i.kind)).map(itemEntry);
-    const next: StudyGroup[] =
-      kind === "mixed"
-        ? [
-            { id: genId(), name: t("routine.groupTechnique"), pool: of("technique", "exercise", "theory") },
-            { id: genId(), name: t("routine.groupRepertoire"), pool: of("piece", "study") },
-          ]
-        : [{ id: genId(), name: t("routine.groupDaily"), pool: of("piece", "study").length ? of("piece", "study") : all.map(itemEntry) }];
-    setGroups(next);
-    setMatrix(Object.fromEntries(WEEKDAYS.map((d) => [String(d), Object.fromEntries(next.map((g) => [g.id, 1]))])));
   };
 
   // ── matrix ──────────────────────────────────────────────────────
@@ -260,37 +241,31 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
         </div>
 
         <section className="mt-7 border-t border-border pt-6">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-serif text-2xl font-semibold">{t("routine.groups")}</h2>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button type="button" size="sm" variant="outline"><Wand2 />{t("routine.templates")}<ChevronDown /></Button></DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => applyTemplate("mixed")}>{t("routine.templateMixed")}</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => applyTemplate("daily")}>{t("routine.templateDaily")}</DropdownMenuItem>
-                {groups.length > 0 && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => applyTemplate("reset")}>{t("routine.templateReset")}</DropdownMenuItem></>}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <h2 className="mb-3 font-serif text-2xl font-semibold">{t("routine.groups")}</h2>
+          <p className="mb-3 text-xs text-muted-foreground">{t("routine.orderHint")}</p>
           {groups.length === 0 ? (
             <p className="text-xs text-muted-foreground">{t("routine.groupsHint")}</p>
           ) : (
             <ul className="grid gap-2">
               {groups.map((g, i) => (
-                <li key={g.id} className="flex items-center gap-2">
-                  <Input aria-label={t("routine.groupName", { n: i + 1 })} placeholder={t("routine.groupName", { n: i + 1 })} value={g.name} required maxLength={80} onChange={(e) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, name: e.target.value } : x)))} />
-                  <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-muted-foreground">{t("routine.groupCount", { count: g.pool.length })}</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button type="button" size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label={t("routine.moreActions")}><MoreHorizontal /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem disabled={i === 0} onSelect={() => moveGroup(g.id, -1)}><ArrowUp />{t("segments.moveUp")}</DropdownMenuItem>
-                      <DropdownMenuItem disabled={i === groups.length - 1} onSelect={() => moveGroup(g.id, 1)}><ArrowDown />{t("segments.moveDown")}</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuCheckboxItem checked={!!g.combine} onCheckedChange={(on) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, combine: on } : x)))}>{t("routine.combineGroup")}</DropdownMenuCheckboxItem>
-                      <DropdownMenuItem disabled={!g.pool.length} onSelect={() => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, pool: [] } : x)))}>{t("routine.clearGroup")}</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => removeGroup(g.id)}><Trash2 />{t("studyRoutine.removeGroup")}</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <li key={g.id} className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Input aria-label={t("routine.groupName", { n: i + 1 })} placeholder={t("routine.groupName", { n: i + 1 })} value={g.name} required maxLength={80} onChange={(e) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, name: e.target.value } : x)))} />
+                    <span className="mt-1 block text-xs tabular-nums text-muted-foreground">{t("routine.groupCount", { count: g.pool.length })}</span>
+                  </div>
+                  <div className="flex shrink-0 items-center">
+                    <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={i === 0} aria-label={`${t("segments.moveUp")}: ${g.name}`} onClick={() => moveGroup(g.id, -1)}><ArrowUp /></Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={i === groups.length - 1} aria-label={`${t("segments.moveDown")}: ${g.name}`} onClick={() => moveGroup(g.id, 1)}><ArrowDown /></Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button type="button" size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label={t("routine.moreActions")}><MoreHorizontal /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuCheckboxItem checked={!!g.combine} onCheckedChange={(on) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, combine: on } : x)))}>{t("routine.combineGroup")}</DropdownMenuCheckboxItem>
+                        <DropdownMenuItem disabled={!g.pool.length} onSelect={() => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, pool: [] } : x)))}>{t("routine.clearGroup")}</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => removeGroup(g.id)}><Trash2 />{t("studyRoutine.removeGroup")}</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -368,11 +343,11 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                                     {t("routine.sectionsCount", { on: segOn, n: segs.length })}<ChevronDown />
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent align="end" aria-label={r.title} className="w-[min(24rem,calc(100vw-2rem))]">
-                                  <div className="mb-1 flex gap-1">
-                                    <Button type="button" size="sm" variant="ghost" onClick={() => setEntries(active.id, segs.map(sg => ({ type: "segment", id: sg.id! })), true)}>{t("common.selectAll")}</Button>
-                                    <Button type="button" size="sm" variant="ghost" onClick={() => setEntries(active.id, segs.map(sg => ({ type: "segment", id: sg.id! })), false)}>{t("common.removeAll")}</Button>
-                                    <Button type="button" size="sm" variant={onlySelectedSegs ? "secondary" : "ghost"} aria-pressed={onlySelectedSegs} className="ml-auto" onClick={() => { setOnlySelectedSegs(v => !v); setSegmentPage(0); }}><Check />{t("routine.onlySelected")}</Button>
+                                <PopoverContent align="end" collisionPadding={16} aria-label={r.title} className="max-h-[var(--radix-popover-content-available-height)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto">
+                                  <div className="mb-3 grid grid-cols-2 gap-2">
+                                    <Button type="button" size="sm" variant="ghost" className="h-auto min-h-11 whitespace-normal" onClick={() => setEntries(active.id, segs.map(sg => ({ type: "segment", id: sg.id! })), true)}>{t("common.selectAll")}</Button>
+                                    <Button type="button" size="sm" variant="ghost" className="h-auto min-h-11 whitespace-normal" onClick={() => setEntries(active.id, segs.map(sg => ({ type: "segment", id: sg.id! })), false)}>{t("common.removeAll")}</Button>
+                                    <Button type="button" size="sm" variant={onlySelectedSegs ? "secondary" : "ghost"} aria-pressed={onlySelectedSegs} className="col-span-2 h-auto min-h-11 whitespace-normal" onClick={() => { setOnlySelectedSegs(v => !v); setSegmentPage(0); }}><Check />{t("routine.onlySelected")}</Button>
                                   </div>
                                   <ul className="divide-y divide-border border-y border-border">
                                     {shownSegs.slice(segmentPage * 5, segmentPage * 5 + 5).map(sg => {
@@ -530,10 +505,10 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
           </StateNotice>
         )}
         {isEdit && <p className="mt-6 text-xs text-muted-foreground">{t("routine.appliesFrom", { date: formatDate(today(), lang, "medium") })}</p>}
-        <div className="mt-7 flex justify-end gap-2 border-t border-border pt-5 max-[699px]:sticky max-[699px]:bottom-[var(--floating-bottom)] max-[699px]:bg-card max-[699px]:pb-3">
+        <FloatingActions>
           <Button type="button" variant="ghost" onClick={onCancel}>{t("common.cancel")}</Button>
           <Button type="submit" disabled={errors.length > 0 || submitting}><Check />{t(isEdit ? "routine.save" : "routine.create")}</Button>
-        </div>
+        </FloatingActions>
       </form>
 
       <aside className="min-w-0 space-y-4 text-sm">

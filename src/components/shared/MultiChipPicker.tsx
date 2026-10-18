@@ -88,8 +88,8 @@ export function MultiChipPicker<T extends string | number>({
                       >
                         <span
                           className={cn(
-                            "h-4 w-4 rounded border flex items-center justify-center shrink-0",
-                            active ? "bg-primary border-primary text-primary-foreground" : "border-input"
+                            "h-4 w-4 rounded-sm border-2 flex items-center justify-center shrink-0",
+                            active ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground bg-background"
                           )}
                         >
                           {active && <Check className="h-3 w-3" />}

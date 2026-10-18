@@ -333,23 +333,21 @@ export default function Library() {
           ...(techniqueFilter !== "all" ? [{ key: "technique", label: allTechniques?.find(tech => tech.id === Number(techniqueFilter))?.name ?? techniqueFilter, onRemove: () => setTechniqueFilter("all") }] : []),
           ...(favoritesOnly ? [{ key: "favorites", label: t("filters.favoritesOnly"), onRemove: () => setFavoritesOnly(false) }] : []),
           ...(repertoireOnly ? [{ key: "repertoire", label: t("repertoire.title"), onRemove: () => setRepertoireOnly(false) }] : []),
-          ...(sortBy !== "recent" ? [{ key: "sort", label: t({ title: "library.sortTitle", titleDesc: "library.sortTitleDesc", composer: "library.sortComposer" }[sortBy]), onRemove: () => setSortBy("recent") }] : []),
-          ...(favoritesFirst ? [{ key: "favoritesFirst", label: t("library.favoritesFirst"), onRemove: () => setFavoritesFirst(false) }] : []),
-          ...(repertoireFirst ? [{ key: "repertoireFirst", label: t("library.repertoireFirst"), onRemove: () => setRepertoireFirst(false) }] : []),
-          ...(groupByCollection ? [{ key: "group", label: t("library.groupedByCollection"), onRemove: () => setGroupByCollection(false) }] : []),
         ]}
-        onReset={() => { setSearch(""); setSubjectFilter("all"); setComposerFilter("all"); setCollectionFilter("all"); setTechniqueFilter("all"); setFavoritesOnly(false); setRepertoireOnly(false); setFavoritesFirst(true); setRepertoireFirst(true); setSortBy("recent"); setGroupByCollection(false); }}
+        onReset={() => { setSearch(""); setSubjectFilter("all"); setComposerFilter("all"); setCollectionFilter("all"); setTechniqueFilter("all"); setFavoritesOnly(false); setRepertoireOnly(false); }}
+        sorting={<>
+          <FilterSelect label={t("link.sortBy")} value={sortBy} onChange={setSortBy} options={[{ value: "recent", label: t("library.sortRecent") }, { value: "title", label: t("library.sortTitle") }, { value: "titleDesc", label: t("library.sortTitleDesc") }, { value: "composer", label: t("library.sortComposer") }]} />
+          <Button type="button" variant={groupByCollection ? "secondary" : "outline"} className="min-h-11" aria-pressed={groupByCollection} onClick={() => setGroupByCollection(v => !v)}><Layers />{groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}</Button>
+          <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={favoritesFirst} onCheckedChange={on => setFavoritesFirst(on === true)} />{t("library.favoritesFirst")}</label>
+          <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={repertoireFirst} onCheckedChange={on => setRepertoireFirst(on === true)} />{t("library.repertoireFirst")}</label>
+        </>}
       >
         <FilterSelect label={t("common.subject")} value={subjectFilter} onChange={setSubjectFilter} options={[{ value: "all", label: t("library.allSubjects") }, ...(subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))]} />
         <FilterSelect label={t("collection.author")} value={composerFilter} onChange={setComposerFilter} options={[{ value: "all", label: t("collection.allAuthors") }, ...Array.from(new Set((items ?? []).map(i => i.composer).filter((v): v is string => !!v))).sort((a, b) => a.localeCompare(b, lang)).map(value => ({ value, label: value }))]} />
         <FilterSelect label={t("link.filterByCollection")} value={collectionFilter} onChange={setCollectionFilter} options={[{ value: "all", label: t("link.allCollections") }, ...(allCollections ?? []).map(c => ({ value: String(c.id), label: c.name }))]} />
         <FilterSelect label={t("filters.technique")} value={techniqueFilter} onChange={setTechniqueFilter} options={[{ value: "all", label: t("common.all") }, ...(allTechniques ?? []).map(tech => ({ value: String(tech.id), label: tech.name }))]} />
-        <FilterSelect label={t("link.sortBy")} value={sortBy} onChange={setSortBy} options={[{ value: "recent", label: t("library.sortRecent") }, { value: "title", label: t("library.sortTitle") }, { value: "titleDesc", label: t("library.sortTitleDesc") }, { value: "composer", label: t("library.sortComposer") }]} />
-        <Button type="button" variant={groupByCollection ? "secondary" : "outline"} className="min-h-11" aria-pressed={groupByCollection} onClick={() => setGroupByCollection(v => !v)}><Layers />{groupByCollection ? t("library.groupedByCollection") : t("library.groupByCollection")}</Button>
         <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={favoritesOnly} onCheckedChange={on => setFavoritesOnly(on === true)} />{t("filters.favoritesOnly")}</label>
         <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={repertoireOnly} onCheckedChange={on => setRepertoireOnly(on === true)} />{t("repertoire.title")}</label>
-        <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={favoritesFirst} onCheckedChange={on => setFavoritesFirst(on === true)} />{t("library.favoritesFirst")}</label>
-        <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={repertoireFirst} onCheckedChange={on => setRepertoireFirst(on === true)} />{t("library.repertoireFirst")}</label>
       </FilterPanel>
       {list}
 

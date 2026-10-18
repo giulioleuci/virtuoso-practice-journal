@@ -2,7 +2,7 @@
 import "fake-indexeddb/auto";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { db } from "@/lib/db";
 import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
@@ -40,4 +40,27 @@ it.each([undefined, 99])("seeds missing practice tempo after visiting the log an
   const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
   render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><PracticeMode task={{ id: 1, title: "Scales", subjectId: 1, plan: [], date: "2026-10-18", done: false, createdAt: 1 }} onClose={() => {}} onFinish={() => {}} /></I18nContext.Provider>);
   expect(await screen.findByText(String(bpm ?? 76))).toBeInTheDocument();
+});
+
+it("switches between plain and dotted choices without discarding the selected tempo", async () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);
+  const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
+  const finish = vi.fn();
+  render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><PracticeMode task={{ id: 1, title: "Scales", subjectId: 1, plan: [], date: "2026-10-18", done: false, createdAt: 1 }} onClose={() => {}} onFinish={finish} /></I18nContext.Provider>);
+  const notes = within(screen.getByRole("group", { name: t("practice.noteLabel") }));
+  await waitFor(() => expect(notes.getByRole("button", { name: "Quarter note" })).toHaveAttribute("aria-pressed", "true"));
+  expect(notes.getByRole("button", { name: "Whole note" })).toBeInTheDocument();
+  expect(notes.queryByRole("button", { name: "Dotted quarter note" })).not.toBeInTheDocument();
+  const toggle = notes.getByRole("button", { name: "Dotted notes" });
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-pressed", "true");
+  expect(notes.queryByRole("button", { name: "Quarter note" })).not.toBeInTheDocument();
+  fireEvent.click(notes.getByRole("button", { name: "Dotted eighth note" }));
+  expect(notes.getByRole("button", { name: "Dotted eighth note" })).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(toggle);
+  expect(notes.getByRole("button", { name: "Quarter note" })).toBeInTheDocument();
+  expect(notes.queryByRole("button", { name: "Dotted eighth note" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: t("practice.finishLog") }));
+  expect(finish).toHaveBeenCalledWith(expect.objectContaining({ marks: [expect.objectContaining({ noteVal: "dotted-eighth", bpm: 60 })] }));
 });

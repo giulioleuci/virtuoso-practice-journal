@@ -137,7 +137,7 @@ export default function History() {
     setSearchParams(params => { const next = new URLSearchParams(params); if (value) next.set(field, value); else next.delete(field); return next; });
   };
   const resetFilters = () => {
-    setFrom(""); setTo(""); setSubjectFilter("all"); setKindFilter("all"); setSortDir("newest"); setPage(0);
+    setFrom(""); setTo(""); setSubjectFilter("all"); setKindFilter("all"); setPage(0);
     setSearchParams(params => { const next = new URLSearchParams(params); next.delete("from"); next.delete("to"); return next; });
   };
 
@@ -159,11 +159,10 @@ export default function History() {
         ...(kindFilter !== "all" ? [{ key: "kind", label: t(`library.kind.${kindFilter}`), onRemove: () => { setKindFilter("all"); setPage(0); } }] : []),
         ...(from ? [{ key: "from", label: `${t("common.from")}: ${formatDate(from, lang)}`, onRemove: () => changeDate("from", "") }] : []),
         ...(to ? [{ key: "to", label: `${t("common.to")}: ${formatDate(to, lang)}`, onRemove: () => changeDate("to", "") }] : []),
-        ...(sortDir !== "newest" ? [{ key: "sort", label: t("history.oldestFirst"), onRemove: () => { setSortDir("newest"); setPage(0); } }] : []),
-      ]} onReset={resetFilters} resultCount={sessions === undefined ? undefined : filteredSessions.length}>
+      ]} onReset={resetFilters} resultCount={sessions === undefined ? undefined : filteredSessions.length}
+        sorting={<FilterSelect label={t("link.sortBy")} value={sortDir} onChange={value => { setSortDir(value); setPage(0); }} options={[{ value: "newest", label: t("history.newestFirst") }, { value: "oldest", label: t("history.oldestFirst") }]} />}>
         <FilterSelect label={t("common.subject")} value={subjectFilter} onChange={value => { setSubjectFilter(value); setPage(0); }} options={[{ value: "all", label: t("history.allSubjects") }, ...(subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))]} />
         <FilterSelect label={t("link.filterByKind")} value={kindFilter} onChange={value => { setKindFilter(value); setPage(0); }} options={KINDS.map(k => ({ value: k, label: k === "all" ? t("history.allKinds") : t(`library.kind.${k}`) }))} />
-        <FilterSelect label={t("link.sortBy")} value={sortDir} onChange={value => { setSortDir(value); setPage(0); }} options={[{ value: "newest", label: t("history.newestFirst") }, { value: "oldest", label: t("history.oldestFirst") }]} />
         <FilterDateRange from={from} to={to} onFromChange={value => changeDate("from", value)} onToChange={value => changeDate("to", value)} />
       </FilterPanel>
       {sessions === undefined ? (

@@ -12,9 +12,10 @@ import { useI18n } from "@/lib/i18n";
 import { today, dayKey, formatDate, now, addDays, parseDayKey } from "@/lib/date";
 import { slotForDate } from "@/lib/recurrence";
 import { computeStreakFromSessions } from "@/lib/domain/streak";
+import { sortDiaryTasks, type DiaryTaskOrder } from "@/lib/domain/taskOrder";
 import { planTempoLabel, sessionLabel } from "@/lib/format";
 import { subjectColorCss } from "@/lib/subjectColors";
-import { CompleteIcon, TasksIcon, PlayIcon, CarryOverIcon, CloseIcon, ResetIcon, HideIcon, LessonIcon, ArrowRightIcon, SessionIcon } from "@/lib/icons";
+import { CompleteIcon, PlayIcon, CarryOverIcon, CloseIcon, ResetIcon, HideIcon, LessonIcon, ArrowRightIcon, SessionIcon } from "@/lib/icons";
 import { Link, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -27,7 +28,6 @@ import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
 import { Archive, CalendarPlus, Check, CheckSquare, MessageSquareQuote, Trash2 } from "lucide-react";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { CompletionBar } from "@/components/diary/CompletionBar";
-import { QuickAdd } from "@/components/diary/QuickAdd";
 import { WeekStrip } from "@/components/diary/WeekStrip";
 import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
 import { HomeworkInput } from "@/components/lessons/HomeworkInput";
@@ -118,6 +118,7 @@ export default function Diary() {
   const [selectedCarryIds, setSelectedCarryIds] = useState<number[]>([]);
   const [ignoredPage, setIgnoredPage] = useState(0);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [taskOrder, setTaskOrder] = useState<DiaryTaskOrder>("routine");
   const [completed, setCompleted] = useState<Task | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [pickedIds, setPickedIds] = useState<number[]>([]);
@@ -146,15 +147,14 @@ export default function Diary() {
   }, [tasks, selectedSubjectId]);
 
   const taskGroups = useMemo(() => {
-    const groups = new Map<number, Task[]>();
-    // Open tasks first; Array.sort is stable so the plan order is otherwise kept.
-    for (const task of [...(filteredTasks ?? [])].sort((a, b) => Number(a.done) - Number(b.done))) {
-      const group = groups.get(task.subjectId) ?? [];
-      group.push(task);
-      groups.set(task.subjectId, group);
+    const groups: { subjectId: number; items: Task[] }[] = [];
+    for (const task of sortDiaryTasks(filteredTasks ?? [], studyRoutines ?? [], taskOrder, lang)) {
+      const previous = groups.at(-1);
+      if (previous?.subjectId === task.subjectId) previous.items.push(task);
+      else groups.push({ subjectId: task.subjectId, items: [task] });
     }
-    return Array.from(groups, ([subjectId, items]) => ({ subjectId, items }));
-  }, [filteredTasks]);
+    return groups;
+  }, [filteredTasks, studyRoutines, taskOrder, lang]);
 
   const emptyQuote = useMemo(() => pickQuote(undefined, lang), [lang]);
   const heroQuote = useMemo(() => pickQuote(undefined, lang, todayKey), [lang, todayKey]);
@@ -167,7 +167,6 @@ export default function Diary() {
       {...(decorative ? { "aria-hidden": true } : { title: s?.name, role: "img", "aria-label": s?.name })}
     />
   );
-  const firstOpenId = filteredTasks?.find((x) => !x.done)?.id;
 
   // One-tap completion marks the task done; results are logged separately and never invented.
   const complete = async (task: Task) => {
@@ -241,9 +240,6 @@ export default function Diary() {
               <span className="tabular-nums">{t("diary.doneSummary", { done: doneCount, total: totalCount })}</span>
               <span className="flex flex-wrap items-center gap-1">
                 {!isToday && <Button size="sm" variant="ghost" onClick={() => selectDay(todayKey)}>{t("diary.backToToday")}</Button>}
-                <Link to="/tasks" className="inline-flex min-h-11 items-center gap-1 px-2 text-xs hover:text-foreground">
-                  <TasksIcon className="h-4 w-4" /> {t("common.all")}
-                </Link>
                 {!!totalCount && (
                   <Button size="sm" variant="ghost" aria-pressed={selecting} onClick={() => (selecting ? stopSelecting() : setSelecting(true))}>
                     {selecting ? <Check /> : <CheckSquare />} {selecting ? t("diary.selectDone") : t("common.select")}
@@ -252,14 +248,18 @@ export default function Diary() {
               </span>
             </div>
             <Progress value={totalCount ? (doneCount / totalCount) * 100 : 0} className="h-1.5 [&>div]:bg-success" aria-label={t("diary.doneSummary", { done: doneCount, total: totalCount })} />
-            <QuickAdd collapsible date={date} subjectId={selectedSubjectId} onAdded={(d) => d !== date && selectDay(d)} />
 
-            {subjectFilterOptions.length > 1 && (
-              <FilterPanel filters={selectedSubjectId === null ? [] : [{ key: "subject", label: `${t("common.subject")}: ${subjectMap.get(selectedSubjectId)?.name ?? selectedSubjectId}`, onRemove: () => setSelectedSubjectId(null) }]} onReset={() => setSelectedSubjectId(null)} resultCount={filteredTasks?.length}>
-                <FilterSelect label={t("common.subject")} value={selectedSubjectId === null ? "all" : String(selectedSubjectId)} onChange={value => setSelectedSubjectId(value === "all" ? null : Number(value))} options={[
+            {(!!totalCount || subjectFilterOptions.length > 1) && (
+              <FilterPanel filters={selectedSubjectId === null ? [] : [{ key: "subject", label: `${t("common.subject")}: ${subjectMap.get(selectedSubjectId)?.name ?? selectedSubjectId}`, onRemove: () => setSelectedSubjectId(null) }]} onReset={() => setSelectedSubjectId(null)} resultCount={filteredTasks?.length}
+                sorting={!!totalCount && <FilterSelect label={t("diary.sortTasks")} value={taskOrder} onChange={setTaskOrder} options={[
+                  { value: "routine", label: t("diary.sortRoutine") },
+                  { value: "title", label: t("diary.sortTitle") },
+                  { value: "created", label: t("diary.sortCreated") },
+                ]} />}>
+                {subjectFilterOptions.length > 1 && <FilterSelect label={t("common.subject")} value={selectedSubjectId === null ? "all" : String(selectedSubjectId)} onChange={value => setSelectedSubjectId(value === "all" ? null : Number(value))} options={[
                   { value: "all", label: `${t("diary.allSubjects")} (${tasks?.length ?? 0})` },
                   ...subjectFilterOptions.map(s => ({ value: String(s.id), label: `${s.name} (${tasks?.filter(task => task.subjectId === s.id).length ?? 0})` })),
-                ]} />
+                ]} />}
               </FilterPanel>
             )}
 
@@ -287,11 +287,11 @@ export default function Diary() {
               <p className="py-6 text-center text-sm text-muted-foreground">{t("common.noResults")}</p>
             ) : (
               <div className="space-y-6">
-                {taskGroups.map(({ subjectId, items }) => {
+                {taskGroups.map(({ subjectId, items }, groupIndex) => {
                   const groupSubject = subjectMap.get(subjectId);
                   const completed = items.filter((task) => task.done).length;
                   return (
-                    <section key={subjectId} aria-label={groupSubject?.name ?? t("diary.otherSubject")}>
+                    <section key={`${subjectId}-${groupIndex}`} aria-label={groupSubject?.name ?? t("diary.otherSubject")}>
                       <div className="mb-1 flex items-center justify-between gap-3">
                         <h3 className="flex min-w-0 items-center gap-2 font-serif text-xl font-semibold">
                           {dot(groupSubject, true)}
@@ -354,16 +354,17 @@ export default function Diary() {
                               </div>
 
                               {!selecting && (
-                                <div className="col-start-2 flex flex-wrap items-center gap-2">
+                                <div className="col-start-2 flex items-center gap-2">
                                 {!task.done && <Button
-                                  variant={task.id === firstOpenId ? "default" : "outline"}
                                   onClick={() => setPracticeTask(task)}
                                   aria-label={`${t("diary.startPractice")}: ${task.title}`}
-                                  className="min-h-11"
+                                  className="min-h-11 px-3"
                                 >
                                   <PlayIcon /> {t("diary.start")}
                                 </Button>}
-                                <Link to={`/log?task=${task.id}`} className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-primary hover:underline underline-offset-4">{t("rate.logResults")}</Link>
+                                <Button asChild variant="ghost" className="min-h-11 px-2">
+                                  <Link to={`/log?task=${task.id}`}>{t("diary.logResults")}</Link>
+                                </Button>
                                 </div>
                               )}
                             </li>
@@ -525,7 +526,7 @@ export default function Diary() {
         <div
           role="toolbar"
           aria-label={t("diary.selectionBar")}
-          className="fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] bottom-[var(--floating-bottom)] z-[60] flex max-w-[760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[14px] border border-border bg-card px-3.5 py-2.5 shadow-raised min-[700px]:bottom-[max(calc(1.25rem+env(safe-area-inset-bottom)),var(--floating-bottom))] min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]"
+          className="fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] bottom-[var(--floating-bottom)] z-[60] flex max-w-[760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[14px] border border-muted-foreground/40 bg-card px-3.5 py-2.5 shadow-raised min-[700px]:bottom-[max(calc(1.25rem+env(safe-area-inset-bottom)),var(--floating-bottom))] min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]"
         >
           <span className="text-sm"><strong className="font-numeric font-semibold tabular-nums">{t("diary.selectedCount", { count: picked.length })}</strong></span>
           <span className="flex gap-1">

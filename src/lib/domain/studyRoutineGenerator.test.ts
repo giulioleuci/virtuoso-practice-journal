@@ -69,6 +69,21 @@ const routine = (over: Partial<StudyRoutine>): StudyRoutine => ({
 });
 
 describe("generateRoutineTasks", () => {
+  it("follows configured group order instead of matrix order", () => {
+    const r = routine({
+      groups: [
+        { id: "scales", name: "Scale", pool: [{ type: "item", id: 2 }, { type: "item", id: 1 }] },
+        { id: "arpeggios", name: "Arpeggi", pool: [{ type: "item", id: 3 }] },
+      ],
+      matrix: { "1": { arpeggios: 1, scales: 1 }, "2": { arpeggios: 1, scales: 2 } },
+    });
+    const tasks = generateRoutineTasks({ routine: r, groupItems: new Map([
+      ["scales", [item(2), item(1)]], ["arpeggios", [item(3)]],
+    ]), stats: null, fromDate: "2026-05-18", createdAt: 0, rng: () => 0 });
+    expect(tasks.filter(t => t.date === "2026-05-18").map(t => t.itemId)).toEqual([1, 3]);
+    expect(tasks.filter(t => t.date === "2026-05-19").map(t => t.itemId)).toEqual([2, 1, 3]);
+  });
+
   it("emits one task on the matrix day within the horizon", () => {
     const groupItems = new Map([["g1", [item(1, "Sonata")]]]);
     const tasks = generateRoutineTasks({ routine: routine({}), groupItems, stats: null, fromDate: "2026-05-18", createdAt: 100 });

@@ -33,3 +33,24 @@ it("keeps search and removable criteria available while filters are collapsed", 
   expect(screen.getByRole("searchbox")).toHaveValue("");
   expect(screen.queryByRole("button", { name: /Materia: Piano/ })).not.toBeInTheDocument();
 });
+
+it("opens filtering and sorting separately without submitting the surrounding form", () => {
+  function Controls() {
+    const [order, setOrder] = useState("recent");
+    return <form onSubmit={event => { event.preventDefault(); throw new Error("Toolbar submitted the form"); }}>
+      <FilterPanel sorting={<label>Ordine<select value={order} onChange={event => setOrder(event.target.value)}><option value="recent">Recenti</option><option value="title">Titolo</option></select></label>}>
+        <input aria-label="Autore" />
+      </FilterPanel>
+    </form>;
+  }
+  render(<I18nContext.Provider value={{ lang: "it", setLang: () => {}, t: (key, vars) => translate("it", key, vars) }}><Controls /></I18nContext.Provider>);
+  fireEvent.click(screen.getByRole("button", { name: translate("it", "common.filters") }));
+  expect(screen.getByRole("textbox", { name: "Autore" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: translate("it", "link.sortBy") }));
+  expect(screen.queryByRole("textbox", { name: "Autore" })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole("combobox", { name: "Ordine" }), { target: { value: "title" } });
+  fireEvent.keyDown(screen.getByRole("combobox"), { key: "Escape" });
+  expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: translate("it", "link.sortBy") }));
+  expect(screen.getByRole("combobox", { name: "Ordine" })).toHaveValue("title");
+});

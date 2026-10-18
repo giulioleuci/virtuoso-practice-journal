@@ -3,7 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Dialog, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import { NOTE_VALUES } from "@/domain/constants/noteValues";
+import { COMPOUND_NOTES, SIMPLE_NOTES } from "@/domain/constants/noteValues";
 import type { SegmentMark } from "@/domain/entities/common";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { RatingFields } from "@/components/shared/RatingFields";
 import { ClipDraftList, Recorder } from "./Recorder";
 import { Slider } from "@/components/ui/slider";
-import { X, Volume2, VolumeX, MessageSquareQuote, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { X, Volume2, VolumeX, MessageSquareQuote, ChevronLeft, ChevronRight, Check, Dot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingActions } from "@/components/shared/FloatingActions";
 
@@ -83,6 +83,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   const [meterOn, setMeterOn] = useState(false);
   const [muted, setMuted] = useState(false);
   const [beatsPerBar, setBeatsPerBar] = useState(1);
+  const [showDottedNotes, setShowDottedNotes] = useState(false);
   const [pulse, setPulse] = useState(0);
   const beatRef = useRef(0);
   const ctxRef = useRef<AudioContext | null>(null);
@@ -158,15 +159,15 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background" />
     <DialogPrimitive.Content aria-describedby={undefined} onInteractOutside={(event) => event.preventDefault()} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }} className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-background animate-fade-in pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-5 pb-44 pt-6 min-[700px]:px-9 min-[700px]:pb-28">
-        <header className="mb-4 flex items-start justify-between gap-4">
-          <DialogTitle asChild className="min-w-0 break-words font-serif text-[2.25rem] font-semibold leading-[1.15] tracking-tight"><h1>{t("practice.practiceMode")}</h1></DialogTitle>
-          <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
-        </header>
-        <p role={storageFailed ? "alert" : "status"} className={`mb-4 text-xs ${storageFailed ? "text-destructive" : "text-muted-foreground"}`}>{t(storageFailed ? "draft.storageFailed" : "draft.kept")}</p>
+        <DialogTitle className="sr-only">{t("practice.practiceMode")}</DialogTitle>
+        {storageFailed && <p role="alert" className="mb-4 text-xs text-destructive">{t("draft.storageFailed")}</p>}
 
         {/* Piece context: compact and secondary to the metronome. */}
         <div className="mb-6 space-y-1.5">
-          <h2 className="break-words font-serif text-xl font-semibold leading-tight">{task.title}</h2>
+          <div className="flex items-start justify-between gap-4">
+            <h2 className="min-w-0 break-words font-serif text-xl font-semibold leading-tight">{task.title}</h2>
+            <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
+          </div>
           {item && <p className="text-sm text-muted-foreground">{item.title}{item.composer ? ` · ${item.composer}` : ""}</p>}
           {collection && <p className="text-sm italic text-muted-foreground">{t("practice.collectionLabel")}: {collection.name}</p>}
           {mark.targetBpm && (
@@ -225,7 +226,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
           )}
 
           <div className="py-4 text-center" aria-live="off">
-            <p className="text-xl text-muted-foreground">{targetGlyph} =</p>
+            <p className="text-xl text-muted-foreground">{NOTE_GLYPH[noteVal ?? "quarter"]} =</p>
             <p className="font-numeric text-[5rem] leading-tight tabular-nums">{bpm}</p>
             <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("practice.bpmUnit")}</p>
           </div>
@@ -277,12 +278,16 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             </div>
             <div role="group" aria-label={t("practice.noteLabel")} className="flex flex-wrap items-center justify-center gap-0.5">
               <span className="w-full text-center text-[0.6875rem] text-muted-foreground/70">{t("practice.noteLabel")}</span>
-              {NOTE_VALUES.map((nv) => (
+              {(showDottedNotes ? COMPOUND_NOTES : SIMPLE_NOTES).map((nv) => (
                 <button key={nv} type="button" aria-pressed={noteVal === nv} onClick={() => setNoteVal(nv)} title={t(`note.${nv}`)} aria-label={t(`note.${nv}`)}
                   className={cn("h-11 min-w-11 rounded-lg px-1 text-base leading-none", noteVal === nv ? "bg-secondary text-foreground" : "text-muted-foreground/70 hover:bg-secondary/40")}>
                   {NOTE_GLYPH[nv]}
                 </button>
               ))}
+              <button type="button" aria-pressed={showDottedNotes} onClick={() => setShowDottedNotes(value => !value)} title={t("note.dotted")} aria-label={t("note.dotted")}
+                className={cn("ml-1 inline-flex h-11 w-11 items-center justify-center rounded-lg", showDottedNotes ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
+                <Dot aria-hidden="true" className="h-6 w-6" />
+              </button>
             </div>
           </div>
 

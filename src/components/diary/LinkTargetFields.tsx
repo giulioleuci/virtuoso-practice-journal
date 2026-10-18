@@ -166,11 +166,10 @@ function ItemPicker({
         filters={[
           ...(kindFilter !== "all" ? [{ key: "kind", label: kindFilter === "repertoire" ? t("repertoire.title") : t(`library.kind.${kindFilter}`), onRemove: () => setKindFilter("all") }] : []),
           ...(collectionFilter !== "all" ? [{ key: "collection", label: allCollections.find(c => c.id === collectionFilter)?.name ?? String(collectionFilter), onRemove: () => setCollectionFilter("all") }] : []),
-          ...(sortBy !== "title" ? [{ key: "sort", label: t("link.sortByComposerAuthor"), onRemove: () => setSortBy("title") }] : []),
-        ]} onReset={() => { setSearch(""); setKindFilter("all"); setCollectionFilter("all"); setSortBy("title"); }} resultCount={items.length}>
+        ]} onReset={() => { setSearch(""); setKindFilter("all"); setCollectionFilter("all"); }} resultCount={items.length}
+        sorting={<FilterSelect label={t("link.sortBy")} value={sortBy} onChange={setSortBy} options={[{ value: "title", label: t("common.title") }, { value: "composer", label: t("link.sortByComposerAuthor") }]} />}>
         <FilterSelect label={t("link.filterByKind")} value={kindFilter} onChange={setKindFilter} options={KIND_VALS.map(value => ({ value, label: value === "all" ? t("common.all") : value === "repertoire" ? t("repertoire.title") : t(`library.kind.${value}`) }))} />
         {allCollections.length > 0 && <FilterSelect label={t("link.filterByCollection")} value={String(collectionFilter)} onChange={value => setCollectionFilter(value === "all" ? "all" : Number(value))} options={[{ value: "all", label: t("link.allCollections") }, ...allCollections.map(c => ({ value: String(c.id), label: c.name }))]} />}
-        <FilterSelect label={t("link.sortBy")} value={sortBy} onChange={setSortBy} options={[{ value: "title", label: t("common.title") }, { value: "composer", label: t("link.sortByComposerAuthor") }]} />
       </FilterPanel>
       <div className="space-y-2">
         <Label className="text-xs font-medium text-foreground">{t("link.item")}</Label>

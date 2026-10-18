@@ -44,7 +44,7 @@ export function CompletionBar({ task, onClose, onUndo, onLog }: { task: Task; on
       role="region"
       aria-label={t("rate.region")}
       className={cn(
-        "fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] z-[60] grid max-w-[760px] gap-3 overflow-hidden rounded-[14px] border border-border bg-card p-4 shadow-raised",
+        "fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] z-[60] grid max-w-[760px] gap-3 overflow-hidden rounded-[14px] border border-muted-foreground/40 bg-card p-4 shadow-raised",
         "bottom-[var(--floating-bottom)] min-[700px]:bottom-[max(calc(1.25rem+env(safe-area-inset-bottom)),var(--floating-bottom))] min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8",
         "min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)] motion-safe:animate-fade-in",
       )}

@@ -51,6 +51,7 @@ function show(children: ReactNode) {
   return render(<MemoryRouter><I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}>{children}</I18nContext.Provider></MemoryRouter>);
 }
 function openFilters() { fireEvent.click(screen.getByRole("button", { name: /Filtri/ })); }
+function openSorting() { fireEvent.click(screen.getByRole("button", { name: t("link.sortBy") })); }
 function titles() { return screen.getAllByRole("listitem").map(row => within(row).getByRole("heading", { level: 3 }).textContent); }
 beforeEach(() => vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} }));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); mocks.collections = []; mocks.segments = []; mocks.events = []; vi.clearAllMocks(); });
@@ -59,7 +60,9 @@ describe("library controls", () => {
   it("starts with repertoire before favorites, and lets either priority be disabled", () => {
     show(<Library />);
     expect(titles()).toEqual(["Gamma", "Beta", "Alfa"]);
-    openFilters();
+    expect(screen.getByRole("button", { name: t("common.filters") })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: t("states.clearFilters") })).not.toBeInTheDocument();
+    openSorting();
     expect(screen.getByRole("checkbox", { name: t("library.repertoireFirst") })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: t("library.favoritesFirst") })).toBeChecked();
     fireEvent.click(screen.getByRole("checkbox", { name: t("library.repertoireFirst") }));
@@ -70,15 +73,34 @@ describe("library controls", () => {
     expect(titles()).toEqual(["Alfa", "Beta", "Gamma"]);
     fireEvent.change(sort, { target: { value: "titleDesc" } });
     expect(titles()).toEqual(["Gamma", "Beta", "Alfa"]);
+    expect(screen.getByRole("button", { name: t("common.filters") })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Alfa" } });
     fireEvent.click(screen.getByRole("button", { name: t("states.clearFilters") }));
     expect(titles()).toEqual(["Gamma", "Beta", "Alfa"]);
+    expect(sort).toHaveValue("titleDesc");
+    expect(screen.getByRole("checkbox", { name: t("library.favoritesFirst") })).not.toBeChecked();
   });
 
   it("keeps repertoire ahead of favorites inside collection groups", () => {
     mocks.collections = [{ id: 1, name: "Raccolta", kind: "collection" }];
     show(<Library />);
-    openFilters();
+    openSorting();
     fireEvent.click(screen.getByRole("button", { name: t("library.groupByCollection") }));
+    expect(titles()).toEqual(["Gamma", "Beta", "Alfa"]);
+  });
+
+  it("counts only result filters and keeps sorting when filters are reset", () => {
+    show(<Library />);
+    openFilters();
+    fireEvent.change(screen.getByRole("option", { name: "Bach" }).parentElement!, { target: { value: "Bach" } });
+    expect(titles()).toEqual(["Gamma", "Alfa"]);
+    expect(screen.getByRole("button", { name: "Filtri (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Rimuovi.*Autore: Bach/ })).toBeInTheDocument();
+    openSorting();
+    fireEvent.change(screen.getByRole("option", { name: t("library.sortTitleDesc") }).parentElement!, { target: { value: "titleDesc" } });
+    expect(screen.getByRole("button", { name: "Filtri (1)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: t("states.clearFilters") }));
+    expect(screen.getByRole("button", { name: "Filtri" })).toBeInTheDocument();
     expect(titles()).toEqual(["Gamma", "Beta", "Alfa"]);
   });
 
@@ -151,6 +173,22 @@ describe("library controls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
     fireEvent.click(screen.getByRole("button", { name: "Next page" }));
     expect(screen.getByRole("checkbox", { name: "Frammento 6" })).toBeChecked();
+  });
+
+  it("reorders routine groups with arrows and preserves each group's materials", () => {
+    show(<RoutineBuilder initial={{ id: 1, subjectId: 1, name: "Tecnica", startDate: "2026-10-18", createdAt: 0,
+      weeksAhead: 1, repetitionCap: 1, matrix: { "1": { scales: 2, arpeggios: 1 } },
+      groups: [{ id: "scales", name: "Scale", pool: [{ type: "item", id: 1 }, { type: "item", id: 2 }] },
+        { id: "arpeggios", name: "Arpeggi", pool: [{ type: "item", id: 3 }] }],
+    }} onDone={() => {}} onCancel={() => {}} />);
+    expect(screen.getByRole("button", { name: `${t("segments.moveUp")}: Scale` })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: `${t("segments.moveUp")}: Arpeggi` }));
+    expect(screen.getByRole("button", { name: `${t("segments.moveDown")}: Scale` })).toBeDisabled();
+    fireEvent.submit(screen.getByRole("textbox", { name: t("studyRoutine.name") }).closest("form")!);
+    expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ groups: [
+      expect.objectContaining({ id: "arpeggios", pool: [{ type: "item", id: 3 }] }),
+      expect.objectContaining({ id: "scales", pool: [{ type: "item", id: 1 }, { type: "item", id: 2 }] }),
+    ] }));
   });
 
   it("shows repertoire without review deadlines and lets the user start a task", () => {

@@ -6,6 +6,7 @@
 import type { StudyPoolEntry, StudyRoutine, Task, SegmentEntry } from "@/lib/db";
 import { emptyEntry } from "@/domain/logic/plan";
 import { parseDayKey, dayKey, addDays, weekKey } from "@/lib/date";
+import { routineTaskOrder } from "./taskOrder";
 
 export interface ResolvedPoolItem {
   key: string;
@@ -243,7 +244,8 @@ export function generateRoutineTasks({
       const daySelected: ResolvedPoolItem[] = [];
       const combined: { name: string; items: ResolvedPoolItem[] }[] = [];
 
-      for (const [groupId, count] of Object.entries(groupCounts)) {
+      for (const { id: groupId } of routine.groups) {
+        const count = groupCounts[groupId] ?? 0;
         if (count <= 0) continue;
         let items = groupItems.get(groupId) ?? [];
         if (count > items.length) items = items.flatMap((item) => item.sections?.length ? item.sections : [item]);
@@ -318,7 +320,7 @@ export function generateRoutineTasks({
     d = addDays(d, 1);
   }
 
-  return tasks;
+  return tasks.sort((a, b) => a.date.localeCompare(b.date) || routineTaskOrder(a, routine) - routineTaskOrder(b, routine));
 }
 
 /** Schedule problems worth showing before a routine is saved. */
