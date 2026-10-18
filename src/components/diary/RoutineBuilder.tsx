@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, Copy, ListChecks, Minus, MoreHorizontal, Plus, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +13,7 @@ import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useSessionSubmission } from "@/presentation/hooks/usePresentationControllers";
-import { useCollections, useSegments, useSubjects } from "@/presentation/hooks/useEntities";
+import { useCollectionLinks, useCollections, useSegments, useSubjects } from "@/presentation/hooks/useEntities";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -22,10 +23,13 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Pager } from "@/components/shared/Pager";
 import { usePagination } from "@/hooks/usePagination";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { StateNotice } from "@/components/shared/StateNotice";
+import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
+
 import { nativeSelect } from "./WhenFields";
 
 const DAYS = [1, 2, 3, 4, 5, 6, 0]; // Monday first
@@ -36,7 +40,7 @@ type Matrix = Record<string, Record<string, number>>;
 
 const chip = (on: boolean) =>
   cn(
-    "inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary",
+    "inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs min-[700px]:min-h-9 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary",
     on ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary/40",
   );
 
@@ -50,6 +54,8 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   const subjects = useSubjects();
   const allSegments = useSegments();
   const collections = useCollections();
+  const collectionLinks = useCollectionLinks();
+  const [collectionId, setCollectionId] = useState<number>();
   const isEdit = !!initial;
 
   const [name, setName] = useState(initial?.name ?? "");
@@ -57,7 +63,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   const [groups, setGroups] = useState<StudyGroup[]>(initial?.groups ?? [{ id: genId(), name: t("routine.groupDaily"), pool: [] }]);
   const [matrix, setMatrix] = useState<Matrix>(initial?.matrix ?? {});
   const [weeks, setWeeks] = useState(initial?.weeksAhead ?? 4);
-  const [cap, setCap] = useState(initial?.repetitionCap ?? 3);
+  const [capInput, setCap] = useState<number | undefined>(initial?.repetitionCap);
   const [adaptivity, setAdaptivity] = useState<Adaptivity>(initial ? routineAdaptivity(initial) : "uniform");
   const [uniformOpen, setUniformOpen] = useState(false);
   const [avoidBackToBack, setAvoidBackToBack] = useState(initial?.avoidBackToBack ?? true);
@@ -67,6 +73,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   const [activeGroupId, setActiveGroupId] = useState<string | undefined>();
   const [kindFilter, setKindFilter] = useState<string>("all");
   const [openSections, setOpenSections] = useState<number | null>(null);
+  const [segmentPage, setSegmentPage] = useState(0);
 
   const subject = subjectId ?? subjects?.[0]?.id;
   const library = usePresentationRead<LibraryItem[]>("library.subject", [subject]);
@@ -88,23 +95,30 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   }, [allSegments]);
 
   const q = search.trim().toLowerCase();
-  const items = useMemo(
-    () => (library ?? []).filter((i) => !q || `${i.title} ${i.composer ?? ""}`.toLowerCase().includes(q)),
-    [library, q],
+  const selectedCollection = collections?.find(c => c.id === collectionId);
+  const collectionItems = useMemo(() => {
+    const byId = new Map((library ?? []).map(item => [item.id, item]));
+    return (collectionLinks ?? []).filter(link => link.collectionId === collectionId)
+      .sort((a, b) => a.position - b.position).flatMap(link => byId.get(link.itemId) ?? []);
+  }, [library, collectionLinks, collectionId]);
+  const sourceItems = collectionId === undefined ? library ?? [] : collectionItems;
+  const matchesItem = (i: LibraryItem) => !q || `${i.title} ${i.composer ?? ""} ${i.catalog ?? ""} ${(segmentsByItem.get(i.id!) ?? []).map(s => s.label).join(" ")}`.toLowerCase().includes(q);
+  const items = sourceItems.filter(matchesItem);
+  const kinds = LIBRARY_KINDS.filter(k => sourceItems.some(i => i.kind === k.key));
+  const visibleCollections = (collections ?? []).filter(c =>
+    !q || `${c.name} ${c.composer ?? ""}`.toLowerCase().includes(q) ||
+    (collectionLinks ?? []).some(link => link.collectionId === c.id && (library ?? []).some(i => i.id === link.itemId && matchesItem(i))),
   );
-  const kinds = LIBRARY_KINDS.filter((k) => items.some((i) => i.kind === k.key));
-  const visibleCollections = (collections ?? []).filter((c) => !q || c.name.toLowerCase().includes(q));
   type Row = { key: string; title: string; composer?: string; entry: StudyPoolEntry; itemId?: number; kindLabel: string };
-  const rows = useMemo<Row[]>(() => [
-    ...items.filter((i) => kindFilter === "all" || i.kind === kindFilter).map((i) => ({
+  const rows: Row[] = [
+    ...items.filter(i => kindFilter === "repertoire" ? i.inRepertoire : kindFilter === "all" || i.kind === kindFilter).map(i => ({
       key: `i${i.id}`, title: i.title, composer: i.composer, entry: { type: "item" as const, id: i.id! }, itemId: i.id,
-      kindLabel: t(LIBRARY_KINDS.find((k) => k.key === i.kind)?.tKey ?? ""),
+      kindLabel: t(LIBRARY_KINDS.find(k => k.key === i.kind)?.tKey ?? ""),
     })),
-    ...(kindFilter === "all" || kindFilter === "collection" ? visibleCollections : []).map((c) => ({
+    ...(collectionId === undefined && (kindFilter === "all" || kindFilter === "collection") ? visibleCollections : []).map(c => ({
       key: `c${c.id}`, title: c.name, composer: c.composer, entry: { type: "collection" as const, id: c.id! }, kindLabel: t("studyRoutine.collections"),
     })),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [items, visibleCollections.length, kindFilter, q, lang]);
+  ];
   const pager = usePagination(rows, 8);
 
   // ── groups & pools ──────────────────────────────────────────────
@@ -126,6 +140,8 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   };
   const changeSubject = (id: number) => {
     setSubjectId(id);
+    setCollectionId(undefined);
+    setOpenSections(null);
     setGroups((prev) => prev.map((g) => ({ ...g, pool: [] })));
   };
 
@@ -166,6 +182,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
     });
   const activeDays = DAYS.filter((d) => dayTotal(d) > 0);
   const firstDay = activeDays[0];
+  const cap = capInput ?? Math.min(20, Math.max(1, activeDays.length)); // default: one repetition per selected day
   const dayName = (d: number) => t(`weekday.${d}`);
   const sameRow = (day: number) => groups.every((g) => count(day, g.id) === count(firstDay, g.id));
   const regular = activeDays.length > 0 && activeDays.every(sameRow);
@@ -222,9 +239,9 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
           </label>
           <label className="grid gap-1.5 text-xs font-medium">
             {t("common.subject")}
-            <select value={subject} onChange={(e) => changeSubject(Number(e.target.value))} className={nativeSelect}>
-              {subjects?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <Select value={String(subject ?? "")} onValueChange={(value) => changeSubject(Number(value))} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+              {subjects?.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+            </SelectContent></Select>
           </label>
         </div>
 
@@ -247,7 +264,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
               {groups.map((g, i) => (
                 <li key={g.id} className="flex items-center gap-2">
                   <Input aria-label={t("routine.groupName", { n: i + 1 })} placeholder={t("routine.groupName", { n: i + 1 })} value={g.name} required maxLength={80} onChange={(e) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, name: e.target.value } : x)))} />
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{t("routine.groupCount", { n: g.pool.length })}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-muted-foreground">{t("routine.groupCount", { count: g.pool.length })}</span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button type="button" size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label={t("routine.moreActions")}><MoreHorizontal /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -275,13 +292,25 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                   </button>
                 ))}
               </div>
-              <div className="mb-3 grid gap-2 min-[560px]:grid-cols-[minmax(0,1fr)_auto_auto]">
-                <Input type="search" aria-label={t("common.search")} value={search} onChange={(e) => { setSearch(e.target.value); pager.reset(); }} placeholder={t("bulk.searchPlaceholder")} />
-                <select aria-label={t("routine.kindFilter")} value={kindFilter} onChange={(e) => { setKindFilter(e.target.value); pager.reset(); }} className={nativeSelect}>
-                  <option value="all">{t("routine.kindAll")}</option>
-                  {kinds.map((k) => <option key={k.key} value={k.key}>{t(k.tKey)}</option>)}
-                  {(collections?.length ?? 0) > 0 && <option value="collection">{t("studyRoutine.collections")}</option>}
-                </select>
+              {selectedCollection && <div className="mb-3 space-y-2 border-b border-border pb-3">
+                <Button type="button" variant="ghost" className="h-11" onClick={() => { setCollectionId(undefined); setKindFilter("collection"); setOpenSections(null); pager.reset(); }}>{t("filters.backToCollections")}</Button>
+                <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+                  <Checkbox checked={has(active, { type: "collection", id: selectedCollection.id! })} onCheckedChange={on => setEntries(active.id, [{ type: "collection", id: selectedCollection.id! }], on === true)} />
+                  {selectedCollection.name}
+                </label>
+                <p className="text-xs text-muted-foreground">{t("filters.collectionSelectionHint")}</p>
+              </div>}
+              <FilterPanel
+                search={{ value: search, onChange: value => { setSearch(value); pager.reset(); }, placeholder: t("bulk.searchPlaceholder") }}
+                filters={kindFilter === "all" ? [] : [{ key: "kind", label: kindFilter === "collection" ? t("studyRoutine.collections") : kindFilter === "repertoire" ? t("repertoire.title") : t(`library.kind.${kindFilter}`), onRemove: () => { setKindFilter("all"); pager.reset(); } }]}
+                onReset={() => { setSearch(""); setKindFilter("all"); pager.reset(); }} resultCount={rows.length}
+              >
+                <FilterSelect label={t("routine.kindFilter")} value={kindFilter} onChange={value => { setKindFilter(value); pager.reset(); }} options={[
+                  { value: "all", label: t("routine.kindAll") }, { value: "repertoire", label: t("repertoire.title") },
+                  ...kinds.map(k => ({ value: k.key, label: t(k.tKey) })),
+                  ...(collectionId === undefined && collections?.length ? [{ value: "collection", label: t("studyRoutine.collections") }] : []),
+                ]} />
+              </FilterPanel>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild><Button type="button" variant="outline" disabled={!active || !rows.length}><ListChecks />{t("common.select")}<ChevronDown /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -289,7 +318,6 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                     <DropdownMenuItem onSelect={() => active && setEntries(active.id, rows.map((r) => r.entry), false)}>{t("routine.clearVisible")}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
               {!active ? null : rows.length === 0 ? (
                 kinds.length === 0 && !collections?.length ? <EmptyState title={t("routine.noMaterials")} hint={t("routine.noMaterialsHint")} /> : <p className="py-6 text-center text-sm text-muted-foreground">{t("common.noResults")}</p>
               ) : (
@@ -310,26 +338,32 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                                 {[r.composer, kindFilter === "all" ? r.kindLabel : undefined, others.length ? t("routine.alsoIn", { groups: others.join(", ") }) : undefined].filter(Boolean).join(" · ")}
                               </span>
                             </label>
+                            {r.entry.type === "collection" && <Button type="button" size="sm" variant="outline" className="min-h-11 shrink-0" aria-label={t("filters.collectionContents", { name: r.title })} onClick={() => { setCollectionId(r.entry.id); setKindFilter("all"); setSearch(""); setOpenSections(null); pager.reset(); }}><ChevronDown aria-hidden="true" />{t("collection.items")}</Button>}
                             {segs.length > 0 && (
-                              <Button type="button" size="sm" variant="ghost" className="shrink-0 tabular-nums" aria-expanded={expanded} onClick={() => setOpenSections(expanded ? null : r.itemId!)}>
-                                {t("routine.sectionsCount", { on: segOn, n: segs.length })}<ChevronDown className={cn("transition-transform", expanded && "rotate-180")} />
-                              </Button>
+                              <Popover open={expanded} onOpenChange={open => { setOpenSections(open ? r.itemId! : null); setSegmentPage(0); }}>
+                                <PopoverTrigger asChild>
+                                  <Button type="button" size="sm" variant="ghost" className="min-h-11 shrink-0 tabular-nums" aria-label={`${r.title}: ${t("routine.sectionsCount", { on: segOn, n: segs.length })}`}>
+                                    {t("routine.sectionsCount", { on: segOn, n: segs.length })}<ChevronDown />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" aria-label={r.title} className="w-[min(24rem,calc(100vw-2rem))]">
+                                  <div className="mb-1 flex gap-1">
+                                    <Button type="button" size="sm" variant="ghost" onClick={() => setEntries(active.id, segs.map(sg => ({ type: "segment", id: sg.id! })), true)}>{t("common.selectAll")}</Button>
+                                    <Button type="button" size="sm" variant="ghost" onClick={() => setEntries(active.id, segs.map(sg => ({ type: "segment", id: sg.id! })), false)}>{t("common.removeAll")}</Button>
+                                  </div>
+                                  <ul className="divide-y divide-border border-y border-border">
+                                    {segs.slice(segmentPage * 5, segmentPage * 5 + 5).map(sg => {
+                                      const entry: StudyPoolEntry = { type: "segment", id: sg.id! };
+                                      return <li key={sg.id}><label className="flex min-h-11 cursor-pointer items-center gap-3 py-2 text-sm">
+                                        <Checkbox checked={has(active, entry)} onCheckedChange={on => setEntries(active.id, [entry], on === true)} />{sg.label}
+                                      </label></li>;
+                                    })}
+                                  </ul>
+                                  <Pager page={segmentPage} totalPages={Math.ceil(segs.length / 5)} onChange={setSegmentPage} />
+                                </PopoverContent>
+                              </Popover>
                             )}
                           </div>
-                          {expanded && (
-                            <ul className="ml-8 mt-2 grid gap-1 border-l border-border pl-3">
-                              {segs.map((sg) => {
-                                const e: StudyPoolEntry = { type: "segment", id: sg.id! };
-                                return (
-                                  <li key={sg.id}>
-                                    <label className="flex min-h-9 cursor-pointer items-center gap-2.5 text-[0.8125rem]">
-                                      <Checkbox checked={has(active, e)} onCheckedChange={(on) => setEntries(active.id, [e], on === true)} />{sg.label}
-                                    </label>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          )}
                         </li>
                       );
                     })}
@@ -374,15 +408,15 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                 </div>
               )}
 
-              <details open={!regular} className="mt-6">
-                <summary className="cursor-pointer text-sm font-medium text-primary">{t("routine.customizeWeek")}</summary>
+              <details open={activeDays.length > 0 && !regular} className="mt-6">
+                <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">{t("routine.customizeWeek")}</summary>
 
               {/* Phone: one day at a time */}
               <div className="mt-4 min-[700px]:hidden">
                 <div role="tablist" aria-label={t("routine.dayTabs")} className="grid grid-cols-7 gap-0.5 border-b border-border">
                   {DAYS.map((d) => (
                     <button key={d} type="button" role="tab" id={`day-tab-${d}`} aria-selected={activeDay === d} aria-controls={`day-panel-${d}`} onClick={() => setActiveDay(d)}
-                      className={cn("-mb-px grid justify-items-center border-b-2 py-1.5 text-xs", activeDay === d ? "border-primary text-primary" : "border-transparent text-muted-foreground")}>
+                      className={cn("-mb-px grid min-h-11 content-center justify-items-center border-b-2 py-1.5 text-xs", activeDay === d ? "border-primary text-primary" : "border-transparent text-muted-foreground")}>
                       <span>{short(d)}</span>
                       <span className="h-4 font-numeric text-[0.6875rem]">{dayTotal(d) || ""}</span>
                     </button>
@@ -441,7 +475,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
         )}
 
         <details className="mt-7 border-t border-border pt-5">
-          <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-3 text-sm font-medium">
+          <summary className="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-3 text-sm font-medium">
             {t("routine.options")}
             <span className="text-xs font-normal text-muted-foreground">{t("routine.optionsSummary", { weeks, cap })} · {t(`studyRoutine.adaptivity${adaptivity[0].toUpperCase()}${adaptivity.slice(1)}`)}</span>
           </summary>
@@ -451,9 +485,9 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
             <label className="grid gap-1.5 text-xs font-medium">{t("studyRoutine.repetitionCap")}<Input type="number" inputMode="numeric" min={1} max={20} required value={cap} onChange={(e) => setCap(Math.min(20, Math.max(1, Number(e.target.value) || 1)))} /></label>
             <label className="grid gap-1.5 text-xs font-medium">
               {t("studyRoutine.adaptivity")}
-              <select value={adaptivity} onChange={(e) => setAdaptivity(e.target.value as Adaptivity)} className={nativeSelect}>
-                {(["uniform", "balanced", "aggressive"] as const).map((l) => <option key={l} value={l}>{t(`studyRoutine.adaptivity${l[0].toUpperCase()}${l.slice(1)}`)}</option>)}
-              </select>
+              <Select value={adaptivity} onValueChange={(value) => setAdaptivity(value as Adaptivity)} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+                {(["uniform", "balanced", "aggressive"] as const).map((l) => <SelectItem key={l} value={String(l)}>{t(`studyRoutine.adaptivity${l[0].toUpperCase()}${l.slice(1)}`)}</SelectItem>)}
+              </SelectContent></Select>
             </label>
           </div>
           <div className="mt-4 flex items-center justify-between gap-3">
@@ -482,7 +516,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
       <aside className="min-w-0 space-y-4 text-sm">
         <h3 className="font-serif text-xl font-semibold">{t("routine.preview")}</h3>
         <p className="text-xs text-muted-foreground">{subjects?.find((s) => s.id === subject)?.name}</p>
-        <p className="tabular-nums">{t("routine.previewPool", { pool: poolSize, groups: groups.length })}</p>
+        <p className="tabular-nums">{t("routine.previewPool", { count: poolSize })}</p>
         <div className="border-t border-border pt-3">
           {activeDays.length === 0 ? (
             <p className="text-xs text-muted-foreground">{t("routine.previewDays")}</p>

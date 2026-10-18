@@ -3,19 +3,19 @@ import { useI18n } from "@/lib/i18n";
 import { SessionIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
-/** Floating shortcut to log a free session. */
-export function SessionFAB({ className }: { className?: string }) {
+/** Labeled shortcut (`short`: compact label) to log a free session without covering the task list. */
+export function SessionFAB({ className, short }: { className?: string; short?: boolean }) {
   const { t } = useI18n();
   return (
     <Link
       to="/log"
-      aria-label={t("diary.freeSession")}
+      aria-label={t("rate.logResults")}
       className={cn(
-        "fixed bottom-[var(--floating-bottom)] right-[max(1rem,env(safe-area-inset-right))] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-raised transition-[bottom,transform] hover:scale-105 active:scale-95",
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90",
         className,
       )}
     >
-      <SessionIcon className="h-6 w-6" />
+      <SessionIcon className="h-5 w-5 shrink-0" aria-hidden />{short ? t("diary.logLessonShort") : t("rate.logResults")}
     </Link>
   );
 }
