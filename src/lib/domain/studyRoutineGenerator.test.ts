@@ -177,6 +177,22 @@ describe("per-group caps and back-to-back avoidance", () => {
   });
 });
 
+describe("combined groups", () => {
+  const seg = (itemId: number, id: number): ResolvedPoolItem => ({ key: `segment:${id}`, type: "segment", title: `i${itemId}`, itemId, segmentIds: [id], plan: [{ segmentId: id, layers: [], techniques: [] }], linkType: "item" });
+  const run = (combine: boolean) => generateRoutineTasks({
+    routine: routine({ groups: [{ id: "g1", name: "Scale", pool: [], combine }], matrix: { "1": { g1: 4 } } }),
+    groupItems: new Map([["g1", [seg(1, 10), seg(1, 11), seg(2, 20), seg(2, 21)]]]),
+    stats: null, fromDate: "2026-05-18", createdAt: 0,
+  });
+  it("folds sections of several items into one free task", () => {
+    const tasks = run(true);
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toMatchObject({ title: "Scale", linkType: "free", itemId: undefined });
+    expect(planSegmentIds(tasks[0].plan).sort()).toEqual([10, 11, 20, 21]);
+  });
+  it("keeps one task per item when off", () => expect(run(false)).toHaveLength(2));
+});
+
 describe("collectRoutineWarnings", () => {
   it("flags a day asking for more than the pool holds", () => {
     const warnings = collectRoutineWarnings({

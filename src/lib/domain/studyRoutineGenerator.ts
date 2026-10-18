@@ -16,7 +16,7 @@ export interface ResolvedPoolItem {
   itemId?: number;
   segmentIds?: number[];
   collectionId?: number;
-  linkType: "item" | "collection";
+  linkType: "item" | "collection" | "free";
   plan?: SegmentEntry[];
   /** Whole-item entries: its sections, drawn instead when a day asks for more entries than the pool holds. */
   sections?: ResolvedPoolItem[];
@@ -241,6 +241,7 @@ export function generateRoutineTasks({
       const dateStr = dayKey(d);
       const previousDay = dayKey(addDays(d, -1));
       const daySelected: ResolvedPoolItem[] = [];
+      const combined: { name: string; items: ResolvedPoolItem[] }[] = [];
 
       for (const [groupId, count] of Object.entries(groupCounts)) {
         if (count <= 0) continue;
@@ -265,10 +266,16 @@ export function generateRoutineTasks({
             ? uniformSampleWithoutReplacement(pickFrom, toSelect, rng)
             : weightedSampleWithoutReplacement(pickFrom, toSelect, weights, rng);
 
-        daySelected.push(...selected);
+        // A "combine" group spanning several library items becomes one task; sections of different items sit in one plan.
+        const group = routine.groups.find((g) => g.id === groupId);
+        const merge = group?.combine ? selected.filter((i) => i.type !== "collection") : [];
+        if (group && new Set(merge.map((i) => i.itemId)).size > 1) {
+          combined.push({ name: group.name, items: merge });
+          daySelected.push(...selected.filter((i) => !merge.includes(i)));
+        } else daySelected.push(...selected);
       }
 
-      for (const item of daySelected) {
+      for (const item of [...daySelected, ...combined.flatMap((c) => c.items)]) {
         weekCounts.set(item.key, (weekCounts.get(item.key) ?? 0) + 1);
         lastUsedDate.set(item.key, dateStr);
       }
@@ -283,6 +290,11 @@ export function generateRoutineTasks({
         } else {
           tasks.push(buildTask(item, dateStr, routine.subjectId, routine.id, createdAt));
         }
+      }
+      for (const { name, items } of combined) {
+        const plan = new Map<number | undefined, SegmentEntry>();
+        for (const i of items) for (const e of i.sections?.length ? i.sections.flatMap((s) => s.plan ?? []) : i.plan ?? []) plan.set(e.segmentId ?? -plan.size - 1, e);
+        tasks.push(buildTask({ key: `group:${name}`, type: "item", title: name, plan: [...plan.values()], linkType: "free" }, dateStr, routine.subjectId, routine.id, createdAt));
       }
       for (const [itemId, { segs, title }] of segsByItem) {
         tasks.push(buildTask(

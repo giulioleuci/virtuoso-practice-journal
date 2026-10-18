@@ -1002,6 +1002,8 @@
   "routine.groupCount": "{{count}} Material",
   "routine.groupCount_plural": "{{count}} Materialien",
   "routine.moreActions": "Weitere Aktionen",
+  "routine.onlySelected": "Nur ausgewählte",
+  "routine.combineGroup": "Eine Aufgabe pro Tag",
   "routine.clearGroup": "Alle Materialien entfernen",
   "routine.assignTo": "Materialien zuordnen zu",
   "routine.kindFilter": "Materialtyp",

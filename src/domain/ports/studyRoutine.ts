@@ -9,6 +9,8 @@ export interface StudyGroup {
   pool: StudyPoolEntry[];
   /** Optional per-group weekly repetition cap, overriding the routine cap. */
   repetitionCap?: number;
+  /** Fold everything the group draws on a day into one task whose sections span several library items. */
+  combine?: boolean;
 }
 
 /** How strongly the draw favours the entries you feel least sure about. */
@@ -52,7 +54,7 @@ export interface ResolvedStudyPoolItem {
   itemId?: number;
   segmentIds?: number[];
   collectionId?: number;
-  linkType: "item" | "collection";
+  linkType: "item" | "collection" | "free";
   plan?: import("../entities/common").SegmentEntry[];
   sections?: ResolvedStudyPoolItem[];
 }

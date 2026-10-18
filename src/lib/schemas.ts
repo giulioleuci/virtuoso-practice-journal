@@ -122,6 +122,7 @@ export const studyGroupSchema = z.object({
     z.object({ type: z.literal("collection"), id: z.number().int().positive() }),
   ])),
   repetitionCap: z.number().int().min(1).optional(),
+  combine: z.boolean().optional(),
 });
 export type StudyGroupInput = StudyGroup;
 

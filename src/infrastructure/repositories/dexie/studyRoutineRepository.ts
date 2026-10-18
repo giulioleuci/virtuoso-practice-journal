@@ -121,9 +121,9 @@ async function profileWeekStartsOn() {
   return profile?.weekStartsOn ?? (profile ? getDefaultWeekStartsOn(profile.lang) : 1);
 }
 
-const slotKey = (task: Pick<Task, "date" | "itemId" | "collectionId">) => `${task.date}|${task.itemId ?? ""}|${task.collectionId ?? ""}`;
+const slotKey = (task: Pick<Task, "date" | "itemId" | "collectionId" | "title">) => `${task.date}|${task.itemId ?? ""}|${task.collectionId ?? ""}|${task.itemId ?? task.collectionId ? "" : task.title}`;
 
-async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: Map<string, number>, kept: Pick<Task, "date" | "itemId" | "collectionId">[] = []) {
+async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: Map<string, number>, kept: Pick<Task, "date" | "itemId" | "collectionId" | "title">[] = []) {
   const entries = routine.groups.flatMap((group) => group.pool);
   const pool = await resolvePoolEntries(entries);
   const groupItems = new Map(

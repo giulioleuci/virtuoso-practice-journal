@@ -1,6 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
-import { Check, ChevronDown, Copy, ListChecks, Minus, MoreHorizontal, Plus, Trash2, Wand2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, Copy, ListChecks, Minus, MoreHorizontal, Plus, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { StudyGroup, StudyPoolEntry, StudyRoutine } from "@/domain/ports/studyRoutine";
@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Pager } from "@/components/shared/Pager";
 import { usePagination } from "@/hooks/usePagination";
@@ -74,6 +74,8 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   const [kindFilter, setKindFilter] = useState<string>("all");
   const [openSections, setOpenSections] = useState<number | null>(null);
   const [segmentPage, setSegmentPage] = useState(0);
+  const [onlySelected, setOnlySelected] = useState(false);
+  const [onlySelectedSegs, setOnlySelectedSegs] = useState(false);
 
   const subject = subjectId ?? subjects?.[0]?.id;
   const library = usePresentationRead<LibraryItem[]>("library.subject", [subject]);
@@ -110,6 +112,10 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
     (collectionLinks ?? []).some(link => link.collectionId === c.id && (library ?? []).some(i => i.id === link.itemId && matchesItem(i))),
   );
   type Row = { key: string; title: string; composer?: string; entry: StudyPoolEntry; itemId?: number; kindLabel: string };
+  const activeGroup = groups.find((g) => g.id === activeGroupId) ?? groups[0];
+  const isPicked = (e: StudyPoolEntry, itemId?: number) => !!activeGroup && (
+    activeGroup.pool.some((x) => poolEntryKey(x) === poolEntryKey(e)) ||
+    (segmentsByItem.get(itemId ?? -1) ?? []).some((sg) => activeGroup.pool.some((x) => x.type === "segment" && x.id === sg.id)));
   const rows: Row[] = [
     ...items.filter(i => kindFilter === "repertoire" ? i.inRepertoire : kindFilter === "all" || i.kind === kindFilter).map(i => ({
       key: `i${i.id}`, title: i.title, composer: i.composer, entry: { type: "item" as const, id: i.id! }, itemId: i.id,
@@ -118,7 +124,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
     ...(collectionId === undefined && (kindFilter === "all" || kindFilter === "collection") ? visibleCollections : []).map(c => ({
       key: `c${c.id}`, title: c.name, composer: c.composer, entry: { type: "collection" as const, id: c.id! }, kindLabel: t("studyRoutine.collections"),
     })),
-  ];
+  ].filter((r: Row) => !onlySelected || isPicked(r.entry, r.itemId));
   const pager = usePagination(rows, 8);
 
   // ── groups & pools ──────────────────────────────────────────────
@@ -133,6 +139,14 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
       }),
     );
   const itemEntry = (i: LibraryItem): StudyPoolEntry => ({ type: "item", id: i.id! });
+  const moveGroup = (id: string, by: -1 | 1) =>
+    setGroups((prev) => {
+      const i = prev.findIndex((g) => g.id === id), j = i + by;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
   const addGroup = (n = "") => setGroups((prev) => [...prev, { id: genId(), name: n, pool: [] }]);
   const removeGroup = (id: string) => {
     setGroups((prev) => prev.filter((g) => g.id !== id));
@@ -213,7 +227,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
     } else toast.error(t("quick.failed"));
   };
 
-  const active = groups.find((g) => g.id === activeGroupId) ?? groups[0];
+  const active = activeGroup;
   const short = (d: number) => dayName(d).slice(0, 3);
   const poolSize = new Set(groups.flatMap((g) => g.pool.map(poolEntryKey))).size;
   const perWeek = activeDays.reduce((s, d) => s + dayTotal(d), 0);
@@ -268,6 +282,10 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button type="button" size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label={t("routine.moreActions")}><MoreHorizontal /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem disabled={i === 0} onSelect={() => moveGroup(g.id, -1)}><ArrowUp />{t("segments.moveUp")}</DropdownMenuItem>
+                      <DropdownMenuItem disabled={i === groups.length - 1} onSelect={() => moveGroup(g.id, 1)}><ArrowDown />{t("segments.moveDown")}</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuCheckboxItem checked={!!g.combine} onCheckedChange={(on) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, combine: on } : x)))}>{t("routine.combineGroup")}</DropdownMenuCheckboxItem>
                       <DropdownMenuItem disabled={!g.pool.length} onSelect={() => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, pool: [] } : x)))}>{t("routine.clearGroup")}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => removeGroup(g.id)}><Trash2 />{t("studyRoutine.removeGroup")}</DropdownMenuItem>
@@ -311,6 +329,8 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                   ...(collectionId === undefined && collections?.length ? [{ value: "collection", label: t("studyRoutine.collections") }] : []),
                 ]} />
               </FilterPanel>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant={onlySelected ? "secondary" : "outline"} aria-pressed={onlySelected} onClick={() => { setOnlySelected(v => !v); pager.reset(); }}><Check />{t("routine.onlySelected")}</Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild><Button type="button" variant="outline" disabled={!active || !rows.length}><ListChecks />{t("common.select")}<ChevronDown /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -318,6 +338,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                     <DropdownMenuItem onSelect={() => active && setEntries(active.id, rows.map((r) => r.entry), false)}>{t("routine.clearVisible")}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
               {!active ? null : rows.length === 0 ? (
                 kinds.length === 0 && !collections?.length ? <EmptyState title={t("routine.noMaterials")} hint={t("routine.noMaterialsHint")} /> : <p className="py-6 text-center text-sm text-muted-foreground">{t("common.noResults")}</p>
               ) : (
@@ -326,6 +347,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                     {pager.pageItems.map((r) => {
                       const segs = r.itemId === undefined ? [] : segmentsByItem.get(r.itemId) ?? [];
                       const segOn = segs.filter((sg) => has(active, { type: "segment", id: sg.id! })).length;
+                      const shownSegs = onlySelectedSegs ? segs.filter((sg) => has(active, { type: "segment", id: sg.id! })) : segs;
                       const others = groups.filter((g) => g.id !== active.id && has(g, r.entry)).map((g) => g.name || t("routine.groupFallback"));
                       const expanded = openSections === r.itemId && r.itemId !== undefined;
                       return (
@@ -350,16 +372,17 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                                   <div className="mb-1 flex gap-1">
                                     <Button type="button" size="sm" variant="ghost" onClick={() => setEntries(active.id, segs.map(sg => ({ type: "segment", id: sg.id! })), true)}>{t("common.selectAll")}</Button>
                                     <Button type="button" size="sm" variant="ghost" onClick={() => setEntries(active.id, segs.map(sg => ({ type: "segment", id: sg.id! })), false)}>{t("common.removeAll")}</Button>
+                                    <Button type="button" size="sm" variant={onlySelectedSegs ? "secondary" : "ghost"} aria-pressed={onlySelectedSegs} className="ml-auto" onClick={() => { setOnlySelectedSegs(v => !v); setSegmentPage(0); }}><Check />{t("routine.onlySelected")}</Button>
                                   </div>
                                   <ul className="divide-y divide-border border-y border-border">
-                                    {segs.slice(segmentPage * 5, segmentPage * 5 + 5).map(sg => {
+                                    {shownSegs.slice(segmentPage * 5, segmentPage * 5 + 5).map(sg => {
                                       const entry: StudyPoolEntry = { type: "segment", id: sg.id! };
                                       return <li key={sg.id}><label className="flex min-h-11 cursor-pointer items-center gap-3 py-2 text-sm">
                                         <Checkbox checked={has(active, entry)} onCheckedChange={on => setEntries(active.id, [entry], on === true)} />{sg.label}
                                       </label></li>;
                                     })}
                                   </ul>
-                                  <Pager page={segmentPage} totalPages={Math.ceil(segs.length / 5)} onChange={setSegmentPage} />
+                                  <Pager page={segmentPage} totalPages={Math.ceil(shownSegs.length / 5)} onChange={setSegmentPage} />
                                 </PopoverContent>
                               </Popover>
                             )}
