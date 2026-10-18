@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 *.apk
+
+# Tooling output
+.playwright-mcp/
+.superpowers/
+.impeccable/

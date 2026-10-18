@@ -82,3 +82,7 @@ npm run build
 ---
 
 *Virtuoso: Perché la tua musica merita uno spazio organizzato tanto quanto il tuo talento.*
+
+---
+
+Licenza: [GPL-3.0](LICENSE)
