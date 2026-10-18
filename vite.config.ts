@@ -6,6 +6,8 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // GitHub Pages serves under /<repo>/; set BASE_PATH in CI only
+  base: process.env.BASE_PATH ?? "/",
   server: {
     host: "::",
     port: 8080,

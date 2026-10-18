@@ -79,7 +79,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[195px] flex-col border-r border-border bg-background px-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-[calc(1.75rem+env(safe-area-inset-top))] min-[700px]:flex min-[1151px]:w-[208px] min-[1151px]:px-5 min-[1600px]:w-[250px]">
         <NavLink to="/" className="mb-9 ml-2.5 flex items-center gap-2.5 font-serif text-[1.75rem] font-semibold tracking-tight min-[1151px]:text-[2rem]">
-          <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-lg" />
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="h-8 w-8 rounded-lg" />
           Virtuoso
         </NavLink>
         <nav aria-label={t("nav.main")} className="grid gap-1.5">

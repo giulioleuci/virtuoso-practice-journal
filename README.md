@@ -4,6 +4,8 @@
 
 > **Nota di Sviluppo:** Questa applicazione è stata interamente realizzata in **Vibe Coding**, sfruttando la sinergia creativa tra **Lovable** e **Claude Code** .
 
+**🌐 Demo live: https://giulioleuci.github.io/virtuoso-practice-journal/** — installabile come PWA, i dati restano nel tuo browser.
+
 ---
 
 ## 🎯 Scopi del Progetto
