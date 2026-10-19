@@ -31,9 +31,12 @@ export default function AppShell({ profile }: { profile: Profile }) {
     { to: "/print/weekly", label: t("nav.weeklySummary"), icon: Printer },
     { to: "/profile", label: t("nav.settings"), icon: Settings },
   ];
+  const [today, plan, library, lessons, progress] = items;
+  const mobileItems = [plan, lessons, today, library];
+  const moreItems: typeof items = [progress, ...secondary];
   const isActive = (to: string, also: string[] = []) =>
     [to, ...also].some((p) => (p === "/" ? location.pathname === "/" : location.pathname.startsWith(p)));
-  const moreActive = secondary.some((m) => isActive(m.to));
+  const moreActive = moreItems.some((m) => isActive(m.to, m.also));
 
   const [hidden, setHidden] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -58,7 +61,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
 
   const mobileLink = (active: boolean) =>
     cn(
-      "flex flex-1 flex-col items-center justify-center gap-1 py-2 min-h-[60px] text-xs transition-colors",
+      "relative flex min-w-0 flex-1 flex-col items-center justify-end gap-1 pb-2 pt-3 text-xs transition-colors",
       active ? "text-primary font-semibold" : "text-muted-foreground active:text-foreground"
     );
 
@@ -145,18 +148,24 @@ export default function AppShell({ profile }: { profile: Profile }) {
       <nav
         aria-label={t("nav.main")}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card px-2 transition-transform duration-300 ease-out min-[700px]:hidden",
-          navHidden ? "translate-y-full" : "translate-y-0"
+          "fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card px-2 transition-transform duration-300 ease-out motion-reduce:transition-none min-[700px]:hidden",
+          navHidden ? "translate-y-[calc(100%+2rem)]" : "translate-y-0"
         )}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         aria-hidden={navHidden}
       >
-        <div className="flex items-stretch justify-around">
-          {items.map(({ to, label, short, icon: Icon, end, also }) => {
+        <div className="flex h-[72px] items-stretch justify-around">
+          {mobileItems.map(({ to, label, short, icon: Icon, end, also }) => {
             const active = isActive(to, also);
             return (
-              <NavLink key={to} to={to} end={end} aria-current={active ? "page" : undefined} className={mobileLink(active)}>
-                <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.3 : 1.75} />
+              <NavLink key={to} to={to} end={end} aria-current={active ? "page" : undefined} className={cn(mobileLink(active), "group")}>
+                {to === "/" ? (
+                  <span className="absolute bottom-7 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-raised ring-[5px] ring-card transition-colors group-hover:bg-primary/90 group-active:bg-primary/90">
+                    <Icon className="h-6 w-6" strokeWidth={active ? 2.3 : 1.75} />
+                  </span>
+                ) : (
+                  <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.3 : 1.75} />
+                )}
                 <span>{short ?? label}</span>
               </NavLink>
             );
@@ -169,15 +178,16 @@ export default function AppShell({ profile }: { profile: Profile }) {
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" side="top" className="w-52 p-1">
-              {secondary.map(({ to, label, icon: Icon }) => (
+              {moreItems.map(({ to, label, icon: Icon, also }) => (
                 <NavLink
                   key={to}
                   to={to}
                   onClick={() => setMoreOpen(false)}
-                  className={({ isActive: a }) =>
+                  aria-current={isActive(to, also) ? "page" : undefined}
+                  className={
                     cn(
                       "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors",
-                      a ? "bg-primary/10 text-primary" : "text-foreground hover:bg-secondary/40"
+                      isActive(to, also) ? "bg-primary/10 text-primary" : "text-foreground hover:bg-secondary/40"
                     )
                   }
                 >
