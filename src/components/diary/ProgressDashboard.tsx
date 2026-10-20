@@ -8,7 +8,8 @@ import type { LibraryItem, Segment } from "@/domain/entities/library";
 
 import { weeklyProgress, type ProgressWeek } from "@/domain/logic/progress";
 import { useI18n } from "@/lib/i18n";
-import { dayKey } from "@/lib/date";
+import { ChartData } from "@/components/shared/ChartData";
+import { formatDate, dayKey } from "@/lib/date";
 import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
 
 const WEEK_OPTIONS = [4, 12, 26] as const;
@@ -45,6 +46,8 @@ export function ProgressDashboard({ from, to, onFiltersChange }: { from?: string
     [sessions, tasks, subjectId, itemId, segmentId, from, to, weeks],
   );
 
+  if ([sessions, tasks, subjects, library, segments].some(value => value === undefined)) return <div className="paper-skeleton h-40" />;
+
   return (
     <section className="space-y-4">
       <div className="space-y-1">
@@ -80,8 +83,8 @@ export function ProgressDashboard({ from, to, onFiltersChange }: { from?: string
 type Row = ProgressWeek & { label: string };
 
 function ChartCard({ title, data, dataKey, kind, domain, unit }: { title: string; data: Row[]; dataKey: keyof ProgressWeek; kind: "line" | "bar"; domain?: [number, number]; unit?: string }) {
-  const { t } = useI18n();
-  const values = data.map((d) => d[dataKey]).filter((v): v is number => typeof v === "number" && v > 0);
+  const { t, lang } = useI18n();
+  const values = data.map((d) => d[dataKey]).filter((v): v is number => typeof v === "number" && Number.isFinite(v));
   const latest = values.at(-1);
   const axis = { fontSize: 10, fill: "hsl(var(--muted-foreground))" };
   return (
@@ -93,17 +96,17 @@ function ChartCard({ title, data, dataKey, kind, domain, unit }: { title: string
       {values.length === 0 ? (
         <p className="text-xs text-muted-foreground italic py-6 text-center">{t("progress.noData")}</p>
       ) : (
-        <div className="h-36">
+        <div className="h-36" aria-hidden="true">
           <ResponsiveContainer width="100%" height="100%">
             {kind === "line" ? (
-              <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+              <LineChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={axis} interval="preserveStartEnd" />
                 <YAxis tick={axis} domain={domain ?? ["auto", "auto"]} allowDecimals={false} />
                 <Line type="monotone" dataKey={dataKey} stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 2 }} connectNulls />
               </LineChart>
             ) : (
-              <BarChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+              <BarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={axis} interval="preserveStartEnd" />
                 <YAxis tick={axis} domain={domain} allowDecimals={false} />
@@ -113,6 +116,7 @@ function ChartCard({ title, data, dataKey, kind, domain, unit }: { title: string
           </ResponsiveContainer>
         </div>
       )}
+      <ChartData label={title} valueLabel={`${title}${unit ? ` (${unit})` : ""}`} points={data.map(row => { const value = row[dataKey]; return { label: formatDate(row.weekKey, lang, "medium"), y: typeof value === "number" ? value : null }; })} />
     </div>
   );
 }

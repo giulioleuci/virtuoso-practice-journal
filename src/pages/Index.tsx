@@ -10,10 +10,11 @@ import { Navigate, Routes, Route, useParams } from "react-router-dom";
 import NotFound from "./NotFound";
 import { PageSkeleton } from "@/components/shared/Loading";
 
-// Main tabs are bundled eagerly so switching between them is instant (local-first app).
+// Daily practice, library and planning stay eager; other routes prefetch while idle.
 import Diary from "./Diary";
 import Library from "./Library";
-import Lessons from "./Lessons";
+const loadLessons = () => import("./Lessons");
+const Lessons = lazy(loadLessons);
 import Tasks from "./Tasks";
 // Secondary pages stay lazy, but are prefetched once the app is idle.
 const loadCollections = () => import("./Collections");
@@ -34,7 +35,7 @@ const Profile = lazy(loadProfile);
 const StudySetup = lazy(loadStudySetup);
 if (typeof window !== "undefined") {
   setTimeout(() => {
-    [loadCollections, loadRepertoire, loadAssignments, loadHistory, loadAnalytics, loadPrintSummary, loadProfile, loadStudySetup,
+    [loadLessons, loadCollections, loadRepertoire, loadAssignments, loadHistory, loadAnalytics, loadPrintSummary, loadProfile, loadStudySetup,
       () => import("./NewTaskPage"), () => import("./EditTaskPage"), () => import("./RoutinePage"), () => import("./ItemPage"),
     ].forEach((load) => void load().catch(() => undefined));
   }, 1500);

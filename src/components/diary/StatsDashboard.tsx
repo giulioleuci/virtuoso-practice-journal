@@ -1,174 +1,83 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Session } from "@/domain/entities/session";
 import { useI18n } from "@/lib/i18n";
-import { dayKey } from "@/lib/date";
-
-
+import { addDays, dayKey, formatDate, parseDayKey } from "@/lib/date";
+import { ChartData } from "@/components/shared/ChartData";
 
 interface Props {
-  /** YYYY-MM-DD inclusive lower bound */
   from?: string;
-  /** YYYY-MM-DD inclusive upper bound */
   to?: string;
-  /** Optional pre-filtered sessions; when provided, stats reflect these instead of the full DB. */
   sessions?: Session[];
 }
 
 export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {}) {
-  const { t } = useI18n();
-  // Only hit the DB when no pre-filtered sessions are provided.
+  const { t, lang } = useI18n();
   const liveSessions = usePresentationRead<Session[]>("sessions.all");
   const sessions = sessionsProp ?? liveSessions;
-
   const hasRange = !!(from || to);
-
-  const { last14, heatmap, totalWeek, rangeCount, rangeMinutes, rangeDays, rangeLabel, last14Label, heatmapLabel } = useMemo(() => {
+  const { daily, spark, heatmap, totalWeek, rangeCount } = useMemo(() => {
+    const selected = (sessions ?? []).filter(session => (!from || session.date >= from) && (!to || session.date <= to));
     const counts = new Map<string, number>();
-    for (const s of sessions ?? []) counts.set(s.date, (counts.get(s.date) ?? 0) + 1);
-    const daySet = new Set(counts.keys());
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Determine sparkline window: range if provided (capped to ~60 days), else last 14
-    const parse = (s: string) => {
-      const [y, m, d] = s.split("-").map(Number);
-      const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
-      dt.setHours(0, 0, 0, 0);
-      return dt;
-    };
-    const sparkEnd = to ? parse(to) : new Date(today);
-    const sparkStart = from
-      ? parse(from)
-      : (() => { const d = new Date(sparkEnd); d.setDate(d.getDate() - 13); return d; })();
-    const dayCount = Math.max(1, Math.min(90, Math.round((sparkEnd.getTime() - sparkStart.getTime()) / 86400000) + 1));
-    const last14: { key: string; count: number }[] = [];
-    for (let i = 0; i < dayCount; i++) {
-      const d = new Date(sparkStart);
-      d.setDate(sparkStart.getDate() + i);
-      const k = dayKey(d);
-      last14.push({ key: k, count: counts.get(k) ?? 0 });
+    for (const session of selected) counts.set(session.date, (counts.get(session.date) ?? 0) + 1);
+    const today = dayKey(new Date());
+    const end = parseDayKey(to || today);
+    const start = hasRange
+      ? parseDayKey(from && from > dayKey(addDays(end, -89)) ? from : dayKey(addDays(end, -89)))
+      : addDays(end, -83);
+    const daily: { key: string; count: number }[] = [];
+    for (let day = start; day <= end; day = addDays(day, 1)) {
+      const key = dayKey(day);
+      daily.push({ key, count: key > today ? -1 : counts.get(key) ?? 0 });
     }
-
-    // Heatmap: weeks ending at sparkEnd, count weeks to cover the span (1..16)
-    const heatEnd = new Date(sparkEnd);
-    const dow = (heatEnd.getDay() + 6) % 7;
-    const heatLastMon = new Date(heatEnd);
-    heatLastMon.setDate(heatEnd.getDate() - dow);
-    const weeksNeeded = Math.max(1, Math.min(16, Math.ceil(dayCount / 7)));
-    const start = new Date(heatLastMon);
-    start.setDate(heatLastMon.getDate() - 7 * (weeksNeeded - 1));
-    const weeks: { key: string; count: number }[][] = [];
-    for (let w = 0; w < weeksNeeded; w++) {
-      const col: { key: string; count: number }[] = [];
-      for (let d = 0; d < 7; d++) {
-        const day = new Date(start);
-        day.setDate(start.getDate() + w * 7 + d);
-        const k = dayKey(day);
-        col.push({ key: k, count: day > today ? -1 : counts.get(k) ?? 0 });
-      }
-      weeks.push(col);
-    }
-
+    const offset = (start.getDay() + 6) % 7;
+    const padded = [...Array.from({ length: offset }, () => null), ...daily];
+    const heatmap = Array.from({ length: Math.ceil(padded.length / 7) }, (_, index) => padded.slice(index * 7, index * 7 + 7));
+    const monday = addDays(parseDayKey(today), -((parseDayKey(today).getDay() + 6) % 7));
     let totalWeek = 0;
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      totalWeek += counts.get(dayKey(d)) ?? 0;
-    }
+    for (let day = monday; dayKey(day) <= today; day = addDays(day, 1)) totalWeek += counts.get(dayKey(day)) ?? 0;
+    return { daily, spark: hasRange ? daily : daily.slice(-14), heatmap, totalWeek, rangeCount: selected.length };
+  }, [sessions, from, to, hasRange]);
 
-    const rangeCount = (sessions ?? []).filter((s) => {
-      if (from && s.date < from) return false;
-      if (to && s.date > to) return false;
-      return true;
-    }).length;
-
-    return {
-      last14,
-      heatmap: weeks,
-      totalWeek,
-      rangeCount,
-      rangeMinutes: rangeCount * 10,
-      rangeDays: dayCount,
-      rangeLabel: hasRange ? t("stats.inRange") : t("stats.allTime"),
-      last14Label: hasRange
-        ? t("stats.daysWindow", { count: dayCount })
-        : t("stats.last14Days"),
-      heatmapLabel: hasRange
-        ? t("stats.weeksWindow", { count: weeksNeeded })
-        : t("stats.last12Weeks"),
-    };
-  }, [sessions, from, to, hasRange, t]);
-
-  const max = Math.max(1, ...last14.map((d) => d.count));
-  const w = 220, h = 36, step = w / Math.max(1, last14.length - 1);
-  const path = last14
-    .map((d, i) => `${i === 0 ? "M" : "L"}${(i * step).toFixed(1)},${(h - (d.count / max) * h).toFixed(1)}`)
-    .join(" ");
-
-  const heatColor = (c: number) => {
-    if (c < 0) return "transparent";
-    if (c === 0) return "hsl(var(--muted))";
-    const intensity = Math.min(1, c / 4);
-    return `hsl(var(--primary) / ${0.25 + intensity * 0.65})`;
-  };
+  if (sessions === undefined) return <div className="paper-skeleton h-40" />;
+  const max = Math.max(1, ...spark.map(day => day.count));
+  const width = 220, height = 36, step = width / Math.max(1, spark.length - 1);
+  const path = spark.map((day, index) => `${index === 0 ? "M" : "L"}${(index * step).toFixed(1)},${(height - (Math.max(0, day.count) / max) * height).toFixed(1)}`).join(" ");
+  const heatColor = (count: number) => count < 0 ? "transparent" : count === 0 ? "hsl(var(--muted))" : `hsl(var(--primary) / ${0.25 + Math.min(1, count / 4) * 0.65})`;
+  const sparkLabel = hasRange ? t("stats.daysWindow", { count: spark.length }) : t("stats.last14Days");
+  const heatLabel = hasRange ? t("stats.daysWindow", { count: daily.length }) : t("stats.last12Weeks");
 
   return (
     <section className="space-y-4 border-y border-border py-5">
       <div className="grid max-w-md grid-cols-2 gap-3">
-        <Stat label={t("stats.thisWeek")} value={`${totalWeek}`} sub={t("stats.sessions")} />
-        <Stat label={rangeLabel} value={`${hasRange ? rangeCount : (sessions ?? []).length}`} />
+        <Stat label={t("stats.thisWeek")} value={totalWeek} sub={t("stats.sessions")} />
+        <Stat label={t(hasRange ? "stats.inRange" : "stats.allTime")} value={rangeCount} />
       </div>
-
       <div>
-        <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{last14Label}</div>
-        <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-10" preserveAspectRatio="none">
+        <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">{sparkLabel}</p>
+        <svg aria-hidden="true" viewBox={`0 0 ${width} ${height}`} className="h-10 w-full" preserveAspectRatio="none">
           <path d={path} fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          {last14.map((d, i) => (
-            <circle key={d.key} cx={i * step} cy={h - (d.count / max) * h} r={d.count > 0 ? 1.6 : 0} fill="hsl(var(--primary))" />
-          ))}
+          {spark.map((day, index) => <circle key={day.key} cx={index * step} cy={height - (Math.max(0, day.count) / max) * height} r={day.count > 0 ? 1.6 : 0} fill="hsl(var(--primary))" />)}
         </svg>
       </div>
-
       <div>
-        <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{heatmapLabel}</div>
-        <div className="flex gap-[3px]">
-          {heatmap.map((col, ci) => (
-            <div key={ci} className="flex flex-col gap-[3px]">
-              {col.map((cell) => {
-                const isFuture = cell.count < 0;
-                const cellEl = (
-                  <div
-                    title={`${cell.key} · ${cell.count >= 0 ? cell.count : 0} ${t("stats.sessions")}`}
-                    className="w-3 h-3 rounded-[2px] transition-transform hover:scale-125"
-                    style={{ backgroundColor: heatColor(cell.count) }}
-                  />
-                );
-                return isFuture ? (
-                  <div key={cell.key}>{cellEl}</div>
-                ) : (
-                  <Link key={cell.key} to={`/history?from=${cell.key}&to=${cell.key}`}>
-                    {cellEl}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+        <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">{heatLabel}</p>
+        <div className="flex gap-[3px]" aria-hidden="true">
+          {heatmap.map((column, index) => <div key={index} className="flex flex-col gap-[3px]">
+            {column.map((cell, row) => <div key={cell?.key ?? row} title={cell ? `${formatDate(cell.key, lang, "medium")} · ${Math.max(0, cell.count)} ${t("stats.sessions")}` : undefined} className="h-3 w-3 rounded-[2px]" style={{ backgroundColor: heatColor(cell?.count ?? -1) }} />)}
+          </div>)}
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">{t("stats.heatmapHint")}</p>
+        <ChartData label={heatLabel} valueLabel={t("stats.sessions")} points={daily.filter(day => day.count >= 0).map(day => ({ label: formatDate(day.key, lang, "medium"), y: day.count, href: `/history?from=${day.key}&to=${day.key}` }))} />
       </div>
     </section>
   );
 }
 
-function Stat({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon?: React.ReactNode }) {
-  return (
-    <div className="text-center">
-      {icon && <div className="mb-1">{icon}</div>}
-      <div className="font-serif text-2xl tabular-nums leading-none">{value}</div>
-      <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
-      {sub && <div className="text-xs text-muted-foreground italic">{sub}</div>}
-    </div>
-  );
+function Stat({ label, value, sub }: { label: string; value: number; sub?: string }) {
+  return <div className="text-center">
+    <div className="font-serif text-2xl tabular-nums leading-none">{value}</div>
+    <div className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+    {sub && <div className="text-xs italic text-muted-foreground">{sub}</div>}
+  </div>;
 }

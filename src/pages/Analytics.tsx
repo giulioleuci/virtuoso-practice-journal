@@ -25,7 +25,7 @@ export default function Analytics() {
   const [busy, setBusy] = useState(false);
   const onFilters = useCallback((f: ProgressFilterLabels) => setLabels(f), []);
   const exportPdf = async () => {
-    if (!ref.current) return;
+    if (!ref.current || busy) return;
     setBusy(true);
     try {
       const all = t("common.all");
@@ -70,7 +70,7 @@ export default function Analytics() {
       ]} onReset={() => { setFrom(""); setTo(""); }}>
         <FilterDateRange from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
       </FilterPanel>
-      <StatsDashboard from={from || undefined} to={to || undefined} sessions={sessions ?? []} />
+      {sessions === undefined ? <div className="paper-skeleton h-40" /> : <StatsDashboard from={from || undefined} to={to || undefined} sessions={sessions} />}
 
       <ProgressDashboard from={from || undefined} to={to || undefined} onFiltersChange={onFilters} />
     </div>

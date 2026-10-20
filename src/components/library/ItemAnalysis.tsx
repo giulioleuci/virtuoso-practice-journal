@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useItem, useProfile } from "@/presentation/hooks/useEntities";
 import type { Lang } from "@/domain/entities/common";
 import type { Session } from "@/domain/entities/session";
@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { BpmTimelineChart } from "./BpmTimelineChart";
 import { meanConfidence } from "@/domain/logic/sessionMetrics";
 import { TrendIcon } from "@/lib/icons";
+import { ChartData } from "@/components/shared/ChartData";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { weeklySessionCounts } from "@/lib/domain/analytics";
 import { formatDate, getDefaultWeekStartsOn } from "@/lib/date";
@@ -18,17 +19,6 @@ function formatDay(date: string, lang: Lang): string {
   return formatDate(date, lang, "medium");
 }
 
-function ChartData({ points, label }: { points: ChartPoint[]; label: string }) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-  return <details onToggle={event => setOpen(event.currentTarget.open)}>
-    <summary className="min-h-11 cursor-pointer py-3 text-xs text-primary">{t("analysis.dataTable")}: {label}</summary>
-    {open && <table aria-label={label} className="w-full text-left text-xs tabular-nums">
-      <thead><tr><th scope="col" className="py-2">{t("common.date")}</th><th scope="col" className="py-2">{label}</th></tr></thead>
-      <tbody>{points.map((point, index) => <tr key={index} className="border-t border-border"><td className="py-2">{point.label}</td><td className="py-2">{point.y}</td></tr>)}</tbody>
-    </table>}
-  </details>;
-}
 
 function LineChart({ points, target, color = "hsl(var(--primary))", targetColor = "hsl(var(--muted-foreground))" }: {
   points: ChartPoint[];
