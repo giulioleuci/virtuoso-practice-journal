@@ -19,7 +19,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const { t, lang } = useI18n();
   const location = useLocation();
   const pageKey = "/" + (location.pathname.split("/")[1] ?? "");
-  const pendingHomework = assignmentsToPlan(useAssignments() ?? [], useActiveTasks() ?? []).length;
+  const pendingHomework = assignmentsToPlan(useAssignments(), useActiveTasks()).length;
   const items = [
     { to: "/", label: t("nav.today"), icon: CalendarDays, also: ["/log"] },
     { to: "/tasks", label: t("nav.plan"), short: t("nav.planShort"), icon: ListChecks },

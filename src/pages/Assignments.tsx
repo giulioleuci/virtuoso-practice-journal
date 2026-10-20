@@ -111,7 +111,7 @@ export default function Assignments() {
   const [planning, setPlanning] = useState<number | null>(null);
   const [planningBusy, setPlanningBusy] = useState(false);
 
-  const pendingIds = new Set(assignmentsToPlan(assignments ?? [], tasks ?? []).map(assignment => assignment.id));
+  const pendingIds = new Set(assignmentsToPlan(assignments, tasks).map(assignment => assignment.id));
   const pending = (assignments ?? []).filter(assignment => pendingIds.has(assignment.id) || assignment.id === planning);
   const totalPages = Math.max(1, Math.ceil(pending.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);

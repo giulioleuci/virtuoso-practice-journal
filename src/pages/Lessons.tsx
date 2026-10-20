@@ -120,7 +120,7 @@ export default function Lessons() {
     finally { setDeleting(false); }
   };
 
-  const pendingAssignments = assignmentsToPlan(assignments ?? [], tasksAll ?? []);
+  const pendingAssignments = assignmentsToPlan(assignments, tasksAll);
 
   const upcoming = useMemo(() => {
     const today = dayKey(new Date());
