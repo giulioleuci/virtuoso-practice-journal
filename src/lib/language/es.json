@@ -264,6 +264,7 @@
   "lesson.with": "con {{teacher}}",
   "lesson.notes": "Notas",
   "lesson.notesPlaceholder": "Qué se discutió, qué funcionó, qué no…",
+  "recap.generalQuestions": "Preguntas generales",
   "recap.title": "Preguntar al profesor",
   "recap.subtitle": "Preguntas abiertas y respuestas registradas, agrupadas por materia.",
   "recap.openTab": "abiertas",

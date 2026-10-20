@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useActiveTasks, useAssignments, useLessons, useOpenHelpRequestCount, useRecurrences, useSubjects } from "@/presentation/hooks/useEntities";
 import { subjectColorCss } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
@@ -33,7 +33,7 @@ import {
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
 import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
 import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
-import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
+import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { NextLessonPanel } from "@/components/lessons/NextLessonPanel";
 import { upcomingLessonDates, slotForDate } from "@/lib/recurrence";
 import { dayKey, today } from "@/lib/date";
@@ -45,6 +45,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 
 const PAGE_SIZE = 5;
+const TeacherRecapSheet = lazy(() => import("@/components/lessons/TeacherRecapSheet").then(module => ({ default: module.TeacherRecapSheet })));
 
 export default function Lessons() {
   const { t, lang } = useI18n();
@@ -68,6 +69,7 @@ export default function Lessons() {
   const [logOpen, setLogOpen] = useState(false);
   const [logContext, setLogContext] = useState<LessonLogContext | null>(null);
   const [delLessonId, setDelLessonId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [pageUpcoming, setPageUpcoming] = useState(0);
   const [pageRecent, setPageRecent] = useState(0);
@@ -104,16 +106,18 @@ export default function Lessons() {
   }, [location.state, recurrences]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteRec = async () => {
-    if (delRecId == null) return;
-    await lessonsService.deleteRecurrence(delRecId);
-    toast.success(t("toast.removed"));
-    setDelRecId(null);
+    if (delRecId == null || deleting) return;
+    setDeleting(true);
+    try { await lessonsService.deleteRecurrence(delRecId); toast.success(t("toast.removed")); setDelRecId(null); }
+    catch { toast.error(t("errors.couldNotSave")); }
+    finally { setDeleting(false); }
   };
   const deleteLesson = async () => {
-    if (delLessonId == null) return;
-    await lessonsService.deleteLesson(delLessonId);
-    toast.success(t("toast.lessonDeleted"));
-    setDelLessonId(null);
+    if (delLessonId == null || deleting) return;
+    setDeleting(true);
+    try { await lessonsService.deleteLesson(delLessonId); toast.success(t("toast.lessonDeleted")); setDelLessonId(null); }
+    catch { toast.error(t("errors.couldNotSave")); }
+    finally { setDeleting(false); }
   };
 
   const pendingAssignments = (assignments ?? []).filter(needsTask);
@@ -139,12 +143,14 @@ export default function Lessons() {
     return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectColorCss(sub?.color, sub?.type, sub?.customColor) }} title={sub?.name} role="img" aria-label={sub?.name} />;
   };
   const linkBtn = "inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4";
-  const iconBtn = "inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40";
+  const iconBtn = "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40";
 
   const upcomingTotal = Math.max(1, Math.ceil(upcoming.length / PAGE_SIZE));
   const upcomingPage = Math.min(pageUpcoming, upcomingTotal - 1);
   const recentTotal = Math.max(1, Math.ceil((lessons?.length ?? 0) / PAGE_SIZE));
   const recentPage = Math.min(pageRecent, recentTotal - 1);
+
+  if (recurrences === undefined || subjects === undefined || lessons === undefined || assignments === undefined || tasksAll === undefined) return <div className="paper-skeleton h-40 w-full" />;
 
   return (
     <div className="pb-24">
@@ -176,11 +182,11 @@ export default function Lessons() {
                 {upcoming.slice(upcomingPage * PAGE_SIZE, (upcomingPage + 1) * PAGE_SIZE).map(({ rec, date, isToday, slot }) => (
                   <li key={`${rec.id}-${date}`} className="flex items-center gap-3 py-3.5">
                     {dot(rec.subjectId)}
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                       <div className="break-words text-sm font-medium">{rec.teacher} · {subjectName(rec.subjectId)}</div>
                       <div className="text-xs text-muted-foreground">{isToday ? t("common.today") : formatDate(date, lang)}{slot ? ` · ${slot.startTime}–${slot.endTime}` : ""}</div>
                     </div>
-                    <Button size="sm" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}><NotebookPen />{t("lessons.log")}</Button>
+                    <Button size="sm" className="min-h-11" variant={isToday ? "default" : "outline"} onClick={() => openLog(rec, date)}><NotebookPen />{t("lessons.log")}</Button>
                   </li>
                 ))}
               </ul>
@@ -200,7 +206,7 @@ export default function Lessons() {
                     return (
                       <li key={l.id} className="py-4">
                         <div className="flex items-start gap-3">
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                             <h3 className="flex items-center gap-2 font-serif text-xl font-semibold">{dot(l.subjectId)}{subjectName(l.subjectId)}</h3>
                             <div className="text-xs text-muted-foreground">{formatDate(l.date, lang)}</div>
                             {l.notes && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{l.notes}</p>}
@@ -215,20 +221,20 @@ export default function Lessons() {
                               return (
                                 <li key={a.id} className="flex items-center gap-2 text-xs">
                                   {a.taskIds.length ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" /> : <Wand2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                                  <span className="flex-1 truncate">{a.text}</span>
+                                  <span className="flex-1 truncate" title={a.text}>{a.text}</span>
                                   {a.taskIds.length ? (
                                     <span className="max-w-[40%] truncate text-primary">→ {linked.length === 1 ? linked[0].title : t("homework.tasksLinked", { count: a.taskIds.length })}</span>
                                   ) : a.ignored ? (
-                                    <button onClick={async () => { await lessonsService.restoreAssignment(a.id); toast(t("toast.restored")); }} className="italic text-muted-foreground hover:text-primary">{t("lessons.ignoredRestore")}</button>
+                                    <button onClick={async () => { try { await lessonsService.restoreAssignment(a.id); toast(t("toast.restored")); } catch { toast.error(t("errors.couldNotSave")); } }} className="min-h-11 italic text-muted-foreground hover:text-primary">{t("lessons.ignoredRestore")}</button>
                                   ) : (
                                     <>
                                       <button
                                         onClick={() => navigate("/tasks/new", { state: { date: today(), prefill: { subjectId: l.subjectId, title: a.text, assignmentId: a.id } } })}
-                                        className="font-medium text-primary hover:underline underline-offset-4"
+                                        className="min-h-11 font-medium text-primary hover:underline underline-offset-4"
                                       >
                                         {t("lessons.makeTask")}
                                       </button>
-                                      <button onClick={async () => { await lessonsService.ignoreAssignment(a.id); toast(t("toast.ignored")); }} className="inline-flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive" aria-label={t("common.ignore")}><X className="h-3.5 w-3.5" /></button>
+                                      <button onClick={async () => { try { await lessonsService.ignoreAssignment(a.id); toast(t("toast.ignored")); } catch { toast.error(t("errors.couldNotSave")); } }} className="inline-flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive" aria-label={t("common.ignore")}><X className="h-3.5 w-3.5" /></button>
                                     </>
                                   )}
                                 </li>
@@ -256,7 +262,7 @@ export default function Lessons() {
                 {recurrences.map((r) => (
                   <li key={r.id} className="py-4">
                     <div className="flex items-start gap-2">
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                         <div className="break-words font-serif text-xl font-semibold leading-tight">{r.teacher}</div>
                         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">{dot(r.subjectId)}{subjectName(r.subjectId)}</div>
                       </div>
@@ -305,18 +311,21 @@ export default function Lessons() {
         context={logContext || undefined}
       />
 
-      <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} subjectId={recapSubjectId} />
+      {recapOpen && <Suspense fallback={<ResponsiveSheet open onOpenChange={setRecapOpen} title={t("recap.title")} description={t("recap.subtitle")}><p role="status" className="text-sm text-muted-foreground">{t("common.loading")}</p></ResponsiveSheet>}>
+        <TeacherRecapSheet open onOpenChange={setRecapOpen} subjectId={recapSubjectId} />
+      </Suspense>}
 
-      <AlertDialog open={delRecId !== null} onOpenChange={(o) => !o && setDelRecId(null)}>
+      <AlertDialog open={delRecId !== null} onOpenChange={(o) => !o && !deleting && setDelRecId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("dialog.removeTeacher")}</AlertDialogTitle>
             <AlertDialogDescription>{t("dialog.removeTeacherDesc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={deleteRec}
+              disabled={deleting}
+              onClick={event => { event.preventDefault(); void deleteRec(); }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {t("common.remove")}
@@ -325,16 +334,17 @@ export default function Lessons() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={delLessonId !== null} onOpenChange={(o) => !o && setDelLessonId(null)}>
+      <AlertDialog open={delLessonId !== null} onOpenChange={(o) => !o && !deleting && setDelLessonId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("dialog.deleteLesson")}</AlertDialogTitle>
             <AlertDialogDescription>{t("dialog.deleteLessonDesc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={deleteLesson}
+              disabled={deleting}
+              onClick={event => { event.preventDefault(); void deleteLesson(); }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {t("common.delete")}

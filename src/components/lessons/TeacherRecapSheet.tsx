@@ -7,12 +7,13 @@ import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, HelpCircle, MessageSquareQuote, ChevronRight, History as HistoryIcon } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { subjectColorCss } from "@/lib/subjectColors";
 
@@ -36,6 +37,9 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
   const [tab, setTab] = useState<Tab>("open");
   const [answeringId, setAnsweringId] = useState<number | null>(null);
   const [answerDraft, setAnswerDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string>();
+  const keyboardInset = useKeyboardInset();
 
   useEffect(() => { if (!open) { setAnsweringId(null); setAnswerDraft(""); } }, [open]);
 
@@ -58,7 +62,7 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
     for (const h of list) {
       const item = h.itemId !== undefined ? itemsMap.get(h.itemId) : undefined;
       const subject = item?.subjectId !== undefined ? subjectsMap.get(item.subjectId) : undefined;
-      const subjectKey = subject?.name ?? "Other";
+      const subjectKey = subject?.name ?? t("diary.otherSubject");
       let bucket = map.get(subjectKey);
       if (!bucket) {
         bucket = { subjectName: subjectKey, subjectColor: subject?.color, subjectType: subject?.type, subjectCustomColor: subject?.customColor, items: new Map() };
@@ -67,13 +71,13 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
       const itemKey = h.itemId ?? "none";
       let entry = bucket.items.get(itemKey);
       if (!entry) {
-        entry = { itemId: h.itemId, itemTitle: item?.title ?? "General", reqs: [] };
+        entry = { itemId: h.itemId, itemTitle: item?.title ?? t("recap.generalQuestions"), reqs: [] };
         bucket.items.set(itemKey, entry);
       }
       entry.reqs.push(h);
     }
     return Array.from(map.values());
-  }, [list, items, subjects]);
+  }, [list, items, subjects, t]);
 
   const startAnswer = (h: HelpRequest) => {
     setAnsweringId(h.id ?? null);
@@ -81,58 +85,65 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
   };
 
   const saveAnswer = async (id: number) => {
-    await helpRequestsService.saveAnswer(id, answerDraft);
-    setAnsweringId(null);
-    setAnswerDraft("");
-    toast.success(t("toast.answerSaved"));
+    if (saving) return;
+    setSaving(true); setSaveError(undefined);
+    try {
+      await helpRequestsService.saveAnswer(id, answerDraft);
+      setAnsweringId(null); setAnswerDraft("");
+      toast.success(t("toast.answerSaved"));
+    } catch { setSaveError(t("errors.couldNotSave")); }
+    finally { setSaving(false); }
   };
 
   const resolve = async (id: number) => {
-    await helpRequestsService.resolve(id);
-    toast.success(t("toast.markedResolved"));
+    if (saving) return;
+    setSaving(true); setSaveError(undefined);
+    try { await helpRequestsService.resolve(id); toast.success(t("toast.markedResolved")); }
+    catch { setSaveError(t("errors.couldNotSave")); }
+    finally { setSaving(false); }
   };
 
   const resolveAll = async () => {
     const ids = list.map((h) => h.id).filter((id): id is number => id !== undefined);
-    await helpRequestsService.resolveAll(ids);
-    toast.success(t("toast.allMarkedResolved"));
+    if (saving || !ids.length) return;
+    setSaving(true); setSaveError(undefined);
+    try { await helpRequestsService.resolveAll(ids); toast.success(t("toast.allMarkedResolved")); }
+    catch { setSaveError(t("errors.couldNotSave")); }
+    finally { setSaving(false); }
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[92vh] overflow-y-auto rounded-t-3xl px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+    <Sheet open={open} onOpenChange={value => { if (!saving) onOpenChange(value); }}>
+      <SheetContent side="bottom" style={{ paddingBottom: keyboardInset ? keyboardInset + 24 : undefined }} className="h-[92vh] overflow-y-auto rounded-t-3xl px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <SheetHeader className="px-0">
           <SheetTitle className="font-serif text-2xl">{t("recap.title")}</SheetTitle>
           <SheetDescription className="text-xs">{t("recap.subtitle")}</SheetDescription>
         </SheetHeader>
 
         {/* Full-width segmented tabs */}
-        <div role="tablist" className="mt-4 grid grid-cols-2 gap-1 p-1 rounded-xl bg-muted/60">
+        {saveError && <p role="alert" className="mt-4 text-sm text-destructive">{saveError}</p>}
+        <Tabs value={tab} onValueChange={value => setTab(value as Tab)}>
+        <TabsList aria-label={t("recap.title")} className="mt-4 grid h-auto grid-cols-2 gap-1 p-1 rounded-xl bg-muted/60">
           {(["open", "answered"] as Tab[]).map((tk) => (
-            <button
+            <TabsTrigger
               key={tk}
-              role="tab"
-              aria-selected={tab === tk}
-              onClick={() => setTab(tk)}
-              className={cn(
-                "h-10 text-xs font-medium rounded-lg transition-colors",
-                tab === tk
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              value={tk}
+              disabled={saving}
+              className="min-h-11 whitespace-normal text-xs font-medium rounded-lg transition-colors"
             >
               {tk === "open" ? t("recap.openTab") : t("recap.answeredTab")}
-            </button>
+            </TabsTrigger>
           ))}
-        </div>
+        </TabsList>
+        <TabsContent value={tab}>
 
         <div className="mt-4 space-y-4">
-          {list.length === 0 ? (
+          {helpRequests === undefined || items === undefined || subjects === undefined || tasks === undefined ? <div className="paper-skeleton h-24" /> : list.length === 0 ? (
             <EmptyState title={tab === "open" ? t("recap.noOpenQuestions") : t("recap.noAnswers")} />
           ) : (
             <>
               {tab === "open" && (
-                <Button variant="outline" size="sm" onClick={resolveAll} className="w-full h-10">
+                <Button variant="outline" size="sm" disabled={saving} onClick={resolveAll} className="w-full min-h-11">
                   <CheckCircle2 className="h-4 w-4 mr-1.5" /> {t("recap.resolveAll")}
                 </Button>
               )}
@@ -140,10 +151,10 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                 <section key={g.subjectName} className="space-y-2">
                   <h3 className="text-xs uppercase tracking-widest text-muted-foreground px-1">{g.subjectName}</h3>
                   <Accordion type="multiple" className="space-y-2">
-                    {Array.from(g.items.values()).map((b) => (
+                    {Array.from(g.items.entries()).map(([itemKey, b]) => (
                       <AccordionItem
-                        key={b.itemTitle}
-                        value={b.itemTitle}
+                        key={itemKey}
+                        value={String(itemKey)}
                         className="paper-card border-none overflow-hidden"
                       >
                         <AccordionTrigger className="group px-3.5 py-3 hover:no-underline gap-2 w-full min-w-0">
@@ -162,11 +173,11 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-3.5 pb-3.5">
-                          {b.itemId && (
+                          {b.itemId && items?.some(item => item.id === b.itemId) && (
                             <Link
-                              to={`/library`}
+                              to={`/library/item/${b.itemId}?tab=questions`}
                               onClick={() => onOpenChange(false)}
-                              className="text-xs uppercase tracking-wider text-primary hover:underline inline-flex items-center gap-0.5 mb-3"
+                              className="min-h-11 text-xs text-primary hover:underline inline-flex items-center gap-0.5 mb-3"
                             >
                               {t("recap.openInLibrary")} <ChevronRight className="h-3 w-3" />
                             </Link>
@@ -184,7 +195,7 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                                     ) : (
                                       <HelpCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                                     )}
-                                    <p className="flex-1 text-[15px] leading-snug whitespace-pre-wrap break-words">
+                                    <p className="min-w-0 flex-1 text-sm leading-snug whitespace-pre-wrap [overflow-wrap:anywhere]">
                                       {r.question}
                                     </p>
                                   </div>
@@ -194,7 +205,7 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                                     <div className="px-3 pb-2 flex items-start gap-2 bg-accent/30">
                                       <MessageSquareQuote className="h-4 w-4 mt-3 shrink-0 text-muted-foreground" />
                                       <div className="flex-1 py-2">
-                                        <p className="text-[14px] leading-snug whitespace-pre-wrap break-words">
+                                        <p className="text-sm leading-snug whitespace-pre-wrap [overflow-wrap:anywhere]">
                                           {r.answer}
                                         </p>
                                         {r.answeredAt && (
@@ -210,6 +221,8 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                                   {isAnswering && (
                                     <div className="px-3 pb-3 space-y-2">
                                       <Textarea
+                                        aria-label={t("recap.editAnswer")}
+                                        disabled={saving}
                                         rows={4}
                                         autoFocus
                                         value={answerDraft}
@@ -217,10 +230,10 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                                         placeholder={t("recap.answerPlaceholder")}
                                       />
                                       <div className="flex gap-2">
-                                        <Button variant="outline" className="flex-1 h-10" onClick={() => setAnsweringId(null)}>
+                                        <Button variant="outline" disabled={saving} className="flex-1 min-h-11" onClick={() => setAnsweringId(null)}>
                                           {t("common.cancel")}
                                         </Button>
-                                        <Button className="flex-[2] h-10" onClick={() => r.id && saveAnswer(r.id)}>
+                                        <Button disabled={saving} className="flex-[2] min-h-11" onClick={() => r.id && saveAnswer(r.id)}>
                                           {t("recap.saveAnswer")}
                                         </Button>
                                       </div>
@@ -231,16 +244,18 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
                                   {!isAnswering && (
                                     <div className="flex items-stretch border-t border-border/50 divide-x divide-border/50">
                                       <button
+                                        disabled={saving}
                                         onClick={() => startAnswer(r)}
-                                        className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-primary hover:bg-primary/10 active:bg-primary/15"
+                                        className="flex-1 min-h-11 inline-flex items-center justify-center gap-1.5 text-xs text-primary hover:bg-primary/10 active:bg-primary/15"
                                       >
                                         <MessageSquareQuote className="h-3.5 w-3.5" />
                                         {r.answer ? t("recap.editAnswer") : t("recap.recordAnswer")}
                                       </button>
                                       {!r.resolved && (
                                         <button
+                                          disabled={saving}
                                           onClick={() => r.id && resolve(r.id)}
-                                          className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                                          className="flex-1 min-h-11 inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent/40"
                                         >
                                           <CheckCircle2 className="h-3.5 w-3.5" />
                                           {t("recap.resolve")}
@@ -261,6 +276,8 @@ export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
             </>
           )}
         </div>
+        </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

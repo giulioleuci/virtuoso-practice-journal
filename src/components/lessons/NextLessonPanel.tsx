@@ -13,6 +13,7 @@ import { HomeworkInput } from "@/components/lessons/HomeworkInput";
 import { CalendarClock, NotebookPen, HelpCircle, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
 
 export function NextLessonPanel({ recurrence, date, subject, onLog, onQuestions }: {
   recurrence: LessonRecurrence; date: string; subject?: Subject; onLog: () => void; onQuestions: () => void;
@@ -62,7 +63,7 @@ export function NextLessonPanel({ recurrence, date, subject, onLog, onQuestions 
       </div>
       <HomeworkInput recurrence={recurrence} date={date} className="mt-4 flex gap-2 border-t border-border pt-4" />
       <details className="group mt-4 border-t border-border pt-3" open={open + questions.length > 0 && open + questions.length <= 6}>
-        <summary className="cursor-pointer list-none text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+        <summary className="min-h-11 cursor-pointer py-3 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
           {t("lessons.preparationCount", { homework: open, questions: questions.length })}
         </summary>
         <div className="mt-3 space-y-5">
@@ -71,18 +72,18 @@ export function NextLessonPanel({ recurrence, date, subject, onLog, onQuestions 
             {open === 0 ? <p className="text-xs text-muted-foreground">{t("lessons.noOpenHomework")}</p> : <ul className="space-y-1">
               {homework.map(assignment => <li key={assignment.id} className="flex items-start gap-2 text-sm">
                 <span aria-hidden="true" className="mt-2 h-3 w-3 shrink-0 rounded-sm border border-border" />
-                <span className="min-w-0 flex-1 break-words py-1">{assignment.text}</span>
+                <span className="min-w-0 flex-1 py-1 [overflow-wrap:anywhere]">{assignment.text}</span>
                 {assignment.taskIds.length > 0
                   ? <span className="py-1 text-xs text-primary">{t("homework.tasksLinked", { count: assignment.taskIds.length })}</span>
-                  : <Link className="inline-flex min-h-8 items-center text-xs font-medium text-primary hover:underline underline-offset-4" to="/tasks/new" state={{ date: today(), prefill: { subjectId: recurrence.subjectId, title: assignment.text, assignmentId: assignment.id } }}>{t("lessons.makeTask")}</Link>}
-                <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground hover:text-destructive" aria-label={`${t("common.ignore")}: ${assignment.text}`} onClick={() => void lessonsService.ignoreAssignment(assignment.id)}><X className="h-3.5 w-3.5" /></button>
+                  : <Link className="inline-flex min-h-11 items-center text-xs font-medium text-primary hover:underline underline-offset-4" to="/tasks/new" state={{ date: today(), prefill: { subjectId: recurrence.subjectId, title: assignment.text, assignmentId: assignment.id } }}>{t("lessons.makeTask")}</Link>}
+                <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground hover:text-destructive" aria-label={`${t("common.ignore")}: ${assignment.text}`} onClick={() => void deleteWithUndo({ remove: () => lessonsService.ignoreAssignment(assignment.id), restore: () => lessonsService.restoreAssignment(assignment.id), message: t("toast.ignored"), undoLabel: t("common.undo"), toast: (message, options) => toast.success(message, options), onError: () => toast.error(t("errors.couldNotSave")) })}><X className="h-3.5 w-3.5" /></button>
               </li>)}
             </ul>}
           </div>
           <div className="space-y-2">
             <h3 className="text-xs font-semibold">{t("lessons.questionsShort")}</h3>
             {!questions.length ? <p className="text-xs text-muted-foreground">{t("recap.noOpenQuestions")}</p> : <ul className="space-y-1">{questions.map(question => <li key={question.id}><label className="flex min-h-11 items-start gap-3 py-2 text-sm"><Checkbox className="mt-0.5" checked={false} disabled={resolvingIds.includes(question.id)} onCheckedChange={() => resolve(question.id)} aria-label={t("lessons.resolveQuestion", { question: question.question })} /><span className="break-words">{question.question}</span></label></li>)}</ul>}
-            <Button variant="ghost" size="sm" onClick={onQuestions}><HelpCircle />{t("lessons.questionsShort")}</Button>
+            <Button variant="ghost" size="sm" className="min-h-11" onClick={onQuestions}><HelpCircle />{t("lessons.questionsShort")}</Button>
           </div>
         </div>
       </details>

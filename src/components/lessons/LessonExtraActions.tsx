@@ -1,13 +1,14 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HelpCircle, FileText } from "lucide-react";
 import { useAllLibrary, useHelpRequests } from "@/presentation/hooks/useEntities";
-import { TeacherRecapSheet } from "@/components/lessons/TeacherRecapSheet";
+import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { useI18n } from "@/lib/i18n";
 
 interface Props {
   subjectId: number;
 }
+const TeacherRecapSheet = lazy(() => import("@/components/lessons/TeacherRecapSheet").then(module => ({ default: module.TeacherRecapSheet })));
 
 /** Secondary row of lesson-card actions: open questions for the subject + weekly summary. */
 export function LessonExtraActions({ subjectId }: Props) {
@@ -37,7 +38,9 @@ export function LessonExtraActions({ subjectId }: Props) {
           <FileText className="h-4 w-4" /> {t("lessons.summaryShort")}
         </button>
       </div>
-      <TeacherRecapSheet open={recapOpen} onOpenChange={setRecapOpen} subjectId={subjectId} />
+      {recapOpen && <Suspense fallback={<ResponsiveSheet open onOpenChange={setRecapOpen} title={t("recap.title")} description={t("recap.subtitle")}><p role="status" className="text-sm text-muted-foreground">{t("common.loading")}</p></ResponsiveSheet>}>
+        <TeacherRecapSheet open onOpenChange={setRecapOpen} subjectId={subjectId} />
+      </Suspense>}
     </>
   );
 }

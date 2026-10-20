@@ -4,7 +4,7 @@ import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
 import { lessonsService } from "@/lib/services";
 import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,9 +36,12 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
 
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string>();
 
   useEffect(() => {
     if (!open) return;
+    setSaveError(undefined);
     setDate(lesson?.date ?? prefilledDate ?? today());
     setNotes(lesson?.notes ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,31 +55,38 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
   }, [subjId, date, t]);
 
   const save = async () => {
-    if (errors.length) return;
-    if (lesson?.id) await lessonsService.updateLesson(lesson, date, notes);
-    else if (subjId !== undefined) await lessonsService.log(subjId, recurrence, date, notes);
-    toast.success(isEdit ? t("toast.lessonUpdated") : t("toast.lessonLogged"));
-    onOpenChange(false);
+    if (errors.length || saving || lessons === undefined) return;
+    setSaving(true);
+    setSaveError(undefined);
+    try {
+      if (lesson?.id) await lessonsService.updateLesson(lesson, date, notes);
+      else if (subjId !== undefined) await lessonsService.log(subjId, recurrence, date, notes);
+      toast.success(isEdit ? t("toast.lessonUpdated") : t("toast.lessonLogged"));
+      onOpenChange(false);
+    } catch { setSaveError(t("errors.couldNotSave")); }
+    finally { setSaving(false); }
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-        <SheetHeader>
-          <SheetTitle className="font-serif text-2xl">{isEdit ? t("lesson.edit") : t("lesson.log")}</SheetTitle>
-          {recurrence && <p className="text-sm text-muted-foreground italic">{t("lesson.with", { teacher: recurrence.teacher })}</p>}
-        </SheetHeader>
-
-        <div className="space-y-5 mt-5">
+    <ResponsiveSheet open={open} onOpenChange={value => { if (!saving) onOpenChange(value); }}
+      title={isEdit ? t("lesson.edit") : t("lesson.log")}
+      description={recurrence ? t("lesson.with", { teacher: recurrence.teacher }) : undefined}
+      footer={<div className="flex w-full gap-2">
+        <Button variant="outline" className="flex-1" disabled={saving} onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
+        <Button className="flex-1" disabled={errors.length > 0 || saving || lessons === undefined} onClick={save}>{isEdit ? t("common.save") : t("lesson.log")}</Button>
+      </div>}>
+        <div className="space-y-5">
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">{t("common.date")}</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Input aria-label={t("common.date")} disabled={saving} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
 
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">{t("lesson.notes")}</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder={t("lesson.notesPlaceholder")} />
+            <Textarea aria-label={t("lesson.notes")} disabled={saving} value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder={t("lesson.notesPlaceholder")} />
           </div>
+
+          {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
 
           {errors.length > 0 && (
             <ul className="text-xs text-destructive space-y-0.5">
@@ -84,12 +94,7 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
             </ul>
           )}
 
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
-            <Button className="flex-1" disabled={errors.length > 0} onClick={save}>{isEdit ? t("common.save") : t("lesson.log")}</Button>
-          </div>
         </div>
-      </SheetContent>
-    </Sheet>
+    </ResponsiveSheet>
   );
 }

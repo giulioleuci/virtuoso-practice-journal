@@ -28,6 +28,7 @@ export function ResponsiveSheet({ open, onOpenChange, title, description, footer
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent
+          {...(!description ? { "aria-describedby": undefined } : {})}
           className={cn("max-h-[92dvh] p-0 flex flex-col", className)}
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
@@ -53,7 +54,7 @@ export function ResponsiveSheet({ open, onOpenChange, title, description, footer
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-h-[85dvh] flex flex-col", className)}>
+      <DialogContent {...(!description ? { "aria-describedby": undefined } : {})} className={cn("max-h-[85dvh] flex flex-col", className)}>
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
