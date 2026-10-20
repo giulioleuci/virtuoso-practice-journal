@@ -86,7 +86,7 @@ export function LastSessionStrip({ task, compact = false, onRestart }: Props) {
                     to={canDrill ? `/library/item/${task.itemId}/segment/${numericId}` : "#"}
                     aria-disabled={!canDrill}
                     className={cn(
-                      "flex min-h-9 w-full items-center gap-2 rounded-md px-1 py-1 -mx-1 text-left text-xs",
+                      "flex min-h-11 w-full items-center gap-2 rounded-md px-1 py-1 -mx-1 text-left text-xs",
                       canDrill && "hover:bg-muted/50 transition-colors",
                     )}
                     aria-label={canDrill ? t("session.segmentHistory") : undefined}

@@ -24,7 +24,8 @@ export function useWakeLock(enabled: boolean) {
     };
 
     const onVisibility = () => {
-      if (document.visibilityState === "visible" && !lockRef.current) void request();
+      // The browser releases the lock whenever the page hides; take a new one on return.
+      if (document.visibilityState === "visible" && (!lockRef.current || lockRef.current.released)) void request();
     };
 
     void request();

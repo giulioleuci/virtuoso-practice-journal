@@ -171,7 +171,7 @@ export default function Library() {
         <div className="min-w-0">
           <h3 className="font-serif text-xl font-semibold leading-tight break-words">
             <Link to={`/library/item/${it.id}`} className="hover:underline underline-offset-4">{it.title}</Link>
-          <Button size="icon" variant="ghost" className="ml-1.5 inline-flex h-11 w-11 align-middle" aria-pressed={!!it.isFavorite} aria-label={`${t(it.isFavorite ? "library.removeFavorite" : "library.addFavorite")}: ${it.title}`} onClick={async () => {
+          <Button size="icon" variant="ghost" className="ml-1.5 inline-flex h-11 w-11 align-middle" aria-label={`${t(it.isFavorite ? "library.removeFavorite" : "library.addFavorite")}: ${it.title}`} onClick={async () => {
             try { await libraryService.upsert({ ...it, isFavorite: !it.isFavorite }); }
             catch { toast.error(t("quick.failed")); }
           }}>

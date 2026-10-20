@@ -158,7 +158,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
         style={{ paddingTop: "calc(1.75rem + env(safe-area-inset-top))" }}
       >
         {/* ponytail: pages not yet ported to the new design stay in a 3xl column */}
-        <div key={pageKey} className={cn("mx-auto w-full animate-page-in", WIDE_PAGES.includes(pageKey) ? "max-w-[1200px]" : "max-w-3xl")}>
+        <div key={pageKey} className={cn("mx-auto w-full animate-page-in motion-reduce:animate-none", WIDE_PAGES.includes(pageKey) ? "max-w-[1200px]" : "max-w-3xl")}>
           <ErrorBoundary inline resetKey={location.pathname}><Outlet context={{ profile, navHidden }} /></ErrorBoundary>
         </div>
       </main>

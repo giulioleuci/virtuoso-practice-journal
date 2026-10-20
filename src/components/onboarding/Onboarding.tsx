@@ -102,7 +102,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         </div>
       </header>
 
-      <main className="flex-1 px-6 max-w-xl w-full mx-auto pb-32 animate-fade-in">
+      <main className="flex-1 px-6 max-w-xl w-full mx-auto pb-32 animate-fade-in motion-reduce:animate-none">
         {step === 0 && (
           <section>
             <h2 ref={heading} tabIndex={-1} className="font-serif text-4xl mb-1 focus-visible:outline-none">{t("onb.welcome")}</h2>
@@ -218,7 +218,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
             </div>
 
             {reminderFreq === "custom" && (
-              <div className="flex gap-2 justify-between">
+              <div className="grid grid-cols-7 gap-1">
                 {DAYS.map((d, i) => (
                   <button
                     key={i}
@@ -226,7 +226,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                     aria-pressed={reminderDays.includes(i)}
                     onClick={() => toggleDay(i)}
                     className={cn(
-                      "h-11 w-11 rounded-full font-medium transition-colors",
+                      "h-11 min-w-0 rounded-lg font-medium transition-colors",
                       reminderDays.includes(i)
                         ? "bg-primary text-primary-foreground"
                         : "bg-card border border-border text-muted-foreground"

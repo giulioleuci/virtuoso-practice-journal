@@ -172,14 +172,14 @@ export default function BulkAddTasksPage() {
                         </label>
                         {segs.length > 0 && (
                           <details className="ml-8 mt-1">
-                            <summary className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                            <summary className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
                               <ListMusic className="h-3.5 w-3.5" />{t("bulk.sections", { count: segs.length })}
                             </summary>
                             <div role="group" aria-label={t("bulk.sectionsOf", { title: item.title })} className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                               {segs.map((s) => {
                                 const k = `${item.id}:${s.id}`;
                                 return (
-                                  <label key={s.id} className="inline-flex min-h-9 items-center gap-2 text-[0.8125rem]">
+                                  <label key={s.id} className="inline-flex min-h-11 items-center gap-2 text-[0.8125rem]">
                                     <Checkbox
                                       checked={segKeys.has(k)}
                                       onCheckedChange={(on) => { toggleSeg(k, on === true); if (on === true) setMany([item.id!], true); }}

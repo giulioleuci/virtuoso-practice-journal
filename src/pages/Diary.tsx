@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useSessions, useStudyRoutines, useSubjects } from "@/presentation/hooks/useEntities";
+import { useActiveTasks, useAssignments, useSessions, useStudyRoutines, useSubjects } from "@/presentation/hooks/useEntities";
+import { assignmentsToPlan } from "@/presentation/utils/assignments";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Task } from "@/domain/entities/task";
 import type { Session } from "@/domain/entities/session";
@@ -65,8 +66,8 @@ export default function Diary() {
 
   const diary = usePresentationRead<{ tasks: Task[]; sessionsByTask: Record<number, Session[]> }>("tasks.diaryDate", [date]);
   const { tasks, sessionsByTask } = diary ?? { tasks: undefined, sessionsByTask: {} };
-  const pendingAssignments = usePresentationRead<unknown[]>("assignments.pending");
-  const pendingCount = pendingAssignments?.length ?? 0;
+  // Same rule as the nav badge and Lessons: homework whose tasks were all deleted is pending again.
+  const pendingCount = assignmentsToPlan(useAssignments(), useActiveTasks()).length;
 
   const studyRoutines = useStudyRoutines();
   const subjects = useSubjects();
@@ -454,7 +455,7 @@ export default function Diary() {
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-11 w-11 sm:h-9 sm:w-9"
+                              className="h-11 w-11"
                               aria-label={t("common.ignore")}
                               onClick={async () => {
                                 if (!task.id) return;
@@ -482,7 +483,7 @@ export default function Diary() {
               const slice = ignoredTasks.slice(page * IGNORED_PAGE_SIZE, page * IGNORED_PAGE_SIZE + IGNORED_PAGE_SIZE);
               return (
                 <details className="group border-t border-border pt-4">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground">
                     <HideIcon className="h-4 w-4" /> {t("diary.ignored", { count: ignoredTasks.length })}
                   </summary>
                   <ul className="mt-3 divide-y divide-border">

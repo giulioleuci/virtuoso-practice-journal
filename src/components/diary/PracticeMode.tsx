@@ -139,7 +139,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     };
     schedule();
     const id = window.setInterval(schedule, 25);
-    return () => { clearInterval(id); pulses.forEach(clearTimeout); };
+    return () => { clearInterval(id); pulses.forEach(clearTimeout); setPulse(0); };
   }, [meterOn]);
 
   useEffect(() => () => { ctxRef.current?.close().catch(() => undefined); }, []);
@@ -154,7 +154,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
     <DialogPortal>
     <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-background" />
-    <DialogPrimitive.Content aria-describedby={undefined} onInteractOutside={(event) => event.preventDefault()} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }} className="fixed inset-0 z-[80] flex flex-col overflow-y-auto bg-background animate-fade-in pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+    <DialogPrimitive.Content aria-describedby={undefined} onInteractOutside={(event) => event.preventDefault()} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }} className="fixed inset-0 z-[80] flex flex-col overflow-y-auto bg-background animate-fade-in motion-reduce:animate-none pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col gap-3 px-4 pb-28 pt-3 min-[700px]:px-9 min-[900px]:max-w-[1100px] short-landscape:max-w-none short-landscape:pb-4 short-landscape:pt-2">
         <DialogTitle className="sr-only">{t("practice.practiceMode")}</DialogTitle>
         {storageFailed && <p role="alert" className="text-xs text-destructive">{t("draft.storageFailed")}</p>}

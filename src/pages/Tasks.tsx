@@ -227,8 +227,8 @@ export default function Tasks() {
                   <RefreshCw className={regeneratingId === r.id ? "animate-spin" : ""} />
                   <span className="max-[699px]:sr-only">{t("studyRoutine.regenerate")}</span>
                 </Button>
-                <Button size="icon" variant="ghost" className="h-10 w-10" aria-label={`${t("common.edit")} ${r.name ?? ""}`} onClick={() => navigate(`/tasks/routines/edit/${r.id}`)}><Pencil /></Button>
-                <Button size="icon" variant="ghost" className="h-10 w-10 hover:text-destructive" aria-label={`${t("common.delete")} ${r.name ?? ""}`} onClick={() => r.id && setDelRoutineId(r.id)}><Trash2 /></Button>
+                <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={`${t("common.edit")} ${r.name ?? ""}`} onClick={() => navigate(`/tasks/routines/edit/${r.id}`)}><Pencil /></Button>
+                <Button size="icon" variant="ghost" className="h-11 w-11 hover:text-destructive" aria-label={`${t("common.delete")} ${r.name ?? ""}`} onClick={() => r.id && setDelRoutineId(r.id)}><Trash2 /></Button>
               </li>
             ))}
           </ul>
@@ -268,8 +268,8 @@ export default function Tasks() {
                       {firstTempo(task.plan) && <span>{NOTE_GLYPH[firstTempo(task.plan)!.noteVal ?? "quarter"]} = {firstTempo(task.plan)!.bpm}</span>}
                     </div>
                   </div>
-                  <Button size="icon" variant="ghost" className="h-10 w-10" aria-label={t("plan.editTask", { title: task.title })} onClick={() => navigate(`/tasks/edit/${task.id}`)}><Pencil /></Button>
-                  <Button size="icon" variant="ghost" className="h-10 w-10 hover:text-destructive" aria-label={t("plan.deleteTask", { title: task.title })} onClick={() => askDelete(task)}><Trash2 /></Button>
+                  <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={t("plan.editTask", { title: task.title })} onClick={() => navigate(`/tasks/edit/${task.id}`)}><Pencil /></Button>
+                  <Button size="icon" variant="ghost" className="h-11 w-11 hover:text-destructive" aria-label={t("plan.deleteTask", { title: task.title })} onClick={() => askDelete(task)}><Trash2 /></Button>
                 </li>
               ))}
             </ul>
