@@ -225,6 +225,9 @@ Gently rounded, never pill-shaped except badges, avatars and the floating Today 
 ### Floating action bar
 Save/cancel bar fixed above the bottom navigation, the system bar or the keyboard, 14px radius, raised shadow. App-wide pattern for forms.
 
+### Metronome (practice mode)
+Beats are scheduled on the audio clock; the pendulum swings to the other side on each scheduled beat and hides under reduced motion, while the beat dots flash by opacity on every beat. Two columns from 900px wide and on short landscape screens (readout left, tempo controls right); the finish bar joins the page flow on short landscape. Readout in Manrope tabular at 5rem.
+
 ### Empty states
 Open band between two rules, optional serif quote, muted icon, serif title, 60ch hint, primary CTA plus ghost secondary.
 

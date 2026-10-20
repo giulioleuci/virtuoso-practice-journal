@@ -497,7 +497,7 @@
   "collections.emptyByKind.manual": "Nessun manuale.",
   "collections.groupHintByKind.manual": "Un indice ordinato per brani, studi, esercizi e teoria.",
   "collections.namePlaceholder.manual": "Hanon — Il pianista virtuoso",
-  "session.segmentIndicator": "Segmento {{current}} di {{total}}",
+  "session.segmentIndicator": "Sezione {{current}} di {{total}}",
   "studyRoutine.name": "Nome routine",
   "studyRoutine.collections": "Raccolte",
   "studyRoutine.repetitionCap": "Max ripetizioni per elemento per settimana",

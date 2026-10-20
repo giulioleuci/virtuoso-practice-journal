@@ -64,3 +64,58 @@ it("switches between plain and dotted choices without discarding the selected te
   fireEvent.click(screen.getByRole("button", { name: t("practice.finishLog") }));
   expect(finish).toHaveBeenCalledWith(expect.objectContaining({ marks: [expect.objectContaining({ noteVal: "dotted-eighth", bpm: 60 })] }));
 });
+
+it("keeps a steady beat on the audio clock while the tempo changes, without a burst of clicks", async () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  const starts: number[] = [];
+  const clock = { now: 0 };
+  vi.stubGlobal("AudioContext", class {
+    state = "running"; destination = {};
+    get currentTime() { return clock.now; }
+    resume() { return Promise.resolve(); }
+    close() { return Promise.resolve(); }
+    createGain() { return { gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: (d: unknown) => d }; }
+    createOscillator() { return { frequency: { value: 0 }, type: "", connect: (g: unknown) => g, start: (when = clock.now) => starts.push(when), stop() {} }; }
+  });
+  await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);
+  const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+  try {
+    render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><PracticeMode task={{ id: 1, title: "Scales", subjectId: 1, plan: [], date: "2026-10-18", done: false, createdAt: 1 }} onClose={() => {}} onFinish={() => {}} /></I18nContext.Provider>);
+    fireEvent.click(await screen.findByRole("button", { name: t("practice.start") }));
+    vi.advanceTimersByTime(25);
+    const before = starts.length;
+    for (let i = 0; i < 10; i++) fireEvent.click(screen.getByRole("button", { name: t("practice.bpmIncrease", { step: 5 }) }));
+    vi.advanceTimersByTime(25);
+    expect(starts.length).toBe(before);
+    for (let step = 1; step <= 40; step++) { clock.now = step * 0.05; vi.advanceTimersByTime(25); }
+    const gaps = starts.slice(before).map((when, i, all) => (i ? when - all[i - 1] : 0)).slice(1);
+    expect(gaps.length).toBeGreaterThan(0);
+    for (const gap of gaps) expect(gap).toBeCloseTo(60 / 110, 3);
+  } finally { vi.useRealTimers(); }
+});
+
+it("swings the pendulum on the scheduled beat and marks every beat, even with one beat per bar", async () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  const clock = { now: 0 };
+  vi.stubGlobal("AudioContext", class {
+    state = "running"; destination = {};
+    get currentTime() { return clock.now; }
+    resume() { return Promise.resolve(); }
+    close() { return Promise.resolve(); }
+    createGain() { return { gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: (d: unknown) => d }; }
+    createOscillator() { return { frequency: { value: 0 }, type: "", connect: (g: unknown) => g, start() {}, stop() {} }; }
+  });
+  await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);
+  const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
+  render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><PracticeMode task={{ id: 1, title: "Scales", subjectId: 1, plan: [], date: "2026-10-18", done: false, createdAt: 1 }} onClose={() => {}} onFinish={() => {}} /></I18nContext.Provider>);
+  fireEvent.click(await screen.findByRole("button", { name: t("practice.start") }));
+  const pendulum = document.querySelector<HTMLElement>("[data-pendulum]")!;
+  const beat = () => document.querySelector<HTMLElement>("[data-beat-mark]")!;
+  await waitFor(() => expect(beat().dataset.beatMark).toBe("1"));
+  const first = { swing: pendulum.style.transform, mark: beat() };
+  clock.now = 1.02;
+  await waitFor(() => expect(beat().dataset.beatMark).toBe("2"), { timeout: 2000 });
+  expect(pendulum.style.transform).not.toBe(first.swing);
+  expect(beat()).not.toBe(first.mark);
+});

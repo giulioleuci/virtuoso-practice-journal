@@ -214,16 +214,9 @@
   }
 }
 
+.metronome-pendulum { transform-origin: bottom center; }
+
 /* Print-optimised weekly teacher summary */
-@keyframes metronome-swing {
-  0%, 100% { transform: translateX(-50%) rotate(-28deg); }
-  50% { transform: translateX(-50%) rotate(28deg); }
-}
-.metronome-pendulum { transform-origin: bottom center; transform: translateX(-50%); }
-.metronome-pendulum-running { animation: metronome-swing 1.5s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .metronome-pendulum-running { animation: none; }
-}
 
 @media print {
   nav,

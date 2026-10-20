@@ -497,7 +497,7 @@
   "collections.emptyByKind.manual": "Noch keine Lehrbücher.",
   "collections.groupHintByKind.manual": "Ein geordnetes Inhaltsverzeichnis für Stücke, Etüden, Übungen und Theorie.",
   "collections.namePlaceholder.manual": "Hanon — Der Klaviervirtuose",
-  "session.segmentIndicator": "Segment {{current}} von {{total}}",
+  "session.segmentIndicator": "Abschnitt {{current}} von {{total}}",
   "studyRoutine.name": "Name der Routine",
   "studyRoutine.collections": "Sammlungen",
   "studyRoutine.repetitionCap": "Max. Wiederholungen pro Element pro Woche",

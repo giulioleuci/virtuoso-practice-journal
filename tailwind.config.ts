@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
+import plugin from "tailwindcss/plugin";
 
 export default {
   darkMode: ["class"],
@@ -102,14 +103,22 @@ export default {
         "accordion-down": { from: { height: "0", opacity: "0" }, to: { height: "var(--radix-accordion-content-height)", opacity: "1" } },
         "accordion-up": { from: { height: "var(--radix-accordion-content-height)", opacity: "1" }, to: { height: "0", opacity: "0" } },
         "fade-in": { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+        // Opacity only, so the beat stays visible under reduced motion.
+        "beat-flash": { from: { opacity: "1" }, to: { opacity: "0.35" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
         "accordion-up": "accordion-up 0.2s cubic-bezier(0.7, 0, 0.84, 0)",
         "fade-in": "fade-in 0.4s ease-out",
         "page-in": "fade-in 0.15s ease-out",
+        "beat-flash": "beat-flash 0.3s ease-out forwards",
       },
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [
+    tailwindcssAnimate,
+    // Phone on a stand in landscape: little height, enough width for two columns. A variant, not a screen:
+    // a raw screen would switch off the arbitrary min-[…]/max-[…] variants the whole app relies on.
+    plugin(({ addVariant }) => addVariant("short-landscape", "@media (orientation: landscape) and (max-height: 500px)")),
+  ],
 } satisfies Config;
