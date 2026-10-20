@@ -509,7 +509,6 @@
   "studyRoutine.avoidBackToBackDesc": "Dasselbe Element nicht an zwei Folgetagen ziehen",
   "studyRoutine.startDate": "Startdatum",
   "studyRoutine.errorNoGroups": "Erstelle mindestens eine Gruppe",
-  "studyRoutine.errorNoGroupItems": "Jede Gruppe braucht mindestens ein zugewiesenes Element",
   "studyRoutine.errorNoDays": "Wähle mindestens einen Tag im Zeitplan",
   "studyRoutine.removeGroup": "Gruppe entfernen",
   "studyRoutine.groupsLabel": "Gruppe",

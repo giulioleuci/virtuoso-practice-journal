@@ -509,7 +509,6 @@
   "studyRoutine.avoidBackToBackDesc": "Don't draw the same item two days in a row",
   "studyRoutine.startDate": "Start date",
   "studyRoutine.errorNoGroups": "Create at least one group",
-  "studyRoutine.errorNoGroupItems": "Each group needs at least one item assigned",
   "studyRoutine.errorNoDays": "Select at least one day in the schedule",
   "studyRoutine.removeGroup": "Remove group",
   "studyRoutine.groupsLabel": "group",

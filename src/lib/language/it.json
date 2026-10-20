@@ -509,7 +509,6 @@
   "studyRoutine.avoidBackToBackDesc": "Non estrarre lo stesso elemento in due giorni consecutivi",
   "studyRoutine.startDate": "Data di inizio",
   "studyRoutine.errorNoGroups": "Crea almeno un gruppo",
-  "studyRoutine.errorNoGroupItems": "Ogni gruppo deve avere almeno un elemento assegnato",
   "studyRoutine.errorNoDays": "Seleziona almeno un giorno nel programma",
   "studyRoutine.removeGroup": "Rimuovi gruppo",
   "studyRoutine.groupsLabel": "gruppo",

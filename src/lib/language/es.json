@@ -509,7 +509,6 @@
   "studyRoutine.avoidBackToBackDesc": "No sortear el mismo elemento dos días seguidos",
   "studyRoutine.startDate": "Fecha de inicio",
   "studyRoutine.errorNoGroups": "Crea al menos un grupo",
-  "studyRoutine.errorNoGroupItems": "Cada grupo necesita al menos un elemento asignado",
   "studyRoutine.errorNoDays": "Selecciona al menos un día en el horario",
   "studyRoutine.removeGroup": "Quitar grupo",
   "studyRoutine.groupsLabel": "grupo",
