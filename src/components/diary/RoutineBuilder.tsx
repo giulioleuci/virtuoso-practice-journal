@@ -76,6 +76,8 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   const [openSections, setOpenSections] = useState<number | null>(null);
   const [segmentPage, setSegmentPage] = useState(0);
   const [onlySelected, setOnlySelected] = useState(false);
+  // "Selected only" shows the rows picked when it was switched on, so unticking one does not make it vanish under the finger.
+  const [pinned, setPinned] = useState<Set<string>>(new Set());
   const [onlySelectedSegs, setOnlySelectedSegs] = useState(false);
 
   const subject = subjectId ?? subjects?.[0]?.id;
@@ -117,7 +119,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   const isPicked = (e: StudyPoolEntry, itemId?: number) => !!activeGroup && (
     activeGroup.pool.some((x) => poolEntryKey(x) === poolEntryKey(e)) ||
     (segmentsByItem.get(itemId ?? -1) ?? []).some((sg) => activeGroup.pool.some((x) => x.type === "segment" && x.id === sg.id)));
-  const rows: Row[] = [
+  const allRows: Row[] = [
     ...items.filter(i => kindFilter === "repertoire" ? i.inRepertoire : kindFilter === "all" || i.kind === kindFilter).map(i => ({
       key: `i${i.id}`, title: i.title, composer: i.composer, entry: { type: "item" as const, id: i.id! }, itemId: i.id,
       kindLabel: t(LIBRARY_KINDS.find(k => k.key === i.kind)?.tKey ?? ""),
@@ -125,7 +127,9 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
     ...(collectionId === undefined && (kindFilter === "all" || kindFilter === "collection") ? visibleCollections : []).map(c => ({
       key: `c${c.id}`, title: c.name, composer: c.composer, entry: { type: "collection" as const, id: c.id! }, kindLabel: t("studyRoutine.collections"),
     })),
-  ].filter((r: Row) => !onlySelected || isPicked(r.entry, r.itemId));
+  ];
+  const pin = () => setPinned(new Set(allRows.filter((r) => isPicked(r.entry, r.itemId)).map((r) => r.key)));
+  const rows = onlySelected ? allRows.filter((r) => pinned.has(r.key)) : allRows;
   const pager = usePagination(rows, 8);
 
   // ── groups & pools ──────────────────────────────────────────────
@@ -139,7 +143,9 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
         return { ...g, pool: on ? [...rest, ...entries] : rest };
       }),
     );
-  const moveGroup = (id: string, by: -1 | 1) =>
+  const moveGroup = (id: string, by: -1 | 1) => {
+    // Pin the group being filled by identity: reordering must not switch the assignment target.
+    setActiveGroupId(activeGroup?.id);
     setGroups((prev) => {
       const i = prev.findIndex((g) => g.id === id), j = i + by;
       if (j < 0 || j >= prev.length) return prev;
@@ -147,12 +153,14 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
       [next[i], next[j]] = [next[j], next[i]];
       return next;
     });
+  };
   const addGroup = (n = "") => setGroups((prev) => [...prev, { id: genId(), name: n, pool: [] }]);
   const removeGroup = (id: string) => {
     setGroups((prev) => prev.filter((g) => g.id !== id));
     setMatrix((prev) => Object.fromEntries(Object.entries(prev).map(([d, row]) => [d, Object.fromEntries(Object.entries(row).filter(([gid]) => gid !== id))])));
   };
   const changeSubject = (id: number) => {
+    if (groups.some((g) => g.pool.length) && !window.confirm(t("routine.subjectChangeWarning"))) return;
     setSubjectId(id);
     setCollectionId(undefined);
     setOpenSections(null);
@@ -191,7 +199,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   const errors = [
     subject === undefined && t("routine.errorNoSubject"),
     groups.length === 0 && t("studyRoutine.errorNoGroups"),
-    groups.length > 0 && groups.some((g) => g.pool.length === 0) && t("studyRoutine.errorNoGroupItems"),
+    ...groups.filter((g) => g.pool.length === 0).map((g) => t("routine.errorGroupEmpty", { group: g.name || t("routine.groupName", { n: groups.indexOf(g) + 1 }) })),
     groups.some((g) => !g.name.trim()) && t("routine.errorGroupName"),
     activeDays.length === 0 && t("studyRoutine.errorNoDays"),
   ].filter((e): e is string => !!e);
@@ -209,7 +217,8 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   };
 
   const active = activeGroup;
-  const short = (d: number) => dayName(d).slice(0, 3);
+  // The language's own short weekday (cutting "Dienstag" to "Die" is wrong); 2024-01-07 is a Sunday.
+  const short = (d: number) => new Date(Date.UTC(2024, 0, 7 + d)).toLocaleDateString(lang, { weekday: "short", timeZone: "UTC" });
   const poolSize = new Set(groups.flatMap((g) => g.pool.map(poolEntryKey))).size;
   const perWeek = activeDays.reduce((s, d) => s + dayTotal(d), 0);
 
@@ -251,13 +260,15 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                 <li key={g.id} className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
                     <Input aria-label={t("routine.groupName", { n: i + 1 })} placeholder={t("routine.groupName", { n: i + 1 })} value={g.name} required maxLength={80} onChange={(e) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, name: e.target.value } : x)))} />
+                    {g.combine && <span className="mt-1 inline-block text-xs text-muted-foreground">{t("routine.mergedTag")}</span>}
                     <span className="mt-1 block text-xs tabular-nums text-muted-foreground">{t("routine.groupCount", { count: g.pool.length })}</span>
                   </div>
                   <div className="flex shrink-0 items-center">
-                    <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={i === 0} aria-label={`${t("segments.moveUp")}: ${g.name}`} onClick={() => moveGroup(g.id, -1)}><ArrowUp /></Button>
-                    <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={i === groups.length - 1} aria-label={`${t("segments.moveDown")}: ${g.name}`} onClick={() => moveGroup(g.id, 1)}><ArrowDown /></Button>
+                    {/* aria-disabled, not disabled: the arrow that reaches the end keeps focus instead of dropping it to the page. */}
+                    <Button type="button" size="icon" variant="ghost" className="h-11 w-11 aria-disabled:opacity-50" aria-disabled={i === 0} aria-label={`${t("segments.moveUp")}: ${g.name}`} onClick={() => i > 0 && moveGroup(g.id, -1)}><ArrowUp /></Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-11 w-11 aria-disabled:opacity-50" aria-disabled={i === groups.length - 1} aria-label={`${t("segments.moveDown")}: ${g.name}`} onClick={() => i < groups.length - 1 && moveGroup(g.id, 1)}><ArrowDown /></Button>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button type="button" size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label={t("routine.moreActions")}><MoreHorizontal /></Button></DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild><Button type="button" size="icon" variant="ghost" className="h-11 w-11 shrink-0" aria-label={t("routine.moreActions")}><MoreHorizontal /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuCheckboxItem checked={!!g.combine} onCheckedChange={(on) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, combine: on } : x)))}>{t("routine.combineGroup")}</DropdownMenuCheckboxItem>
                         <DropdownMenuItem disabled={!g.pool.length} onSelect={() => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, pool: [] } : x)))}>{t("routine.clearGroup")}</DropdownMenuItem>
@@ -270,7 +281,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
               ))}
             </ul>
           )}
-          <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={() => addGroup()}><Plus />{t("routine.addGroup")}</Button>
+          <Button type="button" size="sm" variant="ghost" className="mt-2 max-sm:min-h-11" onClick={() => addGroup()}><Plus />{t("routine.addGroup")}</Button>
         </section>
 
         {groups.length > 0 && (
@@ -280,7 +291,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
               <p className="mb-2 text-xs font-medium text-muted-foreground">{t("routine.assignTo")}</p>
               <div role="tablist" aria-label={t("routine.assignTo")} className="mb-4 flex flex-wrap gap-1.5">
                 {groups.map((g) => (
-                  <button key={g.id} type="button" role="tab" aria-selected={g.id === active?.id} onClick={() => setActiveGroupId(g.id)} className={chip(g.id === active?.id)}>
+                  <button key={g.id} type="button" role="tab" aria-selected={g.id === active?.id} onClick={() => { setActiveGroupId(g.id); setOnlySelected(false); }} className={chip(g.id === active?.id)}>
                     {g.name || t("routine.groupFallback")}<span className="font-numeric tabular-nums opacity-70">{g.pool.length}</span>
                   </button>
                 ))}
@@ -305,7 +316,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                 ]} />
               </FilterPanel>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant={onlySelected ? "secondary" : "outline"} aria-pressed={onlySelected} onClick={() => { setOnlySelected(v => !v); pager.reset(); }}><Check />{t("routine.onlySelected")}</Button>
+                <Button type="button" variant={onlySelected ? "secondary" : "outline"} aria-pressed={onlySelected} onClick={() => { if (!onlySelected) pin(); setOnlySelected(v => !v); pager.reset(); }}><Check />{t("routine.onlySelected")}</Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild><Button type="button" variant="outline" disabled={!active || !rows.length}><ListChecks />{t("common.select")}<ChevronDown /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -315,7 +326,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                 </DropdownMenu>
               </div>
               {!active ? null : rows.length === 0 ? (
-                kinds.length === 0 && !collections?.length ? <EmptyState title={t("routine.noMaterials")} hint={t("routine.noMaterialsHint")} /> : <p className="py-6 text-center text-sm text-muted-foreground">{t("common.noResults")}</p>
+                kinds.length === 0 && !collections?.length ? <EmptyState title={t("routine.noMaterials")} hint={t("routine.noMaterialsHint")} /> : <p className="py-6 text-center text-sm text-muted-foreground">{onlySelected && active ? t("routine.noneSelected", { group: active.name }) : t("common.noResults")}</p>
               ) : (
                 <>
                   <ul className="divide-y divide-border border-y border-border">
@@ -383,7 +394,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                     </label>
                   );
                 })}
-                <Button type="button" size="sm" variant="ghost" onClick={() => DAYS.forEach((d) => setDayOn(d, WEEKDAYS.includes(d)))}>{t("quick.repeat.weekdays")}</Button>
+                <Button type="button" size="sm" variant="ghost" className="max-sm:min-h-11" onClick={() => DAYS.forEach((d) => setDayOn(d, WEEKDAYS.includes(d)))}>{t("quick.repeat.weekdays")}</Button>
               </div>
               <p className="mt-3 text-xs text-muted-foreground">{t("routine.dayHint")}</p>
 
@@ -402,12 +413,12 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                 <div className="mt-4 space-y-2">
                   <p className="text-sm text-muted-foreground">{t("routine.irregularWeek")}</p>
                   <ul className="text-sm tabular-nums">{activeDays.map((d) => <li key={d}>{dayName(d)}: {dayTotal(d)}</li>)}</ul>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setUniformOpen(true)}>{t("routine.uniformize")}</Button>
+                  <Button type="button" size="sm" variant="outline" className="max-sm:min-h-11" onClick={() => setUniformOpen(true)}>{t("routine.uniformize")}</Button>
                 </div>
               )}
 
               <details open={activeDays.length > 0 && !regular} className="mt-6">
-                <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">{t("routine.customizeWeek")}</summary>
+                <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-primary">{t("routine.customizeWeek")}</summary>
 
               {/* Phone: one day at a time */}
               <div className="mt-4 min-[700px]:hidden">
@@ -416,7 +427,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                     <button key={d} type="button" role="tab" id={`day-tab-${d}`} aria-selected={activeDay === d} aria-controls={`day-panel-${d}`} onClick={() => setActiveDay(d)}
                       className={cn("-mb-px grid min-h-11 content-center justify-items-center border-b-2 py-1.5 text-xs", activeDay === d ? "border-primary text-primary" : "border-transparent text-muted-foreground")}>
                       <span>{short(d)}</span>
-                      <span className="h-4 font-numeric text-[0.6875rem]">{dayTotal(d) || ""}</span>
+                      <span className="h-4 font-numeric text-xs">{dayTotal(d) || ""}</span>
                     </button>
                   ))}
                 </div>
@@ -429,9 +440,9 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                   ))}
                   {dayTotal(activeDay) === 0 && <p className="mt-2 text-xs text-muted-foreground">{t("routine.dayRest", { day: dayName(activeDay) })}</p>}
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    <Button type="button" size="sm" variant="outline" onClick={() => copyDay(activeDay, WEEKDAYS)}><Copy />{t("routine.copyWeekdays")}</Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => copyDay(activeDay, DAYS)}>{t("routine.copyAll")}</Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setDayOn(activeDay, false)}>{t("routine.rest")}</Button>
+                    <Button type="button" size="sm" variant="outline" className="max-sm:min-h-11" onClick={() => copyDay(activeDay, WEEKDAYS)}><Copy />{t("routine.copyWeekdays")}</Button>
+                    <Button type="button" size="sm" variant="ghost" className="max-sm:min-h-11" onClick={() => copyDay(activeDay, DAYS)}>{t("routine.copyAll")}</Button>
+                    <Button type="button" size="sm" variant="ghost" className="max-sm:min-h-11" onClick={() => setDayOn(activeDay, false)}>{t("routine.rest")}</Button>
                   </div>
                 </div>
               </div>
@@ -446,8 +457,8 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                         <th key={g.id} className="px-2 py-2 text-center">
                           <div>{g.name}</div>
                           <div className="flex justify-center gap-0.5">
-                            <Button type="button" size="sm" variant="ghost" className="h-7 px-2" aria-label={t("routine.colZero", { group: g.name })} onClick={() => setColumn(g.id, 0)}>0</Button>
-                            <Button type="button" size="sm" variant="ghost" className="h-7 px-2" aria-label={t("routine.colOne", { group: g.name })} onClick={() => setColumn(g.id, 1)}>1</Button>
+                            <Button type="button" size="sm" variant="ghost" className="h-9 min-w-9 px-2" aria-label={t("routine.colZero", { group: g.name })} onClick={() => setColumn(g.id, 0)}>0</Button>
+                            <Button type="button" size="sm" variant="ghost" className="h-9 min-w-9 px-2" aria-label={t("routine.colOne", { group: g.name })} onClick={() => setColumn(g.id, 1)}>1</Button>
                           </div>
                         </th>
                       ))}
@@ -463,7 +474,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                   </tbody>
                 </table>
                 {firstDay !== undefined && (
-                  <Button type="button" size="sm" variant="outline" className="mt-3" onClick={() => copyDay(firstDay, DAYS)}><Copy />{t("routine.copyFirst", { day: dayName(firstDay) })}</Button>
+                  <Button type="button" size="sm" variant="outline" className="mt-3 max-sm:min-h-11" onClick={() => copyDay(firstDay, DAYS)}><Copy />{t("routine.copyFirst", { day: dayName(firstDay) })}</Button>
                 )}
                 <p className="mt-3 text-xs text-muted-foreground">{t("routine.zeroHint")}</p>
               </div>
@@ -473,9 +484,9 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
         )}
 
         <details className="mt-7 border-t border-border pt-5">
-          <summary className="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-3 text-sm font-medium">
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
             {t("routine.options")}
-            <span className="text-xs font-normal text-muted-foreground">{t("routine.optionsSummary", { weeks, cap })} · {t(`studyRoutine.adaptivity${adaptivity[0].toUpperCase()}${adaptivity.slice(1)}`)}</span>
+            <span className="ml-3 text-xs font-normal text-muted-foreground">{t("routine.optionsSummary", { weeks, cap })} · {t(`studyRoutine.adaptivity${adaptivity[0].toUpperCase()}${adaptivity.slice(1)}`)}</span>
           </summary>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="grid gap-1.5 text-xs font-medium">{t("studyRoutine.startDate")}<Input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
@@ -528,8 +539,8 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
           )}
         </div>
         {warnings.length > 0 && (
-          <ul className="space-y-1 border-t border-border pt-3 text-xs text-destructive">
-            {warnings.map((w, i) => (
+          <ul aria-label={t("routine.warningsTitle")} className="space-y-1 border-t border-border pt-3 text-xs text-warning">
+            {warnings.filter((w, i) => warnings.findIndex((x) => x.groupName === w.groupName) === i).map((w, i) => (
               <li key={i}>{w.kind === "dayExceedsPool" ? t("routine.warnDayExceedsPool", { day: dayName(w.day ?? 0), group: w.groupName }) : t("routine.warnCapTooLow", { group: w.groupName })}</li>
             ))}
           </ul>

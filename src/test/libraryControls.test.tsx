@@ -157,7 +157,7 @@ describe("library controls", () => {
     expect(screen.getByRole("checkbox", { name: /Alfa/ })).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: /Alfa: / }));
     expect(screen.getByRole("checkbox", { name: "Introduzione" })).toBeChecked();
-    fireEvent.click(screen.getByText(t("weekday.1").slice(0, 3), { selector: "label" }));
+    fireEvent.click(screen.getByText(new Date(Date.UTC(2024, 0, 8)).toLocaleDateString("it", { weekday: "short", timeZone: "UTC" }), { selector: "label" }));
     fireEvent.submit(screen.getByRole("textbox", { name: t("studyRoutine.name") }).closest("form")!);
     expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ groups: [expect.objectContaining({ pool: [{ type: "item", id: 1 }, { type: "segment", id: 11 }] })] }));
   }, 10000);
@@ -181,9 +181,9 @@ describe("library controls", () => {
       groups: [{ id: "scales", name: "Scale", pool: [{ type: "item", id: 1 }, { type: "item", id: 2 }] },
         { id: "arpeggios", name: "Arpeggi", pool: [{ type: "item", id: 3 }] }],
     }} onDone={() => {}} onCancel={() => {}} />);
-    expect(screen.getByRole("button", { name: `${t("segments.moveUp")}: Scale` })).toBeDisabled();
+    expect(screen.getByRole("button", { name: `${t("segments.moveUp")}: Scale` })).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(screen.getByRole("button", { name: `${t("segments.moveUp")}: Arpeggi` }));
-    expect(screen.getByRole("button", { name: `${t("segments.moveDown")}: Scale` })).toBeDisabled();
+    expect(screen.getByRole("button", { name: `${t("segments.moveDown")}: Scale` })).toHaveAttribute("aria-disabled", "true");
     fireEvent.submit(screen.getByRole("textbox", { name: t("studyRoutine.name") }).closest("form")!);
     expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ groups: [
       expect.objectContaining({ id: "arpeggios", pool: [{ type: "item", id: 3 }] }),
@@ -254,5 +254,44 @@ describe("library controls", () => {
     expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: t("collections.kind.collection") }));
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
+  });
+});
+
+describe("routine builder", () => {
+  const routine = (extra: object = {}) => ({ id: 1, subjectId: 1, name: "Tecnica", startDate: "2026-10-18", createdAt: 0, weeksAhead: 1, repetitionCap: 1,
+    matrix: { "1": { scales: 3, arpeggios: 3 }, "2": { scales: 3, arpeggios: 3 } },
+    groups: [{ id: "scales", name: "Scale", pool: [{ type: "item" as const, id: 1 }] }, { id: "arpeggios", name: "Arpeggi", pool: [{ type: "item" as const, id: 3 }], ...extra }] });
+
+  it("keeps assigning to the same group and keeps focus when a group moves to the top", () => {
+    show(<RoutineBuilder initial={routine()} onDone={() => {}} onCancel={() => {}} />);
+    const up = screen.getByRole("button", { name: `${t("segments.moveUp")}: Arpeggi` });
+    up.focus();
+    fireEvent.click(up);
+    expect(up).toHaveFocus();
+    expect(up).toHaveAttribute("aria-disabled", "true");
+    expect(within(screen.getByRole("tablist", { name: t("routine.assignTo") })).getByRole("tab", { selected: true })).toHaveTextContent("Scale");
+  });
+
+  it("shows when a group is merged into one task and warns once per group, as a warning", () => {
+    show(<RoutineBuilder initial={routine({ combine: true })} onDone={() => {}} onCancel={() => {}} />);
+    expect(screen.getByText(t("routine.mergedTag"))).toBeInTheDocument();
+    const warnings = screen.getByRole("list", { name: t("routine.warningsTitle") });
+    expect(within(warnings).getAllByRole("listitem")).toHaveLength(2);
+    expect(warnings).toHaveClass("text-warning");
+  });
+
+  it("asks before a subject change empties every group", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    show(<RoutineBuilder initial={routine()} onDone={() => {}} onCancel={() => {}} />);
+    const subject = screen.getAllByRole("combobox")[0];
+    fireEvent.change(subject, { target: { value: String([...subject.querySelectorAll("option")].find(o => o.value !== "1")?.value ?? "2") } });
+    expect(confirm).toHaveBeenCalled();
+    expect(subject).toHaveValue("1");
+  });
+
+  it("names study days with the language's own short weekday", () => {
+    show(<RoutineBuilder initial={routine()} onDone={() => {}} onCancel={() => {}} />);
+    const monday = new Date(Date.UTC(2024, 0, 8)).toLocaleDateString("it", { weekday: "short", timeZone: "UTC" });
+    expect(within(screen.getByRole("group", { name: t("routine.studyDays") })).getByText(monday)).toBeInTheDocument();
   });
 });

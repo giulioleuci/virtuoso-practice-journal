@@ -752,7 +752,7 @@
   "routine.lessOne": "Ein Material weniger, {{group}}",
   "routine.moreOne": "Ein Material mehr, {{group}}",
   "routine.options": "Erzeugungsoptionen",
-  "routine.optionsSummary": "{{weeks}} Wochen, max. {{cap}} Wiederholungen",
+  "routine.optionsSummary": "Wochen: {{weeks}} · jedes Element höchstens {{cap}}×",
   "routine.weeks": "Zu erzeugende Wochen",
   "routine.preview": "Dein Plan im Überblick",
   "routine.previewPool": "{{count}} Material",
@@ -990,7 +990,7 @@
   "routine.groupCount_plural": "{{count}} Materialien",
   "routine.moreActions": "Weitere Aktionen",
   "routine.onlySelected": "Nur ausgewählte",
-  "routine.combineGroup": "Eine Aufgabe pro Tag",
+  "routine.combineGroup": "Zu einer Aufgabe zusammenfassen",
   "routine.clearGroup": "Alle Materialien entfernen",
   "routine.assignTo": "Materialien zuordnen zu",
   "routine.kindFilter": "Materialtyp",
@@ -1089,5 +1089,10 @@
   "diary.freeSessions": "Freie Einheiten",
   "toast.openSession": "Einheit öffnen",
   "tasks.editOccurrenceOnly": "Nur dieser Tag ({{date}}) ändert sich; die anderen Tage der Serie bleiben unverändert.",
-  "calendar.tasksOnDay_plural": "{{count}} Aufgaben"
+  "calendar.tasksOnDay_plural": "{{count}} Aufgaben",
+  "routine.mergedTag": "Pro Tag zu einer Aufgabe zusammengefasst",
+  "routine.warningsTitle": "Vor dem Speichern prüfen",
+  "routine.subjectChangeWarning": "Ein Fachwechsel leert die Materialien aller Gruppen. Fortfahren?",
+  "routine.noneSelected": "Für {{group}} ist noch kein Material ausgewählt.",
+  "routine.errorGroupEmpty": "{{group}} hat noch keine Materialien"
 }

@@ -70,7 +70,7 @@ export function MarksEditor({ marks, onChange, sections, seed = emptyEntry, laye
                   </div>
                 )}
                 <details open={isTheory} className="border-t border-border pt-3">
-                  <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-muted-foreground hover:text-foreground">
+                  <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
                     {t("session.editWorkedOn", { layers: m.layers.length, techniques: m.techniques.length })}
                   </summary>
                   <div className="mt-3 space-y-4">

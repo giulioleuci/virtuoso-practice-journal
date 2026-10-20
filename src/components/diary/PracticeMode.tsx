@@ -153,8 +153,8 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
     <DialogPortal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background" />
-    <DialogPrimitive.Content aria-describedby={undefined} onInteractOutside={(event) => event.preventDefault()} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }} className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-background animate-fade-in pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+    <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-background" />
+    <DialogPrimitive.Content aria-describedby={undefined} onInteractOutside={(event) => event.preventDefault()} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }} className="fixed inset-0 z-[80] flex flex-col overflow-y-auto bg-background animate-fade-in pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-5 pb-44 pt-6 min-[700px]:px-9 min-[700px]:pb-28 min-[900px]:max-w-[1100px] short-landscape:max-w-none short-landscape:pb-6 short-landscape:pt-3">
         <DialogTitle className="sr-only">{t("practice.practiceMode")}</DialogTitle>
         {storageFailed && <p role="alert" className="mb-4 text-xs text-destructive">{t("draft.storageFailed")}</p>}

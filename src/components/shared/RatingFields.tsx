@@ -17,7 +17,7 @@ export function RatingFields({ mark, onChange, requireRatings = true, showErrors
       {scale("confidence")}
       {children}
       <details className="border-t border-border pt-3">
-        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-muted-foreground hover:text-foreground">{t("rating.optionalContext")}</summary>
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-muted-foreground hover:text-foreground">{t("rating.optionalContext")}</summary>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">{scale("mood")}{scale("focus")}</div>
       </details>
     </div>

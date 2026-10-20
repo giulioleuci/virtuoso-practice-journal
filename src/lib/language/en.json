@@ -752,7 +752,7 @@
   "routine.lessOne": "One material fewer, {{group}}",
   "routine.moreOne": "One material more, {{group}}",
   "routine.options": "Generation options",
-  "routine.optionsSummary": "{{weeks}} weeks, max {{cap}} repetitions",
+  "routine.optionsSummary": "Weeks: {{weeks}} · each item at most {{cap}}×",
   "routine.weeks": "Weeks to generate",
   "routine.preview": "Your plan at a glance",
   "routine.previewPool": "{{count}} material",
@@ -990,7 +990,7 @@
   "routine.groupCount_plural": "{{count}} materials",
   "routine.moreActions": "More actions",
   "routine.onlySelected": "Selected only",
-  "routine.combineGroup": "One task per day",
+  "routine.combineGroup": "Merge into one task",
   "routine.clearGroup": "Remove all materials",
   "routine.assignTo": "Assign materials to",
   "routine.kindFilter": "Material type",
@@ -1089,5 +1089,10 @@
   "diary.freeSessions": "Free sessions",
   "toast.openSession": "Open session",
   "tasks.editOccurrenceOnly": "Only this day ({{date}}) changes; the other days of the series keep their plan.",
-  "calendar.tasksOnDay_plural": "{{count}} tasks"
+  "calendar.tasksOnDay_plural": "{{count}} tasks",
+  "routine.mergedTag": "Merged into one task a day",
+  "routine.warningsTitle": "Check before saving",
+  "routine.subjectChangeWarning": "Changing the subject empties the materials of every group. Continue?",
+  "routine.noneSelected": "No materials selected for {{group}} yet.",
+  "routine.errorGroupEmpty": "{{group}} has no materials yet"
 }

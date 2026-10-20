@@ -752,7 +752,7 @@
   "routine.lessOne": "Un material menos, {{group}}",
   "routine.moreOne": "Un material más, {{group}}",
   "routine.options": "Opciones de generación",
-  "routine.optionsSummary": "{{weeks}} semanas, máx. {{cap}} repeticiones",
+  "routine.optionsSummary": "Semanas: {{weeks}} · cada elemento como máximo {{cap}}×",
   "routine.weeks": "Semanas a generar",
   "routine.preview": "Tu plan, en breve",
   "routine.previewPool": "{{count}} material",
@@ -990,7 +990,7 @@
   "routine.groupCount_plural": "{{count}} materiales",
   "routine.moreActions": "Más acciones",
   "routine.onlySelected": "Solo seleccionados",
-  "routine.combineGroup": "Una sola tarea al día",
+  "routine.combineGroup": "Combinar en una sola tarea",
   "routine.clearGroup": "Quitar todos los materiales",
   "routine.assignTo": "Asignar materiales a",
   "routine.kindFilter": "Tipo de material",
@@ -1089,5 +1089,10 @@
   "diary.freeSessions": "Sesiones libres",
   "toast.openSession": "Abrir sesión",
   "tasks.editOccurrenceOnly": "Solo cambia este día ({{date}}); los demás días de la serie se mantienen.",
-  "calendar.tasksOnDay_plural": "{{count}} tareas"
+  "calendar.tasksOnDay_plural": "{{count}} tareas",
+  "routine.mergedTag": "Combinado en una tarea al día",
+  "routine.warningsTitle": "Revisar antes de guardar",
+  "routine.subjectChangeWarning": "Cambiar la materia vacía los materiales de cada grupo. ¿Continuar?",
+  "routine.noneSelected": "Aún no hay materiales seleccionados para {{group}}.",
+  "routine.errorGroupEmpty": "{{group}} aún no tiene materiales"
 }
