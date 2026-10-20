@@ -155,51 +155,52 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     <DialogPortal>
     <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-background" />
     <DialogPrimitive.Content aria-describedby={undefined} onInteractOutside={(event) => event.preventDefault()} onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }} className="fixed inset-0 z-[80] flex flex-col overflow-y-auto bg-background animate-fade-in pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-5 pb-44 pt-6 min-[700px]:px-9 min-[700px]:pb-28 min-[900px]:max-w-[1100px] short-landscape:max-w-none short-landscape:pb-6 short-landscape:pt-3">
+      <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col gap-3 px-4 pb-28 pt-3 min-[700px]:px-9 min-[900px]:max-w-[1100px] short-landscape:max-w-none short-landscape:pb-4 short-landscape:pt-2">
         <DialogTitle className="sr-only">{t("practice.practiceMode")}</DialogTitle>
-        {storageFailed && <p role="alert" className="mb-4 text-xs text-destructive">{t("draft.storageFailed")}</p>}
+        {storageFailed && <p role="alert" className="text-xs text-destructive">{t("draft.storageFailed")}</p>}
 
-        {/* Piece context: compact and secondary to the metronome. */}
-        <div className="mb-6 space-y-1.5 short-landscape:mb-3 short-landscape:[&>*:not(:first-child)]:hidden">
-          <div className="flex items-start justify-between gap-4">
-            <h2 className="min-w-0 break-words font-serif text-xl font-semibold leading-tight">{task.title}</h2>
-            <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
-          </div>
-          {item && <p className="text-sm text-muted-foreground">{item.title}{item.composer ? ` · ${item.composer}` : ""}</p>}
-          {collection && <p className="text-sm italic text-muted-foreground">{t("practice.collectionLabel")}: {collection.name}</p>}
-          {mark.targetBpm && (
-            <p className="font-numeric text-sm tabular-nums text-muted-foreground">{t("diary.targetBpm", { note: targetGlyph, bpm: mark.targetBpm })}</p>
-          )}
-          {marks.length > 1 && (
-            <ol className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground" aria-label={t("practice.segmentsLabel")}>
-              {marks.map((m, i) => (
-                <li key={m.segmentId ?? i}>
-                  <button type="button" aria-current={i === current} onClick={() => setCurrent(i)} className={cn("inline-flex min-h-11 items-center gap-1", i === current ? "font-semibold text-primary" : "hover:text-foreground")}>
-                    <span className="break-words">{segments?.find((sg) => sg.id === m.segmentId)?.label}</span>
-                    {m.confidence !== undefined && <span className="inline-flex items-center gap-0.5 tabular-nums"><Check className="h-3 w-3" />{m.confidence}</span>}
-                  </button>
-                </li>
-              ))}
-            </ol>
-          )}
-          {marks.length === 1 && !!segments?.length && (
-            <p className="text-xs text-muted-foreground" aria-label={t("practice.segmentLabel")}>{segments.map((sg) => sg.label).join(" · ")}</p>
-          )}
-          {(!!mark.layers.length || !!focusTechniques.length) && (
-            <p className="text-xs text-muted-foreground">{[...mark.layers, ...focusTechniques].join(", ")}</p>
-          )}
-          {task.executionNotes && <p className="whitespace-pre-wrap text-xs text-muted-foreground">{task.executionNotes}</p>}
-          {onShowAnswers && (
-            <button onClick={onShowAnswers} className="inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
-              <MessageSquareQuote className="h-4 w-4" />
-              {t("teacherAnswers.openLabel")}
-            </button>
-          )}
+        {/* Piece context folds behind the title; the target tempo stays in the metronome. */}
+        <div className="flex items-start justify-between gap-3">
+          <details className="group min-w-0 flex-1">
+            <summary className="flex min-h-11 cursor-pointer list-none items-start gap-1.5 pt-1.5 [&::-webkit-details-marker]:hidden">
+              <h2 className="min-w-0 break-words font-serif text-lg font-semibold leading-tight">{task.title}</h2>
+              <ChevronRight aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90 motion-reduce:transition-none" />
+            </summary>
+            <div className="space-y-1 pb-1">
+              {item && <p className="text-sm text-muted-foreground">{item.title}{item.composer ? ` · ${item.composer}` : ""}</p>}
+              {collection && <p className="text-sm italic text-muted-foreground">{t("practice.collectionLabel")}: {collection.name}</p>}
+              {marks.length > 1 && (
+                <ol className="flex flex-wrap gap-x-3 text-xs text-muted-foreground" aria-label={t("practice.segmentsLabel")}>
+                  {marks.map((m, i) => (
+                    <li key={m.segmentId ?? i}>
+                      <button type="button" aria-current={i === current} onClick={() => setCurrent(i)} className={cn("inline-flex min-h-11 items-center gap-1", i === current ? "font-semibold text-primary" : "hover:text-foreground")}>
+                        <span className="break-words">{segments?.find((sg) => sg.id === m.segmentId)?.label}</span>
+                        {m.confidence !== undefined && <span className="inline-flex items-center gap-0.5 tabular-nums"><Check className="h-3 w-3" />{m.confidence}</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {marks.length === 1 && !!segments?.length && (
+                <p className="text-xs text-muted-foreground" aria-label={t("practice.segmentLabel")}>{segments.map((sg) => sg.label).join(" · ")}</p>
+              )}
+              {(!!mark.layers.length || !!focusTechniques.length) && (
+                <p className="text-xs text-muted-foreground">{[...mark.layers, ...focusTechniques].join(", ")}</p>
+              )}
+              {task.executionNotes && <p className="whitespace-pre-wrap text-xs text-muted-foreground">{task.executionNotes}</p>}
+              {onShowAnswers && (
+                <button onClick={onShowAnswers} className="inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+                  <MessageSquareQuote className="h-4 w-4" />
+                  {t("teacherAnswers.openLabel")}
+                </button>
+              )}
+            </div>
+          </details>
+          <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
         </div>
 
-        {/* Metronome: the main element. */}
-        <section className="grid min-w-0 gap-x-8 rounded-lg bg-card p-6 shadow-soft min-[700px]:p-9 min-[900px]:grid-cols-2 short-landscape:grid-cols-2 short-landscape:p-4" aria-label={t("practice.metronome")}>
-          <div className="col-span-full flex flex-wrap items-center justify-between gap-3">
+        <section className="grid min-w-0 gap-x-8 gap-y-2.5 rounded-lg bg-card p-3.5 shadow-soft min-[700px]:p-7 min-[900px]:grid-cols-2 short-landscape:grid-cols-2 short-landscape:p-4" aria-label={t("practice.metronome")}>
+          <div className="col-span-full flex flex-wrap items-center justify-between gap-2">
             <Recorder sections={[]} segmentId={mark.segmentId} compact onClip={(clip) => setClips((c) => [...c, clip])} onRecordingChange={setRecording} />
             <div className="flex items-center gap-2">
               <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => setMuted((m) => !m)} aria-label={muted ? t("practice.unmute") : t("practice.mute")}>
@@ -213,97 +214,101 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
           </div>
 
           {marks.length > 1 && (
-            <div className="col-span-full mt-4 flex items-center justify-between gap-2 border-t border-border pt-4">
+            <div className="col-span-full flex items-center justify-between gap-2 border-t border-border pt-1">
               <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={current === 0} onClick={() => setCurrent(current - 1)} aria-label={t("practice.prevSection")}><ChevronLeft /></Button>
-              <p className="min-w-0 flex-1 text-center">
+              <p className="min-w-0 flex-1 text-center leading-tight">
                 <span className="block text-xs tabular-nums text-muted-foreground">{t("session.segmentIndicator", { current: String(current + 1), total: String(marks.length) })}</span>
-                <span className="block break-words font-serif text-lg font-semibold leading-tight">{segments?.find((sg) => sg.id === mark.segmentId)?.label}</span>
+                <span className="block break-words font-serif text-base font-semibold">{segments?.find((sg) => sg.id === mark.segmentId)?.label}</span>
               </p>
               <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={current === marks.length - 1} onClick={() => setCurrent(current + 1)} aria-label={t("practice.nextSection")}><ChevronRight /></Button>
             </div>
           )}
 
-          <div className="min-w-0">
-          <div className="py-4 text-center short-landscape:py-1" aria-live="off">
-            <p className="text-xl text-muted-foreground">{NOTE_GLYPH[noteVal ?? "quarter"]} =</p>
-            <p className="font-numeric text-[5rem] leading-tight tabular-nums">{bpm}</p>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("practice.bpmUnit")}</p>
-          </div>
-
-          {/* The pendulum swings to the other side on every scheduled beat, so it cannot drift from the click; reduced motion hides it and the beat marks below carry the pulse. */}
-          <div className="relative h-20 overflow-hidden border-b border-border motion-reduce:hidden min-[700px]:h-32 short-landscape:h-20" aria-hidden="true">
-            <div data-pendulum className="metronome-pendulum absolute bottom-2 left-1/2 h-16 w-1 rounded-full bg-primary min-[700px]:h-28 short-landscape:h-16"
-              style={{ transform: `translateX(-50%) rotate(${meterOn && pulse ? (pulse % 2 ? 28 : -28) : 0}deg)`, transition: `transform ${60000 / bpm}ms ease-in-out` }}>
-              <span className={cn("absolute -left-2.5 -top-1 h-6 w-6 rounded-full border-2 border-primary", isAccent ? "bg-primary" : "bg-background")} />
+          <div className="grid min-w-0 gap-2">
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="flex gap-1.5">
+                {[-5, -1].map((d) => (
+                  <Button key={d} type="button" variant="outline" className="min-h-11 min-w-11 px-1.5 tabular-nums" onClick={() => setBpm((b) => Math.min(BPM_MAX, Math.max(BPM_MIN, b + d)))} aria-label={t("practice.bpmDecrease", { step: Math.abs(d) })}>{d}</Button>
+                ))}
+              </div>
+              <div className="min-w-0 text-center" aria-live="off">
+                <p className="text-sm leading-none text-muted-foreground">{NOTE_GLYPH[noteVal ?? "quarter"]} =</p>
+                <p className="font-numeric text-[3.25rem] leading-none min-[700px]:text-[4.5rem] tabular-nums">{bpm}</p>
+              </div>
+              <div className="flex gap-1.5">
+                {[1, 5].map((d) => (
+                  <Button key={d} type="button" variant="outline" className="min-h-11 min-w-11 px-1.5 tabular-nums" onClick={() => setBpm((b) => Math.min(BPM_MAX, Math.max(BPM_MIN, b + d)))} aria-label={t("practice.bpmIncrease", { step: d })}>+{d}</Button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 py-4" aria-hidden="true">
-            {Array.from({ length: beatsPerBar }).map((_, i) => {
-              const active = meterOn && pulse > 0 && (pulse - 1) % beatsPerBar === i;
-              const accent = i === 0;
-              // Re-mounted on every beat so the flash replays even with one beat per bar.
-              return (
-                <span key={active ? `beat-${pulse}` : i} data-beat-mark={active ? pulse : undefined} className={cn("h-4 w-4 rounded-full border", accent ? "border-primary" : "border-muted-foreground/40", active ? cn("animate-beat-flash", accent ? "bg-primary" : "bg-foreground/70") : "bg-transparent")} />
-              );
-            })}
-          </div>
-
-          </div>
-
-          <div className="min-w-0 self-start pt-4">
-          <div className="space-y-3">
+            <p className="text-center text-[0.6875rem] uppercase tracking-wider text-muted-foreground">{t("practice.bpmUnit")}</p>
             <Slider value={[bpm]} min={BPM_MIN} max={BPM_MAX} step={1} onValueChange={(v) => setBpm(v[0])} aria-label={t("practice.bpmUnit")} />
-            <div className="flex items-center justify-center gap-2">
-              {[-5, -1, +1, +5].map((d) => (
-                <Button
-                  key={d}
-                  type="button"
-                  variant="outline"
-                  className="min-h-11 min-w-12 tabular-nums"
-                  onClick={() => setBpm((b) => Math.min(BPM_MAX, Math.max(BPM_MIN, b + d)))}
-                  aria-label={d > 0 ? t("practice.bpmIncrease", { step: d }) : t("practice.bpmDecrease", { step: Math.abs(d) })}
-                >
-                  {d > 0 ? `+${d}` : d}
-                </Button>
-              ))}
+            <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-end gap-2 border-b border-border">
+              <div className="flex flex-wrap gap-1.5 self-center" aria-hidden="true">
+                {Array.from({ length: beatsPerBar }).map((_, i) => {
+                  const active = meterOn && pulse > 0 && (pulse - 1) % beatsPerBar === i;
+                  const accent = i === 0;
+                  return (
+                    <span key={active ? `beat-${pulse}` : i} data-beat-mark={active ? pulse : undefined} className={cn("h-3.5 w-3.5 rounded-full border", accent ? "border-primary" : "border-muted-foreground/40", active ? cn("animate-beat-flash", accent ? "bg-primary" : "bg-foreground/70") : "bg-transparent")} />
+                  );
+                })}
+              </div>
+              {/* The pendulum swings to the other side on every scheduled beat, so it cannot drift from the click; reduced motion hides it and the beat marks carry the pulse. */}
+              <div className="relative h-16 overflow-hidden motion-reduce:invisible" aria-hidden="true">
+                <div data-pendulum className="metronome-pendulum absolute bottom-1 left-1/2 h-12 w-1 rounded-full bg-primary"
+                  style={{ transform: `translateX(-50%) rotate(${meterOn && pulse ? (pulse % 2 ? 28 : -28) : 0}deg)`, transition: `transform ${60000 / bpm}ms ease-in-out` }}>
+                  <span className={cn("absolute -left-2 -top-1 h-5 w-5 rounded-full border-2 border-primary", isAccent ? "bg-primary" : "bg-background")} />
+                </div>
+              </div>
+              <p className="self-center text-right font-numeric text-xs tabular-nums text-muted-foreground">{!!mark.targetBpm && t("diary.targetBpm", { note: targetGlyph, bpm: mark.targetBpm })}</p>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
-            <div role="group" aria-label={t("practice.beatsPerBar")} className="flex max-w-full flex-wrap items-center justify-center gap-0.5">
-              <span className="w-full text-center text-xs text-muted-foreground">{t("practice.beatsPerBar")}</span>
-              {[1, 2, 3, 4, 6].map((n) => (
-                <button key={n} type="button" aria-pressed={beatsPerBar === n} onClick={() => setBeatsPerBar(n)}
-                  className={cn("h-11 w-11 rounded-lg text-sm tabular-nums", beatsPerBar === n ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
-                  {n}
-                </button>
-              ))}
+          <details className="group min-w-0 self-start border-b border-border min-[900px]:border-b-0">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-xs text-muted-foreground [&::-webkit-details-marker]:hidden">
+              <span className="flex flex-wrap gap-x-4">
+                <span>{t("practice.beatsPerBar")} <span className="font-medium tabular-nums text-foreground">{beatsPerBar}</span></span>
+                <span>{t("practice.noteLabel")} <span className="text-base leading-none text-foreground">{NOTE_GLYPH[noteVal ?? "quarter"]}</span></span>
+              </span>
+              <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90 motion-reduce:transition-none" />
+            </summary>
+            <div className="grid gap-1 pb-2">
+              <div role="group" aria-label={t("practice.beatsPerBar")} className="flex flex-wrap items-center justify-between gap-x-2">
+                <span className="text-xs text-muted-foreground">{t("practice.beatsPerBar")}</span>
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 6].map((n) => (
+                    <button key={n} type="button" aria-pressed={beatsPerBar === n} onClick={() => setBeatsPerBar(n)}
+                      className={cn("h-11 w-11 rounded-lg text-sm tabular-nums", beatsPerBar === n ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div role="group" aria-label={t("practice.noteLabel")} className="flex flex-wrap items-center justify-between gap-x-2">
+                <span className="text-xs text-muted-foreground">{t("practice.noteLabel")}</span>
+                <div className="flex gap-0.5">
+                  {(showDottedNotes ? COMPOUND_NOTES : SIMPLE_NOTES).map((nv) => (
+                    <button key={nv} type="button" aria-pressed={noteVal === nv} onClick={() => setNoteVal(nv)} title={t(`note.${nv}`)} aria-label={t(`note.${nv}`)}
+                      className={cn("h-11 min-w-11 rounded-lg px-1 text-base leading-none", noteVal === nv ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
+                      {NOTE_GLYPH[nv]}
+                    </button>
+                  ))}
+                  <button type="button" aria-pressed={showDottedNotes} onClick={() => setShowDottedNotes((value) => !value)} title={t("note.dotted")} aria-label={t("note.dotted")}
+                    className={cn("ml-1 inline-flex h-11 w-11 items-center justify-center rounded-lg", showDottedNotes ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
+                    <Dot aria-hidden="true" className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
             </div>
-            <div role="group" aria-label={t("practice.noteLabel")} className="flex flex-wrap items-center justify-center gap-0.5">
-              <span className="w-full text-center text-xs text-muted-foreground">{t("practice.noteLabel")}</span>
-              {(showDottedNotes ? COMPOUND_NOTES : SIMPLE_NOTES).map((nv) => (
-                <button key={nv} type="button" aria-pressed={noteVal === nv} onClick={() => setNoteVal(nv)} title={t(`note.${nv}`)} aria-label={t(`note.${nv}`)}
-                  className={cn("h-11 min-w-11 rounded-lg px-1 text-base leading-none", noteVal === nv ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
-                  {NOTE_GLYPH[nv]}
-                </button>
-              ))}
-              <button type="button" aria-pressed={showDottedNotes} onClick={() => setShowDottedNotes(value => !value)} title={t("note.dotted")} aria-label={t("note.dotted")}
-                className={cn("ml-1 inline-flex h-11 w-11 items-center justify-center rounded-lg", showDottedNotes ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
-                <Dot aria-hidden="true" className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
+          </details>
 
-          </div>
-
-          <div className="col-span-full mt-6 border-t border-border pt-5">
+          <div className="col-span-full pt-2.5">
             {marks.length > 1 && current < marks.length - 1 && <p className="mb-2 text-xs font-medium">{t("practice.rateNext")}</p>}
             <RatingFields mark={mark} onChange={patchMark} />
           </div>
 
           {clips.length > 0 && (
-            <div className="col-span-full mt-6 space-y-3 border-t border-border pt-5">
+            <div className="col-span-full space-y-3 border-t border-border pt-3">
               <h3 className="font-sans text-sm font-medium">{t("audio.title")}</h3>
               <ClipDraftList clips={clips} onChange={setClips} sections={segments?.map((s) => ({ id: s.id, label: s.label })) ?? []} />
             </div>
@@ -311,7 +316,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
         </section>
 
         {/* On a short landscape screen the bar would cover the metronome: it joins the page flow instead. */}
-        <FloatingActions className="mx-auto max-w-[760px] flex-wrap bottom-[calc(12px+env(safe-area-inset-bottom))] max-[699px]:[&>button]:w-full min-[700px]:left-8 min-[1151px]:left-8 min-[1600px]:left-8 short-landscape:static short-landscape:mt-4 short-landscape:[&>button]:w-auto">
+        <FloatingActions className="mx-auto max-w-[760px] bottom-[calc(12px+env(safe-area-inset-bottom))] min-[700px]:left-8 min-[1151px]:left-8 min-[1600px]:left-8 max-[699px]:[&>button]:h-auto max-[699px]:[&>button]:min-h-11 max-[699px]:[&>button]:flex-1 max-[699px]:[&>button]:whitespace-normal short-landscape:static short-landscape:mt-4">
           <Button variant="ghost" onClick={onClose}>{t("draft.leave")}</Button>
           <Button disabled={recording} onClick={finish}>{t("practice.finishLog")}</Button>
         </FloatingActions>
