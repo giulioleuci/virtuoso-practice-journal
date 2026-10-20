@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { useProfile } from "@/presentation/hooks/useEntities";
 import { profileService } from "@/lib/services";
 import { I18nProvider } from "@/lib/I18nProvider";
-import { browserLang } from "@/lib/i18n";
+import { browserLang, translate } from "@/lib/i18n";
 const Onboarding = lazy(() => import("@/components/onboarding/Onboarding"));
 const IntroSlides = lazy(() => import("@/components/onboarding/IntroSlides"));
 import AppShell from "@/components/AppShell";
@@ -64,7 +64,7 @@ const Index = () => {
   // undefined = loading; null = no profile yet
   if (profile === undefined) {
     return (
-      <div className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4" style={{ paddingTop: "calc(2.5rem + env(safe-area-inset-top))" }}>
+      <div role="status" aria-label={translate(browserLang(), "common.loading")} aria-busy="true" className="min-h-screen px-6 pt-10 max-w-3xl w-full mx-auto space-y-4" style={{ paddingTop: "calc(2.5rem + env(safe-area-inset-top))" }}>
         <div className="paper-skeleton h-24 w-full" />
         <div className="paper-skeleton h-32 w-full" />
         <div className="paper-skeleton h-20 w-full" />

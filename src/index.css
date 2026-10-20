@@ -238,10 +238,15 @@
     padding: 0;
     font-size: 11pt;
   }
-  .print-summary section,
   .print-summary li,
   .print-summary tr {
     break-inside: avoid;
+  }
+  .print-summary h2 {
+    break-after: avoid;
+  }
+  .print-summary .text-sm {
+    font-size: 11pt;
   }
   @page {
     margin: 14mm;

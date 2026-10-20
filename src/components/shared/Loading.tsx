@@ -13,8 +13,9 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
 }
 
 export function PageSkeleton() {
+  const { t } = useI18n();
   return (
-    <div className="space-y-4">
+    <div role="status" aria-label={t("common.loading")} aria-busy="true" className="space-y-4">
       <div className="paper-skeleton h-24" />
       <ListSkeleton />
     </div>

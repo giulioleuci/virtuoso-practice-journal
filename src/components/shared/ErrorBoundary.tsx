@@ -32,10 +32,10 @@ export class ErrorBoundary extends Component<Props, State> {
           <h2 className="font-serif text-3xl font-semibold">{t("states.errorTitle")}</h2>
           <p className="text-sm text-muted-foreground">{t("states.errorBody")}</p>
           <details className="text-left text-xs text-muted-foreground">
-            <summary className="cursor-pointer text-center">{t("states.details")}</summary>
+            <summary className="min-h-11 cursor-pointer py-3 text-center">{t("states.details")}</summary>
             <p className="mt-2 break-words font-mono">{error.message || String(error)}</p>
           </details>
-          <div className="flex justify-center gap-2 pt-2">
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
             <Button variant="outline" onClick={this.reset}>{t("states.retry")}</Button>
             <Button onClick={() => location.reload()}>{t("states.reload")}</Button>
           </div>
