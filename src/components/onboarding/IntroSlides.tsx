@@ -50,8 +50,9 @@ export default function IntroSlides({ onDone }: { onDone: () => void }) {
       {/* Skip button — top right, discreet */}
       <header className="flex justify-end px-6 pt-8">
         <button
+          type="button"
           onClick={onDone}
-          className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors py-1 px-2"
+          className="min-h-11 px-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           {t("intro.skip")}
         </button>

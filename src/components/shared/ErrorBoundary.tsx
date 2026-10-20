@@ -1,16 +1,9 @@
 import { Component, type ReactNode } from "react";
-import { I18nContext, translate, type I18nContextValue } from "@/lib/i18n";
-import type { Lang } from "@/domain/entities/common";
+import { I18nContext, browserLang, translate, type I18nContextValue } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 
 interface Props { children: ReactNode; /** Render inside the page instead of full screen. */ inline?: boolean; /** Clears the error when it changes (e.g. the route). */ resetKey?: string }
 interface State { error: Error | null }
-
-// The root boundary sits outside the i18n provider, so it falls back to the browser language.
-const browserLang = (): Lang => {
-  const code = (typeof navigator !== "undefined" ? navigator.language : "en").slice(0, 2);
-  return (["it", "es", "de"].includes(code) ? code : "en") as Lang;
-};
 
 /** Catches render and read errors and offers a recovery action. Stored data is untouched. */
 export class ErrorBoundary extends Component<Props, State> {
@@ -31,6 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     const { error } = this.state;
     if (!error) return this.props.children;
+    // The root boundary sits outside the i18n provider, so it falls back to the browser language.
     const t = this.context?.t ?? ((key: string) => translate(browserLang(), key));
     return (
       <div role="alert" className={this.props.inline ? "py-16" : "flex min-h-screen items-center justify-center px-6"}>

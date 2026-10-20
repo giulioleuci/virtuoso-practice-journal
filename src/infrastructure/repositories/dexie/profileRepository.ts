@@ -9,12 +9,15 @@ export const profileRepository = {
   async initialize({ subjects, ...profile }: OnboardingInput) {
     const ts = now();
     const row: Profile = { ...profile, id: "me", createdAt: ts };
-    await db.transaction("rw", db.subjects, db.profile, async () => {
+    return db.transaction("rw", db.subjects, db.profile, async () => {
+      // A second submit (double tap) finds the first one's profile and keeps it; transactions on these tables serialize.
+      const existing = await db.profile.get("me");
+      if (existing?.onboarded) return existing;
       for (const subject of subjects) {
         await db.subjects.add({ ...subject, createdAt: ts });
       }
       await db.profile.put(row);
+      return row;
     });
-    return row;
   },
 } satisfies ProfilePort;

@@ -38,6 +38,12 @@ export function translate(lang: Lang, key: string, vars?: TranslationVars): stri
   return vars ? interpolate(raw, vars) : raw;
 }
 
+/** Supported language of the browser, English otherwise. For screens outside a profile (onboarding, root errors). */
+export function browserLang(): Lang {
+  const code = (typeof navigator !== "undefined" ? navigator.language : "en").slice(0, 2);
+  return code in dicts ? (code as Lang) : "en";
+}
+
 export function useI18n(): I18nContextValue {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error("useI18n must be used inside I18nProvider");

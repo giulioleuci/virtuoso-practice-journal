@@ -1,14 +1,14 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { profileService } from "@/lib/services";
 import type { ImportSummary } from "@/application/useCases/importBackup";
 import { applicationCommands } from "@/lib/applicationCommands";
-import { scheduleReminders, ensureNotificationPermission, isNative } from "@/lib/platform";
+import { ensureNotificationPermission, isNative } from "@/lib/platform";
 import { getDefaultWeekStartsOn } from "@/lib/date";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
 import { useProfile } from "@/presentation/hooks/useEntities";
 import { useBackupCommands } from "@/presentation/hooks/usePresentationControllers";
-import { REMINDER_PRESETS, resolveReminderText, getReminderBodies, type ReminderPreset } from "@/lib/reminderPresets";
+import { REMINDER_PRESETS, getReminderBodies, type ReminderPreset } from "@/lib/reminderPresets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -60,33 +60,6 @@ export default function Profile() {
     exportBackup: () => applicationCommands.backups.export.execute(),
     importBackup: () => applicationCommands.backups.import.execute(),
   });
-
-  // Reflect reminder preferences in scheduled OS-level notifications when running natively.
-  const reminderDaysKey = profile?.reminderDays?.join(",") ?? "";
-  useEffect(() => {
-    if (!profile) return;
-    const enabled = profile.reminderEnabled !== false;
-    if (!enabled) {
-      scheduleReminders(null).catch(() => undefined);
-      return;
-    }
-    const days = profile.reminderFreq === "weekdays"
-      ? [1, 2, 3, 4, 5]
-      : profile.reminderFreq === "custom"
-        ? (profile.reminderDays ?? [1, 2, 3, 4, 5])
-        : [0, 1, 2, 3, 4, 5, 6];
-    const preset = profile.reminderPreset ?? "gentle";
-    resolveReminderText({
-      lang,
-      preset,
-      customTitle: profile.reminderCustomTitle,
-      customBody: profile.reminderCustomBody,
-      includeContext: profile.reminderIncludeContext,
-    }).then(({ title, body }) =>
-      scheduleReminders({ time: profile.reminderTime, days, title, body }),
-    ).catch(() => undefined);
-    // reminderDaysKey is a stable derivation of profile.reminderDays
-  }, [profile, reminderDaysKey, t, lang]);
 
   if (!profile) return null;
 

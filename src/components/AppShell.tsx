@@ -4,6 +4,7 @@ import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHor
 import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { useReminderSchedule } from "@/hooks/useReminderSchedule";
 import { useAssignments } from "@/presentation/hooks/useEntities";
 import { needsTask } from "@/domain/logic/assignments";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,7 @@ const WIDE_PAGES = ["/", "/tasks", "/library", "/lessons", "/analytics", "/histo
 const SIDEBAR_W = "min-[700px]:ml-[195px] min-[1151px]:ml-[208px] min-[1600px]:ml-[250px]";
 
 export default function AppShell({ profile }: { profile: Profile }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const location = useLocation();
   const pageKey = "/" + (location.pathname.split("/")[1] ?? "");
   const pendingHomework = (useAssignments() ?? []).filter(needsTask).length;
@@ -45,6 +46,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const navHidden = hidden || keyboardInset > 0;
 
   useAndroidBackButton(t("toast.pressBackAgainToExit"));
+  useReminderSchedule(profile, lang);
 
   useEffect(() => {
     const onScroll = () => {

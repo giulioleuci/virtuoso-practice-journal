@@ -9,6 +9,10 @@ export function I18nProvider({ children, initial = "en" }: { children: ReactNode
     setLang(initial);
   }, [initial]);
 
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   // Stable per `lang` so consumers can list `t` in effect/memo deps without
   // re-running on every render.
   const t = useCallback(

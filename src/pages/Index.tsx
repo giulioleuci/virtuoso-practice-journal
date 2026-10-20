@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { useProfile } from "@/presentation/hooks/useEntities";
 import { profileService } from "@/lib/services";
 import { I18nProvider } from "@/lib/I18nProvider";
+import { browserLang } from "@/lib/i18n";
 import Onboarding from "@/components/onboarding/Onboarding";
 import IntroSlides from "@/components/onboarding/IntroSlides";
 import AppShell from "@/components/AppShell";
@@ -73,7 +74,7 @@ const Index = () => {
 
   if (!profile || !profile.onboarded) {
     return (
-      <I18nProvider initial="en">
+      <I18nProvider initial={browserLang()}>
         <Onboarding onDone={() => { /* live query refreshes automatically */ }} />
       </I18nProvider>
     );

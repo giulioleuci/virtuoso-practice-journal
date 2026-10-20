@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Piano, BookOpen, Check, X, Plus, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Lang, SubjectType } from "@/domain/entities/common";
 import { profileService } from "@/lib/services";
+import { isNative } from "@/lib/platform";
 import { SUPPORTED_LANGS, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +12,8 @@ interface DraftSubject { name: string; type: SubjectType }
 
 const INSTRUMENT_KEYS = ["piano", "guitar", "flute", "ensemble", "violin", "singing"] as const;
 const THEORY_KEYS = ["harmony", "earTraining", "solfeggio", "history"] as const;
+// Reminders are OS notifications, which only the Android app can schedule: the web flow ends at subjects.
+const LAST_STEP = isNative() ? 3 : 2;
 
 export default function Onboarding({ onDone }: { onDone: () => void }) {
   const { t, setLang, lang } = useI18n();
@@ -22,6 +25,14 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const [reminderTime, setReminderTime] = useState("18:00");
   const [reminderFreq, setReminderFreq] = useState<"daily" | "weekdays" | "custom">("daily");
   const [reminderDays, setReminderDays] = useState<number[]>([1, 2, 3, 4, 5]);
+
+  // Each new step announces itself: focus its question (the name step focuses its field instead).
+  const heading = useRef<HTMLHeadingElement>(null);
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) { firstRender.current = false; return; }
+    if (step !== 1) heading.current?.focus();
+  }, [step]);
 
   const DAYS = useMemo(() => [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`)), [t]);
 
@@ -61,7 +72,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
       reminderTime,
       reminderFreq,
       reminderDays: reminderFreq === "custom" ? reminderDays : reminderFreq === "weekdays" ? [1,2,3,4,5] : [0,1,2,3,4,5,6],
-      reminderEnabled: !remindersDisabled,
+      reminderEnabled: isNative() && !remindersDisabled,
       lateRecoveryDays: 3,
       graceDay: true,
       groupByPhase: false,
@@ -81,7 +92,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     <div className="min-h-screen flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-6 pt-10 pb-4 max-w-xl w-full mx-auto">
         <div className="flex items-center gap-2 mb-1">
-          {[0,1,2,3].map((i) => (
+          {Array.from({ length: LAST_STEP + 1 }, (_, i) => (
             <div key={i} className={cn("h-1 flex-1 rounded-full transition-colors", i <= step ? "bg-primary" : "bg-border")} />
           ))}
         </div>
@@ -90,21 +101,23 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
       <main className="flex-1 px-6 max-w-xl w-full mx-auto pb-32 animate-fade-in">
         {step === 0 && (
           <section>
-            <h2 className="font-serif text-4xl mb-1">{t("onb.welcome")}</h2>
+            <h2 ref={heading} tabIndex={-1} className="font-serif text-4xl mb-1 focus-visible:outline-none">{t("onb.welcome")}</h2>
             <p className="text-muted-foreground mb-8">{t("onb.welcome.sub")}</p>
             <p className="text-sm font-medium mb-3 uppercase tracking-wider text-muted-foreground">{t("onb.lang")}</p>
             <div className="grid grid-cols-2 gap-3">
               {SUPPORTED_LANGS.map((l) => (
                 <button
                   key={l.code}
+                  type="button"
+                  aria-pressed={lang === l.code}
                   onClick={() => setLang(l.code as Lang)}
                   className={cn(
                     "paper-card px-4 py-4 text-left transition-all",
-                    lang === l.code ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
+                    lang === l.code ? "ring-2 ring-primary" : "hover:-translate-y-0.5"
                   )}
                 >
                   <div className="font-serif text-2xl">{l.label}</div>
-                  <div className="text-xs text-muted-foreground tracking-widest">{l.flag}</div>
+                  <div aria-hidden className="text-xs text-muted-foreground tracking-widest">{l.flag}</div>
                 </button>
               ))}
             </div>
@@ -113,20 +126,23 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
 
         {step === 1 && (
           <section>
-            <h2 className="font-serif text-4xl mb-8">{t("onb.name")}</h2>
+            <h2 id="onb-name" className="font-serif text-4xl mb-8">{t("onb.name")}</h2>
+            <form onSubmit={(e) => { e.preventDefault(); if (canNext()) setStep(2); }}>
             <Input
+              aria-labelledby="onb-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("onb.name.ph")}
               className="text-lg h-14 bg-card border-border"
               autoFocus
             />
+            </form>
           </section>
         )}
 
         {step === 2 && (
           <section>
-            <h2 className="font-serif text-4xl mb-1">{t("onb.subjects")}</h2>
+            <h2 ref={heading} tabIndex={-1} className="font-serif text-4xl mb-1 focus-visible:outline-none">{t("onb.subjects")}</h2>
             <p className="text-muted-foreground mb-6">{t("onb.subjects.sub")}</p>
 
             <SubjectGroup
@@ -165,7 +181,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
 
         {step === 3 && (
           <section>
-            <h2 className="font-serif text-4xl mb-1 flex items-center gap-2">
+            <h2 ref={heading} tabIndex={-1} className="font-serif text-4xl mb-1 flex items-center gap-2 focus-visible:outline-none">
               <Bell className="h-7 w-7 text-primary" /> {t("onb.reminder")}
             </h2>
             <p className="text-muted-foreground mb-8">{t("onb.reminder.sub")}</p>
@@ -173,6 +189,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
             <div className="paper-card p-6 mb-4">
               <input
                 type="time"
+                aria-label={t("onb.reminder")}
                 value={reminderTime}
                 onChange={(e) => setReminderTime(e.target.value)}
                 className="font-serif text-5xl bg-transparent border-0 outline-none w-full text-center tabular-nums"
@@ -183,6 +200,8 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               {(["daily","weekdays","custom"] as const).map((f) => (
                 <button
                   key={f}
+                  type="button"
+                  aria-pressed={reminderFreq === f}
                   onClick={() => setReminderFreq(f)}
                   className={cn(
                     "paper-card py-3 text-sm font-medium transition-all",
@@ -199,6 +218,8 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                 {DAYS.map((d, i) => (
                   <button
                     key={i}
+                    type="button"
+                    aria-pressed={reminderDays.includes(i)}
                     onClick={() => toggleDay(i)}
                     className={cn(
                       "h-11 w-11 rounded-full font-medium transition-colors",
@@ -216,7 +237,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               <button
                 type="button"
                 onClick={() => finish({ remindersDisabled: true })}
-                className="text-xs text-muted-foreground/60 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+                className="min-h-11 px-2 text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors"
               >
                 {t("onb.reminder.none")}
               </button>
@@ -232,12 +253,12 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               {t("common.back")}
             </Button>
           )}
-          {step < 3 ? (
+          {step < LAST_STEP ? (
             <Button onClick={() => setStep(step + 1)} disabled={!canNext()} className="flex-1">
               {t("onb.continue")}
             </Button>
           ) : (
-            <Button onClick={() => finish()} className="flex-1">
+            <Button onClick={() => finish()} disabled={!canNext()} className="flex-1">
               {t("onb.finish")}
             </Button>
           )}
@@ -267,6 +288,7 @@ function SubjectGroup({
   customValue, setCustomValue, customPlaceholder, addLabel, onAdd,
   extraChips, onRemoveChip,
 }: SubjectGroupProps) {
+  const { t } = useI18n();
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
@@ -279,10 +301,12 @@ function SubjectGroup({
           return (
             <button
               key={p.name}
+              type="button"
+              aria-pressed={active}
               onClick={() => onToggle(p)}
               className={cn(
                 "paper-card px-3 py-2.5 flex items-center gap-2 text-left transition-all min-w-0",
-                active ? "ring-2 ring-primary -translate-y-0.5" : "hover:-translate-y-0.5"
+                active ? "ring-2 ring-primary" : "hover:-translate-y-0.5"
               )}
             >
               <span className="font-medium truncate">{p.name}</span>
@@ -295,17 +319,14 @@ function SubjectGroup({
       {extraChips.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
           {extraChips.map((s) => (
-            <span key={s.name} className="inline-flex items-center gap-1 bg-accent px-3 py-1.5 rounded-full text-sm">
-              {s.name}
-              <button onClick={() => onRemoveChip(s.name)}>
-                <X className="h-3 w-3" />
-              </button>
-            </span>
+            <Button key={s.name} type="button" variant="secondary" size="sm" onClick={() => onRemoveChip(s.name)} aria-label={t("common.removeItem", { label: s.name })} className="h-auto min-h-11 max-w-full whitespace-normal px-2 py-1.5 text-left">
+              <span className="min-w-0 break-words">{s.name}</span><X aria-hidden="true" />
+            </Button>
           ))}
         </div>
       )}
 
-      <div className="paper-card p-2 flex flex-col sm:flex-row gap-2 sm:items-center">
+      <div className="paper-card p-2 flex flex-col sm:flex-row gap-2 sm:items-center focus-within:ring-2 focus-within:ring-ring">
         <Input
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
