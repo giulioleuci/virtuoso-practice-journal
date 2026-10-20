@@ -269,9 +269,9 @@ describe("library controls", () => {
     view.rerender(<MemoryRouter><I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}><Collections /></I18nContext.Provider></MemoryRouter>);
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(screen.queryByRole("button", { name: "Pagina successiva" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: t("collections.kind.manual") }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: t("collections.kind.manual") }), { button: 0, ctrlKey: false });
     expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: t("collections.kind.collection") }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: t("collections.kind.collection") }), { button: 0, ctrlKey: false });
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
   });
 });

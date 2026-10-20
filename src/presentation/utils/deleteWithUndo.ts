@@ -9,11 +9,13 @@ export async function deleteWithUndo(options: {
   message: string;
   undoLabel: string;
   toast: UndoToast;
+  onError: (error: unknown) => void;
   duration?: number;
 }): Promise<void> {
-  await options.remove();
+  try { await options.remove(); }
+  catch (error) { options.onError(error); return; }
   options.toast(options.message, {
-    action: { label: options.undoLabel, onClick: () => void options.restore() },
+    action: { label: options.undoLabel, onClick: () => void options.restore().catch(options.onError) },
     duration: options.duration ?? 6000,
   });
 }

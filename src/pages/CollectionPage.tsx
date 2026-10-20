@@ -61,7 +61,7 @@ export default function CollectionPage() {
   const pager = usePagination(filtered, 5);
 
   if (collection === undefined || library === undefined || links === undefined) return <div className="paper-skeleton h-40 w-full" />;
-  if (!collection || collection.deletedAt) return <EmptyState title={t("collection.notFound")} />;
+  if (!collection || collection.deletedAt) return <EmptyState title={t("collection.notFound")} cta={{ label: t("collection.all"), onClick: () => navigate("/library/collections") }} />;
 
   const subjectDot = (subjectId: number) => {
     const s = subjects?.find((x) => x.id === subjectId);
@@ -78,7 +78,7 @@ export default function CollectionPage() {
     const order = links.map(l => l.itemId);
     setBusy(true); setError(undefined);
     try {
-      await deleteWithUndo({ remove: () => collectionsService.removeItems(collectionId, [item.id!]), restore: async () => {
+      await deleteWithUndo({ onError: reportError, remove: () => collectionsService.removeItems(collectionId, [item.id!]), restore: async () => {
         try {
           await collectionsService.addItems(collectionId, [item.id!]);
           await collectionsService.updateItemLink(collectionId, item.id!, link);
@@ -111,7 +111,7 @@ export default function CollectionPage() {
 
   return (
     <div className="pb-24">
-      <Link to={`/library/collections?kind=${kind}`} className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+      <Link to={`/library/collections?kind=${kind}`} className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
         <ChevronLeft className="h-4 w-4" />{t("collection.all")}
       </Link>
       <PageHeader
@@ -178,7 +178,7 @@ export default function CollectionPage() {
             {pager.pageItems.map((item) => (
               <li key={item.id} className="flex items-center gap-3 py-3">
                 {subjectDot(item.subjectId)}
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                   <div className="break-words text-sm font-medium">{item.title}</div>
                   {item.composer && <div className="text-xs italic text-muted-foreground">{item.composer}</div>}
                   <p className="text-xs text-muted-foreground">{t(`library.kind.${item.kind}`)}</p>

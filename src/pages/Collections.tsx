@@ -5,6 +5,7 @@ import type { Collection } from "@/domain/entities/collection";
 import type { CollectionKind } from "@/domain/entities/common";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Pencil, Trash2, ChevronLeft, FolderOpen, Music2 } from "lucide-react";
 import { collectionsService } from "@/lib/services";
 import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
@@ -14,7 +15,6 @@ import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet"
 import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
 import { Pager } from "@/components/shared/Pager";
 import { usePagination } from "@/hooks/usePagination";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function Collections() {
@@ -60,6 +60,7 @@ export default function Collections() {
       restore: () => collectionsService.restore(c, savedLinks),
       message: t("toast.collectionRemoved"),
       undoLabel: t("common.undo"),
+      onError: () => toast.error(t("quick.failed")),
       toast: (msg, opts) => toast.success(msg, opts),
       duration: 5000,
     });
@@ -73,7 +74,7 @@ export default function Collections() {
 
   return (
     <div className="pb-24">
-      <Link to="/library" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+      <Link to="/library" className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
         <ChevronLeft className="h-4 w-4" /> {t("nav.library")}
       </Link>
       <PageHeader
@@ -81,19 +82,19 @@ export default function Collections() {
         actions={<Button onClick={openCreate}><Plus /> {t(`collections.newByKind.${active}`)}</Button>}
       />
 
-      <div role="tablist" className="mb-5 flex gap-6 overflow-x-auto overflow-y-hidden border-b border-border no-scrollbar">
+      <Tabs value={active} onValueChange={value => { setActive(value as CollectionKind); setComposer("all"); pager.reset(); }}>
+      <TabsList aria-label={t("collections.title")} className="mb-5 flex h-auto flex-wrap justify-start gap-x-4 rounded-none border-b border-border bg-transparent p-0">
         {(["manual", "collection"] as const).map(key => (
-          <button
+          <TabsTrigger
             key={key}
-            role="tab"
-            aria-selected={active === key}
-            onClick={() => { setActive(key); setComposer("all"); pager.reset(); }}
-            className={cn("-mb-px shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors", active === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+            value={key}
+            className="-mb-px min-h-11 shrink-0 rounded-none border-b-2 border-transparent px-0 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
           >
             {t(`collections.kind.${key}`)}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
+      </TabsList>
+      <TabsContent value={active}>
 
       <FilterPanel search={{ value: search, onChange: value => { setSearch(value); pager.reset(); }, placeholder: t("library.searchTitleComposer") }}
         filters={composer === "all" ? [] : [{ key: "composer", label: `${t("collection.author")}: ${composer}`, onRemove: () => { setComposer("all"); pager.reset(); } }]}
@@ -122,20 +123,22 @@ export default function Collections() {
               />
               <div className="min-w-[calc(100%-2rem)] flex-1 min-[700px]:min-w-0">
                 <Link to={`/library/collections/${c.id}`} className="block break-words font-serif text-xl font-semibold leading-tight hover:underline underline-offset-4">{c.name}</Link>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs tabular-nums text-muted-foreground [overflow-wrap:anywhere]">
                   {(c.composer || c.catalog) && <span className="italic">{[c.composer, c.catalog, c.edition].filter(Boolean).join(" · ")}</span>}
                   <span className="inline-flex items-center gap-1"><Music2 className="h-3 w-3" /> {t("collections.materialCount", { count: countFor(c.id) })}</span>
                 </div>
               </div>
-              <Button asChild size="sm" variant="outline"><Link to={`/library/collections/${c.id}`}><Music2 />{t("collection.manage")}</Link></Button>
-              <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => openEdit(c)} aria-label={`${t("common.edit")} ${c.name}`}><Pencil /></Button>
-              <Button size="icon" variant="ghost" className="h-10 w-10 hover:text-destructive" onClick={() => deleteCollection(c)} aria-label={`${t("common.delete")} ${c.name}`}><Trash2 /></Button>
+              <Button asChild size="sm" variant="outline" className="min-h-11"><Link to={`/library/collections/${c.id}`}><Music2 />{t("collection.manage")}</Link></Button>
+              <Button size="icon" variant="ghost" className="h-11 w-11" onClick={() => openEdit(c)} aria-label={`${t("common.edit")} ${c.name}`}><Pencil /></Button>
+              <Button size="icon" variant="ghost" className="h-11 w-11 hover:text-destructive" onClick={() => deleteCollection(c)} aria-label={`${t("common.delete")} ${c.name}`}><Trash2 /></Button>
             </li>
           ))}
         </ul>
       )}
 
       <Pager page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} />
+      </TabsContent>
+      </Tabs>
 
       <NewCollectionSheet
         open={editorOpen}

@@ -9,11 +9,32 @@ import { configurePresentationQueries } from "@/application/queries/presentation
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import { collectionsService } from "@/lib/services/collections";
 import CollectionPage from "./CollectionPage";
+import { NewCollectionSheet } from "@/components/collections/NewCollectionSheet";
 
 const t = (key: string, vars?: Record<string, string | number>) => translate("it", key, vars);
 beforeEach(async () => { Element.prototype.scrollIntoView = vi.fn(); await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads); });
 
 describe("CollectionPage", () => {
+  it("recovers from a missing collection instead of staying in loading", async () => {
+    render(<I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}><MemoryRouter initialEntries={["/library/collections/999"]}><Routes><Route path="/library/collections/:id" element={<CollectionPage />} /></Routes></MemoryRouter></I18nContext.Provider>);
+    expect(await screen.findByText(t("collection.notFound"))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: t("collection.all") })).toBeInTheDocument();
+  });
+
+  it("labels collection fields and exposes the selected color", async () => {
+    render(<I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}><NewCollectionSheet open onOpenChange={() => {}} kind="manual" /></I18nContext.Provider>);
+    expect(screen.getByRole("textbox", { name: t("library.labelAuthor") })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: t("collections.labelCatalog") })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: t("collections.labelNotesOptional") })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: t("collections.labelDefaultSubject") })).toBeInTheDocument();
+    const sage = screen.getByRole("button", { name: t("subjects.color.sage") });
+    fireEvent.click(sage);
+    expect(sage).toHaveAttribute("aria-pressed", "true");
+    fireEvent.change(screen.getByRole("textbox", { name: t("common.name") }), { target: { value: "Method" } });
+    fireEvent.click(screen.getByRole("button", { name: t("collections.createCollection") }));
+    await waitFor(async () => expect(await db.collections.toArray()).toMatchObject([{ name: "Method", color: "sage", kind: "manual" }]));
+  });
+
   it("paginates library candidates, resets filters and keeps a valid page after adding the last candidate", async () => {
     const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
     const collectionId = await collectionsService.create({ kind: "collection", name: "Collection" });

@@ -114,6 +114,7 @@ export default function Tasks() {
       restore: () => tasksService.restore(saved),
       message: t("toast.taskDeleted"),
       undoLabel: t("common.undo"),
+      onError: () => toast.error(t("quick.failed")),
       toast: (msg, opts) => toast.success(msg, opts),
       duration: 5000,
     });

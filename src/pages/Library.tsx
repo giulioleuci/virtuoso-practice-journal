@@ -136,6 +136,7 @@ export default function Library() {
       restore: () => libraryService.restore(savedItem, savedSegments),
       message: t("toast.deleted"),
       undoLabel: t("common.undo"),
+      onError: () => toast.error(t("quick.failed")),
       toast: (msg, opts) => toast.success(msg, opts),
       duration: 5000,
     });

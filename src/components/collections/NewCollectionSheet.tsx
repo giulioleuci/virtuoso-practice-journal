@@ -107,7 +107,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5">
           <label className="grid gap-1.5 text-xs font-medium">{t("collections.kind")}
-            <Select value={effectiveKind} onValueChange={(value) => setEffectiveKind(value as CollectionKind)} ><SelectTrigger className="h-11 rounded-md border border-input bg-card px-3 text-base"><SelectValue /></SelectTrigger><SelectContent>
+            <Select value={effectiveKind} onValueChange={(value) => setEffectiveKind(value as CollectionKind)} ><SelectTrigger aria-label={t("collections.kind")} className="h-11 rounded-md border border-input bg-card px-3 text-base"><SelectValue /></SelectTrigger><SelectContent>
               {(["manual", "collection"] as const).map(k => <SelectItem key={k} value={String(k)}>{t(`collections.kind.${k}`)}</SelectItem>)}
             </SelectContent></Select>
           </label>
@@ -130,11 +130,11 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
                 <Label className="text-xs font-medium text-foreground">
                   {effectiveKind === "manual" ? t("library.labelAuthor") : t("library.labelComposer")}
                 </Label>
-                <Input value={composer} onChange={(e) => setField("composer", e.target.value)} placeholder={effectiveKind === "manual" ? "Hanon" : "Chopin"} className="bg-card" />
+                <Input aria-label={effectiveKind === "manual" ? t("library.labelAuthor") : t("library.labelComposer")} maxLength={120} value={composer} onChange={(e) => setField("composer", e.target.value)} placeholder={effectiveKind === "manual" ? "Hanon" : "Chopin"} className="bg-card" />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-foreground">{t("collections.labelCatalog")}</Label>
-                <Input value={catalog} onChange={(e) => setField("catalog", e.target.value)} placeholder="Op. 9" className="bg-card" />
+                <Input aria-label={t("collections.labelCatalog")} maxLength={60} value={catalog} onChange={(e) => setField("catalog", e.target.value)} placeholder="Op. 9" className="bg-card" />
               </div>
             </div>
           )}
@@ -145,18 +145,20 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
+                aria-pressed={!color}
                 onClick={() => setField("color", undefined)}
-                className={cn("h-9 px-3 rounded-full text-xs border", !color ? "border-foreground" : "border-input text-muted-foreground")}
+                className={cn("min-h-11 px-3 rounded-full text-xs border", !color ? "border-foreground" : "border-input text-muted-foreground")}
               >{t("common.none")}</button>
               {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setField("color", c)}
-                  aria-label={c}
+                  aria-label={t(`subjects.color.${c}`)}
+                  aria-pressed={color === c}
                   className={cn(
-                    "h-9 w-9 rounded-full border-2 transition-all",
-                    color === c ? "border-foreground scale-110" : "border-transparent"
+                    "h-11 w-11 rounded-full border-2 transition-colors",
+                    color === c ? "border-foreground" : "border-transparent"
                   )}
                   style={{ backgroundColor: `hsl(var(--key-${c}))` }}
                 />
@@ -170,7 +172,7 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
               value={defaultSubjectId !== undefined ? String(defaultSubjectId) : "none"}
               onValueChange={(v) => setField("defaultSubjectId", v === "none" ? undefined : Number(v))}
             >
-              <SelectTrigger className="bg-card"><SelectValue placeholder={t("common.optional")} /></SelectTrigger>
+              <SelectTrigger aria-label={t("collections.labelDefaultSubject")} className="bg-card"><SelectValue placeholder={t("common.optional")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t("common.none")}</SelectItem>
                 {(subjects ?? []).map((s) => (
@@ -182,14 +184,14 @@ export function NewCollectionSheet({ open, onOpenChange, collection, kind, onSav
 
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">{t("collections.labelNotesOptional")}</Label>
-            <Textarea value={notes} onChange={(e) => setField("notes", e.target.value)} placeholder={t("collections.notesPlaceholder")} className="bg-card" rows={3} />
+            <Textarea aria-label={t("collections.labelNotesOptional")} maxLength={2000} value={notes} onChange={(e) => setField("notes", e.target.value)} placeholder={t("collections.notesPlaceholder")} className="bg-card" rows={3} />
           </div>
         </div>
 
-        <SheetFooter className="px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background/80 backdrop-blur">
+        <SheetFooter className="shrink-0 px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background">
           <div className="flex gap-3 w-full">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1">{t("common.cancel")}</Button>
-            <Button onClick={save} disabled={!canSave || submitting} className="flex-1">
+            <Button onClick={save} disabled={!canSave || submitting} className="flex-1 whitespace-normal">
               {isEdit ? t("collections.saveChanges") : t("collections.createCollection")}
             </Button>
           </div>
