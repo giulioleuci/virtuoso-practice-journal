@@ -83,30 +83,31 @@ export function SegmentsEditor({ segments, onChange, itemTempo, subjectLayers = 
             return (
               <li key={s.id ?? `new-${i}`} className="border-b border-border py-3">
                 <details>
-                  <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">{s.label || t("segments.labelRequired")}</summary>
+                  <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium [overflow-wrap:anywhere]">{s.label || t("segments.labelRequired")}</summary>
                   <div className="space-y-3 pt-2">
                 <div className="flex items-center gap-2">
                   <Input
                     aria-label={t("segments.label")}
+                    maxLength={140}
                     aria-invalid={labelInvalid}
                     value={s.label}
                     onChange={(e) => update(i, { label: e.target.value })}
                     className={cn(
-                      "border-0 bg-transparent focus-visible:ring-0 font-serif text-lg px-0 h-8",
+                      "min-w-0 border-0 bg-transparent focus-visible:ring-0 px-0 h-11",
                       labelInvalid && "text-destructive"
                     )}
                   />
                   <button type="button" onClick={() => move(i, -1)} disabled={i === 0}
-                    className="text-muted-foreground hover:text-foreground p-1 disabled:opacity-30" aria-label={t("segments.moveUp")}>
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label={t("segments.moveUp")}>
                     <ArrowUp className="h-4 w-4" />
                   </button>
                   <button type="button" onClick={() => move(i, 1)} disabled={i === segments.length - 1}
-                    className="text-muted-foreground hover:text-foreground p-1 disabled:opacity-30" aria-label={t("segments.moveDown")}>
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label={t("segments.moveDown")}>
                     <ArrowDown className="h-4 w-4" />
                   </button>
                   <button type="button" onClick={() => remove(i)}
                     aria-label={`${t("common.delete")}: ${s.label}`}
-                    className="text-muted-foreground hover:text-destructive p-1">
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground hover:text-destructive">
                     <X className="h-4 w-4" />
                   </button>
                 </div>

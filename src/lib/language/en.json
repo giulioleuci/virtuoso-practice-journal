@@ -553,6 +553,7 @@
   "analysis.bpmTrend": "BPM trend",
   "analysis.confidenceTrend": "Confidence trend",
   "analysis.sessionsPerWeek": "Sessions per week",
+  "analysis.dataTable": "Show chart data",
   "analysis.noData": "No sessions logged yet.",
   "subjects.customColor": "Custom color",
   "common.reset": "Reset",

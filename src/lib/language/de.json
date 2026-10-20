@@ -553,6 +553,7 @@
   "analysis.bpmTrend": "BPM-Verlauf",
   "analysis.confidenceTrend": "Sicherheitsverlauf",
   "analysis.sessionsPerWeek": "Sitzungen pro Woche",
+  "analysis.dataTable": "Diagrammdaten anzeigen",
   "analysis.noData": "Noch keine Sitzungen erfasst.",
   "subjects.customColor": "Eigene Farbe",
   "common.reset": "Zurücksetzen",

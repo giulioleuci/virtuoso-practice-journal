@@ -42,7 +42,7 @@ export const useAllSegments = () => useRead<Segment[]>("segments.active");
 export const useAllCollections = () => useRead<Collection[]>("collections.all");
 export const useCollectionItems = (collectionId?: number) => useRead<CollectionItem[]>("collections.items", [collectionId]);
 export const useCollection = (collectionId?: number) => useRead<Collection | undefined>("collections.one", [collectionId]);
-export const useItem = (id?: number) => useRead<LibraryItem | undefined>("library.item", [id]);
+export const useItem = (id?: number) => usePresentationReader(async queries => (await queries.execute<LibraryItem | undefined>("library.item", id)) ?? null, [id]);
 export const useTask = (id?: number) => useRead<Task | null>("tasks.one", [id]);
 export const useTasksInRange = (from?: string, to?: string) => useRead<Task[]>("tasks.range", [from, to]);
 export const useTasksByDate = (date?: string) => useRead<Task[]>("tasks.date", [date]);

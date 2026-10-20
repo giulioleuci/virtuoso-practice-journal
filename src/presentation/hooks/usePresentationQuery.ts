@@ -51,17 +51,24 @@ export function usePresentationReader<T>(
   dependencies: readonly unknown[] = [],
 ): T | undefined {
   const queries = presentationQueries();
-  const [value, setValue] = useState<T>();
+  const [state, setState] = useState<{ key: string; value: T }>();
   const dependencyKey = JSON.stringify(dependencies);
-  const load = useCallback(() => {
-    void reader(queries).then(setValue);
+
+  useEffect(() => {
+    let active = true;
+    const load = () => {
+      void reader(queries).then(value => {
+        if (active) setState({ key: dependencyKey, value });
+      }, error => {
+        if (active) setState(() => { throw error; });
+      });
+    };
+    load();
+    const unsubscribe = queries.subscribe(load);
+    return () => { active = false; unsubscribe(); };
+  // dependencyKey keeps inline readers from resubscribing on every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queries, dependencyKey]);
 
-  useEffect(() => {
-    load();
-    return queries.subscribe(load);
-  }, [load, queries]);
-
-  return value;
+  return state?.key === dependencyKey ? state.value : undefined;
 }

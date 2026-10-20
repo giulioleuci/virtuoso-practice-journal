@@ -38,6 +38,13 @@ class FakeReads implements PresentationReadPort {
 }
 
 describe("presentation entity adapters", () => {
+  it("distinguishes a missing item from a pending lookup", async () => {
+    configurePresentationQueries(new FakeReads(new Map()));
+    const { result } = renderHook(() => useItem(999));
+    expect(result.current).toBeUndefined();
+    await waitFor(() => expect(result.current).toBeNull());
+  });
+
   it.each([
     ["task date", () => useTasksByDate("2026-07-20"), "tasks.date", [{ id: 1 }], [{ id: 2 }]],
     ["task range", () => useTasksInRange("2026-07-01", "2026-07-31"), "tasks.range", [{ id: 1 }], [{ id: 2 }]],

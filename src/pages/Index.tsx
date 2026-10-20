@@ -3,8 +3,8 @@ import { useProfile } from "@/presentation/hooks/useEntities";
 import { profileService } from "@/lib/services";
 import { I18nProvider } from "@/lib/I18nProvider";
 import { browserLang } from "@/lib/i18n";
-import Onboarding from "@/components/onboarding/Onboarding";
-import IntroSlides from "@/components/onboarding/IntroSlides";
+const Onboarding = lazy(() => import("@/components/onboarding/Onboarding"));
+const IntroSlides = lazy(() => import("@/components/onboarding/IntroSlides"));
 import AppShell from "@/components/AppShell";
 import { Navigate, Routes, Route, useParams } from "react-router-dom";
 import NotFound from "./NotFound";
@@ -75,7 +75,7 @@ const Index = () => {
   if (!profile || !profile.onboarded) {
     return (
       <I18nProvider initial={browserLang()}>
-        <Onboarding onDone={() => { /* live query refreshes automatically */ }} />
+        <Suspense fallback={<PageSkeleton />}><Onboarding onDone={() => { /* live query refreshes automatically */ }} /></Suspense>
       </I18nProvider>
     );
   }
@@ -83,7 +83,7 @@ const Index = () => {
   if (!profile.introSeen) {
     return (
       <I18nProvider initial={profile.lang}>
-        <IntroSlides onDone={() => profileService.update({ introSeen: true })} />
+        <Suspense fallback={<PageSkeleton />}><IntroSlides onDone={() => profileService.update({ introSeen: true })} /></Suspense>
       </I18nProvider>
     );
   }

@@ -1,12 +1,12 @@
-import { useMemo } from "react";
-import { useTechniques, useItem, useProfile } from "@/presentation/hooks/useEntities";
+import { useMemo, useState } from "react";
+import { useItem, useProfile } from "@/presentation/hooks/useEntities";
 import type { Lang } from "@/domain/entities/common";
 import type { Session } from "@/domain/entities/session";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useI18n } from "@/lib/i18n";
 import { BpmTimelineChart } from "./BpmTimelineChart";
 import { meanConfidence } from "@/domain/logic/sessionMetrics";
-import { TrendIcon, ChartIcon } from "@/lib/icons";
+import { TrendIcon } from "@/lib/icons";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { weeklySessionCounts } from "@/lib/domain/analytics";
 import { formatDate, getDefaultWeekStartsOn } from "@/lib/date";
@@ -15,7 +15,19 @@ import { formatDate, getDefaultWeekStartsOn } from "@/lib/date";
 interface ChartPoint { x: number; y: number; label: string }
 
 function formatDay(date: string, lang: Lang): string {
-  return formatDate(date, lang, "dayMonth");
+  return formatDate(date, lang, "medium");
+}
+
+function ChartData({ points, label }: { points: ChartPoint[]; label: string }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  return <details onToggle={event => setOpen(event.currentTarget.open)}>
+    <summary className="min-h-11 cursor-pointer py-3 text-xs text-primary">{t("analysis.dataTable")}: {label}</summary>
+    {open && <table aria-label={label} className="w-full text-left text-xs tabular-nums">
+      <thead><tr><th scope="col" className="py-2">{t("common.date")}</th><th scope="col" className="py-2">{label}</th></tr></thead>
+      <tbody>{points.map((point, index) => <tr key={index} className="border-t border-border"><td className="py-2">{point.label}</td><td className="py-2">{point.y}</td></tr>)}</tbody>
+    </table>}
+  </details>;
 }
 
 function LineChart({ points, target, color = "hsl(var(--primary))", targetColor = "hsl(var(--muted-foreground))" }: {
@@ -39,15 +51,16 @@ function LineChart({ points, target, color = "hsl(var(--primary))", targetColor 
 
   const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(p.y).toFixed(1)}`).join(" ");
   const targetY = target != null ? toY(target) : null;
+  const plotted = points.map((point, index) => ({ point, index })).filter(({ index }) => index % Math.ceil(points.length / 200) === 0 || index === points.length - 1);
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: h }} preserveAspectRatio="none">
+    <svg aria-hidden="true" viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: h }} preserveAspectRatio="none">
       {targetY != null && (
         <line x1={0} y1={targetY} x2={w} y2={targetY} stroke={targetColor} strokeWidth={1} strokeDasharray="4 3" />
       )}
       <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {points.map((p, i) => (
-        <circle key={i} cx={toX(i)} cy={toY(p.y)} r={3} fill={color} />
+      {plotted.map(({ point, index }) => (
+        <circle key={index} cx={toX(index)} cy={toY(point.y)} r={3} fill={color} />
       ))}
     </svg>
   );
@@ -56,7 +69,7 @@ function LineChart({ points, target, color = "hsl(var(--primary))", targetColor 
 function BarChart({ data }: { data: { label: string; count: number; color: string }[] }) {
   const max = Math.max(1, ...data.map((d) => d.count));
   return (
-    <div className="flex items-end gap-2 h-14">
+    <div className="flex items-end gap-2 h-14" aria-hidden="true">
       {data.map((d, i) => (
         <div key={i} className="flex flex-col items-center gap-1 flex-1">
           <div
@@ -81,13 +94,11 @@ export function ItemAnalysis({ itemId }: { itemId: number }) {
   const profile = useProfile();
   const sessions = usePresentationRead<Session[]>("sessions.segmentHistory", [itemId]);
 
-  const techniques = useTechniques();
-
   const isTheory = item?.kind === "theory";
 
   const confidencePoints = useMemo((): ChartPoint[] => {
     const points: ChartPoint[] = [];
-    for (const s of sessions ?? []) {
+    for (const s of [...(sessions ?? [])].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt)) {
       const confidence = meanConfidence(s.marks);
       if (confidence == null) continue;
       points.push({ x: points.length, y: confidence, label: formatDay(s.date, lang) });
@@ -133,6 +144,7 @@ export function ItemAnalysis({ itemId }: { itemId: number }) {
             <span>{confidencePoints[0]?.label}</span>
             <span>{confidencePoints[confidencePoints.length - 1]?.label}</span>
           </div>
+          <ChartData points={confidencePoints} label={t("analysis.confidenceTrend")} />
         </section>
       )}
 
@@ -140,6 +152,7 @@ export function ItemAnalysis({ itemId }: { itemId: number }) {
         <section className={panel}>
           <h3 className="font-serif text-xl font-semibold">{t("analysis.sessionsPerWeek")}</h3>
           <BarChart data={sessionsPerWeek.map((p) => ({ label: p.label.split(" ")[0] ?? "", count: p.y, color: "hsl(var(--key-sage))" }))} />
+          <ChartData points={sessionsPerWeek} label={t("analysis.sessionsPerWeek")} />
         </section>
       )}
     </div>

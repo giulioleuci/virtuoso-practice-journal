@@ -7,10 +7,10 @@ import { sessionLabel, tempoLabel } from "@/lib/format";
 import { formatDate, today } from "@/lib/date";
 import { subjectColorCss } from "@/lib/subjectColors";
 import { useI18n } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useAllCollections, useCollectionLinksByItem, useItem, useSegmentsByItem, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionHeader } from "@/components/shared/SectionHeader";
@@ -47,7 +47,7 @@ export default function ItemPage() {
   const lastTempo = sorted.find(s => s.marks.some(m => m.bpm))?.marks;
 
   if (item === undefined || sessions === undefined) return <div className="paper-skeleton h-40 w-full" />;
-  if (!item || item.deletedAt) return <EmptyState title={t("item.notFound")} />;
+  if (!item || item.deletedAt) return <EmptyState title={t("item.notFound")} cta={{ label: t("item.back"), onClick: () => navigate("/library") }} />;
 
   const subject = subjects?.find((s) => s.id === item.subjectId);
   const openQuestions = (help ?? []).filter((h) => !h.resolved).length;
@@ -83,7 +83,7 @@ export default function ItemPage() {
 
   return (
     <div className="pb-24">
-      <Link to={`/library`} className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+      <Link to={`/library`} className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
         <ChevronLeft className="h-4 w-4" />{t("item.back")}
       </Link>
       <PageHeader
@@ -92,17 +92,19 @@ export default function ItemPage() {
         actions={<Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />{t("common.edit")}</Button>}
       />
 
-      <div role="tablist" className="mb-6 flex gap-6 overflow-x-auto overflow-y-hidden border-b border-border no-scrollbar">
+      <Tabs value={tab} onValueChange={value => setTab(value as Tab)}>
+      <TabsList aria-label={item.title} className="mb-6 flex h-auto flex-wrap justify-start gap-x-4 rounded-none border-b border-border bg-transparent p-0">
         {TABS.map((id2) => {
           const count = id2 === "segments" ? segments.length : id2 === "sessions" ? sorted.length : id2 === "questions" ? openQuestions : 0;
           return (
-            <button key={id2} role="tab" aria-selected={tab === id2} onClick={() => setTab(id2)}
-              className={cn("-mb-px shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors", tab === id2 ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
+            <TabsTrigger key={id2} value={id2}
+              className="-mb-px min-h-11 shrink-0 rounded-none border-b-2 border-transparent px-0 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none">
               {t(`item.tab.${id2}`)}{count > 0 && <span className="ml-1.5 font-numeric text-xs tabular-nums">{count}</span>}
-            </button>
+            </TabsTrigger>
           );
         })}
-      </div>
+      </TabsList>
+      <TabsContent value={tab}>
 
       {tab === "overview" && (
         <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
@@ -118,18 +120,18 @@ export default function ItemPage() {
 
             {!isTheory && sorted.some((s) => topBpm(s.marks)) && (
               <section>
-                <SectionHeader title={t("item.tempoTrend")} action={<button type="button" onClick={() => setTab("analysis")} className="text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">{t("item.fullAnalysis")}</button>} />
+                <SectionHeader title={t("item.tempoTrend")} action={<button type="button" onClick={() => setTab("analysis")} className="min-h-11 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">{t("item.fullAnalysis")}</button>} />
                 <BpmTimelineChart sessions={sorted} targetBpm={item.targetBpm} targetNoteVal={item.noteVal} />
               </section>
             )}
 
             <section>
-              <SectionHeader title={t("item.recentSessions")} action={<button type="button" onClick={() => setTab("sessions")} className="text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">{t("item.allSessions")}</button>} />
+              <SectionHeader title={t("item.recentSessions")} action={<button type="button" onClick={() => setTab("sessions")} className="min-h-11 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">{t("item.allSessions")}</button>} />
               {sorted.length ? sessionRows(sorted.slice(0, 3)) : <EmptyState title={t("item.noSessions")} hint={t("item.noSessionsHint")} />}
             </section>
           </div>
 
-          <aside className="min-w-0 space-y-6">
+          <aside className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
             <section>
               <h3 className="mb-2 text-sm font-semibold">{t("item.context")}</h3>
               <p className="text-xs text-muted-foreground">{t("item.collections")}</p>
@@ -155,17 +157,17 @@ export default function ItemPage() {
               {segments.map((s) => (
                 <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-4">
                   <div className="min-w-full flex-1 min-[700px]:min-w-0">
-                    <h3 className="text-base font-medium">{s.label}</h3>
+                    <h3 className="text-base font-medium [overflow-wrap:anywhere]">{s.label}</h3>
                     {s.barStart !== undefined && <p className="text-xs text-muted-foreground">{t("segments.bars", { start: s.barStart, end: s.barEnd! })}</p>}
-                    <div className="mt-1 flex flex-wrap gap-x-3 text-xs tabular-nums text-muted-foreground">
+                    <div className="mt-1 flex flex-wrap gap-x-3 text-xs tabular-nums text-muted-foreground [overflow-wrap:anywhere]">
                       {(s.targetBpm ?? item.targetBpm) && <span>{tempoLabel(s.targetBpm !== undefined ? s.noteVal : item.noteVal, (s.targetBpm ?? item.targetBpm)!)} · {t(s.targetBpm !== undefined ? "segments.specific" : "segments.inherited")}</span>}
                       {s.notes && <span>{s.notes}</span>}
                       {s.layers.map((l) => <span key={l}>{l}</span>)}
                       {(s.techniqueIds ?? []).map((tid) => <span key={tid}>{techniques?.find((x) => x.id === tid)?.name}</span>)}
                     </div>
                   </div>
-                  <Button asChild size="sm" variant="outline"><Link to={`/library/item/${itemId}/segment/${s.id}`}>{t("item.segmentHistory")}</Link></Button>
-                  <Button size="sm" onClick={() => study([s.id])}><Play />{t("library.practiceThis")}</Button>
+                  <Button asChild size="sm" variant="outline" className="min-h-11"><Link to={`/library/item/${itemId}/segment/${s.id}`}>{t("item.segmentHistory")}</Link></Button>
+                  <Button size="sm" className="min-h-11" onClick={() => study([s.id])}><Play />{t("library.practiceThis")}</Button>
                 </li>
               ))}
             </ul>
@@ -182,6 +184,8 @@ export default function ItemPage() {
 
       {tab === "analysis" && <ItemAnalysis itemId={itemId} />}
       {tab === "questions" && <ItemQuestions itemId={itemId} />}
+      </TabsContent>
+      </Tabs>
 
       <NewLibraryItemSheet open={editOpen} onOpenChange={setEditOpen} kind={item.kind} item={item} />
     </div>
