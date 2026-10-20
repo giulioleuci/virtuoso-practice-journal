@@ -49,7 +49,7 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
 
   return (
     <section className="space-y-4 border-y border-border py-5">
-      <div className="grid max-w-md grid-cols-2 gap-3">
+      <div className="grid max-w-lg grid-cols-2 gap-6 divide-x divide-border py-3 [&>*+*]:pl-6">
         <Stat label={t("stats.thisWeek")} value={totalWeek} sub={t("stats.sessions")} />
         <Stat label={t(hasRange ? "stats.inRange" : "stats.allTime")} value={rangeCount} />
       </div>
@@ -75,7 +75,7 @@ export function StatsDashboard({ from, to, sessions: sessionsProp }: Props = {})
 }
 
 function Stat({ label, value, sub }: { label: string; value: number; sub?: string }) {
-  return <div className="text-center">
+  return <div>
     <div className="font-serif text-2xl tabular-nums leading-none">{value}</div>
     <div className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
     {sub && <div className="text-xs italic text-muted-foreground">{sub}</div>}

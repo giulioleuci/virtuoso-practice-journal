@@ -314,7 +314,7 @@ export default function Diary() {
                           const last = sess[sess.length - 1];
                           const left = !task.done && sess.length ? remainingSegmentIds(task.plan, sess).length : 0;
                           return (
-                            <li key={task.id} className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-2 py-[18px]">
+                            <li key={task.id} className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-3 py-5">
                               {selecting ? (
                                 <Checkbox
                                   className="mt-1 h-5 w-5"
@@ -338,11 +338,11 @@ export default function Diary() {
                                 </button>
                               )}
 
-                              <div className="min-w-0 space-y-1">
+                              <div className="min-w-0 space-y-1 min-[700px]:grid min-[700px]:grid-cols-[minmax(0,1fr)_minmax(7rem,.45fr)] min-[700px]:gap-x-4 min-[700px]:gap-y-2 min-[700px]:space-y-0 min-[700px]:[&>*:nth-child(n+3)]:col-span-full">
                                 <div className={cn("text-left text-base font-medium leading-snug break-words", task.done && "text-muted-foreground line-through")}>
                                   {task.done && last ? <Link to={`/sessions/${last.id}`}>{task.title}</Link> : task.title}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground tabular-nums min-[700px]:flex-col min-[700px]:items-end min-[700px]:text-right">
                                   {planTempoLabel(task.plan) && <span>{planTempoLabel(task.plan)}</span>}
                                   {task.studyRoutineId && routineNames.get(task.studyRoutineId) && (
                                     <span>{t("diary.routine")}: {routineNames.get(task.studyRoutineId)}</span>
@@ -364,7 +364,7 @@ export default function Diary() {
                               </div>
 
                               {!selecting && (
-                                <div className="col-start-2 flex items-center gap-2">
+                                <div className="col-start-2 flex flex-wrap items-center justify-end gap-2">
                                 {!task.done && <Button
                                   onClick={() => setPracticeTask(task)}
                                   aria-label={`${t("diary.startPractice")}: ${task.title}`}

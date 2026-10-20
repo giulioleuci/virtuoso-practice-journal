@@ -75,15 +75,15 @@ export function LessonLogSheet({ open, onOpenChange, context }: Props) {
         <Button variant="outline" className="flex-1" disabled={saving} onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
         <Button className="flex-1" disabled={errors.length > 0 || saving || lessons === undefined} onClick={save}>{isEdit ? t("common.save") : t("lesson.log")}</Button>
       </div>}>
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">{t("common.date")}</Label>
-            <Input aria-label={t("common.date")} disabled={saving} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-
+        <div className="grid gap-6">
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">{t("lesson.notes")}</Label>
-            <Textarea aria-label={t("lesson.notes")} disabled={saving} value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder={t("lesson.notesPlaceholder")} />
+            <Textarea aria-label={t("lesson.notes")} disabled={saving} value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="min-h-48" placeholder={t("lesson.notesPlaceholder")} />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <Label className="text-xs font-medium text-foreground">{t("common.date")}</Label>
+            <Input aria-label={t("common.date")} disabled={saving} type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto max-w-full flex-[0_1_14rem]" />
           </div>
 
           {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}

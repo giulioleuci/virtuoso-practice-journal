@@ -167,8 +167,8 @@ export default function Library() {
       .filter(Boolean) as string[];
     const hasSparkline = !!it.id && it.kind !== "theory";
     return (
-      <li key={it.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 py-[18px]">
-        <div className="min-w-[calc(100%-7rem)] flex-1 min-[700px]:min-w-0">
+      <li key={it.id} className="grid grid-cols-1 gap-3 py-5 min-[700px]:grid-cols-[minmax(0,1fr)_auto_auto] min-[700px]:items-center min-[700px]:gap-x-4">
+        <div className="min-w-0">
           <h3 className="font-serif text-xl font-semibold leading-tight break-words">
             <Link to={`/library/item/${it.id}`} className="hover:underline underline-offset-4">{it.title}</Link>
           <Button size="icon" variant="ghost" className="ml-1.5 inline-flex h-11 w-11 align-middle" aria-pressed={!!it.isFavorite} aria-label={`${t(it.isFavorite ? "library.removeFavorite" : "library.addFavorite")}: ${it.title}`} onClick={async () => {
@@ -191,7 +191,7 @@ export default function Library() {
           </div>
         </div>
         {hasSparkline && <div className="hidden opacity-80 min-[700px]:block"><BpmSparkline itemId={it.id!} /></div>}
-        <div className="ml-auto flex shrink-0 items-center gap-1">
+        <div className="flex flex-wrap items-center justify-end gap-1">
 
           <Button
             size="sm"

@@ -83,14 +83,15 @@ export default function ItemPage() {
 
   return (
     <div className="pb-24">
-      <Link to={`/library`} className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
-        <ChevronLeft className="h-4 w-4" />{t("item.back")}
-      </Link>
-      <PageHeader
-        title={item.title}
-
-        actions={<Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />{t("common.edit")}</Button>}
-      />
+      <div className="[&_h1]:max-w-[24ch]">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+          <Link to={`/library`} className="inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+            <ChevronLeft className="h-4 w-4" />{t("item.back")}
+          </Link>
+          <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />{t("common.edit")}</Button>
+        </div>
+        <PageHeader title={item.title} />
+      </div>
 
       <Tabs value={tab} onValueChange={value => setTab(value as Tab)}>
       <TabsList aria-label={item.title} className="mb-6 flex h-auto flex-wrap justify-start gap-x-4 rounded-none border-b border-border bg-transparent p-0">
