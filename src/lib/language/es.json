@@ -542,7 +542,6 @@
   "diary.lessonTodayWith": "Clase · {{teacher}}",
   "diary.continuity": "Continuidad",
   "diary.bestStreak": "Récord: {{count}}d",
-  "diary.freeSession": "Registrar sesión libre",
   "subjects.colorLabel": "Color",
   "subjects.color.terracotta": "Terracota",
   "subjects.color.gold": "Oro",
@@ -836,7 +835,6 @@
   "logPage.free": "Sesión libre",
   "logPage.titleLabel": "Título de la sesión",
   "logPage.itemOptional": "Material opcional",
-  "logPage.noItem": "Sesión libre",
   "logPage.dateLabel": "Fecha de la sesión",
   "logPage.taskNotFound": "Tarea no encontrada.",
   "logPage.helpLinked": "La pregunta se vinculará a {{title}}.",
@@ -1090,5 +1088,6 @@
   "pager.previous": "Página anterior",
   "pager.next": "Página siguiente",
   "diary.logSession": "Registrar sesión",
-  "diary.freeSessions": "Sesiones libres"
+  "diary.freeSessions": "Sesiones libres",
+  "toast.openSession": "Abrir sesión"
 }

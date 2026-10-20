@@ -17,7 +17,7 @@ import { applicationCommands } from "@/lib/applicationCommands";
 import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { flattenErrors, newSessionInputSchema, segmentMarkSchema } from "@/lib/schemas";
-import { taskDraftScope } from "@/lib/sessionDrafts";
+import { taskDraftScope, draftHasContent } from "@/lib/sessionDrafts";
 import { useSessionDraft } from "@/presentation/hooks/useSessionDraft";
 import { SessionDraftActions } from "@/components/diary/SessionDraftActions";
 import { routineAdaptivity } from "@/lib/domain/studyRoutineGenerator";
@@ -98,6 +98,11 @@ export default function SessionLogPage() {
   return <TaskSessionForm key={task.id} task={task} prefill={prefill} />;
 }
 
+/** After a failed save, bring the first unanswered required rating into view and focus, so the musician sees which section. */
+function focusFirstInvalid() {
+  requestAnimationFrame(() => document.querySelector<HTMLElement>('[role="group"][aria-invalid="true"] button')?.focus());
+}
+
 function useGoBack() {
   const navigate = useNavigate();
   return () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
@@ -115,7 +120,7 @@ function BackLink({ onClick }: { onClick?: () => void }) {
 function Footer({ onCancel, busy, recording }: { onCancel: () => void; busy: boolean; recording: boolean }) {
   const { t } = useI18n();
   return (
-    <FloatingActions>
+    <FloatingActions className="min-[700px]:max-w-3xl">
       <Button type="button" variant="ghost" disabled={busy} onClick={onCancel}>{t("draft.leave")}</Button>
       <Button type="submit" disabled={recording || busy}>{busy ? t("logPage.saving") : t("session.saveSession")}</Button>
     </FloatingActions>
@@ -193,14 +198,15 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setAttempted(true);
-    if (errors.length || recording || submission.submitting || !task.id) return;
+    if (errors.length) return focusFirstInvalid();
+    if (recording || submission.submitting || !task.id) return;
     const logged = marks;
     const ok = await submission.submit({ input: { date: task.date, notes, marks: logged, helpText: needHelp ? helpText.trim() : undefined, clips } });
     if (!ok) return void toast.error(submission.error ?? t("errors.couldNotSave"));
     if (task.studyRoutineId) void refreshRoutine(task.studyRoutineId, task.date, t, () => navigate("/tasks?tab=routines"));
     clear();
     try { localStorage.removeItem(marksDraftKey(task.id)); } catch { /* Session is already saved. */ }
-    toast.success(t("toast.sessionLogged"), { description: task.title, action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${savedId.current}`) } });
+    toast.success(t("toast.sessionLogged"), { description: task.title, action: { label: t("toast.openSession"), onClick: () => navigate(`/sessions/${savedId.current}`) } });
     goBack();
   };
 
@@ -213,7 +219,6 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
         {item && item.title !== task.title && <p className="break-words text-sm text-muted-foreground">{item.title}</p>}
         {task.executionNotes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.executionNotes}</p>}
       </div>
-      <SessionDraftActions storageFailed={storageFailed} onDiscard={discard} disabled={recording || submission.submitting} />
       <div>
         {task.itemId && answeredCount > 0 && (
           <button type="button" onClick={() => setShowAnswers(true)} className="mb-4 inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
@@ -239,6 +244,7 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
           <FormErrors errors={attempted ? errors : []} className="mt-6" />
           <Footer onCancel={leave} busy={submission.submitting} recording={recording} />
         </form>
+        <div className="mt-4"><SessionDraftActions storageFailed={storageFailed} hasContent={draftHasContent(draft)} onDiscard={discard} disabled={recording || submission.submitting} /></div>
 
       </div>
       {task.itemId && <TeacherAnswersSheet open={showAnswers} onOpenChange={setShowAnswers} itemId={task.itemId} itemTitle={item?.title ?? task.title} />}
@@ -293,13 +299,14 @@ function FreeSessionForm() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setAttempted(true);
-    if (errors.length || recording || busy || subjId === undefined) return;
+    if (errors.length) return focusFirstInvalid();
+    if (recording || busy || subjId === undefined) return;
     setBusy(true);
     try {
-      const target: SessionTarget = { subjectId: subjId, linkType: itemId ? "item" : "free", itemId, title: item?.title ?? (title.trim() || t("diary.freeSession")), plan: [] };
+      const target: SessionTarget = { subjectId: subjId, linkType: itemId ? "item" : "free", itemId, title: item?.title ?? (title.trim() || t("logPage.free")), plan: [] };
       const id = await applicationCommands.sessions.log.execute(target, { date, notes, marks: marks, helpText: needHelp && itemId ? helpText.trim() : undefined, clips });
       clear();
-      toast.success(t("toast.sessionLogged"), { description: target.title, action: { label: t("nextTask.title"), onClick: () => navigate(`/sessions/${id}`) } });
+      toast.success(t("toast.sessionLogged"), { description: target.title, action: { label: t("toast.openSession"), onClick: () => navigate(`/sessions/${id}`) } });
       goBack();
     } catch (err) {
       toast.error((err as Error).message || t("errors.couldNotSave"));
@@ -311,7 +318,6 @@ function FreeSessionForm() {
     <div className="pb-24">
       <BackLink onClick={leave} />
       <PageHeader title={t("logPage.free")}  />
-      <SessionDraftActions storageFailed={storageFailed} onDiscard={discard} disabled={recording || busy} />
       <div>
         <form onSubmit={save} className={`${panel} min-w-0`}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -330,14 +336,14 @@ function FreeSessionForm() {
             <label className="grid gap-1.5 text-xs font-medium">
               {t("logPage.itemOptional")}
               <Select value={itemId === undefined ? "__none" : String(itemId)} onValueChange={(value) => update({ itemId: value === "__none" ? undefined : Number(value) })} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
-                <SelectItem value="__none">{t("logPage.noItem")}</SelectItem>
+                <SelectItem value="__none">{t("common.none")}</SelectItem>
                 {pieces?.map((i) => <SelectItem key={i.id} value={String(i.id)}>{i.title}</SelectItem>)}
               </SelectContent></Select>
             </label>
             {!itemId && (
               <label className="grid gap-1.5 text-xs font-medium">
                 {t("logPage.titleLabel")}
-                <Input value={title} maxLength={160} onChange={(e) => update({ title: e.target.value })} placeholder={t("diary.freeSession")} />
+                <Input value={title} maxLength={160} onChange={(e) => update({ title: e.target.value })} placeholder={t("logPage.free")} />
               </label>
             )}
           </div>
@@ -357,6 +363,7 @@ function FreeSessionForm() {
           <FormErrors errors={attempted ? errors : []} className="mt-6" />
           <Footer onCancel={leave} busy={busy} recording={recording} />
         </form>
+        <div className="mt-4"><SessionDraftActions storageFailed={storageFailed} hasContent={draftHasContent(draft)} onDiscard={discard} disabled={recording || busy} /></div>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import { I18nContext, translate } from "@/lib/i18n";
 import { applicationCommands } from "@/lib/applicationCommands";
 import { audioDb } from "@/infrastructure/dexie/audioDb";
 import { today } from "@/lib/date";
+import { toast } from "sonner";
 import SessionLogPage from "./SessionLogPage";
 
 const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
@@ -97,3 +98,42 @@ it("confirms discarding a recovered draft before deleting its local recording", 
   await waitFor(async () => expect(await audioDb.clips.count()).toBe(0));
   expect(localStorage.getItem(`virtuoso-session-task-${taskId}-1`)).toBeNull();
 });
+
+it("offers to discard a draft only once there is something to discard", async () => {
+  show();
+  await screen.findByText("Sonata exposition");
+  expect(screen.queryByRole("button", { name: t("draft.discard") })).not.toBeInTheDocument();
+  await rate();
+  expect(screen.getByRole("button", { name: t("draft.discard") })).toBeInTheDocument();
+});
+
+it("stores an untitled free session as a free session, not as the button label", async () => {
+  show(true);
+  await rate();
+  await waitFor(async () => {
+    const save = screen.queryByRole("button", { name: t("session.saveSession") });
+    if (save) fireEvent.click(save);
+    expect(await db.sessions.count()).toBe(1);
+  }, { timeout: 5000 });
+  expect((await db.sessions.toArray())[0].snapshot?.taskTitle).toBe(t("logPage.free"));
+}, 10000);
+
+it("takes a failed save to the first section still missing its confidence", async () => {
+  show();
+  await screen.findByText("Sonata exposition");
+  fireEvent.click(screen.getByRole("button", { name: t("session.saveSession") }));
+  const group = (await screen.findAllByRole("group", { name: t("session.confidenceLabel") })).find((g) => g.getAttribute("aria-invalid") === "true")!;
+  await waitFor(() => expect(group).toContainElement(document.activeElement as HTMLElement));
+});
+
+it("offers to open the saved session rather than a next task that may not exist", async () => {
+  const success = vi.spyOn(toast, "success");
+  show(true);
+  await rate();
+  await waitFor(async () => {
+    const save = screen.queryByRole("button", { name: t("session.saveSession") });
+    if (save) fireEvent.click(save);
+    expect(success).toHaveBeenCalled();
+  }, { timeout: 5000 });
+  expect(success.mock.calls[0][1]).toMatchObject({ action: { label: t("toast.openSession") } });
+}, 10000);

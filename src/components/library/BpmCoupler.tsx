@@ -33,7 +33,7 @@ export function BpmCoupler({ bpm, noteVal, onChange, label }: Props) {
   return (
     <div className="space-y-2">
       <Label className="text-xs font-medium text-foreground">{label ?? t("library.targetTempo")}</Label>
-      <div className="paper-card space-y-1 p-2">
+      <div className="paper-card space-y-1 p-2 focus-within:ring-2 focus-within:ring-ring">
         <div className="flex items-center gap-2 px-2">
           <Input
             type="number"
@@ -44,7 +44,7 @@ export function BpmCoupler({ bpm, noteVal, onChange, label }: Props) {
             onChange={(e) => onChange({ bpm: e.target.value ? Number(e.target.value) : undefined, noteVal })}
             placeholder="—"
             aria-label={label ?? t("library.targetTempo")}
-            className="h-10 w-16 border-0 bg-transparent px-0 font-serif text-2xl tabular-nums focus-visible:ring-0"
+            className="h-10 w-16 border-0 bg-transparent px-0 font-numeric text-2xl tabular-nums focus-visible:ring-0 md:text-2xl"
           />
           <span className="text-xs text-muted-foreground">BPM</span>
         </div>

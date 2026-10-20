@@ -160,6 +160,8 @@
     color-scheme: light;
     /* Prevent overscroll bounce-through on iOS/Android WebView. */
     overscroll-behavior-y: none;
+    /* Keyboard focus never lands under a floating save bar or the bottom navigation. */
+    scroll-padding-bottom: 7rem;
     /* Block the auto-zoom on input focus on iOS Safari. */
     -webkit-text-size-adjust: 100%;
   }

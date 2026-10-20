@@ -124,7 +124,7 @@ export function ClipDrafts({ clips, onChange, sections, onRecordingChange }: { c
   const { t } = useI18n();
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-medium">{t("audio.title")}</h2>
+      <h2 className="font-sans text-sm font-medium">{t("audio.title")}</h2>
       <Recorder sections={sections} onClip={(clip) => onChange([...clips, clip])} onRecordingChange={onRecordingChange} />
       <ClipDraftList clips={clips} onChange={onChange} sections={sections} />
     </div>

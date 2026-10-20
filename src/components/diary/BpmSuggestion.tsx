@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { firstTempo } from "@/domain/logic/plan";
 import type { Task } from "@/domain/entities/task";
@@ -13,10 +14,7 @@ interface Props {
   onDismiss: () => void;
 }
 
-/**
- * Shows a BPM suggestion chip when the user has nailed the same BPM
- * with quality ≥ "well" and confidence ≥ 4 for the last 3 sessions.
- */
+/** Suggests a step up when the same top BPM was reached with mean confidence ≥ 4 in each of the last 3 sessions. */
 export function BpmSuggestion({ task, onAccept, dismissed, onDismiss }: Props) {
   const { t } = useI18n();
   const todayKey = today();
@@ -27,7 +25,7 @@ export function BpmSuggestion({ task, onAccept, dismissed, onDismiss }: Props) {
 
   return (
     <div className={cn(
-      "flex items-center gap-2 rounded-xl px-3 py-2 text-xs",
+      "flex items-center gap-2 rounded-lg px-3 py-1 text-xs",
       "bg-primary/10 border border-primary/20"
     )}>
       <SuggestionIcon className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -37,17 +35,17 @@ export function BpmSuggestion({ task, onAccept, dismissed, onDismiss }: Props) {
       <button
         type="button"
         onClick={() => onAccept(suggestion.next)}
-        className="font-semibold text-primary hover:text-primary/80 shrink-0"
+        className="min-h-11 shrink-0 font-semibold text-primary hover:text-primary/80"
       >
         {t("session.bpmSuggestion", { bpm: suggestion.next })}
       </button>
       <button
         type="button"
         onClick={onDismiss}
-        className="text-muted-foreground hover:text-foreground ml-1"
-        aria-label="Dismiss"
+        className="-mr-2 grid h-11 w-11 shrink-0 place-items-center text-muted-foreground hover:text-foreground"
+        aria-label={t("common.close")}
       >
-        ×
+        <X className="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
   );

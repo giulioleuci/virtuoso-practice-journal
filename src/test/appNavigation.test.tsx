@@ -76,3 +76,8 @@ it("marks the current secondary destination in the sidebar", () => {
   expect(sidebar.getByRole("link", { name: t("nav.weeklySummary") })).toHaveAttribute("aria-current", "page");
   expect(sidebar.getAllByRole("link", { name: /Giulio|Impostazioni/ })).toHaveLength(1);
 });
+
+it("keeps the bottom navigation out of the way while logging, so the save bar stays put", () => {
+  show("/log");
+  expect(screen.getAllByRole("navigation", { name: t("nav.main"), hidden: true })[1]).toHaveAttribute("inert");
+});

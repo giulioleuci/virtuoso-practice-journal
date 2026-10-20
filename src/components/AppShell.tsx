@@ -43,7 +43,8 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const lastY = useRef(0);
   const keyboardInset = useKeyboardInset();
-  const navHidden = hidden || keyboardInset > 0;
+  // The log form keeps its save bar pinned low: no navigation beside Save while rating.
+  const navHidden = hidden || keyboardInset > 0 || location.pathname === "/log";
 
   useAndroidBackButton(t("toast.pressBackAgainToExit"));
   useReminderSchedule(profile, lang);
