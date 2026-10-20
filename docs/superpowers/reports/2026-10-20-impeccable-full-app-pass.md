@@ -2,7 +2,7 @@
 
 2026-10-20 · branch `impeccable-full-app-pass`
 
-Implementation Tasks 0–19 are committed. Task 20 shared fixes, documentation and verification are implemented; the six user-selected flagship variant rounds, intro-slide preference and final whole-branch review remain pending. This report does not declare the plan complete.
+Tasks 0–20 are committed. The user picked six flagship variants and a compact practice mode in the live browser, chose to remove the intro slides, and a fresh-context whole-branch review ran; its confirmed findings are fixed.
 
 The accepted direction remains **The Practice Taccuino**: warm paper, terracotta actions, serif headings, practical controls and ruled lists. The approved condensed pass prioritizes usability and recovery; no dependencies were added. Domain entities, schemas, ports, application logic and repositories are unchanged from baseline `9095acc`.
 
@@ -13,30 +13,30 @@ The accepted direction remains **The Practice Taccuino**: warm paper, terracotta
 | 0 · baseline | Captured design, tests, bundle and browser baseline; removed unused CSS. | Physical-device baseline unavailable. |
 | 1 · shell/kit | Navigation names, contrast, focus, overlay levels and shared feedback. | Retained the user's Today navigation choice. |
 | 2 · first run | Accessible choices, stable drafts, guarded submission and app-wide reminders. | Intro slides await preference; no new onboarding features. |
-| 3 · Diary | Clear task actions, empty-day/session handling, completion feedback. | Task-row variants pending; carryover duplicate is repository logic. |
-| 4 · log | Reliable draft recovery, validation, safe discard and clear saved-session destination. | Mark-row variants pending; target tempo still seeds reached tempo by domain rule. |
+| 3 · Diary | Clear task actions, empty-day/session handling, completion feedback. | Picked task row v2: title and tempo share a row from 700px. Carryover duplicate is repository logic. |
+| 4 · log | Reliable draft recovery, validation, safe discard and clear saved-session destination. | Picked mark row v3: reached tempo before confidence. Target tempo still seeds reached tempo by domain rule. |
 | 5 · practice | Audio-clock timing, responsive landscape, visible controls and reduced motion. | Real-device audio calibration remains unverified. |
 | 6 · history/session | Snapshot fallbacks, recovery, tempo context and usable controls. | Large-history navigation and dedicated single-session read are deferred. |
 | 7 · tasks | Date selection, stable edited titles, accurate bulk counts, series-edit notice. | Whole-series editing is a feature; no shared form abstraction added. |
 | 8 · routines | Grouping/reorder feedback, overlay hierarchy, safe generation controls. | Generator merging whole pieces still loses material identity. |
-| 9 · Library | Keyboard tabs, long-content fit, stable editor drafts and validation. | Row variants pending; closing/reloading an editor still discards its draft. |
-| 10 · material/analysis | Missing-state recovery, chart tables, bounded plots, accessible scrubber and question-write recovery. | Header variants pending; free-only sparkline guard retained. |
+| 9 · Library | Keyboard tabs, long-content fit, stable editor drafts and validation. | Picked row v1: grid with grouped actions. Closing/reloading an editor still discards its draft. |
+| 10 · material/analysis | Missing-state recovery, chart tables, bounded plots, accessible scrubber and question-write recovery. | Picked header v3: back and Edit toolbar above the title. Free-only sparkline guard retained. |
 | 11 · section | Complete inherited tempo notation, source context and missing-parent recovery. | No extra chart or model change. |
 | 12 · collections | Safe delete/Undo errors, accessible metadata, stable pagination and long-content fit. | Distant reorder still requires repeated arrow taps. |
 | 13 · repertoire/events | Confirmed deletion, safe retry identity, programme search and valid readiness context. | Event/programme writes remain separate transactions. |
-| 14 · lessons | Typing survives earlier save completion/failure; form retries preserve edits; accessible keyboard-aware sheets. | Lesson-form variants pending; drafts do not survive explicit close/reload. |
+| 14 · lessons | Typing survives earlier save completion/failure; form retries preserve edits; accessible keyboard-aware sheets. | Picked lesson sheet v3: notes lead, date beside the footer. Drafts do not survive explicit close/reload. |
 | 15 · assignments | Orphaned homework returns to inbox; multi-day retries preserve completed days and created IDs; Undo/error feedback. | Leaving after a failed link can lose the retry checkpoint. |
-| 16 · analytics | Latest zero preserved, true calendar/week windows, bounded recent data, shared readable tables. | Stat-summary variants pending; no new metrics. |
+| 16 · analytics | Latest zero preserved, true calendar/week windows, bounded recent data, shared readable tables. | Picked stat summary v1: equal columns with a divider. No new metrics. |
 | 17 · settings | Import replacement confirmation, named controls, 44px switches, selected states and failed-save recovery. | Empty-backup validation and demo atomicity need separate application/storage work. |
 | 18 · Study setup | Preserved accepted layout; fixed long-text overflow and independent accordion drafts. | Subject deletion can create unrestorable backups; one load-sensitive test lookup remains recorded. |
 | 19 · print/system | Identity-safe report grouping, chosen week start, fixed print columns, natural page flow and announced loading. | Native print/Safari not checked. |
-| 20 · closing | Route arrival/title, filter focus recovery, wrapping Settings links, 44px primitive defaults, refreshed design contract. | User variants and final whole-branch review pending. |
+| 20 · closing | Route arrival/title, filter focus recovery, wrapping Settings links, 44px primitive defaults, refreshed design contract. | Practice mode picked compact v2 (390×844 height 1240→844, no scroll); intro slides removed; review fixes: Diary homework rule, wake-lock re-acquire, beat reset, reduced-motion entrances, 44px stragglers, filter group name. |
 
 ## Verification
 
 - `npx tsc --noEmit -p tsconfig.app.json`: pass.
-- `npm run ci`: pass — lint, four-locale validation, **94 files / 591 tests**, production/PWA build.
-- Baseline: 72 test files / 499 tests. The occasional 5s baseline timeouts did not reproduce. During this pass one StudySetup 1s asynchronous lookup failed under full load, then passed on subsequent full runs; no arbitrary timeout increase was made.
+- `npm run ci`: pass — lint, four-locale validation, **96 files / 594 tests**, production/PWA build.
+- Baseline: 72 test files / 499 tests. The occasional 5s baseline timeouts did not reproduce. The StudySetup technique-rename lookup later failed in two consecutive full runs (passes isolated), so that one lookup now waits 3s. `NewTaskPage` "titles a multi-section task in the app language" failed once under full load and passed isolated and on the next full run; it stays listed as load-sensitive.
 - Chromium: 390×844 German, 768×1024 Italian and 1280×800 English; all six core routes fit. Extra checks cover 320px, large Library/homework/collection/history fixtures, missing records, failed saves and retries, empty/one-day/three-year analytics, print A4/Letter and forced render errors.
 - Design detector: **five retained Inter warnings, zero advisories** after documenting actual type sizes. Inter is part of the accepted identity.
 - Lighthouse on production first-run: accessibility, best practices and SEO **100**. This bundled runner gives paint metrics zero weight and omits LCP, so its performance score is not used as a speed claim. A separate identical-throttle browser comparison is recorded below.
@@ -64,7 +64,8 @@ A direct comparison rebuilt baseline `9095acc` separately and used fresh 390×84
 
 ## Deferred refinements and limitations
 
-- Six flagship variant sets and the intro-slide choice await the user. No unselected visual alternative has been baked in.
+- The `assignments.pending` read case in the presentation read port is now unused (Diary switched to the shared rule); it was left because ports are out of scope for this UI pass.
+- Library: the favourite toggle still sits inside the item heading, so the heading's accessible name includes it (pre-existing on main).
 - Sheet, routine and Study setup drafts generally survive write failures, not leaving/reloading. Log-session draft recovery remains supported.
 - Distant collection reorder and large-history page jumps remain cumbersome; week view/move-task, tap tempo/pedal controls and remembered meter are features beyond this pass.
 - Small existing refinements remain: optional onboarding progressive disclosure/composition preset, quote punctuation, German musician terminology for layers, routine partial-checkbox/weekend presentation, note-value strip density, and history kind filtering of deleted materials where snapshots lack kind.
