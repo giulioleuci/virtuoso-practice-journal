@@ -18,12 +18,12 @@ it("keeps segment details collapsed and edits the correct segment across pages",
   render(<I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}><Editor /></I18nContext.Provider>);
   expect(screen.getByText("Parte 1").closest("details")).not.toHaveAttribute("open");
   expect(screen.queryByText("Parte 6")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+  fireEvent.click(screen.getByRole("button", { name: "Pagina successiva" }));
   fireEvent.click(screen.getByText("Parte 6"));
   fireEvent.change(within(screen.getByText("Parte 6").closest("details")!).getByRole("textbox", { name: t("segments.label") }), { target: { value: "Finale" } });
-  fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
+  fireEvent.click(screen.getByRole("button", { name: "Pagina precedente" }));
   expect(screen.getByText("Parte 1")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+  fireEvent.click(screen.getByRole("button", { name: "Pagina successiva" }));
   expect(screen.getByText("Finale")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: `${t("common.delete")}: Finale` }));
   expect(screen.getByText("Parte 1")).toBeInTheDocument();

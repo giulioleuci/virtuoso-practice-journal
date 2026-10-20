@@ -54,3 +54,13 @@ it("opens filtering and sorting separately without submitting the surrounding fo
   fireEvent.click(screen.getByRole("button", { name: translate("it", "link.sortBy") }));
   expect(screen.getByRole("combobox", { name: "Ordine" })).toHaveValue("title");
 });
+
+it("counts results only once the list is narrowed", () => {
+  const panel = (value: string) => <I18nContext.Provider value={{ lang: "en", setLang: () => {}, t: (key, vars) => translate("en", key, vars) }}>
+    <FilterPanel search={{ value, onChange: () => {} }} resultCount={7} />
+  </I18nContext.Provider>;
+  const { rerender } = render(panel(""));
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  rerender(panel("Bach"));
+  expect(screen.getByRole("status")).toHaveTextContent("7");
+});

@@ -25,12 +25,12 @@ describe("CollectionPage", () => {
     render(<I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}><MemoryRouter initialEntries={[`/library/collections/${collectionId}`]}><Routes><Route path="/library/collections/:id" element={<CollectionPage />} /></Routes></MemoryRouter></I18nContext.Provider>);
     await screen.findByText("1 / 3");
     expect(screen.getAllByRole("button", { name: /^Aggiungi Material/ })).toHaveLength(5);
-    expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByRole("button", { name: "Pagina precedente" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Pagina successiva" }));
     expect(screen.getByText("Material 06")).toBeInTheDocument();
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Material" } });
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pagina successiva" }));
     fireEvent.click(screen.getByRole("button", { name: /Filtri/ }));
     fireEvent.keyDown(screen.getByLabelText(t("collection.author")), { key: "ArrowDown" });
     fireEvent.keyDown(screen.getByRole("option", { name: "Author A" }), { key: "Enter" });
@@ -38,17 +38,17 @@ describe("CollectionPage", () => {
     expect(screen.getByText("Material 01")).toBeInTheDocument();
     fireEvent.keyDown(screen.getByLabelText(t("collection.author")), { key: "ArrowDown" });
     fireEvent.keyDown(screen.getAllByRole("option")[0], { key: "Enter" });
-    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
-    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pagina successiva" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pagina successiva" }));
     expect(screen.getByText("3 / 3")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Pagina successiva" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: t("collection.addNamed", { title: "Material 11" }) }));
     await screen.findByRole("link", { name: "Material 11" });
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /^Aggiungi Material/ })).toHaveLength(5);
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "missing" } });
     expect(screen.getByText(t("collection.noCandidates"))).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Next page" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pagina successiva" })).not.toBeInTheDocument();
   });
 
   it("shows a mixed index in persisted order and edits link metadata without copying or deleting material", async () => {

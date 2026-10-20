@@ -51,13 +51,13 @@ export function FilterPanel({ children, sorting, active = false, search, filters
           </PopoverContent>
         </Popover>)}
       </div>
-      {(filters.length > 0 || resultCount !== undefined || (hasCriteria && onReset)) && <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      {(filters.length > 0 || (hasCriteria && (resultCount !== undefined || onReset))) && <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {filters.length > 0 && <div className="flex min-w-0 flex-1 flex-wrap gap-1.5" aria-label={t("common.filtersActive")}>
           {filters.map(filter => <Button key={filter.key} type="button" variant="secondary" size="sm" className="h-auto min-h-11 max-w-full whitespace-normal px-2 py-1.5 text-left" aria-label={t("common.removeItem", { label: filter.label })} onClick={filter.onRemove}>
             <span className="min-w-0 break-words">{filter.label}</span><X aria-hidden="true" />
           </Button>)}
         </div>}
-        {resultCount !== undefined && <p role="status" className="text-xs tabular-nums text-muted-foreground">{t("filters.results", { count: resultCount })}</p>}
+        {hasCriteria && resultCount !== undefined && <p role="status" className="text-xs tabular-nums text-muted-foreground">{t("filters.results", { count: resultCount })}</p>}
         {hasCriteria && onReset && <Button type="button" size="icon" variant="ghost" className="ml-auto h-11 w-11 shrink-0" title={t("states.clearFilters")} aria-label={t("states.clearFilters")} onClick={onReset}><RotateCcw aria-hidden="true" /></Button>}
       </div>}
     </div>

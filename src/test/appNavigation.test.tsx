@@ -5,12 +5,13 @@ import AppShell from "@/components/AppShell";
 import { I18nContext, translate } from "@/lib/i18n";
 import type { Profile } from "@/domain/entities/profile";
 
-vi.mock("@/presentation/hooks/useEntities", () => ({ useAssignments: () => [] }));
+const state = vi.hoisted(() => ({ assignments: [] as { taskIds: number[]; ignored?: boolean }[] }));
+vi.mock("@/presentation/hooks/useEntities", () => ({ useAssignments: () => state.assignments }));
 vi.mock("@/hooks/useAndroidBackButton", () => ({ useAndroidBackButton: () => {} }));
 vi.mock("@/hooks/useKeyboardInset", () => ({ useKeyboardInset: () => 0 }));
 
-afterEach(cleanup);
-const t = (key: string) => translate("it", key);
+afterEach(() => { cleanup(); state.assignments = []; });
+const t = (key: string, vars?: Record<string, string | number>) => translate("it", key, vars);
 
 function show(path = "/") {
   render(
@@ -44,4 +45,34 @@ it.each(["/analytics", "/history"])("highlights More and Progress for %s", path 
   expect(more).toHaveClass("text-primary");
   fireEvent.click(more);
   expect(within(screen.getByRole("dialog")).getByRole("link", { name: "Progressi" })).toHaveClass("text-primary");
+});
+
+it("takes the hidden bottom navigation out of the tab order", () => {
+  show();
+  const nav = screen.getAllByRole("navigation", { name: t("nav.main"), hidden: true })[1];
+  expect(nav).not.toHaveAttribute("inert");
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 400 });
+  fireEvent.scroll(window);
+  expect(nav).toHaveAttribute("inert");
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+});
+
+it("shows pending homework on the phone Lessons tab and names the count", () => {
+  state.assignments = [{ taskIds: [] }, { taskIds: [] }, { taskIds: [3] }];
+  const nav = show();
+  const label = translate("it", "diary.homework_plural").replace("{{count}}", "2");
+  expect(nav.getByRole("link", { name: new RegExp(label) })).toHaveAttribute("href", "/lessons");
+  expect(screen.getAllByRole("navigation", { name: t("nav.main") })[0].querySelector('a[href="/lessons"]')).toHaveAccessibleName(new RegExp(label));
+});
+
+it("keeps Today active while logging a session", () => {
+  const nav = show("/log");
+  expect(nav.getByRole("link", { name: "Oggi" })).toHaveAttribute("aria-current", "page");
+});
+
+it("marks the current secondary destination in the sidebar", () => {
+  show("/print/weekly");
+  const sidebar = within(screen.getAllByRole("navigation", { name: t("nav.main") })[0].parentElement!);
+  expect(sidebar.getByRole("link", { name: t("nav.weeklySummary") })).toHaveAttribute("aria-current", "page");
+  expect(sidebar.getAllByRole("link", { name: /Giulio|Impostazioni/ })).toHaveLength(1);
 });

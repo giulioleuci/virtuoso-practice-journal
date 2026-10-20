@@ -1096,5 +1096,7 @@
   "draft.leaveWarning": "Your latest changes could not be kept. Leave and lose them?",
   "draft.discard": "Discard draft",
   "draft.discardDescription": "Discard this unsaved session, including notes, ratings and recordings? This cannot be undone.",
-  "rate.completeHint": "Task completed. To save ratings and tempos, choose Log results."
+  "rate.completeHint": "Task completed. To save ratings and tempos, choose Log results.",
+  "pager.previous": "Previous page",
+  "pager.next": "Next page"
 }

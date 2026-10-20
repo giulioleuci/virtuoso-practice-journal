@@ -1096,5 +1096,7 @@
   "draft.leaveWarning": "Die letzten Änderungen wurden nicht gesichert. Verlassen und Änderungen verlieren?",
   "draft.discard": "Entwurf verwerfen",
   "draft.discardDescription": "Diese ungespeicherte Sitzung mit Notizen, Bewertungen und Aufnahmen verwerfen? Dies lässt sich nicht rückgängig machen.",
-  "rate.completeHint": "Aufgabe abgeschlossen. Wähle Ergebnisse eintragen, um Bewertungen und Tempi zu speichern."
+  "rate.completeHint": "Aufgabe abgeschlossen. Wähle Ergebnisse eintragen, um Bewertungen und Tempi zu speichern.",
+  "pager.previous": "Vorherige Seite",
+  "pager.next": "Nächste Seite"
 }

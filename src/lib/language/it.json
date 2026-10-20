@@ -1096,5 +1096,7 @@
   "draft.leaveWarning": "Le ultime modifiche non sono state conservate. Uscire e perderle?",
   "draft.discard": "Elimina bozza",
   "draft.discardDescription": "Eliminare questa sessione non salvata, incluse note, valutazioni e registrazioni? Non potrai annullare.",
-  "rate.completeHint": "Attività completata. Per salvare valutazioni e tempi, scegli Registra i risultati."
+  "rate.completeHint": "Attività completata. Per salvare valutazioni e tempi, scegli Registra i risultati.",
+  "pager.previous": "Pagina precedente",
+  "pager.next": "Pagina successiva"
 }

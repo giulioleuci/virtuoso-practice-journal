@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHorizontal, Printer, Settings, SlidersHorizontal } from "lucide-react";
+import { Link, Outlet, useLocation } from "react-router-dom";
+import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHorizontal, Printer, Settings, Shapes } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
@@ -20,14 +20,14 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const pageKey = "/" + (location.pathname.split("/")[1] ?? "");
   const pendingHomework = (useAssignments() ?? []).filter(needsTask).length;
   const items = [
-    { to: "/", label: t("nav.today"), icon: CalendarDays, end: true },
+    { to: "/", label: t("nav.today"), icon: CalendarDays, also: ["/log"] },
     { to: "/tasks", label: t("nav.plan"), short: t("nav.planShort"), icon: ListChecks },
     { to: "/library", label: t("nav.library"), icon: BookMarked },
     { to: "/lessons", label: t("nav.lessons"), icon: GraduationCap, badge: pendingHomework },
     { to: "/analytics", label: t("nav.progress"), icon: BarChart3, also: ["/history"] },
   ];
   const secondary = [
-    { to: "/study-setup", label: t("nav.studySetup"), icon: SlidersHorizontal },
+    { to: "/study-setup", label: t("nav.studySetup"), icon: Shapes },
     { to: "/print/weekly", label: t("nav.weeklySummary"), icon: Printer },
     { to: "/profile", label: t("nav.settings"), icon: Settings },
   ];
@@ -81,18 +81,17 @@ export default function AppShell({ profile }: { profile: Profile }) {
       </a>
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[195px] flex-col border-r border-border bg-background px-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-[calc(1.75rem+env(safe-area-inset-top))] min-[700px]:flex min-[1151px]:w-[208px] min-[1151px]:px-5 min-[1600px]:w-[250px]">
-        <NavLink to="/" className="mb-9 ml-2.5 flex items-center gap-2.5 font-serif text-[1.75rem] font-semibold tracking-tight min-[1151px]:text-[2rem]">
+        <Link to="/" className="mb-9 ml-2.5 flex items-center gap-2.5 font-serif text-[1.75rem] font-semibold tracking-tight min-[1151px]:text-[2rem]">
           <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="h-8 w-8 rounded-lg" />
           Virtuoso
-        </NavLink>
+        </Link>
         <nav aria-label={t("nav.main")} className="grid gap-1.5">
-          {items.map(({ to, label, icon: Icon, end, badge, also }) => {
+          {items.map(({ to, label, icon: Icon, badge, also }) => {
             const active = isActive(to, also);
             return (
-              <NavLink
+              <Link
                 key={to}
                 to={to}
-                end={end}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-[46px] items-center gap-3 rounded-lg px-2.5 py-3 text-[0.8125rem] font-medium transition-colors min-[1151px]:px-3.5 min-[1151px]:text-sm",
@@ -102,19 +101,23 @@ export default function AppShell({ profile }: { profile: Profile }) {
                 <Icon className="h-5 w-5" strokeWidth={1.75} />
                 {label}
                 {!!badge && (
-                  <span className="ml-auto min-w-5 rounded bg-primary px-1.5 py-px text-center font-numeric text-xs font-semibold text-primary-foreground">
-                    {badge}
-                  </span>
+                  <>
+                    <span aria-hidden className="ml-auto min-w-5 rounded bg-primary px-1.5 py-px text-center font-numeric text-xs font-semibold text-primary-foreground">
+                      {badge}
+                    </span>
+                    <span className="sr-only">{t("diary.homework", { count: badge })}</span>
+                  </>
                 )}
-              </NavLink>
+              </Link>
             );
           })}
         </nav>
         <div className="mt-auto grid gap-1.5">
           {secondary.map(({ to, label, icon: Icon }) => (
-            <NavLink
+            <Link
               key={to}
               to={to}
+              aria-current={isActive(to) ? "page" : undefined}
               className={cn(
                 "flex min-h-[46px] items-center gap-3 rounded-lg px-2.5 py-3 text-[0.8125rem] font-medium transition-colors min-[1151px]:px-3.5",
                 isActive(to) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/40"
@@ -122,14 +125,14 @@ export default function AppShell({ profile }: { profile: Profile }) {
             >
               <Icon className="h-5 w-5" strokeWidth={1.75} />
               {label}
-            </NavLink>
+            </Link>
           ))}
-          <NavLink to="/profile" className="mt-3 flex items-center gap-2.5 rounded-lg px-2.5 pt-4 text-xs text-muted-foreground hover:bg-secondary/40">
-            <span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary">
+          <div className="mt-3 flex items-center gap-2.5 px-2.5 pt-4 text-xs text-muted-foreground">
+            <span aria-hidden className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary">
               {profile.name?.[0]?.toUpperCase()}
             </span>
             <strong className="truncate text-[0.8125rem] font-semibold text-foreground">{profile.name}</strong>
-          </NavLink>
+          </div>
         </div>
       </aside>
 
@@ -152,22 +155,27 @@ export default function AppShell({ profile }: { profile: Profile }) {
           navHidden ? "translate-y-[calc(100%+2rem)]" : "translate-y-0"
         )}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        aria-hidden={navHidden}
+        // inert (React 18 lacks the prop) also drops the hidden links from the tab order, which aria-hidden did not.
+        {...(navHidden ? { inert: "" } : {})}
       >
         <div className="flex h-[72px] items-stretch justify-around">
-          {mobileItems.map(({ to, label, short, icon: Icon, end, also }) => {
+          {mobileItems.map(({ to, label, short, icon: Icon, also, badge }) => {
             const active = isActive(to, also);
             return (
-              <NavLink key={to} to={to} end={end} aria-current={active ? "page" : undefined} className={cn(mobileLink(active), "group")}>
+              <Link key={to} to={to} aria-current={active ? "page" : undefined} className={cn(mobileLink(active), "group")}>
                 {to === "/" ? (
                   <span className="absolute bottom-7 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-raised ring-[5px] ring-card transition-colors group-hover:bg-primary/90 group-active:bg-primary/90">
                     <Icon className="h-6 w-6" strokeWidth={active ? 2.3 : 1.75} />
                   </span>
                 ) : (
-                  <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.3 : 1.75} />
+                  <span className="relative">
+                    <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.3 : 1.75} />
+                    {!!badge && <span aria-hidden className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-primary ring-2 ring-card" />}
+                  </span>
                 )}
                 <span>{short ?? label}</span>
-              </NavLink>
+                {!!badge && <span className="sr-only">{t("diary.homework", { count: badge })}</span>}
+              </Link>
             );
           })}
           <Popover open={moreOpen} onOpenChange={setMoreOpen}>
@@ -179,21 +187,21 @@ export default function AppShell({ profile }: { profile: Profile }) {
             </PopoverTrigger>
             <PopoverContent align="end" side="top" className="w-52 p-1">
               {moreItems.map(({ to, label, icon: Icon, also }) => (
-                <NavLink
+                <Link
                   key={to}
                   to={to}
                   onClick={() => setMoreOpen(false)}
                   aria-current={isActive(to, also) ? "page" : undefined}
                   className={
                     cn(
-                      "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors",
+                      "flex min-h-11 items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors",
                       isActive(to, also) ? "bg-primary/10 text-primary" : "text-foreground hover:bg-secondary/40"
                     )
                   }
                 >
                   <Icon className="h-4 w-4" />
                   <span>{label}</span>
-                </NavLink>
+                </Link>
               ))}
             </PopoverContent>
           </Popover>

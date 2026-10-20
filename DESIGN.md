@@ -217,7 +217,10 @@ Gently rounded, never pill-shaped except badges, avatars and the floating Today 
 
 ### Navigation
 - **Sidebar (≥700px):** serif wordmark, 46px nav rows, inactive muted ink, active terracotta text on `primary/10`; pending homework count as a terracotta badge.
-- **Bottom nav (<700px):** Plan, Lessons, floating Today (56px terracotta circle), Library, More. More opens a popover with Progress, Study setup, Weekly summary, Settings.
+- **Bottom nav (<700px):** Plan, Lessons, floating Today (56px terracotta circle), Library, More. More opens a popover with Progress, Study setup, Weekly summary, Settings (44px rows). Pending homework shows as a terracotta dot on the Lessons icon, with the count in its accessible name. Today stays active while logging (`/log`). The nav is `inert` while hidden on scroll or keyboard.
+
+### Chips
+- **Removable chip:** secondary button, at least 44px tall, label then a small X; the whole chip removes it. Used by the filter toolbar and the multi-select picker.
 
 ### Floating action bar
 Save/cancel bar fixed above the bottom navigation, the system bar or the keyboard, 14px radius, raised shadow. App-wide pattern for forms.

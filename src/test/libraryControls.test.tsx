@@ -168,10 +168,10 @@ describe("library controls", () => {
     fireEvent.click(screen.getByRole("button", { name: /Alfa: / }));
     expect(screen.getAllByRole("checkbox", { name: /^Frammento/ })).toHaveLength(5);
     expect(screen.queryByText("Frammento 6")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pagina successiva" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "Frammento 6" }));
-    fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
-    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pagina precedente" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pagina successiva" }));
     expect(screen.getByRole("checkbox", { name: "Frammento 6" })).toBeChecked();
   });
 
@@ -243,13 +243,13 @@ describe("library controls", () => {
     mocks.collections = Array.from({ length: 6 }, (_, i) => ({ id: i + 1, name: `Raccolta ${i + 1}`, kind: "collection" }));
     const view = show(<Collections />);
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
-    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pagina successiva" }));
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
     expect(within(screen.getByRole("list")).getByText("Raccolta 6")).toBeInTheDocument();
     mocks.collections = mocks.collections.slice(0, 5);
     view.rerender(<MemoryRouter><I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}><Collections /></I18nContext.Provider></MemoryRouter>);
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
-    expect(screen.queryByRole("button", { name: "Next page" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pagina successiva" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: t("collections.kind.manual") }));
     expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: t("collections.kind.collection") }));

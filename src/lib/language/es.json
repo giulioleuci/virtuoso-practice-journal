@@ -1096,5 +1096,7 @@
   "draft.leaveWarning": "No se conservaron los últimos cambios. ¿Salir y perderlos?",
   "draft.discard": "Descartar borrador",
   "draft.discardDescription": "¿Descartar esta sesión sin guardar, incluidas notas, valoraciones y grabaciones? No se puede deshacer.",
-  "rate.completeHint": "Tarea completada. Para guardar valoraciones y tempos, elige Registrar resultados."
+  "rate.completeHint": "Tarea completada. Para guardar valoraciones y tempos, elige Registrar resultados.",
+  "pager.previous": "Página anterior",
+  "pager.next": "Página siguiente"
 }

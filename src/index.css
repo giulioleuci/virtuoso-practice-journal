@@ -208,7 +208,7 @@
     height: 1px;
   }
   .paper-skeleton {
-    @apply bg-muted/60 animate-pulse rounded-paper;
+    @apply bg-muted/60 animate-pulse rounded-paper motion-reduce:animate-none;
   }
 }
 

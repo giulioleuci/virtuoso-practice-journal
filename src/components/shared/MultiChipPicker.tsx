@@ -58,7 +58,7 @@ export function MultiChipPicker<T extends string | number>({
                 type="button"
                 aria-label={label ?? effectivePlaceholder}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-input bg-card text-sm transition-colors hover:bg-accent/40",
+                  "w-full min-h-11 flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-input bg-card text-sm transition-colors hover:bg-accent/40",
                   selectedOpts.length === 0 && "text-muted-foreground"
                 )}
               >
@@ -82,7 +82,7 @@ export function MultiChipPicker<T extends string | number>({
                         aria-checked={active}
                         onClick={() => toggle(o.value)}
                         className={cn(
-                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm text-left transition-colors hover:bg-accent",
+                          "w-full min-h-11 flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm text-left transition-colors hover:bg-accent",
                           active && "text-foreground"
                         )}
                       >
@@ -115,20 +115,17 @@ export function MultiChipPicker<T extends string | number>({
           {!selectionSummary && selectedOpts.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {selectedOpts.map((o) => (
-                <span
+                <Button
                   key={String(o.value)}
-                  className="inline-flex items-center gap-1 text-xs pl-2 pr-1 py-0.5 rounded-full bg-primary/10 text-primary"
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => remove(o.value)}
+                  className="h-auto min-h-11 max-w-full whitespace-normal px-2 py-1.5 text-left"
+                  aria-label={t("common.removeItem", { label: o.label })}
                 >
-                  {o.label}
-                  <button
-                    type="button"
-                    onClick={() => remove(o.value)}
-                    className="hover:text-destructive p-0.5"
-                    aria-label={t("common.removeItem", { label: o.label })}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
+                  <span className="min-w-0 break-words">{o.label}</span><X aria-hidden="true" />
+                </Button>
               ))}
             </div>
           )}

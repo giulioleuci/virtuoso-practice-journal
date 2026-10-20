@@ -21,7 +21,6 @@ import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { BpmSparkline } from "@/components/library/BpmSparkline";
 import { ListSkeleton } from "@/components/shared/Loading";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { FeatureEmptyState } from "@/components/shared/FeatureEmptyState";
 import { Pager } from "@/components/shared/Pager";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
@@ -238,7 +237,7 @@ export default function Library() {
     if (items === undefined) return <ListSkeleton />;
     if (!filteredItems.length) {
       return items.length === 0
-        ? <FeatureEmptyState description={t("library.empty")} quote={libraryQuote} action={{ label: t("library.addToLibrary"), onClick: openCreate }} />
+        ? <EmptyState hint={t("library.empty")} quote={libraryQuote} cta={{ label: t("library.addToLibrary"), onClick: openCreate }} />
         : <EmptyState icon={SearchX} title={t("library.noItemsMatch")} />;
     }
 

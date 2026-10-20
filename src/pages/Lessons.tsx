@@ -40,7 +40,6 @@ import { dayKey, today } from "@/lib/date";
 import { toast } from "sonner";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { FeatureEmptyState } from "@/components/shared/FeatureEmptyState";
 import { Pager } from "@/components/shared/Pager";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionHeader } from "@/components/shared/SectionHeader";
@@ -251,7 +250,7 @@ export default function Lessons() {
           <section>
             <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("lessons.teachers")}</h2>
             {!recurrences?.length ? (
-              <FeatureEmptyState description={t("lessons.empty")} quote={lessonQuote} action={{ label: t("lessons.addRecurrence"), onClick: openNew }} />
+              <EmptyState hint={t("lessons.empty")} quote={lessonQuote} cta={{ label: t("lessons.addRecurrence"), onClick: openNew }} />
             ) : (
               <ul className="divide-y divide-border border-y border-border">
                 {recurrences.map((r) => (
