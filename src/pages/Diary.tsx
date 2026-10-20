@@ -33,6 +33,7 @@ import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
 import { HomeworkInput } from "@/components/lessons/HomeworkInput";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { FloatingActions } from "@/components/shared/FloatingActions";
 import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
 
 import { Pager } from "@/components/shared/Pager";
@@ -100,6 +101,8 @@ export default function Diary() {
   // All-time sessions for streak calculation
   const allSessions = useSessions();
   const { streak, best: bestStreak } = useMemo(() => computeStreakFromSessions(allSessions ?? []), [allSessions]);
+  // Sessions logged without a task have no row of their own: list them so a free session never vanishes from its day.
+  const freeSessions = useMemo(() => (allSessions ?? []).filter((s) => s.date === date && s.taskId === undefined), [allSessions, date]);
 
   const carryoverDays = profile?.carryoverDays ?? 2;
   const carryoverFrom = useMemo(() => {
@@ -119,7 +122,7 @@ export default function Diary() {
   const [ignoredPage, setIgnoredPage] = useState(0);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [taskOrder, setTaskOrder] = useState<DiaryTaskOrder>("routine");
-  const [completed, setCompleted] = useState<Task | null>(null);
+  const [completed, setCompleted] = useState<{ task: Task; viaKeyboard: boolean } | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [pickedIds, setPickedIds] = useState<number[]>([]);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
@@ -169,17 +172,23 @@ export default function Diary() {
   );
 
   // One-tap completion marks the task done; results are logged separately and never invented.
-  const complete = async (task: Task) => {
+  const complete = async (task: Task, viaKeyboard = false) => {
     try {
       await tasksService.toggleDone(task.id!, true);
-      setCompleted(task);
+      setCompleted({ task, viaKeyboard });
     } catch {
       toast.error(t("rate.failed"));
     }
   };
+  const reopen = async (task: Task) => {
+    const logged = (sessionsByTask[task.id!] ?? []).some((s) => s.date === task.date);
+    if (logged) return setConfirmUncomplete(task);
+    await tasksService.toggleDone(task.id!, false);
+    toast(t("toast.taskReopened"));
+  };
   const undoComplete = async () => {
-    if (!completed?.id) return;
-    const task = completed;
+    if (!completed?.task.id) return;
+    const { task } = completed;
     setCompleted(null);
     await tasksService.toggleDone(task.id!, false);
     toast(t("toast.taskReopened"));
@@ -237,17 +246,17 @@ export default function Diary() {
 
           <section>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.8125rem] text-muted-foreground">
-              <span className="tabular-nums">{t("diary.doneSummary", { done: doneCount, total: totalCount })}</span>
+              {!!totalCount && <span className="tabular-nums">{t("diary.doneSummary", { done: doneCount, total: totalCount })}</span>}
               <span className="flex flex-wrap items-center gap-1">
-                {!isToday && <Button size="sm" variant="ghost" onClick={() => selectDay(todayKey)}>{t("diary.backToToday")}</Button>}
+                {!isToday && <Button size="sm" variant="ghost" className="max-sm:min-h-11" onClick={() => selectDay(todayKey)}>{t("diary.backToToday")}</Button>}
                 {!!totalCount && (
-                  <Button size="sm" variant="ghost" aria-pressed={selecting} onClick={() => (selecting ? stopSelecting() : setSelecting(true))}>
+                  <Button size="sm" variant="ghost" className="max-sm:min-h-11" aria-pressed={selecting} onClick={() => (selecting ? stopSelecting() : setSelecting(true))}>
                     {selecting ? <Check /> : <CheckSquare />} {selecting ? t("diary.selectDone") : t("common.select")}
                   </Button>
                 )}
               </span>
             </div>
-            <Progress value={totalCount ? (doneCount / totalCount) * 100 : 0} className="h-1.5 [&>div]:bg-success" aria-label={t("diary.doneSummary", { done: doneCount, total: totalCount })} />
+            {!!totalCount && <Progress value={(doneCount / totalCount) * 100} className="h-1.5 [&>div]:bg-success" aria-label={t("diary.doneSummary", { done: doneCount, total: totalCount })} />}
 
             {(!!totalCount || subjectFilterOptions.length > 1) && (
               <FilterPanel filters={selectedSubjectId === null ? [] : [{ key: "subject", label: `${t("common.subject")}: ${subjectMap.get(selectedSubjectId)?.name ?? selectedSubjectId}`, onRemove: () => setSelectedSubjectId(null) }]} onReset={() => setSelectedSubjectId(null)} resultCount={filteredTasks?.length}
@@ -279,7 +288,7 @@ export default function Diary() {
               ) : (
                 <EmptyState
                   hint={t("diary.empty")}
-                  quote={emptyQuote}
+                  quote={showHeroQuote ? undefined : emptyQuote}
                   cta={{ label: t("diary.beginTask"), onClick: () => navigate("/tasks/new", { state: { date } }) }}
                 />
               )
@@ -293,10 +302,10 @@ export default function Diary() {
                   return (
                     <section key={`${subjectId}-${groupIndex}`} aria-label={groupSubject?.name ?? t("diary.otherSubject")}>
                       <div className="mb-1 flex items-center justify-between gap-3">
-                        <h3 className="flex min-w-0 items-center gap-2 font-serif text-xl font-semibold">
+                        <h2 className="flex min-w-0 items-center gap-2 font-serif text-xl font-semibold">
                           {dot(groupSubject, true)}
                           <span className="break-words">{groupSubject?.name ?? t("diary.otherSubject")}</span>
-                        </h3>
+                        </h2>
                         {taskGroups.length > 1 && <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{t("diary.groupProgress", { done: completed, total: items.length })}</span>}
                       </div>
                       <ul className="divide-y divide-border">
@@ -318,7 +327,8 @@ export default function Diary() {
                                   type="button"
                                   aria-label={task.done ? t("diary.markNotDone") : t("tasks.markDone")}
                                   title={task.done ? t("diary.markNotDone") : t("tasks.markDone")}
-                                  onClick={() => (task.done ? setConfirmUncomplete(task) : void complete(task))}
+                                  // detail 0: activated from the keyboard, so the completion bar takes focus.
+                                  onClick={(e) => void (task.done ? reopen(task) : complete(task, e.detail === 0))}
                                   className={cn(
                                     "relative mt-0.5 grid h-6 w-6 shrink-0 before:absolute before:-inset-2.5 before:content-[''] place-items-center rounded-full border-2 transition-colors",
                                     task.done ? "border-success bg-success" : "border-muted-foreground hover:border-primary",
@@ -363,7 +373,7 @@ export default function Diary() {
                                   <PlayIcon /> {t("diary.start")}
                                 </Button>}
                                 <Button asChild variant="ghost" className="min-h-11 px-2">
-                                  <Link to={`/log?task=${task.id}`}>{t("diary.logResults")}</Link>
+                                  <Link to={`/log?task=${task.id}`} aria-label={`${t("diary.logResults")}: ${task.title}`}>{t("diary.logResults")}</Link>
                                 </Button>
                                 </div>
                               )}
@@ -378,13 +388,29 @@ export default function Diary() {
             )}
           </section>
 
+          {!!freeSessions.length && (
+            <section>
+              <SectionHeader title={t("diary.freeSessions")} />
+              <ul className="divide-y divide-border">
+                {freeSessions.map((s) => (
+                  <li key={s.id}>
+                    <Link to={`/sessions/${s.id}`} className="flex min-h-11 items-center justify-between gap-3 py-3 hover:underline underline-offset-4">
+                      <span className="min-w-0 break-words text-sm font-medium">{s.snapshot?.taskTitle ?? t("logPage.free")}</span>
+                      {sessionLabel(s.marks) && <span className="shrink-0 text-xs tabular-nums text-primary">{sessionLabel(s.marks)}</span>}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {isToday && !!carryoverTasks?.length && (
             <section>
               <SectionHeader
                 title={t("diary.unfinished")}
                 action={<span className="text-xs tabular-nums text-muted-foreground">{t("diary.fromLastDays", { count: carryoverDays })}</span>}
               />
-              <CarryoverBatchActions tasks={carryoverTasks} todayKey={todayKey} selectedIds={selectedCarryIds} onSelectionChange={setSelectedCarryIds} />
+              {carryoverTasks.length > 1 && <CarryoverBatchActions tasks={carryoverTasks} todayKey={todayKey} selectedIds={selectedCarryIds} onSelectionChange={setSelectedCarryIds} />}
               {(() => {
                 const totalPages = Math.max(1, Math.ceil(carryoverTasks.length / CARRY_PAGE_SIZE));
                 const page = Math.min(carryPage, totalPages - 1);
@@ -471,6 +497,7 @@ export default function Diary() {
                         </div>
                         <Button
                           size="sm"
+                          className="max-sm:min-h-11"
                           aria-label={t("diary.unignore")}
                           onClick={async () => {
                             if (!task.id) return;
@@ -492,7 +519,7 @@ export default function Diary() {
         <aside className="min-w-0 space-y-6 min-[901px]:space-y-8">
           {streak > 0 && (
             <section>
-              <h2 className="mb-1 text-sm font-medium text-muted-foreground">{t("diary.continuity")}</h2>
+              <h2 className="mb-1 font-sans text-sm font-medium text-muted-foreground">{t("diary.continuity")}</h2>
               <p className="flex items-baseline gap-2">
                 <strong className="font-numeric text-xl font-semibold tabular-nums">{t("common.daysShort", { count: streak })}</strong>
                 {bestStreak > streak && <span className="text-xs text-muted-foreground">· {t("diary.bestStreak", { count: bestStreak })}</span>}
@@ -514,19 +541,20 @@ export default function Diary() {
 
       {completed && (
         <CompletionBar
-          key={completed.id}
-          task={completed}
+          key={completed.task.id}
+          task={completed.task}
+          focusUndo={completed.viaKeyboard}
           onClose={() => setCompleted(null)}
           onUndo={() => void undoComplete()}
-          onLog={() => { const id = completed.id; setCompleted(null); navigate(`/log?task=${id}`); }}
+          onLog={() => { const id = completed.task.id; setCompleted(null); navigate(`/log?task=${id}`); }}
         />
       )}
 
       {selecting && (
-        <div
+        <FloatingActions
           role="toolbar"
           aria-label={t("diary.selectionBar")}
-          className="fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] bottom-[var(--floating-bottom)] z-[60] flex max-w-[760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-muted-foreground/40 bg-card px-3.5 py-2.5 shadow-raised min-[700px]:bottom-[max(calc(1.25rem+env(safe-area-inset-bottom)),var(--floating-bottom))] min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]"
+          className="max-w-[760px] flex-wrap justify-between gap-x-4 gap-y-2 px-3.5 py-2.5 [&_button]:max-sm:min-h-11"
         >
           <span className="text-sm"><strong className="font-numeric font-semibold tabular-nums">{t("diary.selectedCount", { count: picked.length })}</strong></span>
           <span className="flex gap-1">
@@ -547,7 +575,7 @@ export default function Diary() {
               <Trash2 />{t("common.delete")}
             </Button>
           </span>
-        </div>
+        </FloatingActions>
       )}
 
       {practiceTask && (
@@ -641,7 +669,7 @@ function LessonTodayBanner({
   const link = "inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4";
   return (
     <div className="rounded-lg bg-info-subtle p-6 shadow-soft">
-      <h2 className="text-sm font-semibold text-info">
+      <h2 className="font-sans text-sm font-semibold text-info">
         {rec.teacher ? t("diary.lessonTodayWith", { teacher: rec.teacher }) : t("diary.lessonToday")}
       </h2>
       {(subject || slot) && (
@@ -652,7 +680,7 @@ function LessonTodayBanner({
       <HomeworkInput recurrence={rec} date={today()} className="mt-3 flex gap-2" />
       <div className="mt-2 flex flex-wrap items-center gap-x-5">
         <button onClick={() => navigate("/lessons", { state: { openLogForRecurrenceId: rec.id, date: today() } })} className={link}>
-          {t("diary.logLessonShort")} <ArrowRightIcon className="h-3.5 w-3.5" />
+          {t("lesson.log")} <ArrowRightIcon className="h-3.5 w-3.5" />
         </button>
       </div>
       <LessonExtraActions subjectId={rec.subjectId} />
@@ -675,7 +703,7 @@ function EndOfDaySummary({
         <SessionIcon className="h-5 w-5 shrink-0" />
         {t("toast.tasksBulkDone", { count })}
       </p>
-      <Button size="sm" variant="ghost" className="text-success" onClick={() => navigate("/history")}>
+      <Button size="sm" variant="ghost" className="text-success max-sm:min-h-11" onClick={() => navigate("/history")}>
         {t("diary.viewHistory")} <ArrowRightIcon className="ml-1 h-3.5 w-3.5" />
       </Button>
     </div>

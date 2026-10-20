@@ -31,3 +31,8 @@ describe("FloatingActions", () => {
     expect(screen.getByRole("button", { name: "Save" }).parentElement!.style.getPropertyValue("--bar-bottom")).toContain("84px");
   });
 });
+
+it("passes landmark props through, so other bars can reuse its positioning", () => {
+  render(<MemoryRouter><FloatingActions role="toolbar" aria-label="Selection"><button>Done</button></FloatingActions></MemoryRouter>);
+  expect(screen.getByRole("toolbar", { name: "Selection" })).toContainElement(screen.getByRole("button", { name: "Done" }));
+});

@@ -4,16 +4,16 @@ import { toast } from "sonner";
 import type { Task } from "@/domain/entities/task";
 import { useI18n } from "@/lib/i18n";
 import { helpRequestsService } from "@/lib/services";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FloatingActions } from "@/components/shared/FloatingActions";
 
-const START_MS = 6000;
+const START_MS = 10000;
 const BUMP_MS = 3000;
 const TICK_MS = 100;
 
 /** Shown after a one-tap completion. The task is only marked done: results are logged on the log page, never invented here. */
-export function CompletionBar({ task, onClose, onUndo, onLog }: { task: Task; onClose: () => void; onUndo: () => void; onLog: () => void }) {
+export function CompletionBar({ task, focusUndo = false, onClose, onUndo, onLog }: { task: Task; focusUndo?: boolean; onClose: () => void; onUndo: () => void; onLog: () => void }) {
   const { t } = useI18n();
   const [question, setQuestion] = useState("");
   const [writing, setWriting] = useState(false);
@@ -40,25 +40,19 @@ export function CompletionBar({ task, onClose, onUndo, onLog }: { task: Task; on
   };
 
   return (
-    <div
-      role="region"
-      aria-label={t("rate.region")}
-      className={cn(
-        "fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] z-[60] grid max-w-[760px] gap-3 overflow-hidden rounded-lg border border-muted-foreground/40 bg-card p-4 shadow-raised",
-        "bottom-[var(--floating-bottom)] min-[700px]:bottom-[max(calc(1.25rem+env(safe-area-inset-bottom)),var(--floating-bottom))] min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8",
-        "min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)] motion-safe:animate-fade-in",
-      )}
-    >
+    // The countdown pauses while the bar is pointed at or holds focus (writing a question, reaching for Undo).
+    <FloatingActions role="region" aria-label={t("rate.region")} className="grid max-w-[760px] items-stretch justify-normal gap-3 overflow-hidden p-4 motion-safe:animate-fade-in"
+      onPointerEnter={() => setWriting(true)} onPointerLeave={() => setWriting(false)} onFocus={() => setWriting(true)} onBlur={() => setWriting(false)}>
       <div aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-secondary">
         <div className="h-full origin-left bg-success" style={{ transform: `scaleX(${Math.max(0, left) / peak.current})` }} />
       </div>
       <div className="flex items-center justify-between gap-3">
-        <span className="min-w-0 flex-1 truncate text-sm text-success"><strong className="font-semibold">{t("rate.completed", { title: task.title })}</strong></span>
+        <span role="status" className="min-w-0 flex-1 truncate text-sm text-success"><strong className="font-semibold">{t("rate.completed", { title: task.title })}</strong></span>
         <span className="flex shrink-0 items-center gap-1">
           <span className="hidden text-xs text-muted-foreground tabular-nums sm:inline" aria-live="off">
             {writing ? t("rate.paused") : t("rate.closesIn", { s: Math.ceil(left / 1000) })}
           </span>
-          <Button size="sm" variant="outline" onClick={onUndo}>{t("common.undo")}</Button>
+          <Button size="sm" variant="outline" className="max-sm:min-h-11" autoFocus={focusUndo} onClick={onUndo}>{t("common.undo")}</Button>
           <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={t("common.close")} onClick={onClose}><X /></Button>
         </span>
       </div>
@@ -68,11 +62,10 @@ export function CompletionBar({ task, onClose, onUndo, onLog }: { task: Task; on
       </button>
       {task.itemId !== undefined && (
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void ask(); }}>
-          <Input value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={1000} aria-label={t("rate.question")} placeholder={t("rate.question")}
-            onFocus={() => setWriting(true)} onBlur={() => setWriting(false)} />
+          <Input value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={1000} aria-label={t("rate.question")} placeholder={t("rate.question")} />
           <Button type="submit" size="sm" variant="outline" className="h-[42px]" disabled={!question.trim()}>{t("rate.ask")}</Button>
         </form>
       )}
-    </div>
+    </FloatingActions>
   );
 }

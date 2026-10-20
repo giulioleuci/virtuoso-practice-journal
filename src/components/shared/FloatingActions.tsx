@@ -7,13 +7,14 @@ import { cn } from "@/lib/utils";
  * and the Android system bar, on the system bar alone once the navigation hides (scroll, keyboard), above the
  * keyboard when it overlays the page, and beside the sidebar on wide screens. Put it inside the form: its buttons still submit it.
  */
-export function FloatingActions({ children, className }: { children: React.ReactNode; className?: string }) {
+export function FloatingActions({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   // Outside the app shell there is no outlet context: assume the navigation shows.
   const navHidden = (useOutletContext<{ navHidden?: boolean } | null>() ?? {}).navHidden === true;
   const keyboard = useKeyboardInset();
   const bottom = keyboard > 0 ? `${keyboard + 8}px` : navHidden ? "calc(12px + env(safe-area-inset-bottom))" : "calc(84px + env(safe-area-inset-bottom))";
   return (
     <div
+      {...props}
       style={{ "--bar-bottom": bottom, "--keyboard-bottom": `${keyboard > 0 ? keyboard + 8 : 0}px` } as React.CSSProperties}
       className={cn(
         "fixed z-[60] flex items-center justify-end gap-2 rounded-lg border border-muted-foreground/40 bg-card p-3 shadow-raised transition-[bottom] duration-300 ease-out motion-reduce:transition-none",

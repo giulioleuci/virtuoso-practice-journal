@@ -45,10 +45,10 @@ export function CarryoverBatchActions({ tasks, todayKey, selectedIds, onSelectio
         {t("diary.selectAll", { count: ids.length })}
       </label>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" disabled={busy || !selected.length} onClick={() => apply(false)}>
+        <Button size="sm" className="max-sm:min-h-11" disabled={busy || !selected.length} onClick={() => apply(false)}>
           <CalendarPlus className="mr-2 h-4 w-4" />{t("diary.moveSelected", { count: selected.length })}
         </Button>
-        <Button size="sm" variant="outline" disabled={busy || !selected.length} onClick={() => apply(true)}>
+        <Button size="sm" variant="outline" className="max-sm:min-h-11" disabled={busy || !selected.length} onClick={() => apply(true)}>
           <Archive className="mr-2 h-4 w-4" />{t("diary.archiveSelected")}
         </Button>
         {!!selected.length && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><CheckSquare className="h-3 w-3" />{selected.length}</span>}

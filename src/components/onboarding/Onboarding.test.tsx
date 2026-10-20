@@ -50,3 +50,16 @@ it("continues with Enter from the name and moves focus to the next question", ()
   fireEvent.submit(name);
   expect(screen.getByRole("heading", { name: "What do you study?" })).toHaveFocus();
 });
+
+it("saves once when Begin is tapped twice", async () => {
+  services.profileService.initialize.mockClear();
+  render(<I18nProvider><Onboarding onDone={() => {}} /></I18nProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  fireEvent.change(screen.getByRole("textbox"), { target: { value: "Clara" } });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  fireEvent.click(screen.getByRole("button", { name: "Piano" }));
+  const begin = screen.getByRole("button", { name: "Begin" });
+  fireEvent.click(begin);
+  fireEvent.click(begin);
+  await waitFor(() => expect(services.profileService.initialize).toHaveBeenCalledTimes(1));
+});

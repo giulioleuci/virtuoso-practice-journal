@@ -13,12 +13,6 @@ beforeEach(async () => {
 // ---------------------------------------------------------------------------
 
 describe("profileService.initialize", () => {
-  it("ignores a second submit of the onboarding (double tap) instead of duplicating subjects", async () => {
-    const input = { subjects: [{ name: "Cello", type: "instrument" as const }], name: "Clara", lang: "en" as const, reminderTime: "18:00", reminderFreq: "daily" as const, reminderDays: [0, 1, 2, 3, 4, 5, 6], reminderEnabled: false, lateRecoveryDays: 3, graceDay: true, groupByPhase: false, onboarded: true };
-    await Promise.all([profileService.initialize(input), profileService.initialize(input)]);
-    expect(await db.subjects.count()).toBe(1);
-  });
-
   it("creates the profile row and all subject rows in a transaction", async () => {
     await profileService.initialize({
       subjects: [

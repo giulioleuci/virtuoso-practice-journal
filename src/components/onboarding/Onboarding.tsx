@@ -63,7 +63,11 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const toggleDay = (d: number) =>
     setReminderDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
 
+  // A double tap on Begin must not create the subjects twice.
+  const saving = useRef(false);
   const finish = async (opts?: { remindersDisabled?: boolean }) => {
+    if (saving.current) return;
+    saving.current = true;
     const remindersDisabled = !!opts?.remindersDisabled;
     await profileService.initialize({
       subjects: chosen,
@@ -77,7 +81,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
       graceDay: true,
       groupByPhase: false,
       onboarded: true,
-    });
+    }).catch((error) => { saving.current = false; throw error; });
     onDone();
   };
 

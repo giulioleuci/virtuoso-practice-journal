@@ -21,7 +21,7 @@ export function WeekStrip({ date, onSelect }: {
 
   return (
     <div className="flex w-full items-center" role="group" aria-label={t("week.label")}>
-      <button type="button" onClick={() => shift(-7)} aria-label={t("week.prev")} className="grid h-11 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary/40">
+      <button type="button" onClick={() => shift(-7)} aria-label={t("week.prev")} className="relative grid h-11 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground before:absolute before:-left-3 before:right-0 before:inset-y-0 before:content-[''] hover:bg-secondary/40">
         <ChevronLeft className="h-4 w-4" />
       </button>
       <div className="grid min-w-0 flex-1 grid-cols-7 gap-1">
@@ -36,7 +36,7 @@ export function WeekStrip({ date, onSelect }: {
               aria-current={active ? "date" : undefined}
               aria-label={`${dt.toLocaleDateString(LANG_LOCALE[lang], { weekday: "long", day: "numeric", month: "long" })}${withTasks.has(d) ? `, ${t("week.hasTasks")}` : ""}`}
               className={cn(
-                "min-h-11 min-w-0 rounded-lg py-1 text-center text-[0.6875rem] transition-colors",
+                "min-h-11 min-w-0 rounded-lg py-1 text-center text-xs transition-colors",
                 active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/40",
               )}
             >
@@ -47,7 +47,7 @@ export function WeekStrip({ date, onSelect }: {
           );
         })}
       </div>
-      <button type="button" onClick={() => shift(7)} aria-label={t("week.next")} className="grid h-11 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary/40">
+      <button type="button" onClick={() => shift(7)} aria-label={t("week.next")} className="relative grid h-11 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground before:absolute before:-right-3 before:left-0 before:inset-y-0 before:content-[''] hover:bg-secondary/40">
         <ChevronRight className="h-4 w-4" />
       </button>
     </div>

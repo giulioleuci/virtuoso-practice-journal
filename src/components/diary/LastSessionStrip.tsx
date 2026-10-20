@@ -54,9 +54,9 @@ export function LastSessionStrip({ task, compact = false, onRestart }: Props) {
   if (compact) {
     return (
       <div className="text-xs text-muted-foreground tabular-nums inline-flex items-center gap-1 flex-wrap">
-        <span className="font-medium text-foreground/60">{t("session.lastSession")}:</span>
+        <span className="font-medium">{t("session.lastSession")}:</span>
         {sessionLabel(lastSession.marks) && <span>{sessionLabel(lastSession.marks)}</span>}
-        <span className="opacity-70">· {daysAgoLabel(lastSession.date, t)}</span>
+        <span>· {daysAgoLabel(lastSession.date, t)}</span>
       </div>
     );
   }
