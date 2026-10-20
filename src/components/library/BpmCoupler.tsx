@@ -23,7 +23,7 @@ export function BpmCoupler({ bpm, noteVal, onChange, label }: Props) {
       title={t(`note.${n}`)}
       onClick={() => onChange({ bpm, noteVal: n })}
       className={cn(
-        "h-11 min-w-0 flex-1 rounded-md px-1 text-lg leading-none transition-colors",
+        "h-11 min-w-11 rounded-md px-1 text-lg leading-none transition-colors",
         noteVal === n ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent",
       )}
     >
@@ -44,13 +44,13 @@ export function BpmCoupler({ bpm, noteVal, onChange, label }: Props) {
             onChange={(e) => onChange({ bpm: e.target.value ? Number(e.target.value) : undefined, noteVal })}
             placeholder="—"
             aria-label={label ?? t("library.targetTempo")}
-            className="h-10 w-16 border-0 bg-transparent px-0 font-numeric text-2xl tabular-nums focus-visible:ring-0 md:text-2xl"
+            className="h-11 w-24 border-0 bg-transparent px-0 font-numeric text-2xl tabular-nums focus-visible:ring-0 md:text-2xl"
           />
           <span className="text-xs text-muted-foreground">BPM</span>
         </div>
-        <div className="flex gap-0.5 border-t border-border pt-1" role="group" aria-label={t("note.group")}>
+        <div className="grid grid-cols-5 gap-1 border-t border-border pt-1" role="group" aria-label={t("note.group")}>
           {SIMPLE_NOTES.map(note)}
-          <span aria-hidden className="my-1 w-px bg-border" />
+          <span aria-hidden className="col-span-full h-px bg-border" />
           {COMPOUND_NOTES.map(note)}
         </div>
       </div>

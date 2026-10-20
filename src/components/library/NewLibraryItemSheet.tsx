@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCollectionLinksByItem, useCollections, useSegmentsByItem, useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
 import type { LibraryKind } from "@/domain/entities/common";
 import type { LibraryItem, SegmentInput } from "@/domain/entities/library";
@@ -69,6 +69,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
 
   const [collectionIds, setCollectionIds] = useState<number[]>([]);
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+  const hydratedSegments = useRef(false);
+  const hydratedMemberships = useRef(false);
 
   const allCollections = useCollections();
   const existingMemberships = useCollectionLinksByItem(item?.id);
@@ -100,6 +102,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
   // Prefill on edit-open
   useEffect(() => {
     if (!open) return;
+    hydratedSegments.current = false;
+    hydratedMemberships.current = false;
     setEditingKind(item?.kind ?? kind);
     setSaveError(undefined);
     if (isEdit && item) {
@@ -121,7 +125,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
 
   // Hydrate segments from DB on edit
   useEffect(() => {
-    if (open && isEdit && existingSegments) {
+    if (open && isEdit && existingSegments && !hydratedSegments.current) {
+      hydratedSegments.current = true;
       setSegments(
         existingSegments.map((s) => ({
           id: s.id,
@@ -141,7 +146,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
 
   // Hydrate collection memberships on edit
   useEffect(() => {
-    if (open && isEdit && existingMemberships) {
+    if (open && isEdit && existingMemberships && !hydratedMemberships.current) {
+      hydratedMemberships.current = true;
       setCollectionIds(existingMemberships.map((m) => m.collectionId));
     }
   }, [open, isEdit, existingMemberships]);
@@ -211,7 +217,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5">
           <label className="grid gap-1.5 text-xs font-medium">{t("library.materialType")}
-            <Select value={editingKind} onValueChange={(value) => setEditingKind(value as LibraryKind)} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>{LIBRARY_KINDS.map(k => <SelectItem key={k.key} value={String(k.key)}>{t(k.tKey)}</SelectItem>)}</SelectContent></Select>
+            <Select value={editingKind} onValueChange={(value) => setEditingKind(value as LibraryKind)} ><SelectTrigger aria-label={t("library.materialType")} className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>{LIBRARY_KINDS.map(k => <SelectItem key={k.key} value={String(k.key)}>{t(k.tKey)}</SelectItem>)}</SelectContent></Select>
           </label>
           {/* Subject */}
           <div className="space-y-2">
@@ -242,6 +248,8 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
             </Label>
             <Input
               aria-label={t("common.title")}
+              aria-invalid={!title.trim()}
+              aria-describedby={!title.trim() ? "library-title-error" : undefined}
               maxLength={140}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -249,10 +257,11 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
               className="bg-card text-lg h-12"
               autoFocus
             />
+            {!title.trim() && <p id="library-title-error" className="text-xs text-muted-foreground">{t("errors.titleRequired")}</p>}
           </div>
 
           <details className="space-y-3">
-            <summary className="cursor-pointer text-sm font-medium">{t("library.optionalDetails")}</summary>
+            <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">{t("library.optionalDetails")}</summary>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-1.5 text-xs font-medium">{t("library.authorComposer")}<Input maxLength={120} value={composer} onChange={e => setComposer(e.target.value)} /></label>
             <label className="grid gap-1.5 text-xs font-medium">{t("library.catalog")}<Input maxLength={60} value={catalog} onChange={e => setCatalog(e.target.value)} /></label>
@@ -277,25 +286,15 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
           />
 
           {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
-          {/* Validation summary */}
-          {errors.length > 0 && (
-            <div className="paper-card p-3 border border-destructive/30">
-              <p className="text-xs uppercase tracking-wider text-destructive mb-1">
-                {t("library.fixToSave")}
-              </p>
-              <ul className="text-sm text-destructive/90 list-disc pl-5 space-y-0.5">
-                {errors.map((e) => <li key={e}>{e}</li>)}
-              </ul>
-            </div>
-          )}
         </div>
 
-        <SheetFooter className="px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background/80 backdrop-blur">
+        <SheetFooter className="shrink-0 flex-col gap-2 px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] border-t border-border bg-background sm:flex-col sm:space-x-0">
+          {errors.length > 0 && <p id="library-save-errors" aria-live="polite" className="text-xs text-muted-foreground">{errors.join(" · ")}</p>}
           <div className="flex gap-3 w-full">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1">
               {t("common.cancel")}
             </Button>
-            <Button onClick={save} disabled={!canSave} className="flex-1">
+            <Button onClick={save} disabled={!canSave} aria-describedby={errors.length ? "library-save-errors" : undefined} className="flex-1 whitespace-normal">
               {isEdit ? t("collections.saveChanges") : t("library.saveToLibrary")}
             </Button>
           </div>

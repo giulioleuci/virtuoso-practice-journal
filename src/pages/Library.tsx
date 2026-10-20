@@ -13,6 +13,7 @@ import { repertoireService } from "@/lib/services/performances";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -167,7 +168,7 @@ export default function Library() {
     return (
       <li key={it.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 py-[18px]">
         <div className="min-w-[calc(100%-7rem)] flex-1 min-[700px]:min-w-0">
-          <h3 className="font-serif text-[1.375rem] font-semibold leading-tight break-words">
+          <h3 className="font-serif text-xl font-semibold leading-tight break-words">
             <Link to={`/library/item/${it.id}`} className="hover:underline underline-offset-4">{it.title}</Link>
           <Button size="icon" variant="ghost" className="ml-1.5 inline-flex h-11 w-11 align-middle" aria-pressed={!!it.isFavorite} aria-label={`${t(it.isFavorite ? "library.removeFavorite" : "library.addFavorite")}: ${it.title}`} onClick={async () => {
             try { await libraryService.upsert({ ...it, isFavorite: !it.isFavorite }); }
@@ -177,7 +178,7 @@ export default function Library() {
           </Button>
             {it.inRepertoire && <BookmarkCheck className="ml-1.5 inline-block h-4 w-4 fill-current align-middle text-primary" aria-label={t("repertoire.title")} />}
           </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground tabular-nums [overflow-wrap:anywhere]">
             <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectColorCss(subject?.color, subject?.type, subject?.customColor) }} title={subject?.name} role="img" aria-label={subject?.name} />
             {it.composer && <span className="italic">{it.composer}</span>}
             {it.kind === "technique" && (it.startBpm || it.targetBpm) && <span>{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>}
@@ -200,7 +201,7 @@ export default function Library() {
           </Button>
           <button
             onClick={() => setHelpItem(it)}
-            className="relative inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40 hover:text-primary"
+            className="relative inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40 hover:text-primary"
             aria-label={t("library.askTeacher")}
           >
             <MessageCircleQuestion className="h-[18px] w-[18px]" />
@@ -210,7 +211,7 @@ export default function Library() {
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40 hover:text-foreground" aria-label={`${t("common.more")}: ${it.title}`}>
+              <button className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/40 hover:text-foreground" aria-label={`${t("common.more")}: ${it.title}`}>
                 <MoreVertical className="h-[18px] w-[18px]" />
               </button>
             </DropdownMenuTrigger>
@@ -291,7 +292,7 @@ export default function Library() {
     );
   })();
 
-  const linkCls = "inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-[0.8125rem] font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground";
+  const linkCls = "inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-2 text-[0.8125rem] font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground";
 
   return (
     <div className="pb-24">
@@ -301,20 +302,19 @@ export default function Library() {
         actions={<Button onClick={openCreate}><Plus /> {t("library.add")}</Button>}
       />
 
+      <Tabs value={active} onValueChange={value => setActive(value as LibraryKind)}>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-border max-[699px]:block">
-        <div role="tablist" aria-label={t("library.materials")} className="-mb-px flex gap-6 overflow-x-auto overflow-y-hidden no-scrollbar max-[699px]:w-full">
+        <TabsList aria-label={t("library.materials")} className="-mb-px flex h-auto flex-wrap justify-start gap-x-4 rounded-none bg-transparent p-0">
           {LIBRARY_KINDS.map(({ key, tKey }) => (
-            <button
+            <TabsTrigger
               key={key}
-              role="tab"
-              aria-selected={active === key}
-              onClick={() => setActive(key)}
-              className={cn("shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors", active === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+              value={key}
+              className="min-h-11 shrink-0 rounded-none border-b-2 border-transparent px-0 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
             >
               {t(tKey)}
-            </button>
+            </TabsTrigger>
           ))}
-        </div>
+        </TabsList>
         <div className="flex flex-wrap pb-1 max-[699px]:mt-3">
           <Link to="/library/collections" className={linkCls}><FolderOpen className="h-4 w-4" />{t("library.collections")}</Link>
           <Link to="/library/repertoire" className={linkCls}><BookmarkCheck className="h-4 w-4" />{t("repertoire.tab")}</Link>
@@ -322,6 +322,7 @@ export default function Library() {
         </div>
       </div>
 
+      <TabsContent value={active}>
       <FilterPanel
         search={{ value: search, onChange: setSearch, placeholder: t("library.searchTitleComposer") }}
         resultCount={items === undefined ? undefined : filteredItems.length}
@@ -349,6 +350,8 @@ export default function Library() {
         <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={repertoireOnly} onCheckedChange={on => setRepertoireOnly(on === true)} />{t("repertoire.title")}</label>
       </FilterPanel>
       {list}
+      </TabsContent>
+      </Tabs>
 
       <NewLibraryItemSheet
         open={sheetOpen}

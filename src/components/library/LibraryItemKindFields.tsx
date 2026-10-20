@@ -40,7 +40,7 @@ export function LibraryItemKindFields(p: Props) {
         <button
           type="button"
           onClick={p.onCreateCollection}
-          className="text-xs text-primary hover:underline"
+          className="inline-flex min-h-11 items-center text-xs text-primary hover:underline"
         >{t("library.newCollectionBtn")}</button>
       )}
     </div>
@@ -57,7 +57,7 @@ export function LibraryItemKindFields(p: Props) {
         <BpmCoupler bpm={p.targetBpm} noteVal={p.noteVal} onChange={(n) => { p.setTargetBpm(n.bpm); p.setNoteVal(n.noteVal); }} />
       )}
 
-      <Button type="button" variant="ghost" size="sm" disabled={p.targetBpm === undefined && p.noteVal === undefined} onClick={() => { p.setTargetBpm(undefined); p.setNoteVal(undefined); }}>{t("library.clearTempo")}</Button>
+      <Button type="button" variant="ghost" size="sm" className="min-h-11" disabled={p.targetBpm === undefined && p.noteVal === undefined} onClick={() => { p.setTargetBpm(undefined); p.setNoteVal(undefined); }}>{t("library.clearTempo")}</Button>
       </>)}
 
       <MultiChipPicker selectionSummary

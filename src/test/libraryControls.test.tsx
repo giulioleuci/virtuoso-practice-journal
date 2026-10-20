@@ -1,6 +1,6 @@
 import { Children, isValidElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { I18nContext, translate } from "@/lib/i18n";
 import type { LibraryItem } from "@/domain/entities/library";
@@ -11,14 +11,14 @@ import BulkAddTasksPage from "@/pages/BulkAddTasksPage";
 import { RoutineBuilder } from "@/components/diary/RoutineBuilder";
 import { LinkTargetFields } from "@/components/diary/LinkTargetFields";
 
-const mocks = vi.hoisted(() => ({ upsert: vi.fn(), submit: vi.fn().mockResolvedValue(true), events: [] as object[], segments: [] as object[], collections: [] as object[] }));
+const mocks = vi.hoisted(() => ({ upsert: vi.fn(), submit: vi.fn().mockResolvedValue(true), events: [] as object[], segments: [] as object[], collections: [] as object[], library: undefined as LibraryItem[] | undefined }));
 const items: LibraryItem[] = [
   { id: 1, subjectId: 1, kind: "piece", title: "Alfa", composer: "Bach", createdAt: 3 },
   { id: 2, subjectId: 1, kind: "piece", title: "Beta", composer: "Mozart", techniqueIds: [9], isFavorite: true, createdAt: 2 },
   { id: 3, subjectId: 1, kind: "piece", title: "Gamma", composer: "Bach", inRepertoire: true, createdAt: 1 },
 ];
 vi.mock("@/presentation/hooks/useEntities", () => ({
-  useLibraryByKind: () => items,
+  useLibraryByKind: () => mocks.library ?? items,
   useLibrary: () => items,
   useHelpRequests: () => [], useTechniques: () => [{ id: 9, name: "Arpeggi" }], useSegments: () => mocks.segments, useAllSegments: () => [],
   useSubjects: () => [{ id: 1, name: "Piano", type: "instrument" }],
@@ -54,9 +54,28 @@ function openFilters() { fireEvent.click(screen.getByRole("button", { name: /Fil
 function openSorting() { fireEvent.click(screen.getByRole("button", { name: t("link.sortBy") })); }
 function titles() { return screen.getAllByRole("listitem").map(row => within(row).getByRole("heading", { level: 3 }).textContent); }
 beforeEach(() => vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} }));
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); mocks.collections = []; mocks.segments = []; mocks.events = []; vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); mocks.collections = []; mocks.segments = []; mocks.events = []; mocks.library = undefined; vi.clearAllMocks(); });
 
 describe("library controls", () => {
+  it("offers an add action when the selected material type is empty", () => {
+    mocks.library = [];
+    show(<Library />);
+    expect(screen.getByText(t("library.empty"))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: t("library.addToLibrary") })).toBeInTheDocument();
+    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+  });
+
+  it("switches material tabs with arrow keys and labels their panel", async () => {
+    show(<Library />);
+    const pieces = screen.getAllByRole("tab")[0];
+    act(() => pieces.focus());
+    fireEvent.keyDown(pieces, { key: "ArrowRight" });
+    await waitFor(() => expect(screen.getAllByRole("tab")[1]).toHaveAttribute("aria-selected", "true"));
+    const selected = screen.getAllByRole("tab")[1];
+    expect(selected).toHaveFocus();
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", selected.id);
+  });
+
   it("starts with repertoire before favorites, and lets either priority be disabled", () => {
     show(<Library />);
     expect(titles()).toEqual(["Gamma", "Beta", "Alfa"]);
