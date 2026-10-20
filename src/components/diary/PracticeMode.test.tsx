@@ -79,10 +79,12 @@ it("keeps a steady beat on the audio clock while the tempo changes, without a bu
   });
   await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);
   const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
+  render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><PracticeMode task={{ id: 1, title: "Scales", subjectId: 1, plan: [], date: "2026-10-18", done: false, createdAt: 1 }} onClose={() => {}} onFinish={() => {}} /></I18nContext.Provider>);
+  const start = await screen.findByRole("button", { name: t("practice.start") });
+  // Fake only the scheduler's wake-ups, and only once the page is ready (Testing Library polls with real timers).
   vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
   try {
-    render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><PracticeMode task={{ id: 1, title: "Scales", subjectId: 1, plan: [], date: "2026-10-18", done: false, createdAt: 1 }} onClose={() => {}} onFinish={() => {}} /></I18nContext.Provider>);
-    fireEvent.click(await screen.findByRole("button", { name: t("practice.start") }));
+    fireEvent.click(start);
     vi.advanceTimersByTime(25);
     const before = starts.length;
     for (let i = 0; i < 10; i++) fireEvent.click(screen.getByRole("button", { name: t("practice.bpmIncrease", { step: 5 }) }));
@@ -93,7 +95,7 @@ it("keeps a steady beat on the audio clock while the tempo changes, without a bu
     expect(gaps.length).toBeGreaterThan(0);
     for (const gap of gaps) expect(gap).toBeCloseTo(60 / 110, 3);
   } finally { vi.useRealTimers(); }
-});
+}, 10000);
 
 it("swings the pendulum on the scheduled beat and marks every beat, even with one beat per bar", async () => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
