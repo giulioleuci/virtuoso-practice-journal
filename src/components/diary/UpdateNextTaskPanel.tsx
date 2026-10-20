@@ -25,27 +25,33 @@ export function UpdateNextTaskPanel({ session }: { session: Session }) {
   )[0], [session, tasks]);
   if (tasks === undefined) return null;
 
-  const heading = <h2 id="next-task" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("nextTask.title")}</h2>;
+  const heading = <h2 id="next-task" className="font-sans text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("nextTask.title")}</h2>;
   if (!next) {
     const segmentIds = session.marks.flatMap((m) => (m.segmentId === undefined ? [] : [m.segmentId]));
     return (
       <section aria-labelledby="next-task" className="space-y-2">
         {heading}
         <p className="text-sm text-muted-foreground">{t("nextTask.none")}</p>
-        <Button size="sm" variant="outline" onClick={() => navigate("/tasks/new", { state: { prefill: { subjectId: session.subjectId, itemId: session.itemId, collectionId: session.collectionId, title: session.snapshot?.taskTitle, segmentIds } } })}>
+        <Button size="sm" variant="outline" className="max-sm:min-h-11" onClick={() => navigate("/tasks/new", { state: { prefill: { subjectId: session.subjectId, itemId: session.itemId, collectionId: session.collectionId, title: session.snapshot?.taskTitle, segmentIds } } })}>
           {t("nextTask.create")}
         </Button>
       </section>
     );
   }
 
-  const tempo = new Set(picked ?? tempoProposal(next.plan, session.marks));
+  // Pre-select only real progress: a faster tempo in the same figure. A slower or re-figured result stays opt-in.
+  const faster = (id: number | undefined) => {
+    const e = next.plan.find((x) => x.segmentId === id); const m = entryFor(session.marks, id);
+    return !!e && !!m?.bpm && (m.noteVal ?? e.noteVal) === e.noteVal && m.bpm > (e.bpm ?? 0);
+  };
+  const tempo = new Set(picked ?? tempoProposal(next.plan, session.marks).filter(faster));
   const labels = new Map((session.snapshot?.segments ?? []).map((s) => [Number(s.id), s.label]));
   const rows = next.plan.flatMap((e) => { const m = entryFor(session.marks, e.segmentId); return m ? [{ e, m }] : []; });
   const toggle = (segmentId: number | undefined, on: boolean) => setPicked([...tempo].filter((id) => id !== segmentId).concat(on ? [segmentId] : []));
   const apply = async () => {
+    const before = { plan: next.plan, customized: next.customized };
     await tasksService.update(next.id!, { plan: carryMarksToPlan(next.plan, session.marks, { tempo, extras }), ...(next.studyRoutineId !== undefined ? { customized: true } : {}) });
-    toast.success(t("nextTask.applied"));
+    toast.success(t("nextTask.applied"), { action: { label: t("common.undo"), onClick: () => void tasksService.update(next.id!, before) } });
   };
 
   return (
@@ -68,7 +74,7 @@ export function UpdateNextTaskPanel({ session }: { session: Session }) {
         ))}
       </ul>
       <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={extras} onCheckedChange={(on) => setExtras(on === true)} />{t("nextTask.extras")}</label>
-      <Button size="sm" disabled={!tempo.size && !extras} onClick={() => void apply()}>{t("nextTask.apply")}</Button>
+      <Button size="sm" className="max-sm:min-h-11" disabled={!tempo.size && !extras} onClick={() => void apply()}>{t("nextTask.apply")}</Button>
     </section>
   );
 }

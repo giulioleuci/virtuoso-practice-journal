@@ -4,7 +4,7 @@ import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 
 export const nativeSelect =
-  "h-[42px] min-w-0 max-w-full rounded-sm border border-input bg-card px-3 text-[0.8125rem] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring";
+  "h-11 min-w-0 max-w-full rounded-sm border border-input bg-card px-3 text-[0.8125rem] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring";
 
 /** "When" and "Repeat" controls shared by quick add and bulk add. */
 export function WhenFields({ when, custom, repeat, onWhen, onCustom, onRepeat }: {

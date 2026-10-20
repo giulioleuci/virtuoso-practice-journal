@@ -63,7 +63,7 @@ export function CompletionBar({ task, focusUndo = false, onClose, onUndo, onLog 
       {task.itemId !== undefined && (
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void ask(); }}>
           <Input value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={1000} aria-label={t("rate.question")} placeholder={t("rate.question")} />
-          <Button type="submit" size="sm" variant="outline" className="h-[42px]" disabled={!question.trim()}>{t("rate.ask")}</Button>
+          <Button type="submit" size="sm" variant="outline" className="h-11" disabled={!question.trim()}>{t("rate.ask")}</Button>
         </form>
       )}
     </FloatingActions>

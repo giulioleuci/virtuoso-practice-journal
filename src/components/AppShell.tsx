@@ -25,7 +25,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
     { to: "/tasks", label: t("nav.plan"), short: t("nav.planShort"), icon: ListChecks },
     { to: "/library", label: t("nav.library"), icon: BookMarked },
     { to: "/lessons", label: t("nav.lessons"), icon: GraduationCap, badge: pendingHomework },
-    { to: "/analytics", label: t("nav.progress"), icon: BarChart3, also: ["/history"] },
+    { to: "/analytics", label: t("nav.progress"), icon: BarChart3, also: ["/history", "/sessions"] },
   ];
   const secondary = [
     { to: "/study-setup", label: t("nav.studySetup"), icon: Shapes },

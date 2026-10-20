@@ -83,13 +83,13 @@ components:
     textColor: "{colors.paper-on-ink}"
     typography: "{typography.control}"
     rounded: "{rounded.button}"
-    height: "42px"
+    height: "44px"
     padding: "8px 16px"
   button-outline:
     backgroundColor: "{colors.card-paper}"
     textColor: "{colors.warm-ink}"
     rounded: "{rounded.button}"
-    height: "42px"
+    height: "44px"
   button-ghost:
     textColor: "{colors.muted-ink}"
     rounded: "{rounded.button}"
@@ -97,7 +97,7 @@ components:
     backgroundColor: "{colors.card-paper}"
     textColor: "{colors.warm-ink}"
     rounded: "{rounded.sm}"
-    height: "42px"
+    height: "44px"
     padding: "10px 12px"
   paper-card:
     backgroundColor: "{colors.card-paper}"
@@ -119,7 +119,7 @@ components:
 
 A warm paper notebook that lives on the music stand. Warm ink on quiet paper, a single terracotta voice for action, and a handful of colored tabs (the key colors) that mark recurring lessons and subjects. The serif is the handwriting on the cover and the section titles; everything the musician operates is set in a plain, legible sans, and every number that matters during practice (tempo, counts, durations) is set in tabular Manrope so it can be read at arm's length.
 
-The app is an Operate surface: density is moderate, lists and sections stay open on the page instead of being boxed, and boxes appear only where something is selectable or tactile. Ambition shows as precision: aligned numerals, consistent 42px controls, calm transitions that respect reduced motion.
+The app is an Operate surface: density is moderate, lists and sections stay open on the page instead of being boxed, and boxes appear only where something is selectable or tactile. Ambition shows as precision: aligned numerals, consistent 44px controls, calm transitions that respect reduced motion.
 
 **Key Characteristics:**
 - Warm paper and ink, never pure white or pure black on screen.
@@ -203,12 +203,12 @@ Gently rounded, never pill-shaped except badges, avatars and the floating Today 
 
 ### Buttons
 - **Shape:** gently rounded (7px).
-- **Primary:** terracotta fill, paper text, 42px tall, 13px medium label; hover darkens by brightness.
+- **Primary:** terracotta fill, paper text, 44px tall, 13px medium label; hover darkens by brightness.
 - **Outline:** card-paper fill with rule-line border; **Ghost:** muted ink, fills on hover; **Small:** 34px.
 - **Focus:** 2px ring in terracotta with offset; global `:focus-visible` outline is 3px terracotta.
 
 ### Inputs / Fields
-- **Style:** card-paper fill, input-line stroke, 6px radius, 42px tall, terracotta caret.
+- **Style:** card-paper fill, input-line stroke, 6px radius, 44px tall, terracotta caret.
 - **Focus:** 3px terracotta ring with offset. **Disabled:** 50% opacity.
 
 ### Cards / Containers

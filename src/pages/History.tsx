@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import type { LibraryKind, Subject } from "@/domain/entities/common";
 import type { Session } from "@/domain/entities/session";
@@ -40,7 +40,8 @@ export default function History() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [from, setFrom] = useState(searchParams.get("from") ?? "");
   const [to, setTo] = useState(searchParams.get("to") ?? "");
-  const navigate = useNavigate();
+  // Groups showing all their sessions instead of the first six.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // Scope session reads by date range when set — avoids loading the entire table
   const sessions = useSessionsInRange(from || undefined, to || undefined);
@@ -74,43 +75,41 @@ export default function History() {
   }, [sessions, from, to, subjectFilter, kindFilter, taskOf, itemById]);
 
   const groups = useMemo(() => {
-    const map = new Map<string, { sortKey: string; label: string; sub?: string; sessions: Session[]; subjectIds: number[] }>();
+    const map = new Map<string, { key: string; sortKey: string; label: string; sub?: string; sessions: Session[]; subjectIds: number[] }>();
     for (const s of filteredSessions) {
       const task = taskOf(s);
       const item = s.itemId ? itemById.get(s.itemId) : undefined;
       const collection = s.collectionId ? collectionById.get(s.collectionId) : undefined;
       const segIds = s.marks.flatMap((m) => (m.segmentId === undefined ? [] : [m.segmentId]));
-      const seg = segIds.length ? segById.get(segIds[0]) : undefined;
-      const historical = s.snapshot?.segments?.find(segment => segment.id === String(segIds[0]));
-      let key: string, label: string, sub: string | undefined;
+      // A deleted material is no longer among the active items: its snapshot keeps the name.
+      const itemTitle = item?.title ?? s.snapshot?.itemTitle;
+      const place = (key: string, label: string, sub?: string) => {
+        let g = map.get(key);
+        if (!g) {
+          g = { key, sortKey: "", label, sub, sessions: [], subjectIds: [] };
+          map.set(key, g);
+        }
+        // A subtitle names the material only while every session of the group shares it.
+        else if (g.sub !== sub) g.sub = undefined;
+        g.sessions.push(s);
+        if (s.subjectId != null && !g.subjectIds.includes(s.subjectId)) g.subjectIds.push(s.subjectId);
+      };
       switch (groupBy) {
         case "task":
-          key = `t:${s.taskId ?? `s${s.id}`}`;
-          label = task?.title ?? s.snapshot?.taskTitle ?? t("history.untitled");
-          sub = item?.title ?? collection?.name;
+          place(`t:${s.taskId ?? `s${s.id}`}`, task?.title ?? s.snapshot?.taskTitle ?? t("history.untitled"), itemTitle ?? collection?.name);
           break;
         case "day":
-          key = `d:${s.date}`;
-          label = formatDate(s.date, lang);
+          place(`d:${s.date}`, formatDate(s.date, lang, "long"));
           break;
         case "item":
-          if (collection) { key = `c:${collection.id}`; label = collection.name; sub = t("history.collection"); }
-          else { key = `i:${item?.id ?? "none"}`; label = item?.title ?? t("history.noItem"); }
+          if (collection) place(`c:${collection.id}`, collection.name, t("history.collection"));
+          else place(`i:${s.itemId ?? "none"}`, itemTitle ?? t("history.noItem"));
           break;
         case "segment":
-          key = `s:${segIds[0] ?? "none"}`;
-          label = historical?.label ?? seg?.label ?? t("history.noSegment");
-          sub = item?.title ?? collection?.name;
+          // A session counts under every section it marked, as on the section's own page.
+          if (!segIds.length) place("s:none", t("history.noSegment"), itemTitle ?? collection?.name);
+          for (const id of segIds) place(`s:${id}`, s.snapshot?.segments?.find((segment) => segment.id === String(id))?.label ?? segById.get(id)?.label ?? t("history.noSegment"), itemTitle ?? collection?.name);
           break;
-      }
-      let g = map.get(key);
-      if (!g) {
-        g = { sortKey: "", label, sub, sessions: [], subjectIds: [] };
-        map.set(key, g);
-      }
-      g.sessions.push(s);
-      if (s.subjectId != null && !g.subjectIds.includes(s.subjectId)) {
-        g.subjectIds.push(s.subjectId);
       }
     }
     const cmp = (a: string, b: string) => sortDir === "newest" ? b.localeCompare(a) : a.localeCompare(b);
@@ -171,8 +170,9 @@ export default function History() {
         <EmptyState icon={SearchX} title={t("history.noSessionsMatch")} />
       ) : (
         <Accordion type="multiple" className="border-t border-border">
-          {pageGroups.map((g, i) => (
-            <AccordionItem key={i} value={`g-${i}`} className="border-b border-border">
+          {pageGroups.map((g) => (
+            // Keyed by the group itself, so paging or filtering never opens a different group.
+            <AccordionItem key={g.key} value={g.key} className="border-b border-border">
               <AccordionTrigger className="py-4 hover:no-underline gap-2">
                 <div className="flex items-start justify-between gap-2 flex-1 min-w-0 text-left">
                   <div className="min-w-0 flex-1">
@@ -182,6 +182,8 @@ export default function History() {
                         return (
                           <span
                             key={sid}
+                            role="img"
+                            aria-label={subj?.name}
                             className="h-2 w-2 rounded-full shrink-0 inline-block"
                             style={{ backgroundColor: subjectColorCss(subj?.color, subj?.type, subj?.customColor) }}
                             title={subj?.name}
@@ -199,13 +201,13 @@ export default function History() {
               </AccordionTrigger>
               <AccordionContent className="pb-3">
                 <ul className="pt-2 border-t border-border/60 space-y-1">
-                  {g.sessions.slice(0, 6).map((s) => {
+                  {(expanded.has(g.key) ? g.sessions : g.sessions.slice(0, 6)).map((s) => {
                     const task = taskOf(s);
                     const subj = s.subjectId != null ? subjectMap.get(s.subjectId) as Subject | undefined : undefined;
                     return (
                       <li key={s.id}>
-                        <button
-                          onClick={() => navigate(`/sessions/${s.id}`)}
+                        <Link
+                          to={`/sessions/${s.id}`}
                           className="w-full flex items-start gap-2 text-left py-2 px-2 -mx-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 active:bg-accent/60 min-h-[44px]"
                         >
                           <span
@@ -216,13 +218,15 @@ export default function History() {
                             <span className="text-sm break-words text-foreground">{groupBy === "day" ? task?.title ?? s.snapshot?.taskTitle : formatDate(s.date, lang)}</span>
                             {sessionLabel(s.marks) && <span className="text-xs tabular-nums">{sessionLabel(s.marks)}</span>}
                           </div>
-                        </button>
+                        </Link>
                       </li>
                     );
                   })}
-                  {g.sessions.length > 6 && (
-                    <li className="text-xs text-muted-foreground italic px-2">
-                      {t("history.more", { count: g.sessions.length - 6 })}
+                  {g.sessions.length > 6 && !expanded.has(g.key) && (
+                    <li>
+                      <button type="button" onClick={() => setExpanded((all) => new Set(all).add(g.key))} className="min-h-11 px-2 text-xs font-medium text-primary hover:underline underline-offset-4">
+                        {t("history.more", { count: g.sessions.length - 6 })}
+                      </button>
                     </li>
                   )}
                 </ul>

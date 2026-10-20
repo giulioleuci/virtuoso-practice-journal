@@ -10,7 +10,7 @@ import type { Task } from "@/domain/entities/task";
 import { emptyEntry } from "@/domain/logic/plan";
 import { applicationCommands } from "@/lib/applicationCommands";
 import { formatDate } from "@/lib/date";
-import { tempoLabel } from "@/lib/format";
+import { confidenceLabel, tempoLabel } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { flattenErrors, sessionInputSchema } from "@/lib/schemas";
 import { sessionsService } from "@/lib/services";
@@ -39,7 +39,11 @@ export default function SessionPage() {
   const sessions = useSessions();
   const session = sessions?.find((s) => s.id === Number(id));
   if (sessions === undefined) return <div className="paper-skeleton h-40 w-full" />;
-  return session ? <SessionView key={session.id} session={session} /> : <EmptyStateNotFound />;
+  if (!session) return <EmptyStateNotFound />;
+  // Only the newest session of a material may push its results into the next task: older ones would roll targets back.
+  const newer = sessions.some((o) => o.id !== session.id && (session.itemId !== undefined ? o.itemId === session.itemId : session.taskId !== undefined && o.taskId === session.taskId)
+    && (o.date > session.date || (o.date === session.date && o.createdAt > session.createdAt)));
+  return <SessionView key={session.id} session={session} latest={!newer} />;
 }
 
 function EmptyStateNotFound() {
@@ -47,7 +51,7 @@ function EmptyStateNotFound() {
   return <EmptyState title={t("sessionPage.notFound")} />;
 }
 
-function SessionView({ session }: { session: Session }) {
+function SessionView({ session, latest }: { session: Session; latest: boolean }) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const task = usePresentationRead<Task | undefined>("tasks.one", [session.taskId]);
@@ -103,8 +107,8 @@ function SessionView({ session }: { session: Session }) {
 
   return (
     <div className="pb-24">
-      <Link to="/history" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
-        <ChevronLeft className="h-4 w-4" />{t("sessionPage.back")}
+      <Link to="/history" className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+        <ChevronLeft className="h-4 w-4" />{t("nav.history")}
       </Link>
       <PageHeader
         title={snap?.taskTitle ?? task?.title ?? t("session.sessionTitle")}
@@ -112,10 +116,12 @@ function SessionView({ session }: { session: Session }) {
         actions={!editing && (
           <>
             <Button variant="outline" onClick={() => setEditing(true)}><Pencil />{t("common.edit")}</Button>
-            <Button size="icon" variant="ghost" className="h-[42px] w-[42px] hover:text-destructive" aria-label={t("session.delete")} onClick={() => setConfirmDelete(true)}><Trash2 /></Button>
+            <Button size="icon" variant="ghost" className="h-11 w-11 hover:text-destructive" aria-label={t("session.delete")} onClick={() => setConfirmDelete(true)}><Trash2 /></Button>
           </>
         )}
       />
+
+      <p className="-mt-4 mb-6 text-sm tabular-nums text-muted-foreground">{formatDate(session.date, lang, "long")}</p>
 
       {editing ? (
         <form onSubmit={save} className="max-w-[820px] rounded-lg bg-card p-6 shadow-soft">
@@ -146,8 +152,8 @@ function SessionView({ session }: { session: Session }) {
                     <div className="flex flex-wrap gap-x-4 text-sm tabular-nums">
                       {m.bpm ? <span>{tempoLabel(m.noteVal, m.bpm)}</span> : null}
                       {m.targetBpm !== undefined && <span className="text-muted-foreground">{t("library.targetTempo")}: {tempoLabel(m.targetNoteVal, m.targetBpm)}</span>}
-                      {RATING_KEYS.map((key) => (
-                        <span key={key}>{key === "confidence" ? t("session.confidenceLabel") : t(`rating.${key}`)} {m[key] ?? "—"}</span>
+                      {RATING_KEYS.map((key) => m[key] === undefined ? null : (
+                        <span key={key}>{key === "confidence" ? `${t("session.confidenceLabel")} ${confidenceLabel(m[key]!)}` : `${t(`rating.${key}`)} ${m[key]}`}</span>
                       ))}
                     </div>
                     {(!!m.layers.length || !!m.techniques.length) && (
@@ -187,13 +193,12 @@ function SessionView({ session }: { session: Session }) {
           </div>
 
           <aside className="min-w-0">
-            <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("sessionPage.context")}</h2>
-            <p className="break-words font-serif text-xl font-semibold leading-tight">{snap?.taskTitle ?? task?.title ?? "—"}</p>
-            {itemTitle && <p className="mt-1 text-sm text-muted-foreground">{session.itemId ? <Link to={`/library/item/${session.itemId}`} className="hover:underline underline-offset-4">{itemTitle}</Link> : itemTitle}{itemComposer ? ` · ${itemComposer}` : ""}</p>}
+            <h2 className="mb-2 font-sans text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("sessionPage.context")}</h2>
+            {itemTitle && <p className="text-sm text-muted-foreground">{session.itemId && item && !item.deletedAt ? <Link to={`/library/item/${session.itemId}`} className="hover:underline underline-offset-4">{itemTitle}</Link> : itemTitle}{itemComposer ? ` · ${itemComposer}` : ""}</p>}
             {!!segLabels.length && <p className="mt-2 text-sm italic text-muted-foreground">{segLabels.length > 1 ? t("session.segmentTitle_plural") : t("session.segmentTitle")}: {segLabels.join(", ")}</p>}
             {snap?.collectionName && <p className="text-sm italic text-muted-foreground">{t("session.collectionLabel")}: {snap.collectionName}</p>}
-            {snap && <p className="mt-3 text-xs text-muted-foreground">{t("session.snapshotLabel")} · {snap.subjectName}</p>}
-            <div className="mt-8"><UpdateNextTaskPanel session={session} /></div>
+            {snap && <p className="mt-3 text-xs text-muted-foreground">{snap.subjectName}</p>}
+            {latest && <div className="mt-8"><UpdateNextTaskPanel session={session} /></div>}
           </aside>
         </div>
       )}

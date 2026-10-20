@@ -63,7 +63,7 @@ export default function EventPage() {
         actions={
           <>
             <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />{t("event.editProgramme")}</Button>
-            <Button size="icon" variant="ghost" className="h-[42px] w-[42px] hover:text-destructive" aria-label={t("common.delete")} onClick={() => setConfirmDelete(true)}><Trash2 /></Button>
+            <Button size="icon" variant="ghost" className="h-11 w-11 hover:text-destructive" aria-label={t("common.delete")} onClick={() => setConfirmDelete(true)}><Trash2 /></Button>
           </>
         }
       />
