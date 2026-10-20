@@ -21,10 +21,10 @@ export function StateNotice({ tone = "info", children, action, className }: { to
 }
 
 /** Validation summary under a form: one line per problem, announced politely. */
-export function FormErrors({ errors, className }: { errors: string[]; className?: string }) {
+export function FormErrors({ errors, className, id }: { errors: string[]; className?: string; id?: string }) {
   if (!errors.length) return null;
   return (
-    <ul role="status" className={cn("space-y-0.5 text-xs text-destructive", className)}>
+    <ul id={id} tabIndex={-1} role="status" className={cn("space-y-0.5 text-xs text-destructive focus-visible:outline-none", className)}>
       {errors.map((e) => <li key={e}>• {e}</li>)}
     </ul>
   );

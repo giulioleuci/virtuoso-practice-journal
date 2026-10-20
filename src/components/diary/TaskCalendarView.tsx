@@ -64,8 +64,8 @@ export function TaskCalendarView({ subjects }: Props) {
     return d.toLocaleString(lang, { month: "long", year: "numeric", timeZone: "UTC" });
   }, [displayYear, displayMonth, lang]);
 
-  // Monday-first day headers using i18n weekday keys [1,2,3,4,5,6,0]
-  const dayHeaders = [1, 2, 3, 4, 5, 6, 0].map((d) => t(`weekday.${d}`).slice(0, 3));
+  // Monday-first day headers in the language's own short form (cutting "Dienstag" to "Die" is wrong); 2024-01-07 is a Sunday.
+  const dayHeaders = [1, 2, 3, 4, 5, 6, 0].map((d) => new Date(Date.UTC(2024, 0, 7 + d)).toLocaleDateString(lang, { weekday: "short", timeZone: "UTC" }));
 
   const goTo = (year: number, month: number) => {
     setDisplayYear(year);

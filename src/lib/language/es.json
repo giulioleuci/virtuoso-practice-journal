@@ -721,7 +721,7 @@
   "plan.deleteTask": "Eliminar {{title}}",
   "calendar.moreN": "+{{count}} más",
   "calendar.addTask": "Añadir tarea",
-  "calendar.tasksOnDay": "{{count}} tareas",
+  "calendar.tasksOnDay": "{{count}} tarea",
   "routine.newTitle": "Nueva rutina",
   "routine.editTitle": "Editar rutina",
   "routine.create": "Crear rutina",
@@ -1087,5 +1087,7 @@
   "pager.next": "Página siguiente",
   "diary.logSession": "Registrar sesión",
   "diary.freeSessions": "Sesiones libres",
-  "toast.openSession": "Abrir sesión"
+  "toast.openSession": "Abrir sesión",
+  "tasks.editOccurrenceOnly": "Solo cambia este día ({{date}}); los demás días de la serie se mantienen.",
+  "calendar.tasksOnDay_plural": "{{count}} tareas"
 }

@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { LIBRARY_KINDS } from "@/lib/constants";
 import { expandTaskRecurrence } from "@/lib/recurrence";
-import { presetRecurrence, resolveWhen, type RepeatPreset, type When } from "@/lib/domain/taskPresets";
+import { presetDates, presetRecurrence, resolveWhen, type RepeatPreset, type When } from "@/lib/domain/taskPresets";
 import { useI18n } from "@/lib/i18n";
 import { tasksService } from "@/lib/services";
 import { today } from "@/lib/date";
@@ -208,7 +208,8 @@ export default function BulkAddTasksPage() {
         <div className="mt-8 flex justify-end gap-2 border-t border-border pt-5">
           <Button asChild variant="ghost"><Link to="/">{t("common.cancel")}</Link></Button>
           <Button type="submit" disabled={busy || !selected.length}>
-            <Check />{t("bulk.addN", { count: selected.length })}
+            {/* The count is tasks, not materials: every material lands on every chosen day. */}
+            <Check />{t("bulk.addN", { count: selected.length * presetDates(when, custom, repeat).length })}
           </Button>
         </div>
       </form>

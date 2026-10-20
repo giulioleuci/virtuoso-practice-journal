@@ -56,13 +56,14 @@ export function LinkTargetFields({
             <button
               key={val}
               type="button"
+              aria-pressed={linkType === val}
               onClick={() => {
                 setLinkType(val);
                 if (val !== "item") { setItemId(undefined); setSegmentIds([]); }
                 if (val !== "collection") setCollectionId(undefined);
               }}
               className={cn(
-                "text-xs px-3 py-1.5 rounded-paper border transition-colors",
+                "min-h-11 text-xs px-3 py-1.5 rounded-paper border transition-colors",
                 linkType === val
                   ? "bg-primary text-primary-foreground border-primary"
                   : "border-border text-muted-foreground hover:text-foreground"

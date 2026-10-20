@@ -179,11 +179,12 @@ export default function Tasks() {
       <PageHeader
         title={t("nav.plan")}
 
-        actions={
+        actions={<>
+          {tab !== "routines" && <Button asChild variant="outline"><Link to="/tasks/bulk">{t("bulk.title")}</Link></Button>}
           <Button onClick={() => navigate(tab === "routines" ? "/tasks/routines/new" : "/tasks/new")}>
             <Plus /> {tab === "routines" ? t("plan.newRoutine") : t("tasks.newTask")}
           </Button>
-        }
+        </>}
       />
 
       <div role="tablist" className="mb-5 flex gap-6 overflow-x-auto border-b border-border no-scrollbar overflow-y-hidden">
@@ -193,10 +194,9 @@ export default function Tasks() {
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`-mb-px shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors ${tab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            className={`-mb-px min-h-11 shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors ${tab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
             {t(`plan.tab.${id}`)}
-            {id === "tasks" && tasks !== undefined && <span className="ml-1.5 font-numeric text-xs tabular-nums">{tasks.length}</span>}
           </button>
         ))}
       </div>
@@ -306,11 +306,13 @@ export default function Tasks() {
                       <span className="flex gap-2 mt-2">
                         <button
                           onClick={() => setDelMode("one")}
-                          className={`text-xs px-3 py-1 rounded-full border ${delMode === "one" ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}
+                          aria-pressed={delMode === "one"}
+                          className={`min-h-11 text-xs px-3 py-1 rounded-full border ${delMode === "one" ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}
                         >{t("tasks.justThisOne")}</button>
                         <button
                           onClick={() => setDelMode("series")}
-                          className={`text-xs px-3 py-1 rounded-full border ${delMode === "series" ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}
+                          aria-pressed={delMode === "series"}
+                          className={`min-h-11 text-xs px-3 py-1 rounded-full border ${delMode === "series" ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}
                         >{t("tasks.entireSeries")}</button>
                       </span>
                     </span>

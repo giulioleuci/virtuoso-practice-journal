@@ -1,6 +1,6 @@
 import type { TaskRecurrence } from "@/domain/entities/task";
 import { addDays, dayKey, parseDayKey, today } from "@/lib/date";
-import { schoolYearEnd } from "@/lib/recurrence";
+import { expandTaskRecurrence, schoolYearEnd } from "@/lib/recurrence";
 
 /** Shared "when / how often" choices for quick add, bulk add and the full editor. */
 export const REPEAT_PRESETS = ["none", "daily", "weekdays", "mwf", "every2"] as const;
@@ -23,4 +23,11 @@ export function presetRecurrence(preset: RepeatPreset, startDate: string): TaskR
   const end = schoolYearEnd(parseDayKey(startDate));
   // Jul/Aug start dates fall after June 30: leave the end open (capped by the generator).
   return { ...PRESETS[preset], startDate, endDate: end >= startDate ? end : undefined };
+}
+
+/** Every day a "when + repeat" choice creates a task on. */
+export function presetDates(when: When, custom: string, repeat: RepeatPreset): string[] {
+  const date = resolveWhen(when, custom);
+  const recurrence = presetRecurrence(repeat, date);
+  return recurrence ? expandTaskRecurrence(recurrence) : [date];
 }

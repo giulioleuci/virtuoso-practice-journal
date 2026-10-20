@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 import { useI18n } from "@/lib/i18n";
+import { getDefaultWeekStartsOn } from "@/lib/date";
 import { buildRecurrence, type RecurrenceState, type EndMode } from "./recurrence-state";
 
 interface Props {
@@ -16,8 +17,9 @@ interface Props {
 }
 
 export function RecurrenceFields({ state, setState, nextLessonDate }: Props) {
-  const { t } = useI18n();
-  const DAYS = [0,1,2,3,4,5,6].map((i) => t(`weekday.${i}`).slice(0, 1));
+  const { t, lang } = useI18n();
+  // Same week start as the calendar for the language; buttons show an initial, their name is the full weekday.
+  const DAYS = (getDefaultWeekStartsOn(lang) === 1 ? [1, 2, 3, 4, 5, 6, 0] : [0, 1, 2, 3, 4, 5, 6]).map((i) => ({ i, name: t(`weekday.${i}`) }));
   const recurrence = useMemo(() => buildRecurrence(state, nextLessonDate), [state, nextLessonDate]);
   const previewDates = useMemo(
     () => (recurrence ? expandTaskRecurrence(recurrence).slice(0, 6) : []),
@@ -36,20 +38,20 @@ export function RecurrenceFields({ state, setState, nextLessonDate }: Props) {
           <div className="font-medium">{t("recurrence.repeat")}</div>
           <div className="text-xs text-muted-foreground">{t("recurrence.scheduleDesc")}</div>
         </div>
-        <Switch checked={state.enabled} onCheckedChange={(v) => setState({ enabled: v })} />
+        <Switch checked={state.enabled} onCheckedChange={(v) => setState({ enabled: v })} aria-label={t("recurrence.repeat")} />
       </div>
 
       {state.enabled && (
         <div className="space-y-3 pt-1">
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">{t("teacher.startDate")}</Label>
-            <Input type="date" value={state.startDate} onChange={(e) => setState({ startDate: e.target.value })} />
+            <Label htmlFor="rec-start" className="text-xs font-medium text-foreground">{t("teacher.startDate")}</Label>
+            <Input id="rec-start" type="date" value={state.startDate} onChange={(e) => setState({ startDate: e.target.value })} />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">{t("recurrence.pattern")}</Label>
+            <Label htmlFor="rec-pattern" className="text-xs font-medium text-foreground">{t("recurrence.pattern")}</Label>
             <Select value={state.kind} onValueChange={(v) => setState({ kind: v as RecurrenceState["kind"] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="rec-pattern"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="weekdays">{t("recurrence.specificDays")}</SelectItem>
                 <SelectItem value="interval">{t("recurrence.interval")}</SelectItem>
@@ -59,18 +61,20 @@ export function RecurrenceFields({ state, setState, nextLessonDate }: Props) {
 
           {state.kind === "weekdays" ? (
             <div className="flex justify-between gap-1">
-              {DAYS.map((d, i) => (
+              {DAYS.map(({ i, name }) => (
                 <button
                   key={i}
                   type="button"
+                  aria-label={name}
+                  aria-pressed={state.days.includes(i)}
                   onClick={() => toggleDay(i)}
                   className={cn(
-                    "flex-1 h-9 rounded-md text-sm font-medium transition-colors",
+                    "flex-1 h-11 rounded-md text-sm font-medium transition-colors",
                     state.days.includes(i)
                       ? "bg-primary text-primary-foreground"
                       : "bg-accent/50 text-muted-foreground hover:bg-accent",
                   )}
-                >{d}</button>
+                >{name.slice(0, 1)}</button>
               ))}
             </div>
           ) : (

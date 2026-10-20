@@ -43,8 +43,9 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const lastY = useRef(0);
   const keyboardInset = useKeyboardInset();
-  // The log form keeps its save bar pinned low: no navigation beside Save while rating.
-  const navHidden = hidden || keyboardInset > 0 || location.pathname === "/log";
+  // Forms keep their save bar pinned low: no navigation beside Save while logging or planning.
+  const onForm = ["/log", "/tasks/new", "/tasks/edit/", "/tasks/bulk"].some((p) => p.endsWith("/") ? location.pathname.startsWith(p) : location.pathname === p);
+  const navHidden = hidden || keyboardInset > 0 || onForm;
 
   useAndroidBackButton(t("toast.pressBackAgainToExit"));
   useReminderSchedule(profile, lang);

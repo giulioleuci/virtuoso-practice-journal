@@ -19,6 +19,7 @@ import { RecurrenceFields } from "@/components/diary/RecurrenceFields";
 import { buildRecurrence, type RecurrenceState } from "@/components/diary/recurrence-state";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { FormErrors } from "@/components/shared/StateNotice";
+import { FloatingActions } from "@/components/shared/FloatingActions";
 
 import { tasksService, lessonsService } from "@/lib/services";
 import { toast } from "sonner";
@@ -54,6 +55,8 @@ export default function NewTaskPage() {
   const [segmentIds, setSegmentIds] = useState<number[]>(prefill?.segmentIds ?? []);
   const [collectionId, setCollectionId] = useState<number | undefined>(prefill?.collectionId);
   const [title, setTitle] = useState(prefill?.itemTitle ?? prefill?.title ?? "");
+  // Once the musician types a title, picking material or sections no longer rewrites it.
+  const [titleTouched, setTitleTouched] = useState(false);
   const [executionNotes, setExecutionNotes] = useState("");
 
   const [rec, setRecState] = useState<RecurrenceState>({
@@ -81,20 +84,20 @@ export default function NewTaskPage() {
   // Auto-fill title from item or segments selection
   const segmentIdsKey = segmentIds.join(",");
   useEffect(() => {
-    if (linkType !== "item" || !selectedItem) return;
+    if (titleTouched || linkType !== "item" || !selectedItem) return;
     const segLabel = selectedSegments?.length === 1
       ? ` — ${selectedSegments[0].label}`
       : selectedSegments && selectedSegments.length > 1
-        ? ` — ${selectedSegments.length} segments`
+        ? ` — ${t("library.segments", { count: selectedSegments.length })}`
         : "";
     setTitle(`${selectedItem.title}${segLabel}`);
-  }, [linkType, itemId, segmentIdsKey, selectedItem, selectedSegments]);
+  }, [linkType, itemId, segmentIdsKey, selectedItem, selectedSegments, titleTouched, t]);
 
   // Auto-fill title from collection
   useEffect(() => {
-    if (linkType !== "collection" || !selectedCollection) return;
+    if (titleTouched || linkType !== "collection" || !selectedCollection) return;
     setTitle(selectedCollection.name);
-  }, [linkType, collectionId, selectedCollection]);
+  }, [linkType, collectionId, selectedCollection, titleTouched]);
 
   const lessons = useLessons();
   const lessonRecurrences = useRecurrences();
@@ -131,8 +134,15 @@ export default function NewTaskPage() {
     else navigate("/");
   };
 
+  // Problems are listed only after a save attempt, then focused so the musician sees what is missing.
+  const [attempted, setAttempted] = useState(false);
   const save = async () => {
-    if (errors.length || subjectId === undefined) return;
+    if (errors.length || subjectId === undefined) {
+      setAttempted(true);
+      const first = !subjectId ? "task-subject" : !title.trim() ? "task-title" : "task-errors";
+      requestAnimationFrame(() => document.getElementById(first)?.focus());
+      return;
+    }
     const baseTask = {
       subjectId,
       linkType,
@@ -145,7 +155,7 @@ export default function NewTaskPage() {
     try {
       const firstId = await tasksService.create({
         ...baseTask,
-        date: recurrence ? recurrence.startDate : date,
+        date: recurrence ? recurrence.startDate : rec.startDate,
         recurrence,
       });
       if (prefill?.assignmentId) {
@@ -174,7 +184,7 @@ export default function NewTaskPage() {
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5">
-            <Label className={labelCls}>{t("common.subject")}</Label>
+            <Label htmlFor="task-subject" className={labelCls}>{t("common.subject")}</Label>
             <Select
               value={subjectId?.toString() ?? ""}
               onValueChange={(v) => {
@@ -182,7 +192,7 @@ export default function NewTaskPage() {
                 setItemId(undefined); setSegmentIds([]); setCollectionId(undefined);
               }}
             >
-              <SelectTrigger><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
+              <SelectTrigger id="task-subject" aria-invalid={(attempted && !subjectId) || undefined} aria-describedby={attempted && !subjectId ? "task-errors" : undefined}><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
               <SelectContent>
                 {(subjects ?? []).map((s) => (
                   <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
@@ -191,9 +201,16 @@ export default function NewTaskPage() {
             </Select>
           </div>
           <div className="grid gap-1.5">
-            <Label className={labelCls}>{t("common.title")}</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("tasks.taskTitle")} />
+            <Label htmlFor="task-title" className={labelCls}>{t("common.title")}</Label>
+            <Input id="task-title" value={title} onChange={(e) => { setTitleTouched(true); setTitle(e.target.value); }} placeholder={t("tasks.taskTitle")}
+              aria-invalid={(attempted && !title.trim()) || undefined} aria-describedby={attempted && !title.trim() ? "task-errors" : undefined} />
           </div>
+          {!rec.enabled && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="task-date" className={labelCls}>{t("common.date")}</Label>
+              <Input id="task-date" type="date" required value={rec.startDate} onChange={(e) => setRec({ startDate: e.target.value })} />
+            </div>
+          )}
         </div>
 
         <div className={sectionCls}>
@@ -210,13 +227,16 @@ export default function NewTaskPage() {
           />
         </div>
 
-        <div className={sectionCls}>
-          <PlanEditor plan={plan} onChange={setPlan} sections={selectedSegments} subject={selectedSubject} />
-        </div>
+        {plan.length > 0 && (
+          <div className={sectionCls}>
+            <PlanEditor plan={plan} onChange={setPlan} sections={selectedSegments} subject={selectedSubject} />
+          </div>
+        )}
 
         <div className={`${sectionCls} grid gap-1.5`}>
-          <Label className={labelCls}>{t("tasks.executionNotes")}</Label>
+          <Label htmlFor="task-notes" className={labelCls}>{t("tasks.executionNotes")}</Label>
           <Textarea
+            id="task-notes"
             value={executionNotes}
             onChange={(e) => setExecutionNotes(e.target.value)}
             placeholder={t("tasks.executionNotesPlaceholder")}
@@ -228,12 +248,12 @@ export default function NewTaskPage() {
           <RecurrenceFields state={rec} setState={setRec} nextLessonDate={nextLessonDateValue} />
         </div>
 
-        <FormErrors errors={errors} className="mt-6" />
+        <FormErrors id="task-errors" errors={attempted ? errors : []} className="mt-6" />
 
-        <div className="mt-8 flex justify-end gap-2 border-t border-border pt-5 max-[699px]:sticky max-[699px]:bottom-[var(--floating-bottom)] max-[699px]:bg-card max-[699px]:pb-3">
+        <FloatingActions className="min-[700px]:max-w-[920px]">
           <Button type="button" variant="ghost" onClick={handleCancel}>{t("common.cancel")}</Button>
-          <Button type="submit" disabled={errors.length > 0}>{t("tasks.addTask")}</Button>
-        </div>
+          <Button type="submit">{t("tasks.addTask")}</Button>
+        </FloatingActions>
       </form>
     </div>
   );

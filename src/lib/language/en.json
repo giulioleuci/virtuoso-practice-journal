@@ -721,7 +721,7 @@
   "plan.deleteTask": "Delete {{title}}",
   "calendar.moreN": "+{{count}} more",
   "calendar.addTask": "Add task",
-  "calendar.tasksOnDay": "{{count}} tasks",
+  "calendar.tasksOnDay": "{{count}} task",
   "routine.newTitle": "New routine",
   "routine.editTitle": "Edit routine",
   "routine.create": "Create routine",
@@ -1087,5 +1087,7 @@
   "pager.next": "Next page",
   "diary.logSession": "Log session",
   "diary.freeSessions": "Free sessions",
-  "toast.openSession": "Open session"
+  "toast.openSession": "Open session",
+  "tasks.editOccurrenceOnly": "Only this day ({{date}}) changes; the other days of the series keep their plan.",
+  "calendar.tasksOnDay_plural": "{{count}} tasks"
 }

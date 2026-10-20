@@ -1087,5 +1087,7 @@
   "pager.next": "Pagina successiva",
   "diary.logSession": "Registra sessione",
   "diary.freeSessions": "Sessioni libere",
-  "toast.openSession": "Apri sessione"
+  "toast.openSession": "Apri sessione",
+  "tasks.editOccurrenceOnly": "Cambia solo questo giorno ({{date}}); gli altri giorni della serie restano come sono.",
+  "calendar.tasksOnDay_plural": "{{count}} attività"
 }

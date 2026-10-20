@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { presetDates } from "./taskPresets";
 import { expandTaskRecurrence } from "@/lib/recurrence";
 import { presetRecurrence, resolveWhen } from "./taskPresets";
 
@@ -20,4 +21,9 @@ describe("taskPresets", () => {
     expect(expandTaskRecurrence(presetRecurrence("daily", "2026-07-15")!).length).toBeGreaterThan(0);
   });
   it("custom date is used only for custom", () => expect(resolveWhen("custom", "2026-11-01")).toBe("2026-11-01"));
+});
+
+it("counts the days a bulk add will create, so its button can say how many tasks", () => {
+  expect(presetDates("custom", "2026-11-02", "none")).toEqual(["2026-11-02"]);
+  expect(presetDates("custom", "2026-11-02", "mwf").slice(0, 3)).toEqual(["2026-11-02", "2026-11-04", "2026-11-06"]);
 });
