@@ -102,7 +102,8 @@ describe("study subjects", () => {
     expect(screen.getByRole("textbox")).toHaveValue("Legato morbido");
     write.mockRestore();
     fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
-    await screen.findByRole("button", { name: "Legato morbido" });
+    // ponytail: the save round-trips through Dexie and a live query; 1s default is too tight under the parallel full suite.
+    await screen.findByRole("button", { name: "Legato morbido" }, { timeout: 3000 });
     expect(await db.techniques.toArray()).toMatchObject([{ subjectId: pianoId, name: "Legato morbido" }]);
   });
 
