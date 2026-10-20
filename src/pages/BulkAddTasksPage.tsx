@@ -110,7 +110,7 @@ export default function BulkAddTasksPage() {
         actions={<Button asChild variant="outline"><Link to="/tasks/new"><ChevronLeft />{t("bulk.back")}</Link></Button>}
       />
 
-      <form onSubmit={submit} className="rounded-[14px] bg-card p-6 shadow-soft">
+      <form onSubmit={submit} className="rounded-lg bg-card p-6 shadow-soft">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1.5 text-xs font-medium">
             {t("common.subject")}

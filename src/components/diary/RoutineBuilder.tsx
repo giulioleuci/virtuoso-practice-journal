@@ -226,7 +226,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
 
   return (
     <div className="grid gap-6 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px] min-[1151px]:gap-8">
-      <form onSubmit={save} className="min-w-0 rounded-[14px] bg-card p-6 shadow-soft">
+      <form onSubmit={save} className="min-w-0 rounded-lg bg-card p-6 shadow-soft">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1.5 text-xs font-medium">
             {t("studyRoutine.name")}

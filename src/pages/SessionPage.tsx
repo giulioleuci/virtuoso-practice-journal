@@ -118,7 +118,7 @@ function SessionView({ session }: { session: Session }) {
       />
 
       {editing ? (
-        <form onSubmit={save} className="max-w-[820px] rounded-[14px] bg-card p-6 shadow-soft">
+        <form onSubmit={save} className="max-w-[820px] rounded-lg bg-card p-6 shadow-soft">
           <div className="mb-6 grid gap-1.5 sm:max-w-xs">
             <Label className="text-xs font-medium text-foreground">{t("common.date")}</Label>
             <Input type="date" required aria-label={t("common.date")} value={date} onChange={(e) => setDate(e.target.value)} />

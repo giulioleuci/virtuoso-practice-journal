@@ -102,7 +102,7 @@ function EditTaskForm({ task }: { task: Task }) {
 
       <form
         onSubmit={(e) => { e.preventDefault(); void save(); }}
-        className="max-w-[920px] rounded-[14px] bg-card p-6 shadow-soft"
+        className="max-w-[920px] rounded-lg bg-card p-6 shadow-soft"
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5">

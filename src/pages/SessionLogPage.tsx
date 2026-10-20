@@ -42,7 +42,7 @@ import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
 
 type Prefill = { marks?: SegmentMark[]; notes?: string; clips?: AudioDraft[] };
 const marksDraftKey = (taskId: number) => `virtuoso-marks-${taskId}`;
-const panel = "max-w-3xl rounded-[14px] bg-card p-6 shadow-soft";
+const panel = "max-w-3xl rounded-lg bg-card p-6 shadow-soft";
 const section = "mt-6 border-t border-border pt-6";
 
 const initialMarks = (task?: Task | null, prefill?: Prefill): SegmentMark[] => {

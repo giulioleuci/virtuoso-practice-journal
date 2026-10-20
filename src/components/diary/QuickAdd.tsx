@@ -128,7 +128,7 @@ export function QuickAdd({ date, subjectId: filterSubject, onAdded, collapsible 
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget) && !title.trim()) { setExpanded(false); if (collapsible) setOpen(false); } }}
       className="my-4"
     >
-      <div className="flex items-center gap-2.5 rounded-[14px] border border-border bg-card py-1.5 pl-3.5 pr-1.5 focus-within:border-primary focus-within:ring-[3px] focus-within:ring-ring">
+      <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card py-1.5 pl-3.5 pr-1.5 focus-within:border-primary focus-within:ring-[3px] focus-within:ring-ring">
         <Plus className="h-4 w-4 shrink-0 text-primary" aria-hidden />
         <input
           ref={inputRef}

@@ -196,11 +196,11 @@
 
   /* Outlined surface for selectable tiles and nested fields. Ordinary lists and sections stay open. */
   .paper-card {
-    @apply bg-card text-card-foreground border border-border rounded-[10px];
+    @apply bg-card text-card-foreground border border-border rounded-paper;
   }
   /* Tactile surface: forms, next lesson, metronome. */
   .paper-raised {
-    @apply bg-card text-card-foreground rounded-[14px];
+    @apply bg-card text-card-foreground rounded-lg;
     box-shadow: var(--shadow-soft);
   }
   .paper-divider {
@@ -208,7 +208,7 @@
     height: 1px;
   }
   .paper-skeleton {
-    @apply bg-muted/60 animate-pulse rounded-[10px];
+    @apply bg-muted/60 animate-pulse rounded-paper;
   }
 }
 

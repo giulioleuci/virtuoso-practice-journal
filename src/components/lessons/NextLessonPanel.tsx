@@ -45,7 +45,7 @@ export function NextLessonPanel({ recurrence, date, subject, onLog, onQuestions 
   };
   const open = homework.length;
   return (
-    <section className="rounded-[14px] bg-card p-6 shadow-soft" aria-label={t("lessons.nextLesson")}>
+    <section className="rounded-lg bg-card p-6 shadow-soft" aria-label={t("lessons.nextLesson")}>
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

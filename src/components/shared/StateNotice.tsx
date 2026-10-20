@@ -12,7 +12,7 @@ const TONES = {
 export function StateNotice({ tone = "info", children, action, className }: { tone?: keyof typeof TONES; children: ReactNode; action?: ReactNode; className?: string }) {
   const { icon: Icon, cls, role } = TONES[tone];
   return (
-    <div role={role} className={cn("flex items-start gap-3 rounded-[10px] border px-4 py-3 text-sm", cls, className)}>
+    <div role={role} className={cn("flex items-start gap-3 rounded-paper border px-4 py-3 text-sm", cls, className)}>
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
       <div className="min-w-0 flex-1 break-words">{children}</div>
       {action}

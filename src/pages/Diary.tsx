@@ -526,7 +526,7 @@ export default function Diary() {
         <div
           role="toolbar"
           aria-label={t("diary.selectionBar")}
-          className="fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] bottom-[var(--floating-bottom)] z-[60] flex max-w-[760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[14px] border border-muted-foreground/40 bg-card px-3.5 py-2.5 shadow-raised min-[700px]:bottom-[max(calc(1.25rem+env(safe-area-inset-bottom)),var(--floating-bottom))] min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]"
+          className="fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] bottom-[var(--floating-bottom)] z-[60] flex max-w-[760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-muted-foreground/40 bg-card px-3.5 py-2.5 shadow-raised min-[700px]:bottom-[max(calc(1.25rem+env(safe-area-inset-bottom)),var(--floating-bottom))] min-[700px]:left-[calc(195px+2rem)] min-[700px]:right-8 min-[1151px]:left-[calc(208px+2rem)] min-[1600px]:left-[calc(250px+2rem)]"
         >
           <span className="text-sm"><strong className="font-numeric font-semibold tabular-nums">{t("diary.selectedCount", { count: picked.length })}</strong></span>
           <span className="flex gap-1">
@@ -640,7 +640,7 @@ function LessonTodayBanner({
   const subject = subjects.find((s) => s.id === rec.subjectId);
   const link = "inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4";
   return (
-    <div className="rounded-[14px] bg-info-subtle p-6 shadow-soft">
+    <div className="rounded-lg bg-info-subtle p-6 shadow-soft">
       <h2 className="text-sm font-semibold text-info">
         {rec.teacher ? t("diary.lessonTodayWith", { teacher: rec.teacher }) : t("diary.lessonToday")}
       </h2>
@@ -670,7 +670,7 @@ function EndOfDaySummary({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[14px] bg-success-subtle px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-success-subtle px-4 py-3">
       <p className="flex items-center gap-2 text-sm font-medium text-success">
         <SessionIcon className="h-5 w-5 shrink-0" />
         {t("toast.tasksBulkDone", { count })}
