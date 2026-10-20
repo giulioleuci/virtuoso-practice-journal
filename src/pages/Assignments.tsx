@@ -30,6 +30,7 @@ function PlanHomework({ assignment, subjectId, onComplete, onBusy }: { assignmen
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [completed, setCompleted] = useState<string[]>([]);
+  // shortcut: retry checkpoints last only in this planner; use atomic create/link for recovery after leaving.
   const created = useRef(new Map<string, number>());
   const base = parseDayKey(today());
   const options = Array.from({ length: DAYS_AHEAD }, (_, i) => dayKey(addDays(base, i)));

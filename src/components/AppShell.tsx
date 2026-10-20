@@ -42,10 +42,20 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const [hidden, setHidden] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const lastY = useRef(0);
+  const main = useRef<HTMLElement>(null);
   const keyboardInset = useKeyboardInset();
   // Forms keep their save bar pinned low: no navigation beside Save while logging or planning.
   const onForm = ["/log", "/tasks/new", "/tasks/edit/", "/tasks/bulk"].some((p) => p.endsWith("/") ? location.pathname.startsWith(p) : location.pathname === p);
   const navHidden = hidden || keyboardInset > 0 || onForm;
+
+  useEffect(() => {
+    main.current?.focus({ preventScroll: true });
+    const destination = items.find(item => isActive(item.to, item.also)) ?? secondary.find(item => isActive(item.to));
+    const title = main.current?.querySelector("h1")?.textContent ?? destination?.label ?? t("app.name");
+    document.title = `${title} · Virtuoso`;
+  // Only route arrivals move focus; filters, hashes and live data keep the current control.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   useAndroidBackButton(t("toast.pressBackAgainToExit"));
   useReminderSchedule(profile, lang);
@@ -141,6 +151,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
       </aside>
 
       <main
+        ref={main}
         id="main-content"
         tabIndex={-1}
         className={cn("px-5 min-[700px]:px-7 min-[1151px]:px-9 pb-[calc(7rem+env(safe-area-inset-bottom))] min-[700px]:pb-[calc(4rem+env(safe-area-inset-bottom))]", SIDEBAR_W)}

@@ -35,6 +35,7 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
   const [itemIds, setItemIds] = useState<number[]>([]);
+  // shortcut: retries keep the event ID only while open; atomic event/programme writes need repository work.
   const savedEvent = useRef<{ id?: number; createdAt: number }>({ createdAt: Date.now() });
   const [search, setSearch] = useState("");
   const [saveError, setSaveError] = useState<string>();

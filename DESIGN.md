@@ -2,6 +2,8 @@
 name: Virtuoso
 description: Local-first practice journal for musicians — the Practice Taccuino.
 colors:
+  print-paper: "#fff"
+  print-ink: "#000"
   terracotta-ink: "hsl(16 48% 36%)"
   paper-on-ink: "hsl(40 50% 96%)"
   warm-paper: "hsl(40 30% 96%)"
@@ -38,6 +40,16 @@ typography:
     fontWeight: 600
     lineHeight: 1.15
     letterSpacing: "-0.01em"
+  display-phone:
+    fontFamily: "Cormorant Garamond, Georgia, serif"
+    fontSize: "2rem"
+    fontWeight: 600
+    lineHeight: 1.15
+  feature-title:
+    fontFamily: "Cormorant Garamond, Georgia, serif"
+    fontSize: "1.75rem"
+    fontWeight: 600
+    lineHeight: 1.25
   headline:
     fontFamily: "Cormorant Garamond, Georgia, serif"
     fontSize: "1.5rem"
@@ -61,6 +73,19 @@ typography:
     fontSize: "0.75rem"
     fontWeight: 600
     letterSpacing: "0.05em"
+  practice-readout:
+    fontFamily: "Manrope, Inter, system-ui, sans-serif"
+    fontSize: "5rem"
+    fontWeight: 600
+    lineHeight: 1.25
+  calendar-caption:
+    fontFamily: "Inter, system-ui, sans-serif"
+    fontSize: "0.6875rem"
+    fontWeight: 400
+  status-badge:
+    fontFamily: "Inter, system-ui, sans-serif"
+    fontSize: "0.625rem"
+    fontWeight: 500
   numeric:
     fontFamily: "Manrope, Inter, system-ui, sans-serif"
     fontWeight: 600
@@ -93,6 +118,9 @@ components:
   button-ghost:
     textColor: "{colors.muted-ink}"
     rounded: "{rounded.button}"
+  switch:
+    height: "44px"
+    width: "44px"
   input:
     backgroundColor: "{colors.card-paper}"
     textColor: "{colors.warm-ink}"
@@ -122,7 +150,7 @@ A warm paper notebook that lives on the music stand. Warm ink on quiet paper, a 
 The app is an Operate surface: density is moderate, lists and sections stay open on the page instead of being boxed, and boxes appear only where something is selectable or tactile. Ambition shows as precision: aligned numerals, consistent 44px controls, calm transitions that respect reduced motion.
 
 **Key Characteristics:**
-- Warm paper and ink, never pure white or pure black on screen.
+- Warm paper and ink, never pure white or pure black on screen. Print uses plain white and black.
 - One action color (terracotta); state colors (sage, umber, slate blue) never double as actions.
 - Serif for headings only; sans for every control; Manrope tabular numerals for every measured value.
 - Open lists separated by rules; outlined paper cards only for selectable tiles and nested fields.
@@ -165,12 +193,16 @@ Warm, low-chroma paper neutrals with one earthy action color and muted state hue
 
 ### Hierarchy
 - **Display** (600, 2.25rem, 2rem on phone, 1.15): page titles via `PageHeader`.
+- **Feature title** (600, 1.75rem): next-teacher title and compact wordmark; the desktop wordmark steps to 2rem.
 - **Headline** (400, 1.5rem): section titles via `SectionHeader`.
 - **Title** (600, 1.25rem, snug): empty-state titles, card titles.
 - **Body** (400, 0.875rem): running text, hints; long hints capped at 60ch.
 - **Control** (500, 0.8125rem): buttons, nav items, desktop inputs. Inputs use 1rem on phone so mobile browsers do not zoom.
 - **Label** (600, 0.75rem, uppercase, wider tracking): small group labels.
 - **Numeric** (Manrope 600, tabular): BPM, counts, durations, badges.
+- **Practice readout** (Manrope 600, 5rem): the metronome tempo at arm’s length.
+- **Calendar caption** (0.6875rem): desktop calendar previews; full task text remains in the selected day list.
+- **Status badge** (0.625rem): the secondary filter-count badge; the control’s accessible name includes its count.
 
 ### Named Rules
 **The Serif Is For Titles Rule.** `h1`–`h3` get the serif automatically; controls, labels and numbers never do.
@@ -181,7 +213,7 @@ Warm, low-chroma paper neutrals with one earthy action color and muted state hue
 
 Mobile-first single column. Page gutters are 20px on phone, 28px from 700px, 36px from 1151px. From 700px a fixed left sidebar (195px, 208px from 1151px, 250px from 1600px) replaces the bottom navigation. Ported pages use a 1200px max content width; others stay in a 3xl column. Page headers sit 24px above content; section headers 12px above their list.
 
-The phone bottom navigation is 72px tall plus the safe-area inset and hides on scroll down or when the soft keyboard opens; `--floating-bottom` and the keyboard inset keep floating bars above it. Main content reserves 7rem of bottom padding on phone so the last row clears the navigation.
+The phone bottom navigation is 72px tall plus the safe-area inset and hides on scroll down, while logging/planning in a form, or when the soft keyboard opens; `--floating-bottom` and the keyboard inset keep floating bars above it. Main content reserves 7rem of bottom padding on phone so the last row clears the navigation.
 
 ## Elevation & Depth
 
@@ -204,12 +236,17 @@ Gently rounded, never pill-shaped except badges, avatars and the floating Today 
 ### Buttons
 - **Shape:** gently rounded (7px).
 - **Primary:** terracotta fill, paper text, 44px tall, 13px medium label; hover darkens by brightness.
-- **Outline:** card-paper fill with rule-line border; **Ghost:** muted ink, fills on hover; **Small:** 34px.
+- **Outline:** card-paper fill with rule-line border; **Ghost:** muted ink, fills on hover; **Small:** the same 44px hit height with a compact label and narrower padding.
 - **Focus:** 2px ring in terracotta with offset; global `:focus-visible` outline is 3px terracotta.
 
 ### Inputs / Fields
 - **Style:** card-paper fill, input-line stroke, 6px radius, 44px tall, terracotta caret.
 - **Focus:** 3px terracotta ring with offset. **Disabled:** 50% opacity.
+
+### Switches, selects and menus
+- Switches retain a quiet 24px track inside a 44px square hit area.
+- Select options and touch menu items are at least 44px tall; long lists scroll within available space.
+- Named controls expose pressed, checked or expanded state where applicable.
 
 ### Cards / Containers
 - **paper-card:** card paper, 1px rule border, 10px radius. Selectable tiles and nested fields.
@@ -219,11 +256,21 @@ Gently rounded, never pill-shaped except badges, avatars and the floating Today 
 - **Sidebar (≥700px):** serif wordmark, 46px nav rows, inactive muted ink, active terracotta text on `primary/10`; pending homework count as a terracotta badge.
 - **Bottom nav (<700px):** Plan, Lessons, floating Today (56px terracotta circle), Library, More. More opens a popover with Progress, Study setup, Weekly summary, Settings (44px rows). Pending homework shows as a terracotta dot on the Lessons icon, with the count in its accessible name. Today stays active while logging (`/log`). The nav is `inert` while hidden on scroll or keyboard.
 
+Route arrivals focus the main content and set a localized page title. Hash navigation and filter changes keep focus in place. Settings section links wrap on phones; active criteria return focus to Search or Filters after removal.
+
 ### Chips
 - **Removable chip:** secondary button, at least 44px tall, label then a small X; the whole chip removes it. Used by the filter toolbar and the multi-select picker.
 
 ### Floating action bar
 Save/cancel bar fixed above the bottom navigation, the system bar or the keyboard, 14px radius, raised shadow. App-wide pattern for forms.
+
+### Sheets and dialogs
+Use the existing responsive sheet for editors: bottom drawer on phones (92dvh maximum), dialog on larger screens (85dvh maximum). Keep a fixed, wrapping footer and a scrolling body; honor keyboard and safe-area insets. Failed saves retain edits and explain retry. Pending writes prevent dismissal.
+
+### Charts and print
+Charts have a readable date/value table behind a 44px disclosure; tables mount only when requested. Color encodes secondary information, with numeric counts and named day links in the table. Missing data stays distinct from zero.
+
+Weekly print reports use fixed columns, wrap long titles and preserve material identity. Plain black ink on white paper, 11pt body, repeated table headings, 14mm margins, and natural page flow serve A4 and Letter.
 
 ### Metronome (practice mode)
 Beats are scheduled on the audio clock; the pendulum swings to the other side on each scheduled beat and hides under reduced motion, while the beat dots flash by opacity on every beat. Two columns from 900px wide and on short landscape screens (readout left, tempo controls right); the finish bar joins the page flow on short landscape. Readout in Manrope tabular at 5rem.

@@ -30,11 +30,14 @@ it("shows five bottom navigation items with Today in the middle", () => {
   expect(nav.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/tasks", "/lessons", "/", "/library"]);
   expect(nav.getByRole("link", { name: "Oggi" })).toHaveAttribute("aria-current", "page");
   expect(nav.getByRole("button", { name: "Altro" })).toBeInTheDocument();
+  expect(screen.getByRole("main")).toHaveFocus();
   expect(nav.queryByRole("link", { name: "Progressi" })).not.toBeInTheDocument();
   fireEvent.click(nav.getByRole("button", { name: "Altro" }));
   const menu = within(screen.getByRole("dialog"));
   expect(menu.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/analytics", "/study-setup", "/print/weekly", "/profile"]);
   fireEvent.click(menu.getByRole("link", { name: "Progressi" }));
+  expect(screen.getByRole("main")).toHaveFocus();
+  expect(document.title).toContain("Progressi");
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(nav.getByRole("button", { name: "Altro" })).toHaveClass("text-primary");
 });

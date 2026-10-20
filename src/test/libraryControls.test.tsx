@@ -96,7 +96,9 @@ describe("library controls", () => {
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Alfa" } });
     fireEvent.click(screen.getByRole("button", { name: t("states.clearFilters") }));
     expect(titles()).toEqual(["Gamma", "Beta", "Alfa"]);
-    expect(sort).toHaveValue("titleDesc");
+    expect(screen.getByRole("searchbox")).toHaveFocus();
+    openSorting();
+    expect(screen.getByRole("option", { name: t("library.sortTitle") }).parentElement).toHaveValue("titleDesc");
     expect(screen.getByRole("checkbox", { name: t("library.favoritesFirst") })).not.toBeChecked();
   });
 

@@ -111,9 +111,9 @@ export default function Profile() {
       <PageHeader title={t("nav.settings")}  />
       {saveError && !editingName && <p role="alert" className="mb-4 text-sm text-destructive">{t("errors.couldNotSave")}</p>}
       <div className="grid gap-8 min-[901px]:grid-cols-[210px_minmax(0,1fr)]">
-        <nav aria-label={t("settings.navLabel")} className="flex gap-1 overflow-x-auto no-scrollbar min-[901px]:sticky min-[901px]:top-6 min-[901px]:flex-col min-[901px]:self-start">
+        <nav aria-label={t("settings.navLabel")} className="flex flex-wrap gap-1 min-[901px]:sticky min-[901px]:top-6 min-[901px]:flex-col min-[901px]:self-start">
           {[["preferences", t("settings.preferences")], ["practice", t("profile.settings")], ["data", t("profile.data")], ["advanced", t("profile.dev")]].map(([id, label]) => (
-            <a key={id} href={`#settings-${id}`} className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 py-2 max-[900px]:whitespace-nowrap text-[0.8125rem] font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground">{label}</a>
+            <a key={id} href={`#settings-${id}`} className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 py-2 max-[900px]:whitespace-normal text-[0.8125rem] font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground">{label}</a>
           ))}
         </nav>
         <div className="min-w-0 max-w-[720px] space-y-10">

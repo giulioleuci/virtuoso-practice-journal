@@ -20,7 +20,9 @@ it("keeps search and removable criteria available while filters are collapsed", 
   render(<I18nContext.Provider value={{ lang: "it", setLang: () => {}, t: (key, vars) => translate("it", key, vars) }}><Controls /></I18nContext.Provider>);
   expect(screen.getByRole("searchbox")).toHaveValue("Bach");
   expect(screen.queryByRole("textbox", { name: "Autore" })).not.toBeInTheDocument();
+  screen.getByRole("button", { name: /Materia: Piano/ }).focus();
   fireEvent.click(screen.getByRole("button", { name: /Materia: Piano/ }));
+  expect(screen.getByRole("searchbox")).toHaveFocus();
   expect(screen.getByRole("searchbox")).toHaveValue("Bach");
   fireEvent.click(screen.getByRole("button", { name: translate("it", "filters.clearSearch") }));
   expect(screen.getByRole("searchbox")).toHaveValue("");
@@ -29,9 +31,21 @@ it("keeps search and removable criteria available while filters are collapsed", 
   expect(screen.getByRole("searchbox")).toHaveValue("");
   expect(screen.getByRole("searchbox")).toHaveFocus();
   fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Beethoven" } });
+  screen.getByRole("button", { name: translate("it", "states.clearFilters") }).focus();
   fireEvent.click(screen.getByRole("button", { name: translate("it", "states.clearFilters") }));
+  expect(screen.getByRole("searchbox")).toHaveFocus();
   expect(screen.getByRole("searchbox")).toHaveValue("");
   expect(screen.queryByRole("button", { name: /Materia: Piano/ })).not.toBeInTheDocument();
+});
+
+it("returns focus to Filters when removing criteria from a toolbar without search", () => {
+  function Controls() {
+    const [active, setActive] = useState(true);
+    return <FilterPanel filters={active ? [{ key: "subject", label: "Piano", onRemove: () => setActive(false) }] : []}><input aria-label="Subject" /></FilterPanel>;
+  }
+  render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t: (key, vars) => translate("en", key, vars) }}><Controls /></I18nContext.Provider>);
+  const chip = screen.getByRole("button", { name: /Piano/ }); chip.focus(); fireEvent.click(chip);
+  expect(screen.getByRole("button", { name: translate("en", "common.filters") })).toHaveFocus();
 });
 
 it("opens filtering and sorting separately without submitting the surrounding form", () => {

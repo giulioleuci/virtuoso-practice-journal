@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 /** Shared page title and actions. */
 export function PageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
+  useEffect(() => { document.title = `${title} · Virtuoso`; }, [title]);
   return (
     <header className="mb-6 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
       <div className="min-w-[min(100%,9rem)] flex-1">
