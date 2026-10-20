@@ -6,7 +6,7 @@ import { I18nContext, translate } from "@/lib/i18n";
 import type { Profile } from "@/domain/entities/profile";
 
 const state = vi.hoisted(() => ({ assignments: [] as { taskIds: number[]; ignored?: boolean }[] }));
-vi.mock("@/presentation/hooks/useEntities", () => ({ useAssignments: () => state.assignments }));
+vi.mock("@/presentation/hooks/useEntities", () => ({ useAssignments: () => state.assignments, useActiveTasks: () => [{ id: 3 }] }));
 vi.mock("@/hooks/useAndroidBackButton", () => ({ useAndroidBackButton: () => {} }));
 vi.mock("@/hooks/useKeyboardInset", () => ({ useKeyboardInset: () => 0 }));
 

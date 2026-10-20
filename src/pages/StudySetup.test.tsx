@@ -49,6 +49,22 @@ function show(path = "/study-setup") {
 }
 
 describe("study subjects", () => {
+  it("keeps unsaved layer and technique drafts when switching accordion sections", async () => {
+    show(`/study-setup/${pianoId}`);
+    const layers = await screen.findByRole("button", { name: new RegExp(t("subjects.layers")) });
+    const techniques = screen.getByRole("button", { name: new RegExp(t("subjects.techniques")) });
+    fireEvent.click(layers);
+    fireEvent.click(screen.getByRole("button", { name: t("subjects.addLayer") }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "New layer draft" } });
+    fireEvent.click(techniques);
+    fireEvent.click(screen.getByRole("button", { name: t("subjects.addTechnique") }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "New technique draft" } });
+    fireEvent.click(layers);
+    expect(screen.getByRole("textbox")).toHaveValue("New layer draft");
+    fireEvent.click(techniques);
+    expect(screen.getByRole("textbox")).toHaveValue("New technique draft");
+  });
+
   it("opens one subject, reveals only the requested editor and returns to the list", async () => {
     vi.spyOn(window, "scrollY", "get").mockReturnValue(420);
     show();

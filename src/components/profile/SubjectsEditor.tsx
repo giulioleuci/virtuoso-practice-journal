@@ -64,7 +64,7 @@ export function SubjectsEditor() {
   const subject = subjects.find((s) => String(s.id) === id);
 
   return (
-    <div ref={heading} tabIndex={-1} className="min-w-0 pb-8 focus:outline-none [&_h1]:break-words">
+    <div ref={heading} tabIndex={-1} className="min-w-0 pb-8 focus:outline-none [&_h1]:[overflow-wrap:anywhere]">
       {id ? (
         <>
           <Button
@@ -296,7 +296,7 @@ function OptionRow({
           <button
             disabled={disabled}
             onClick={() => setEditing(true)}
-            className="min-h-12 min-w-0 flex-1 break-words rounded-md py-3 text-left text-base hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            className="min-h-12 min-w-0 flex-1 [overflow-wrap:anywhere] rounded-md py-3 text-left text-base hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           >
             {label}
           </button>
@@ -341,7 +341,9 @@ function SubjectDetail({
 }) {
   const { t } = useI18n();
   const [editingName, setEditingName] = useState(false);
-  const [adding, setAdding] = useState<"layer" | "technique" | null>(null);
+  const [addingLayer, setAddingLayer] = useState(false);
+  const [addingTechnique, setAddingTechnique] = useState(false);
+  const [section, setSection] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -414,7 +416,7 @@ function SubjectDetail({
           {error}
         </StateNotice>
       )}
-      <Accordion type="single" collapsible onValueChange={() => setAdding(null)}>
+      <Accordion type="single" collapsible value={section} onValueChange={setSection}>
         <AccordionItem value="layers">
           <AccordionTrigger
             className="min-h-[76px] gap-4 text-left hover:no-underline"
@@ -425,12 +427,12 @@ function SubjectDetail({
                 {t("subjects.layers")}{" "}
                 <span className="ml-2 font-numeric text-sm text-muted-foreground">{layers.length}</span>
               </span>
-              <span className="mt-1 line-clamp-2 break-words text-sm font-normal text-muted-foreground">
+              <span className="mt-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-normal text-muted-foreground">
                 {layers.length ? layers.join(", ") : t("subjects.layersHint")}
               </span>
             </span>
           </AccordionTrigger>
-          <AccordionContent className="space-y-3">
+          <AccordionContent forceMount hidden={section !== "layers"} className="space-y-3">
             <p className="text-sm text-muted-foreground">
               {subject.type === "theory" ? t("subjects.theoryLayersFixed") : t("subjects.layersHelp")}
             </p>
@@ -452,18 +454,18 @@ function SubjectDetail({
               )}
             </ul>
             {subject.type !== "theory" &&
-              (adding === "layer" ? (
+              (addingLayer ? (
                 <InlineEdit
                   label={t("subjects.addLayer")}
                   adding
-                  onCancel={() => setAdding(null)}
+                  onCancel={() => setAddingLayer(false)}
                   onSave={async (name) => {
                     await subjectsService.addLayer(id, name);
-                    setAdding(null);
+                    setAddingLayer(false);
                   }}
                 />
               ) : (
-                <Button variant="outline" className="min-h-11" onClick={() => setAdding("layer")}>
+                <Button variant="outline" className="min-h-11" onClick={() => setAddingLayer(true)}>
                   <Plus className="mr-2 h-4 w-4" aria-hidden />
                   {t("subjects.addLayer")}
                 </Button>
@@ -480,14 +482,14 @@ function SubjectDetail({
                 {t("subjects.techniques")}{" "}
                 <span className="ml-2 font-numeric text-sm text-muted-foreground">{techniques.length}</span>
               </span>
-              <span className="mt-1 line-clamp-2 break-words text-sm font-normal text-muted-foreground">
+              <span className="mt-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-normal text-muted-foreground">
                 {techniques.length
                   ? techniques.map((tech) => tech.name).join(", ")
                   : t("subjects.techniquesHint")}
               </span>
             </span>
           </AccordionTrigger>
-          <AccordionContent className="space-y-3">
+          <AccordionContent forceMount hidden={section !== "techniques"} className="space-y-3">
             {!techniques.length && (
               <p className="text-sm text-muted-foreground">{t("subjects.techniquesHint")}</p>
             )}
@@ -502,19 +504,19 @@ function SubjectDetail({
                 />
               ))}
             </ul>
-            {adding === "technique" ? (
+            {addingTechnique ? (
               <InlineEdit
                 label={t("subjects.addTechnique")}
                 adding
-                onCancel={() => setAdding(null)}
+                onCancel={() => setAddingTechnique(false)}
                 onSave={async (name) => {
                   if (!techniques.some((tech) => tech.name.toLocaleLowerCase() === name.toLocaleLowerCase()))
                     await subjectsService.addTechnique(id, name);
-                  setAdding(null);
+                  setAddingTechnique(false);
                 }}
               />
             ) : (
-              <Button variant="outline" className="min-h-11" onClick={() => setAdding("technique")}>
+              <Button variant="outline" className="min-h-11" onClick={() => setAddingTechnique(true)}>
                 <Plus className="mr-2 h-4 w-4" aria-hidden />
                 {t("subjects.addTechnique")}
               </Button>
