@@ -63,7 +63,7 @@ export function BpmTimelineChart({ sessions, targetBpm, targetNoteVal, segmentId
       {targetBpm !== undefined && <p className="text-xs text-muted-foreground">{t("library.targetTempo")}: {tempoLabel(targetNoteVal, targetBpm)}</p>}
       {mixedFigures ? <ul className="max-h-64 overflow-y-auto divide-y divide-border">{points.map(point => <li key={`${point.session.id}:${point.noteVal ?? "quarter"}`} className="flex justify-between gap-3 py-2 text-sm tabular-nums"><span>{formatDate(point.date, lang, "medium")}</span><span>{tempoLabel(point.noteVal, point.bpm)}</span></li>)}</ul> : <div className="h-40" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartPoints} margin={{ left: -18, right: 8, top: 8, bottom: 0 }}>
+          <LineChart data={chartPoints} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
             <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
             <XAxis dataKey="position" type="number" domain={[0, Math.max(1, points.length - 1)]} tickFormatter={position => points[Math.round(position)]?.label ?? ""} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" interval="preserveStartEnd" />
             <YAxis domain={[0, Math.ceil((maxBpm + 10) / 10) * 10]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" width={38} />

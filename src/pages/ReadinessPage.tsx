@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { PieceEvidence } from "@/domain/logic/readiness";
 import { meanConfidence, topMark } from "@/domain/logic/sessionMetrics";
@@ -7,7 +7,7 @@ import { confidenceLabel, tempoLabel } from "@/lib/format";
 import { formatDate } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { useReadiness } from "@/presentation/hooks/useReadiness";
-import { useHelpRequests } from "@/presentation/hooks/useEntities";
+import { useHelpRequests, usePerformanceEvents, usePerformanceLinks } from "@/presentation/hooks/useEntities";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionHeader } from "@/components/shared/SectionHeader";
@@ -17,17 +17,20 @@ import { BpmTimelineChart } from "@/components/library/BpmTimelineChart";
 /** What the log holds for one programme piece: coverage, latest ratings and tempi with dates, sessions and questions. */
 export default function ReadinessPage() {
   const { t, lang } = useI18n();
+  const navigate = useNavigate();
   const params = useParams();
   const eventId = Number(params.id);
   const itemId = Number(params.itemId);
   const { ready, itemsById, sessionsOf, evidenceFor } = useReadiness();
   const help = useHelpRequests();
+  const events = usePerformanceEvents();
+  const links = usePerformanceLinks();
 
   const item = itemsById.get(itemId);
   const ordered = useMemo(() => sessionsOf(itemId).slice().sort((a, b) => b.date.localeCompare(a.date)), [sessionsOf, itemId]);
 
-  if (!ready || help === undefined) return <div className="paper-skeleton h-40 w-full" />;
-  if (!item) return <EmptyState title={t("readiness.notFound")} />;
+  if (!ready || help === undefined || events === undefined || links === undefined) return <div className="paper-skeleton h-40 w-full" />;
+  if (!item || item.deletedAt || !events.some(event => event.id === eventId) || !links.some(link => link.eventId === eventId && link.itemId === itemId)) return <EmptyState title={t("readiness.notFound")} cta={{ label: t("event.back"), onClick: () => navigate("/library/repertoire?tab=performances") }} />;
 
   const ev = evidenceFor(item);
   const coverage = (e: PieceEvidence) => [
@@ -38,7 +41,7 @@ export default function ReadinessPage() {
 
   return (
     <div className="pb-24">
-      <Link to={`/library/events/${eventId}`} className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+      <Link to={`/library/events/${eventId}`} className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
         <ChevronLeft className="h-4 w-4" />{t("readiness.back")}
       </Link>
       <PageHeader title={t("readiness.title", { title: item.title })}  />
@@ -48,7 +51,7 @@ export default function ReadinessPage() {
       <div className="space-y-10">
         <section>
           <SectionHeader title={t("drilldown.timeline")} />
-          <BpmTimelineChart sessions={ordered} targetBpm={item.targetBpm} />
+          <BpmTimelineChart sessions={ordered} targetBpm={item.targetBpm} targetNoteVal={item.noteVal} />
         </section>
 
         <section>

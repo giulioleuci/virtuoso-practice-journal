@@ -33,10 +33,11 @@ export default function EventPage() {
   ].join(" · ");
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (events === undefined || links === undefined || !ready) return <div className="paper-skeleton h-40 w-full" />;
   const event = events.find((e) => e.id === eventId);
-  if (!event) return <EmptyState title={t("event.notFound")} />;
+  if (!event) return <EmptyState title={t("event.notFound")} cta={{ label: t("event.back"), onClick: () => navigate("/library/repertoire?tab=performances") }} />;
 
   const programme = links.filter((l) => l.eventId === eventId);
   const rows = programme.flatMap((l) => {
@@ -47,14 +48,19 @@ export default function EventPage() {
   const daysLeft = Math.round((parseDayKey(event.date).getTime() - parseDayKey(today()).getTime()) / 86_400_000);
 
   const remove = async () => {
-    await performancesService.removeEvent(eventId);
-    toast.success(t("toast.deleted"));
-    navigate("/library/repertoire?tab=performances");
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await performancesService.removeEvent(eventId);
+      toast.success(t("toast.deleted"));
+      navigate("/library/repertoire?tab=performances");
+    } catch { toast.error(t("quick.failed")); }
+    finally { setDeleting(false); }
   };
 
   return (
     <div className="pb-24">
-      <Link to="/library/repertoire?tab=performances" className="mb-4 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+      <Link to="/library/repertoire?tab=performances" className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
         <ChevronLeft className="h-4 w-4" />{t("event.back")}
       </Link>
       <PageHeader
@@ -76,7 +82,7 @@ export default function EventPage() {
         ) : (
           <ul className="divide-y divide-border border-t border-border">
             {rows.map(({ item, ev }) => (
-              <li key={item.id} className="grid gap-x-6 gap-y-2 py-4 min-[900px]:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)]">
+              <li key={item.id} className="grid gap-x-6 gap-y-2 py-4 [overflow-wrap:anywhere] min-[900px]:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)]">
                 <Link to={`/library/events/${eventId}/item/${item.id}`} className="min-w-0 hover:underline underline-offset-4">
                   <strong className="block break-words font-serif text-xl font-semibold leading-tight">{item.title}</strong>
                   {item.composer && <small className="text-xs italic text-muted-foreground">{item.composer}</small>}
@@ -93,15 +99,15 @@ export default function EventPage() {
       </section>
 
       <PerformanceEventSheet open={editOpen} onOpenChange={setEditOpen} event={event} programme={programme.map((l) => l.itemId)} />
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+      <AlertDialog open={confirmDelete} onOpenChange={open => { if (!deleting) setConfirmDelete(open); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("event.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>{t("event.deleteDesc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={remove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
+            <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction disabled={deleting} onClick={event => { event.preventDefault(); void remove(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

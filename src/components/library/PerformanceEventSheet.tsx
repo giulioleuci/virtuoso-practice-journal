@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePerformableLibrary, useSubjects } from "@/presentation/hooks/useEntities";
 import type { PerformanceEvent, PerformanceKind } from "@/domain/entities/performance";
 import { useI18n } from "@/lib/i18n";
@@ -35,9 +35,15 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
   const [subjectId, setSubjectId] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
   const [itemIds, setItemIds] = useState<number[]>([]);
+  const savedEvent = useRef<{ id?: number; createdAt: number }>({ createdAt: Date.now() });
+  const [search, setSearch] = useState("");
+  const [saveError, setSaveError] = useState<string>();
 
   useEffect(() => {
     if (!open) return;
+    savedEvent.current = { id: event?.id, createdAt: event?.createdAt ?? Date.now() };
+    setSearch("");
+    setSaveError(undefined);
     setName(event?.name ?? "");
     setKind(event?.kind ?? "concert");
     setDate(event?.date ?? today());
@@ -48,8 +54,8 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
   }, [open, event?.id]);
 
   const sortedPieces = useMemo(
-    () => (pieces ?? []).slice().sort((a, b) => a.title.localeCompare(b.title)),
-    [pieces]
+    () => (pieces ?? []).filter(piece => `${piece.title} ${piece.composer ?? ""}`.toLowerCase().includes(search.trim().toLowerCase())).sort((a, b) => a.title.localeCompare(b.title)),
+    [pieces, search]
   );
 
   const canSave = name.trim().length > 0 && !!date;
@@ -57,20 +63,28 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
   const save = async () => {
     if (!canSave || saving) return;
     setSaving(true);
+    setSaveError(undefined);
+    let metadataSaved = false;
     try {
     const id = await performancesService.upsertEvent({
-      id: event?.id,
+      id: savedEvent.current.id,
       name: name.trim(),
       kind,
       date,
       venue: venue.trim() || undefined,
       subjectId,
-      createdAt: event?.createdAt ?? Date.now(),
+      createdAt: savedEvent.current.createdAt,
     });
+    savedEvent.current.id = id;
+    metadataSaved = true;
     await performancesService.setEventItems(id, itemIds);
     toast.success(isEdit ? t("toast.updated") : t("toast.added"));
     onOpenChange(false);
-    } catch (error) { toast.error(error instanceof Error && /^(library|performances)\.error\./.test(error.message) ? t(error.message) : t("errors.couldNotSave")); }
+    } catch (error) {
+      const message = metadataSaved ? t("performances.programmeSaveFailed") : error instanceof Error && /^(library|performances)\.error\./.test(error.message) ? t(error.message) : t("errors.couldNotSave");
+      setSaveError(message);
+      toast.error(message);
+    }
     finally { setSaving(false); }
   };
 
@@ -80,26 +94,27 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
   return (
     <ResponsiveSheet
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={value => { if (!saving) onOpenChange(value); }}
       title={isEdit ? t("performances.edit") : t("performances.new")}
       description={t("performances.hint")}
       footer={
         <div className="flex gap-3 w-full">
-          <Button variant="ghost" className="flex-1" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
+          <Button variant="ghost" className="flex-1" disabled={saving} onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
           <Button className="flex-1" disabled={!canSave || saving} onClick={save}>{t("common.save")}</Button>
         </div>
       }
     >
+      {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
       <div className="space-y-2">
         <Label className="text-xs font-medium text-foreground">{t("common.name")}</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("performances.namePlaceholder")} className="bg-card h-12" />
+        <Input aria-label={t("common.name")} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("performances.namePlaceholder")} className="bg-card h-12" />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label className="text-xs font-medium text-foreground">{t("performances.kind")}</Label>
           <Select value={kind} onValueChange={(value) => setKind(value as PerformanceKind)}>
-            <SelectTrigger className="bg-card"><SelectValue /></SelectTrigger>
+            <SelectTrigger aria-label={t("performances.kind")} className="bg-card"><SelectValue /></SelectTrigger>
             <SelectContent>
               {KINDS.map((option) => (
                 <SelectItem key={option} value={option}>{t(`performances.kind.${option}`)}</SelectItem>
@@ -109,19 +124,19 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
         </div>
         <div className="space-y-2">
           <Label className="text-xs font-medium text-foreground">{t("common.date")}</Label>
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-card" />
+          <Input aria-label={t("common.date")} type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-card" />
         </div>
       </div>
 
       <div className="space-y-2">
         <Label className="text-xs font-medium text-foreground">{t("performances.venue")}</Label>
-        <Input value={venue} onChange={(e) => setVenue(e.target.value)} className="bg-card" />
+        <Input aria-label={t("performances.venue")} value={venue} onChange={(e) => setVenue(e.target.value)} className="bg-card" />
       </div>
 
       <div className="space-y-2">
         <Label className="text-xs font-medium text-foreground">{t("common.subject")}</Label>
         <Select value={subjectId !== undefined ? String(subjectId) : ""} onValueChange={(value) => setSubjectId(Number(value))}>
-          <SelectTrigger className="bg-card"><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
+          <SelectTrigger aria-label={t("common.subject")} className="bg-card"><SelectValue placeholder={t("tasks.pickSubject")} /></SelectTrigger>
           <SelectContent>
             {(subjects ?? []).map((subject) => (
               <SelectItem key={subject.id} value={String(subject.id)}>{subject.name}</SelectItem>
@@ -134,6 +149,8 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
         <Label className="text-xs font-medium text-foreground">
           {t("performances.programme")} · {itemIds.length}
         </Label>
+        <Input type="search" aria-label={t("library.searchTitleComposer")} placeholder={t("library.searchTitleComposer")} value={search} onChange={event => setSearch(event.target.value)} />
+        {pieces !== undefined && sortedPieces.length === 0 && <p className="text-sm text-muted-foreground">{t("common.noResults")}</p>}
         <ul className="space-y-1">
           {sortedPieces.map((piece) => (
             <li key={piece.id}>
@@ -143,7 +160,7 @@ export function PerformanceEventSheet({ open, onOpenChange, event, programme }: 
                   onCheckedChange={() => piece.id !== undefined && toggle(piece.id)}
                   className="mt-1"
                 />
-                <span className="min-w-0">
+                <span className="min-w-0 [overflow-wrap:anywhere]">
                   <span className="block font-serif text-base leading-tight break-words">{piece.title}</span>
                   {piece.composer && <span className="block text-xs text-muted-foreground italic">{piece.composer}</span>}
                 </span>

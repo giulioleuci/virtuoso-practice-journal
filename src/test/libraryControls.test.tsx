@@ -29,7 +29,7 @@ vi.mock("@/presentation/hooks/useEntities", () => ({
 }));
 vi.mock("@/presentation/hooks/usePresentationQuery", () => ({ usePresentationRead: (key: string) => key === "library.subject" ? items : [] }));
 vi.mock("@/presentation/hooks/usePresentationControllers", () => ({ useSessionSubmission: () => ({ submitting: false, submit: mocks.submit }) }));
-vi.mock("@/presentation/hooks/useReadiness", () => ({ useReadiness: () => ({ itemsById: new Map(), evidenceFor: () => ({ total: 0, toDo: [] }) }) }));
+vi.mock("@/presentation/hooks/useReadiness", () => ({ useReadiness: () => ({ ready: true, itemsById: new Map(), evidenceFor: () => ({ total: 0, toDo: [] }) }) }));
 vi.mock("@/lib/services", () => ({ libraryService: { upsert: mocks.upsert }, collectionsService: {} }));
 vi.mock("@/components/library/NewLibraryItemSheet", () => ({ NewLibraryItemSheet: () => null }));
 vi.mock("@/components/collections/NewCollectionSheet", () => ({ NewCollectionSheet: () => null }));
@@ -244,7 +244,7 @@ describe("library controls", () => {
       { id: 3, name: "Concerto futuro", kind: "concert", date: "2099-01-01", venue: "Milano", createdAt: 1 },
     ];
     show(<Repertoire />);
-    fireEvent.click(screen.getByRole("tab", { name: t("performances.tab") }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: t("performances.tab") }), { button: 0, ctrlKey: false });
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Roma" } });
     openFilters();
     fireEvent.change(screen.getByRole("option", { name: t("filters.upcoming") }).parentElement!, { target: { value: "upcoming" } });
