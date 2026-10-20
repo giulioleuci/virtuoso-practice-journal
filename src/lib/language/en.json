@@ -867,6 +867,7 @@
   "practice.rateNext": "Rate this section, then use the arrows to move on.",
   "homework.tasksLinked": "{{count}} task",
   "homework.tasksLinked_plural": "{{count}} tasks",
+  "assignments.planFailed": "Some tasks may already be saved. Retry to finish the remaining days before leaving this planner.",
   "assignments.pickDays": "Plan for",
   "assignments.create": "Create task",
   "assignments.create_plural": "Create {{count}} tasks",

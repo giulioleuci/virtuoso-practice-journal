@@ -867,6 +867,7 @@
   "practice.rateNext": "Valuta questo passaggio, poi usa le frecce per continuare.",
   "homework.tasksLinked": "{{count}} esercizio",
   "homework.tasksLinked_plural": "{{count}} esercizi",
+  "assignments.planFailed": "Alcune attività potrebbero essere già salvate. Riprova per completare i giorni rimanenti prima di chiudere questo piano.",
   "assignments.pickDays": "Pianifica per",
   "assignments.create": "Crea esercizio",
   "assignments.create_plural": "Crea {{count}} esercizi",

@@ -867,6 +867,7 @@
   "practice.rateNext": "Valora este pasaje y usa las flechas para continuar.",
   "homework.tasksLinked": "{{count}} tarea",
   "homework.tasksLinked_plural": "{{count}} tareas",
+  "assignments.planFailed": "Puede que algunas tareas ya estén guardadas. Reintenta para completar los días restantes antes de salir del planificador.",
   "assignments.pickDays": "Planificar para",
   "assignments.create": "Crear tarea",
   "assignments.create_plural": "Crear {{count}} tareas",

@@ -73,8 +73,8 @@ export function NextLessonPanel({ recurrence, date, subject, onLog, onQuestions 
               {homework.map(assignment => <li key={assignment.id} className="flex items-start gap-2 text-sm">
                 <span aria-hidden="true" className="mt-2 h-3 w-3 shrink-0 rounded-sm border border-border" />
                 <span className="min-w-0 flex-1 py-1 [overflow-wrap:anywhere]">{assignment.text}</span>
-                {assignment.taskIds.length > 0
-                  ? <span className="py-1 text-xs text-primary">{t("homework.tasksLinked", { count: assignment.taskIds.length })}</span>
+                {assignment.taskIds.some(id => tasks?.some(task => task.id === id))
+                  ? <span className="py-1 text-xs text-primary">{t("homework.tasksLinked", { count: assignment.taskIds.filter(id => tasks?.some(task => task.id === id)).length })}</span>
                   : <Link className="inline-flex min-h-11 items-center text-xs font-medium text-primary hover:underline underline-offset-4" to="/tasks/new" state={{ date: today(), prefill: { subjectId: recurrence.subjectId, title: assignment.text, assignmentId: assignment.id } }}>{t("lessons.makeTask")}</Link>}
                 <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground hover:text-destructive" aria-label={`${t("common.ignore")}: ${assignment.text}`} onClick={() => void deleteWithUndo({ remove: () => lessonsService.ignoreAssignment(assignment.id), restore: () => lessonsService.restoreAssignment(assignment.id), message: t("toast.ignored"), undoLabel: t("common.undo"), toast: (message, options) => toast.success(message, options), onError: () => toast.error(t("errors.couldNotSave")) })}><X className="h-3.5 w-3.5" /></button>
               </li>)}

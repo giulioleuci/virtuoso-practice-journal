@@ -5,8 +5,8 @@ import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { useReminderSchedule } from "@/hooks/useReminderSchedule";
-import { useAssignments } from "@/presentation/hooks/useEntities";
-import { needsTask } from "@/domain/logic/assignments";
+import { useActiveTasks, useAssignments } from "@/presentation/hooks/useEntities";
+import { assignmentsToPlan } from "@/presentation/utils/assignments";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -19,7 +19,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const { t, lang } = useI18n();
   const location = useLocation();
   const pageKey = "/" + (location.pathname.split("/")[1] ?? "");
-  const pendingHomework = (useAssignments() ?? []).filter(needsTask).length;
+  const pendingHomework = assignmentsToPlan(useAssignments() ?? [], useActiveTasks() ?? []).length;
   const items = [
     { to: "/", label: t("nav.today"), icon: CalendarDays, also: ["/log"] },
     { to: "/tasks", label: t("nav.plan"), short: t("nav.planShort"), icon: ListChecks },

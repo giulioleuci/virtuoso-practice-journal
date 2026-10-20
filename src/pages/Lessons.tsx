@@ -4,7 +4,7 @@ import { subjectColorCss } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
 import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
 import { lessonsService } from "@/lib/services";
-import { needsTask } from "@/domain/logic/assignments";
+import { assignmentsToPlan } from "@/presentation/utils/assignments";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/date";
 import { Button } from "@/components/ui/button";
@@ -120,7 +120,7 @@ export default function Lessons() {
     finally { setDeleting(false); }
   };
 
-  const pendingAssignments = (assignments ?? []).filter(needsTask);
+  const pendingAssignments = assignmentsToPlan(assignments ?? [], tasksAll ?? []);
 
   const upcoming = useMemo(() => {
     const today = dayKey(new Date());
@@ -220,10 +220,10 @@ export default function Lessons() {
                               const linked = a.taskIds.flatMap((id) => tasksAll?.find((tk) => tk.id === id) ?? []);
                               return (
                                 <li key={a.id} className="flex items-center gap-2 text-xs">
-                                  {a.taskIds.length ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" /> : <Wand2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                                  {linked.length ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" /> : <Wand2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                                   <span className="flex-1 truncate" title={a.text}>{a.text}</span>
-                                  {a.taskIds.length ? (
-                                    <span className="max-w-[40%] truncate text-primary">→ {linked.length === 1 ? linked[0].title : t("homework.tasksLinked", { count: a.taskIds.length })}</span>
+                                  {linked.length ? (
+                                    <span className="max-w-[40%] truncate text-primary">→ {linked.length === 1 ? linked[0].title : t("homework.tasksLinked", { count: linked.length })}</span>
                                   ) : a.ignored ? (
                                     <button onClick={async () => { try { await lessonsService.restoreAssignment(a.id); toast(t("toast.restored")); } catch { toast.error(t("errors.couldNotSave")); } }} className="min-h-11 italic text-muted-foreground hover:text-primary">{t("lessons.ignoredRestore")}</button>
                                   ) : (

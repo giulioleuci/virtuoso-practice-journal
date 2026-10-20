@@ -867,6 +867,7 @@
   "practice.rateNext": "Bewerte diesen Abschnitt und gehe mit den Pfeilen weiter.",
   "homework.tasksLinked": "{{count}} Aufgabe",
   "homework.tasksLinked_plural": "{{count}} Aufgaben",
+  "assignments.planFailed": "Einige Aufgaben sind möglicherweise bereits gespeichert. Versuche es erneut, um die übrigen Tage abzuschließen, bevor du die Planung verlässt.",
   "assignments.pickDays": "Planen für",
   "assignments.create": "Aufgabe erstellen",
   "assignments.create_plural": "{{count}} Aufgaben erstellen",
