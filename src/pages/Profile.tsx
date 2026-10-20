@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
-  Download, Upload, Trash2, FlaskConical, Pencil, PlayCircle,
+  Download, Upload, Trash2, FlaskConical, Pencil,
   Bell, Languages, BookMarked, User, Info, FileSpreadsheet,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -375,11 +375,6 @@ export default function Profile() {
                 onCheckedChange={(v) => update({ hideHeroQuote: v })}
               />
             </Row>
-            <div className="pt-1">
-              <Button variant="outline" size="sm" className="min-h-11 w-full" onClick={() => update({ introSeen: false })}>
-                <PlayCircle className="h-4 w-4 mr-2" />{t("profile.introTour")}
-              </Button>
-            </div>
           </section>
 
         <section id="settings-data" className="scroll-mt-6 space-y-3 ">
