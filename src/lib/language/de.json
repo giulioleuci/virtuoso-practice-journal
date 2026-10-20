@@ -950,6 +950,8 @@
   "progress.contextHint": "Stimmung und Konzentration sind Kontext: sie ändern weder Vorbereitung noch Plan oder Routinen.",
   "profile.exportData": "Datensicherung exportieren",
   "profile.exportDataHint": "Enthält Daten und Bewertungen. Keine Audiodateien.",
+  "profile.importWarning": "Ein Import ersetzt alle Tagebuchdaten auf diesem Gerät, auch neuere Einträge. Exportiere vorher eine Sicherung. Eine leere Sicherung leert das Tagebuch. Audiodateien werden nicht wiederhergestellt.",
+  "profile.sampleFailed": "Die Beispieldaten konnten nicht vollständig erstellt werden. Vorhandene Daten wurden möglicherweise schon ersetzt. Stelle deine Sicherung wieder her, um sie zurückzuholen.",
   "profile.importHint": "Importiert nur Daten. Audiodateien werden nicht wiederhergestellt. Lokale Aufnahmen werden weder importiert noch exportiert.",
   "profile.exportCsv": "CSV-Dateien exportieren",
   "profile.csvFrom": "Von",

@@ -7,7 +7,7 @@ import { ensureNotificationPermission, isNative } from "@/lib/platform";
 import { getDefaultWeekStartsOn } from "@/lib/date";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
 import { useProfile } from "@/presentation/hooks/useEntities";
-import { useBackupCommands } from "@/presentation/hooks/usePresentationControllers";
+import { useBackupCommands, useSessionSubmission } from "@/presentation/hooks/usePresentationControllers";
 import { REMINDER_PRESETS, getReminderBodies, type ReminderPreset } from "@/lib/reminderPresets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { nativeSelect } from "@/components/diary/WhenFields";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AudioNotice } from "@/components/diary/Recorder";
 
 const APP_VERSION = "0.3alpha";
@@ -36,9 +37,12 @@ export default function Profile() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [sampleOpen, setSampleOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [wiping, setWiping] = useState(false);
+  const { submit: saveProfile, submitting: saving, error: saveError } = useSessionSubmission(profileService.update);
 
   const runSeed = async (set: "full" | "guitar") => {
-    if (!confirm(t("profile.sampleDataWarning"))) return;
+    if (seeding || !confirm(t("profile.sampleDataWarning"))) return;
     setSeeding(true);
     try {
       if (set === "full") {
@@ -53,7 +57,7 @@ export default function Profile() {
       setTimeout(() => location.reload(), 400);
     } catch {
       setSeeding(false);
-      toast.error(t("errors.couldNotSave"));
+      toast.error(t("profile.sampleFailed"));
     }
   };
   const backup = useBackupCommands({
@@ -61,10 +65,19 @@ export default function Profile() {
     importBackup: () => applicationCommands.backups.import.execute(),
   });
 
-  if (!profile) return null;
+  if (!profile) return <div className="paper-skeleton h-40" />;
 
   const update = async (patch: Partial<typeof profile>) => {
-    await profileService.update(patch);
+    const saved = await saveProfile(patch);
+    if (!saved) toast.error(t("errors.couldNotSave"));
+    return saved;
+  };
+
+  const saveName = async () => {
+    if (saving) return;
+    if (await update({ name: nameDraft.trim() })) {
+      setEditingName(false); toast.success(t("toast.nameSaved"));
+    }
   };
 
   const onExport = async () => {
@@ -83,7 +96,9 @@ export default function Profile() {
   };
 
   const onImport = async () => {
+    if (backup.progress !== "idle") return;
     const result = await backup.importBackup();
+    setImportOpen(false);
     const summary = result.ok ? (result.value as ImportSummary | null) : null;
     if (summary) toast.success(summary.recordings ? t("toast.importedClips", { available: summary.available, missing: summary.recordings - summary.available }) : t("toast.imported"));
     else if (!result.ok) toast.error(t("errors.invalidFile"));
@@ -94,41 +109,40 @@ export default function Profile() {
   return (
     <div className="pb-8">
       <PageHeader title={t("nav.settings")}  />
+      {saveError && !editingName && <p role="alert" className="mb-4 text-sm text-destructive">{t("errors.couldNotSave")}</p>}
       <div className="grid gap-8 min-[901px]:grid-cols-[210px_minmax(0,1fr)]">
         <nav aria-label={t("settings.navLabel")} className="flex gap-1 overflow-x-auto no-scrollbar min-[901px]:sticky min-[901px]:top-6 min-[901px]:flex-col min-[901px]:self-start">
           {[["preferences", t("settings.preferences")], ["practice", t("profile.settings")], ["data", t("profile.data")], ["advanced", t("profile.dev")]].map(([id, label]) => (
-            <a key={id} href={`#settings-${id}`} className="shrink-0 rounded-lg px-3 py-2 max-[900px]:whitespace-nowrap text-[0.8125rem] font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground">{label}</a>
+            <a key={id} href={`#settings-${id}`} className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 py-2 max-[900px]:whitespace-nowrap text-[0.8125rem] font-medium text-muted-foreground hover:bg-secondary/40 hover:text-foreground">{label}</a>
           ))}
         </nav>
         <div className="min-w-0 max-w-[720px] space-y-10">
-      <Dialog open={editingName} onOpenChange={setEditingName}>
-        <DialogContent>
+      <Dialog open={editingName} onOpenChange={value => { if (!saving) setEditingName(value); }}>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{t("profile.editName")}</DialogTitle>
           </DialogHeader>
           <Input
             autoFocus
+            aria-label={t("common.name")}
+            maxLength={100}
+            disabled={saving}
             value={nameDraft}
             placeholder={t("onb.name.ph")}
             onChange={(e) => setNameDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                update({ name: nameDraft.trim() }).then(() => {
-                  setEditingName(false);
-                  toast.success(t("toast.nameSaved"));
-                });
+                void saveName();
               }
             }}
           />
+          {saveError && <p role="alert" className="text-sm text-destructive">{t("errors.couldNotSave")}</p>}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditingName(false)}>{t("common.cancel")}</Button>
+            <Button disabled={saving} variant="ghost" onClick={() => setEditingName(false)}>{t("common.cancel")}</Button>
             <Button
-              onClick={async () => {
-                await update({ name: nameDraft.trim() });
-                setEditingName(false);
-                toast.success(t("toast.nameSaved"));
-              }}
+              disabled={saving}
+              onClick={() => void saveName()}
             >
               {t("common.save")}
             </Button>
@@ -142,9 +156,9 @@ export default function Profile() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
             <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="truncate text-sm">{profile.name || <span className="italic text-muted-foreground">{t("common.unnamed")}</span>}</span>
+            <span className="text-sm [overflow-wrap:anywhere]">{profile.name || <span className="italic text-muted-foreground">{t("common.unnamed")}</span>}</span>
           </div>
-          <Button type="button" size="sm" variant="outline" aria-label={t("profile.editName")} onClick={() => { setNameDraft(profile.name ?? ""); setEditingName(true); }}>
+          <Button type="button" size="sm" className="min-h-11" variant="outline" aria-label={t("profile.editName")} onClick={() => { setNameDraft(profile.name ?? ""); setEditingName(true); }}>
             <Pencil />{t("common.edit")}
           </Button>
         </div>
@@ -154,13 +168,12 @@ export default function Profile() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-sm truncate">{t("onb.lang")}</span>
+            <span className="text-sm break-words">{t("onb.lang")}</span>
           </div>
           <Select value={lang} onValueChange={async (value) => {
               const v = value as typeof lang;
-              setLang(v);
-              await update({ lang: v });
-            }} ><SelectTrigger className={nativeSelect}><SelectValue /></SelectTrigger><SelectContent>
+              if (await update({ lang: v })) setLang(v);
+            }} ><SelectTrigger aria-label={t("onb.lang")} className={`${nativeSelect} w-36 shrink-0`}><SelectValue /></SelectTrigger><SelectContent>
             {SUPPORTED_LANGS.map((l) => (
               <SelectItem key={l.code} value={String(l.code)}>{l.label}</SelectItem>
             ))}
@@ -172,9 +185,10 @@ export default function Profile() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <Bell className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-sm truncate">{t("profile.reminderEnabled")}</span>
+            <span className="text-sm break-words">{t("profile.reminderEnabled")}</span>
           </div>
           <Switch
+            aria-label={t("profile.reminderEnabled")}
             checked={remindersOn}
             onCheckedChange={async (v) => {
               if (v && isNative()) {
@@ -194,14 +208,15 @@ export default function Profile() {
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-muted-foreground">{t("profile.reminder")}</span>
               <input
+                aria-label={t("profile.reminder")}
                 type="time"
                 value={profile.reminderTime}
-                onChange={(e) => update({ reminderTime: e.target.value })}
+                onChange={(e) => { if (e.target.value) void update({ reminderTime: e.target.value }); }}
                 className={nativeSelect}
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3">
               {(["daily", "weekdays", "custom"] as const).map((f) => {
                 const active = (profile.reminderFreq ?? "daily") === f;
                 return (
@@ -214,9 +229,10 @@ export default function Profile() {
                         : f === "weekdays" ? [1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6];
                       update({ reminderFreq: f, reminderDays: days });
                     }}
+                    aria-pressed={active}
                     title={t(`onb.freq.${f}`)}
                     className={
-                      "rounded-md border px-2 py-1.5 text-xs font-medium transition-colors overflow-hidden truncate " +
+                      "min-h-11 rounded-md border px-2 py-2 text-xs font-medium transition-colors break-words " +
                       (active
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-background text-muted-foreground border-border hover:bg-accent")
@@ -229,7 +245,7 @@ export default function Profile() {
             </div>
 
             {(profile.reminderFreq ?? "daily") === "custom" && (
-              <div className="flex justify-between gap-1">
+              <div className="flex flex-wrap gap-1">
                 {[0, 1, 2, 3, 4, 5, 6].map((i) => {
                   const sel = profile.reminderDays?.includes(i) ?? false;
                   return (
@@ -242,11 +258,12 @@ export default function Profile() {
                         update({ reminderDays: next });
                       }}
                       className={
-                        "h-9 w-9 rounded-full text-xs font-medium transition-colors " +
+                        "h-11 w-11 rounded-full text-xs font-medium transition-colors " +
                         (sel
                           ? "bg-primary text-primary-foreground"
                           : "bg-background border border-border text-muted-foreground")
                       }
+                      aria-label={t(`weekday.${i}`)}
                       aria-pressed={sel}
                     >
                       {t(`weekday.${i}`).slice(0, 1)}
@@ -260,16 +277,17 @@ export default function Profile() {
 
             <div className="space-y-2">
               <span className="text-sm text-muted-foreground">{t("profile.reminderMessages")}</span>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3">
                 {([...REMINDER_PRESETS, "custom"] as ReminderPreset[]).map((p) => {
                   const active = (profile.reminderPreset ?? "gentle") === p;
                   return (
                     <button
                       key={p}
                       type="button"
+                      aria-pressed={active}
                       onClick={() => update({ reminderPreset: p })}
                       className={
-                        "rounded-md border px-2 py-1.5 text-xs font-medium transition-colors overflow-hidden truncate " +
+                        "min-h-11 rounded-md border px-2 py-2 text-xs font-medium transition-colors break-words " +
                         (active
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-background text-muted-foreground border-border hover:bg-accent")
@@ -284,11 +302,13 @@ export default function Profile() {
               {(profile.reminderPreset ?? "gentle") === "custom" ? (
                 <div className="space-y-2 pt-1">
                   <Input
+                    aria-label={t("profile.reminderCustomTitle.ph")}
                     value={profile.reminderCustomTitle ?? ""}
                     placeholder={t("profile.reminderCustomTitle.ph")}
                     onChange={(e) => update({ reminderCustomTitle: e.target.value })}
                   />
                   <Input
+                    aria-label={t("profile.reminderCustomBody.ph")}
                     value={profile.reminderCustomBody ?? ""}
                     placeholder={t("profile.reminderCustomBody.ph")}
                     onChange={(e) => update({ reminderCustomBody: e.target.value })}
@@ -303,6 +323,7 @@ export default function Profile() {
               <div className="flex items-center justify-between gap-3 pt-1">
                 <span className="text-sm text-muted-foreground">{t("profile.reminderIncludeContext")}</span>
                 <Switch
+                  aria-label={t("profile.reminderIncludeContext")}
                   checked={profile.reminderIncludeContext ?? false}
                   onCheckedChange={(v) => update({ reminderIncludeContext: v })}
                 />
@@ -318,41 +339,44 @@ export default function Profile() {
           <h2 className="font-serif text-2xl font-semibold ">{t("profile.settings")}</h2>
             <Row label={t("profile.lateRecovery")}>
               <input
+                aria-label={t("profile.lateRecovery")}
                 type="number" min={0} max={14}
                 value={profile.lateRecoveryDays}
-                onChange={(e) => update({ lateRecoveryDays: Number(e.target.value) })}
+                onChange={(e) => { if (e.target.value && e.target.validity.valid) void update({ lateRecoveryDays: Number(e.target.value) }); }}
                 className={`${nativeSelect} w-20 tabular-nums`}
               />
             </Row>
             <Row label={t("profile.carryover")}>
               <input
+                aria-label={t("profile.carryover")}
                 type="number" min={0} max={14}
                 value={profile.carryoverDays ?? 2}
-                onChange={(e) => update({ carryoverDays: Number(e.target.value) })}
+                onChange={(e) => { if (e.target.value && e.target.validity.valid) void update({ carryoverDays: Number(e.target.value) }); }}
                 className={`${nativeSelect} w-20 tabular-nums`}
               />
             </Row>
             <Row label={t("profile.weekStartsOn")}>
-              <Select value={String(profile.weekStartsOn ?? getDefaultWeekStartsOn(lang) ?? "")} onValueChange={(value) => update({ weekStartsOn: Number(value) })} ><SelectTrigger className={`${nativeSelect} w-36`}><SelectValue /></SelectTrigger><SelectContent>
+              <Select value={String(profile.weekStartsOn ?? getDefaultWeekStartsOn(lang) ?? "")} onValueChange={(value) => update({ weekStartsOn: Number(value) })} ><SelectTrigger aria-label={t("profile.weekStartsOn")} className={`${nativeSelect} w-36`}><SelectValue /></SelectTrigger><SelectContent>
                 {[0, 1, 2, 3, 4, 5, 6].map((i) => (
                   <SelectItem key={i} value={String(i)}>{t(`weekday.${i}`)}</SelectItem>
                 ))}
               </SelectContent></Select>
             </Row>
             <Row label={t("profile.graceDay")}>
-              <Switch checked={profile.graceDay} onCheckedChange={(v) => update({ graceDay: v })} />
+              <Switch aria-label={t("profile.graceDay")} checked={profile.graceDay} onCheckedChange={(v) => update({ graceDay: v })} />
             </Row>
             <Row label={t("profile.groupByPhase")}>
-              <Switch checked={profile.groupByPhase} onCheckedChange={(v) => update({ groupByPhase: v })} />
+              <Switch aria-label={t("profile.groupByPhase")} checked={profile.groupByPhase} onCheckedChange={(v) => update({ groupByPhase: v })} />
             </Row>
             <Row label={t("profile.hideHeroQuote")}>
               <Switch
+                aria-label={t("profile.hideHeroQuote")}
                 checked={profile.hideHeroQuote === true}
                 onCheckedChange={(v) => update({ hideHeroQuote: v })}
               />
             </Row>
             <div className="pt-1">
-              <Button variant="outline" size="sm" className="w-full" onClick={() => update({ introSeen: false })}>
+              <Button variant="outline" size="sm" className="min-h-11 w-full" onClick={() => update({ introSeen: false })}>
                 <PlayCircle className="h-4 w-4 mr-2" />{t("profile.introTour")}
               </Button>
             </div>
@@ -368,7 +392,7 @@ export default function Profile() {
                 <p className="text-xs text-muted-foreground">{t("profile.exportDataHint")}</p>
               </div>
               <div className="space-y-1.5">
-                <Button variant="outline" onClick={onImport} disabled={backup.progress !== "idle"} className="w-full">
+                <Button variant="outline" onClick={() => setImportOpen(true)} disabled={backup.progress !== "idle"} className="w-full">
                   <Upload className="h-4 w-4 mr-2" />{t("profile.import")}
                 </Button>
                 <p className="text-xs text-muted-foreground">{t("profile.importHint")}</p>
@@ -376,9 +400,9 @@ export default function Profile() {
             </div>
             <div className="border-t border-border pt-4"><AudioNotice /></div>
             <div className="space-y-2 border-t border-border pt-4">
-              <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1 text-xs font-medium">{t("profile.csvFrom")}<Input type="date" value={csvFrom} max={csvTo || undefined} onChange={(e) => setCsvFrom(e.target.value)} /></label>
-                <label className="grid gap-1 text-xs font-medium">{t("profile.csvTo")}<Input type="date" value={csvTo} min={csvFrom || undefined} onChange={(e) => setCsvTo(e.target.value)} /></label>
+              <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
+                <label className="grid gap-1 text-xs font-medium">{t("profile.csvFrom")}<Input className="min-w-0" type="date" value={csvFrom} max={csvTo || undefined} onChange={(e) => setCsvFrom(e.target.value)} /></label>
+                <label className="grid gap-1 text-xs font-medium">{t("profile.csvTo")}<Input className="min-w-0" type="date" value={csvTo} min={csvFrom || undefined} onChange={(e) => setCsvTo(e.target.value)} /></label>
               </div>
               <p className="text-xs text-muted-foreground">{t("profile.csvHint")}</p>
               <Button variant="outline" onClick={() => void onExportCsv()} className="w-full">
@@ -414,11 +438,12 @@ export default function Profile() {
                     return <>{pre}<code className="px-1 bg-muted rounded">DELETE</code>{post}</>;
                   })()}
                 </p>
-                <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
+                <Input aria-label={t("profile.typeDelete")} value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
                     className="flex-1"
+                    disabled={wiping}
                     onClick={() => { setConfirming(false); setConfirmText(""); }}
                   >
                     {t("common.cancel")}
@@ -426,10 +451,13 @@ export default function Profile() {
                   <Button
                     variant="destructive"
                     className="flex-1"
-                    disabled={confirmText !== "DELETE"}
+                    disabled={confirmText !== "DELETE" || wiping}
                     onClick={async () => {
-                      await applicationCommands.backups.wipe();
-                      location.reload();
+                      if (wiping) return;
+                      setWiping(true);
+                      try { await applicationCommands.backups.wipe(); location.reload(); }
+                      catch { toast.error(t("errors.couldNotSave")); }
+                      finally { setWiping(false); }
                     }}
                   >
                     {t("common.confirm")}
@@ -443,7 +471,7 @@ export default function Profile() {
         <button
           type="button"
           onClick={() => setAboutOpen(true)}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex min-h-11 items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <Info className="h-3.5 w-3.5" />
           {t("profile.about")}
@@ -452,7 +480,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <Dialog open={sampleOpen} onOpenChange={setSampleOpen}>
+      <Dialog open={sampleOpen} onOpenChange={value => { if (!seeding) setSampleOpen(value); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-serif text-xl">{t("profile.sampleDataChoose")}</DialogTitle>
@@ -475,12 +503,19 @@ export default function Profile() {
             ))}
           </div>
           <DialogFooter>
-            <Button variant="ghost" className="w-full" onClick={() => setSampleOpen(false)}>
+            <Button variant="ghost" className="w-full" disabled={seeding} onClick={() => setSampleOpen(false)}>
               {t("common.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={importOpen} onOpenChange={value => { if (backup.progress === "idle") setImportOpen(value); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>{t("profile.import")}</AlertDialogTitle><AlertDialogDescription>{t("profile.importWarning")}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={backup.progress !== "idle"}>{t("common.cancel")}</AlertDialogCancel><AlertDialogAction disabled={backup.progress !== "idle"} onClick={event => { event.preventDefault(); void onImport(); }}>{t("profile.import")}</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -507,7 +542,7 @@ export default function Profile() {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex min-h-11 items-center justify-between gap-3">
       <span className="text-sm flex-1 min-w-0">{label}</span>
       <div className="shrink-0">{children}</div>
     </div>

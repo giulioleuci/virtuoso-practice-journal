@@ -950,6 +950,8 @@
   "progress.contextHint": "Umore e concentrazione sono contesto: non cambiano preparazione, piano o routine.",
   "profile.exportData": "Esporta backup dei dati",
   "profile.exportDataHint": "Include dati e valutazioni. Non include i file audio.",
+  "profile.importWarning": "Importare un backup sostituisce tutti i dati del diario su questo dispositivo, incluse le voci più recenti. Esporta prima un backup. Un backup vuoto cancella il diario. I file audio non vengono ripristinati.",
+  "profile.sampleFailed": "Impossibile completare i dati di esempio. Alcuni dati esistenti potrebbero essere già stati sostituiti. Ripristina il tuo backup per recuperarli.",
   "profile.importHint": "Importa solo dati. I file audio non vengono ripristinati. Le registrazioni locali non vengono importate o esportate.",
   "profile.exportCsv": "Esporta file CSV",
   "profile.csvFrom": "Dal",

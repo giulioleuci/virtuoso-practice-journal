@@ -950,6 +950,8 @@
   "progress.contextHint": "Mood and focus are context: they never change readiness, plans or routines.",
   "profile.exportData": "Export data backup",
   "profile.exportDataHint": "Includes data and ratings. Does not include audio files.",
+  "profile.importWarning": "Importing a backup replaces all journal data on this device, including newer entries. Export a backup first. An empty backup clears the journal. Audio files are not restored.",
+  "profile.sampleFailed": "Sample data could not be completed. Some existing data may already have been replaced. Restore your backup to recover it.",
   "profile.importHint": "Imports data only. Audio files are not restored. Local recordings are never imported or exported.",
   "profile.exportCsv": "Export CSV files",
   "profile.csvFrom": "From",

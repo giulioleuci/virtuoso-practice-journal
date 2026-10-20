@@ -950,6 +950,8 @@
   "progress.contextHint": "El ánimo y la concentración son contexto: no cambian la preparación, el plan ni las rutinas.",
   "profile.exportData": "Exportar copia de seguridad de los datos",
   "profile.exportDataHint": "Incluye datos y valoraciones. No incluye los archivos de audio.",
+  "profile.importWarning": "Importar una copia sustituye todos los datos del diario en este dispositivo, incluidas las entradas más recientes. Exporta una copia antes. Una copia vacía borra el diario. Los archivos de audio no se restauran.",
+  "profile.sampleFailed": "No se pudieron completar los datos de ejemplo. Puede que algunos datos existentes ya se hayan sustituido. Restaura tu copia de seguridad para recuperarlos.",
   "profile.importHint": "Importa solo datos. Los archivos de audio no se restauran. Las grabaciones locales no se importan ni se exportan.",
   "profile.exportCsv": "Exportar archivos CSV",
   "profile.csvFrom": "Desde",
