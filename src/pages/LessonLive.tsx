@@ -63,14 +63,14 @@ export default function LessonLive() {
   const finish = () => { clearLiveLesson(); navigate("/lessons"); };
 
   return (
-    <div className="pb-[calc(1.5rem+env(safe-area-inset-bottom))] [&>header]:mb-1.5">
+    <div className="max-w-2xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] [&>header]:mb-1.5">
       <PageHeader title={t("lessonLive.title")} actions={<Button className="min-h-11" onClick={finish}>{t("lessonLive.finish")}</Button>} />
       <div className="mb-5 grid gap-1">
         <p className="break-words text-sm font-medium">{[recurrence?.teacher ?? lesson?.snapshot?.teacher, subject?.name ?? lesson?.snapshot?.subjectName].filter(Boolean).join(" · ")}</p>
         <div className="flex flex-wrap items-center gap-x-5">
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             {t("common.date")}
-            <Input type="date" required aria-invalid={!!dateError} aria-describedby={dateError ? "lesson-live-date-error" : undefined} value={dateValue} className="min-h-11 w-auto max-w-full text-foreground"
+            <Input type="date" name="date" required aria-invalid={!!dateError} aria-describedby={dateError ? "lesson-live-date-error" : undefined} value={dateValue} className="min-h-11 w-auto max-w-full text-foreground"
               onChange={(e) => setTyped({ base: date, value: e.target.value })} onBlur={commitDate} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
           </label>
           <LessonExtraActions subjectId={subjectId} />

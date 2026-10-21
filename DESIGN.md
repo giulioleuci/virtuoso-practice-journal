@@ -247,6 +247,7 @@ Gently rounded, never pill-shaped except badges, avatars and the floating Today 
 ### Inputs / Fields
 - **Style:** card-paper fill, input-line stroke, 6px radius, 44px tall, terracotta caret.
 - **Focus:** 3px terracotta ring with offset. **Disabled:** 50% opacity.
+- **Capture field:** a one-line textarea that grows with its text up to 40% of the viewport, then scrolls. Enter adds the line and Shift+Enter breaks it; unsent text survives a reload. A label-style caption sits above it and a 44px outline + button beside it. Used for live lesson homework and notes, which sit together under the header; their entries follow below a rule, newest first, under title-size serif headings.
 
 ### Switches, selects and menus
 - Switches retain a quiet 24px track inside a 44px square hit area.
@@ -260,6 +261,7 @@ Gently rounded, never pill-shaped except badges, avatars and the floating Today 
 ### Navigation
 - **Sidebar (≥700px):** serif wordmark, 46px nav rows, inactive muted ink, active terracotta text on `primary/10`; pending homework count as a terracotta badge.
 - **Bottom nav (<700px):** Plan, Lessons, floating Today (56px terracotta circle), Library, More. More opens a popover with Progress, Study setup, Weekly summary, Settings (44px rows). Pending homework shows as a terracotta dot on the Lessons icon, with the count in its accessible name. Today stays active while logging (`/log`). The nav is `inert` while hidden on scroll or keyboard.
+- **Back to lesson:** while a lesson is open, a terracotta "Back to lesson" row sits above the bottom navigation on phones and under the sidebar navigation from 700px. On phones it adds 2.75rem to `--navigation-height`, so floating bars and the main content's bottom padding clear it.
 
 Route arrivals focus the main content and set a localized page title. Hash navigation and filter changes keep focus in place. Settings section links wrap on phones; active criteria return focus to Search or Filters after removal.
 

@@ -63,6 +63,7 @@ it("Enter adds the line, Shift+Enter keeps typing", async () => {
   expect(fireEvent.keyDown(notes, { key: "Enter" })).toBe(false);
   expect(await screen.findByText("Line one")).toBeInTheDocument();
   expect(notes).toHaveValue("");
+  expect(screen.getByText(`${t("toast.added")}: Line one`)).toHaveAttribute("role", "status");
   await waitFor(async () => expect((await db.lessons.toArray())[0]?.notes?.map((n) => n.text)).toEqual(["Line one"]));
 });
 
@@ -84,6 +85,19 @@ it("a legacy string in notes renders without crashing", async () => {
   expect(screen.queryByRole("heading", { name: t("lessonLive.notes") })).not.toBeInTheDocument();
 });
 
+it("a failed add keeps the text in the field and says so", async () => {
+  vi.spyOn(lessonsService, "addNote").mockRejectedValueOnce(new Error("quota"));
+  const error = vi.spyOn(toast, "error");
+  renderPage();
+  const notes = await noteInput();
+  add(notes, "Keep me");
+  await waitFor(() => expect(error).toHaveBeenCalledWith(t("lessonLive.notSaved")));
+  expect(notes).toHaveValue("Keep me");
+  fireEvent.submit(notes.closest("form")!);
+  expect(await screen.findByText("Keep me")).toBeInTheDocument();
+  expect(notes).toHaveValue("");
+});
+
 it("two quick adds create one lesson", async () => {
   renderPage();
   const notes = await noteInput();
@@ -103,7 +117,8 @@ it("editing a note updates it and an empty edit is rejected", async () => {
   const id = await db.lessons.add({ subjectId, recurrenceId, date: DATE, notes: [{ id: "n1", text: "Old" }], createdAt: 1 });
   renderPage(`/lessons/live?lesson=${id}`);
   fireEvent.click(await screen.findByRole("button", { name: `${t("common.edit")}: Old` }));
-  const field = screen.getByRole("textbox", { name: `${t("common.edit")}: Old` });
+  const field = screen.getByRole("textbox", { name: `${t("common.edit")}: Old` }) as HTMLTextAreaElement;
+  expect(field.selectionStart).toBe("Old".length); // caret after the text
   fireEvent.change(field, { target: { value: "   " } });
   fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
   expect(field).toHaveAttribute("aria-invalid", "true");
@@ -112,7 +127,8 @@ it("editing a note updates it and an empty edit is rejected", async () => {
   fireEvent.change(field, { target: { value: "New" } });
   expect(field).not.toHaveAttribute("aria-invalid", "true");
   fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
-  expect(await screen.findByText("New")).toBeInTheDocument();
+  // The edit textarea also carries "New" as text content until it closes: wait for the saved row.
+  expect(await screen.findByText("New", { selector: "p" })).toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole("button", { name: `${t("common.edit")}: New` })).toHaveFocus());
   await waitFor(async () => expect((await db.lessons.get(id))?.notes).toEqual([{ id: "n1", text: "New" }]));
 });
@@ -133,6 +149,14 @@ it("deleting a homework removes it and undo restores it", async () => {
   options.action.onClick();
   expect(await screen.findByText("Scales")).toBeInTheDocument();
   await waitFor(async () => expect(await db.assignments.toArray()).toEqual([before]));
+});
+
+it("deleting a row moves focus to the next row", async () => {
+  const id = await db.lessons.add({ subjectId, recurrenceId, date: DATE, notes: [{ id: "n1", text: "Older" }, { id: "n2", text: "Newer" }], createdAt: 1 });
+  renderPage(`/lessons/live?lesson=${id}`);
+  fireEvent.click(await screen.findByRole("button", { name: `${t("common.delete")}: Newer` }));
+  expect(screen.getByRole("button", { name: `${t("common.edit")}: Older` })).toHaveFocus();
+  await waitFor(() => expect(screen.queryByText("Newer")).not.toBeInTheDocument());
 });
 
 it("unsent text is restored after remount", async () => {

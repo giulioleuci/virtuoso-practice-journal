@@ -1088,5 +1088,6 @@
   "lessonLive.removed": "Rimosso",
   "lessonLive.emptyEdit": "Scrivi qualcosa, oppure elimina la voce",
   "lessonLive.resume": "Riprendi lezione",
-  "lessonLive.backToLesson": "Torna alla lezione"
+  "lessonLive.backToLesson": "Torna alla lezione",
+  "lessonLive.notSaved": "Non salvato. Il testo è ancora lì: riprova."
 }

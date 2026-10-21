@@ -11,7 +11,7 @@ export function FloatingActions({ children, className, ...props }: React.HTMLAtt
   // Outside the app shell there is no outlet context: assume the navigation shows.
   const navHidden = (useOutletContext<{ navHidden?: boolean } | null>() ?? {}).navHidden === true;
   const keyboard = useKeyboardInset();
-  const bottom = keyboard > 0 ? `${keyboard + 8}px` : navHidden ? "calc(12px + env(safe-area-inset-bottom))" : "calc(84px + env(safe-area-inset-bottom))";
+  const bottom = keyboard > 0 ? `${keyboard + 8}px` : navHidden ? "calc(12px + env(safe-area-inset-bottom))" : "calc(12px + var(--navigation-height, 72px) + env(safe-area-inset-bottom))";
   return (
     <div
       {...props}

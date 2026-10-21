@@ -74,6 +74,16 @@ it("resumes the lesson in progress from the banner", async () => {
   expect(await screen.findByRole("link", { name: t("lessonLive.resume") })).toHaveAttribute("href", `/lessons/live?recurrence=${id}&date=${today()}`);
 });
 
+it("leaves the banner on today's lesson while another lesson is in progress", async () => {
+  const id = await lessonToday();
+  const other = await db.lessons.add({ subjectId, date: "2026-01-07", createdAt: 1 });
+  setLiveLesson(`/lessons/live?lesson=${other}`);
+  show();
+  expect(await screen.findByRole("link", { name: t("lessonLive.title") })).toHaveAttribute("href", `/lessons/live?recurrence=${id}&date=${today()}`);
+  expect(screen.queryByRole("link", { name: t("lessonLive.resume") })).not.toBeInTheDocument();
+  expect(readLiveLesson()).toBe(`/lessons/live?lesson=${other}`);
+});
+
 it("drops a pointer to a deleted teacher and offers a new lesson", async () => {
   const id = await lessonToday();
   setLiveLesson(`/lessons/live?recurrence=${id + 1}&date=${today()}`);

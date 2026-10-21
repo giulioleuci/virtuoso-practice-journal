@@ -84,7 +84,8 @@ export default function AppShell({ profile }: { profile: Profile }) {
 
   return (
     <div
-      className="app-shell min-h-screen"
+      // The phone chip row adds 2.75rem to the bottom navigation; floating bars read the height from this variable.
+      className={cn("app-shell min-h-screen", backToLesson && "[--navigation-height:calc(72px+2.75rem)] min-[700px]:[--navigation-height:0px]")}
       style={{
         "--navigation-height": navHidden ? "0px" : undefined,
         "--keyboard-inset": `${keyboardInset}px`,
@@ -163,7 +164,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
         ref={main}
         id="main-content"
         tabIndex={-1}
-        className={cn("px-5 min-[700px]:px-7 min-[1151px]:px-9 pb-[calc(7rem+env(safe-area-inset-bottom))] min-[700px]:pb-[calc(4rem+env(safe-area-inset-bottom))]", SIDEBAR_W)}
+        className={cn("px-5 min-[700px]:px-7 min-[1151px]:px-9 min-[700px]:pb-[calc(4rem+env(safe-area-inset-bottom))]", backToLesson ? "pb-[calc(9.75rem+env(safe-area-inset-bottom))]" : "pb-[calc(7rem+env(safe-area-inset-bottom))]", SIDEBAR_W)}
         style={{ paddingTop: "calc(1.75rem + env(safe-area-inset-top))" }}
       >
         {/* ponytail: pages not yet ported to the new design stay in a 3xl column */}

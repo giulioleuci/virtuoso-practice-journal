@@ -666,7 +666,9 @@ function LessonTodayBanner({
   t: (k: string, v?: Record<string, string | number>) => string;
 }) {
   const subject = subjects.find((s) => s.id === rec.subjectId);
-  const live = useLiveLesson();
+  // Resume only this slot's lesson; any other lesson in progress is reached through the shell's chip.
+  const path = liveLessonPath({ recurrenceId: rec.id, date: today() });
+  const resume = useLiveLesson() === path;
   return (
     <div className="rounded-lg bg-info-subtle p-6 shadow-soft">
       <h2 className="font-sans text-sm font-semibold text-info">
@@ -678,8 +680,8 @@ function LessonTodayBanner({
         </p>
       )}
       <Button asChild className="mt-3 min-h-11">
-        <Link to={live ?? liveLessonPath({ recurrenceId: rec.id, date: today() })}>
-          {t(live ? "lessonLive.resume" : "lessonLive.title")} <ArrowRightIcon className="h-3.5 w-3.5" />
+        <Link to={path}>
+          {t(resume ? "lessonLive.resume" : "lessonLive.title")} <ArrowRightIcon className="h-3.5 w-3.5" />
         </Link>
       </Button>
       <LessonExtraActions subjectId={rec.subjectId} />

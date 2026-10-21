@@ -1088,5 +1088,6 @@
   "lessonLive.removed": "Entfernt",
   "lessonLive.emptyEdit": "Schreib etwas oder lösche den Eintrag",
   "lessonLive.resume": "Stunde fortsetzen",
-  "lessonLive.backToLesson": "Zurück zur Stunde"
+  "lessonLive.backToLesson": "Zurück zur Stunde",
+  "lessonLive.notSaved": "Nicht gespeichert. Dein Text ist noch da: versuch es noch einmal."
 }

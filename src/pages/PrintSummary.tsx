@@ -84,8 +84,8 @@ export default function PrintSummary() {
 
   return (
     <div className="print-summary min-h-screen bg-background text-foreground px-5 py-6 [overflow-wrap:anywhere] max-w-3xl mx-auto">
-      <div className="no-print flex items-center justify-between mb-5">
-        <Link to="/history" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground min-h-[44px]">
+      <div className="no-print flex items-center justify-between gap-3 mb-5">
+        <Link to="/history" className="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground min-h-[44px]">
           <ArrowLeft className="h-4 w-4" /> {t("common.back")}
         </Link>
         <button

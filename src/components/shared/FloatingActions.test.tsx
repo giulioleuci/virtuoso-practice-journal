@@ -18,7 +18,7 @@ describe("FloatingActions", () => {
     render(bar(false));
     const el = screen.getByRole("button", { name: "Save" }).parentElement!;
     expect(el.className).toMatch(/fixed/);
-    expect(el.style.getPropertyValue("--bar-bottom")).toBe("calc(84px + env(safe-area-inset-bottom))");
+    expect(el.style.getPropertyValue("--bar-bottom")).toBe("calc(12px + var(--navigation-height, 72px) + env(safe-area-inset-bottom))");
   });
 
   it("drops to the system bar when the navigation hides", () => {
@@ -28,7 +28,7 @@ describe("FloatingActions", () => {
 
   it("renders outside the app shell too, with the navigation assumed visible", () => {
     render(<MemoryRouter><FloatingActions><button>Save</button></FloatingActions></MemoryRouter>);
-    expect(screen.getByRole("button", { name: "Save" }).parentElement!.style.getPropertyValue("--bar-bottom")).toContain("84px");
+    expect(screen.getByRole("button", { name: "Save" }).parentElement!.style.getPropertyValue("--bar-bottom")).toContain("var(--navigation-height, 72px)");
   });
 });
 
