@@ -9,6 +9,7 @@ import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadP
 import { I18nContext, translate } from "@/lib/i18n";
 import { today } from "@/lib/date";
 import type { Profile } from "@/domain/entities/profile";
+import { readLiveLesson, setLiveLesson } from "@/lib/liveLesson";
 import Diary from "./Diary";
 
 const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
@@ -19,7 +20,7 @@ beforeEach(async () => {
   configurePresentationQueries(dexiePresentationReads);
   subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
 
 function show() {
   const profile = { id: "me", name: "Clara", hideHeroQuote: true } as Profile;
@@ -55,4 +56,28 @@ it("labels the week arrows by the distance they move", async () => {
   show();
   expect(await screen.findByRole("button", { name: "Previous week" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Next week" })).toBeInTheDocument();
+});
+
+const lessonToday = () => db.recurrences.add({ subjectId, teacher: "Rossi", schedules: [{ dayOfWeek: new Date().getDay(), startTime: "17:00", endTime: "18:00", frequency: "weekly" }], startDate: "2020-01-01", color: "sage", createdAt: 1 }) as Promise<number>;
+
+it("opens today's lesson on the live page instead of asking for homework in the banner", async () => {
+  const id = await lessonToday();
+  show();
+  expect(await screen.findByRole("link", { name: t("lessonLive.title") })).toHaveAttribute("href", `/lessons/live?recurrence=${id}&date=${today()}`);
+  expect(screen.queryByPlaceholderText(t("homework.textPlaceholder"))).not.toBeInTheDocument();
+});
+
+it("resumes the lesson in progress from the banner", async () => {
+  const id = await lessonToday();
+  setLiveLesson(`/lessons/live?recurrence=${id}&date=${today()}`);
+  show();
+  expect(await screen.findByRole("link", { name: t("lessonLive.resume") })).toHaveAttribute("href", `/lessons/live?recurrence=${id}&date=${today()}`);
+});
+
+it("drops a pointer to a deleted teacher and offers a new lesson", async () => {
+  const id = await lessonToday();
+  setLiveLesson(`/lessons/live?recurrence=${id + 1}&date=${today()}`);
+  show();
+  expect(await screen.findByRole("link", { name: t("lessonLive.title") })).toBeInTheDocument();
+  await waitFor(() => expect(readLiveLesson()).toBeUndefined());
 });

@@ -1,8 +1,8 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useActiveTasks, useAssignments, useLessons, useOpenHelpRequestCount, useRecurrences, useSubjects } from "@/presentation/hooks/useEntities";
 import { subjectColorCss } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
-import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
+import type { LessonRecurrence } from "@/domain/entities/lesson";
 import { lessonsService } from "@/lib/services";
 import { assignmentsToPlan } from "@/presentation/utils/assignments";
 import { useI18n } from "@/lib/i18n";
@@ -31,14 +31,14 @@ import {
   X,
 } from "lucide-react";
 import { RecurrenceSheet } from "@/components/lessons/RecurrenceSheet";
-import { LessonLogSheet, type LessonLogContext } from "@/components/lessons/LessonLogSheet";
 import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { NextLessonPanel } from "@/components/lessons/NextLessonPanel";
 import { upcomingLessonDates, slotForDate } from "@/lib/recurrence";
 import { dayKey, today } from "@/lib/date";
 import { toast } from "sonner";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { liveLessonPath } from "@/lib/liveLesson";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pager } from "@/components/shared/Pager";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -51,7 +51,6 @@ export default function Lessons() {
   const { t, lang } = useI18n();
   const lessonQuote = useMemo(() => pickQuote(LESSON_QUOTES, lang), [lang]);
   const navigate = useNavigate();
-  const location = useLocation();
   const recurrences = useRecurrences();
   const subjects = useSubjects();
   const lessons = useLessons();
@@ -66,8 +65,6 @@ export default function Lessons() {
   const [editingRec, setEditingRec] = useState<LessonRecurrence | null>(null);
   const [delRecId, setDelRecId] = useState<number | null>(null);
 
-  const [logOpen, setLogOpen] = useState(false);
-  const [logContext, setLogContext] = useState<LessonLogContext | null>(null);
   const [delLessonId, setDelLessonId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -86,24 +83,7 @@ export default function Lessons() {
   const subjectMap = useMemo(() => new Map((subjects ?? []).map((s) => [s.id, s])), [subjects]);
   const subjectName = (id: number) => subjectMap.get(id)?.name ?? "—";
 
-  const openLog = (r: LessonRecurrence, date?: string) => {
-    setLogContext({ recurrence: r, prefilledDate: date });
-    setLogOpen(true);
-  };
-  const openEditLesson = (l: Lesson) => {
-    setLogContext({ lesson: l, recurrence: recurrences?.find((r) => r.id === l.recurrenceId) ?? null });
-    setLogOpen(true);
-  };
-
-  // Open lesson log when navigated here from the Diary today-lesson banner.
-  useEffect(() => {
-    const s = location.state as { openLogForRecurrenceId?: number; date?: string } | null;
-    if (!s?.openLogForRecurrenceId || !recurrences) return;
-    const rec = recurrences.find((r) => r.id === s.openLogForRecurrenceId);
-    // Clear state regardless so a missing/deleted recurrence doesn't cause an infinite retry.
-    navigate(location.pathname, { replace: true, state: null });
-    if (rec) openLog(rec, s.date);
-  }, [location.state, recurrences]); // eslint-disable-line react-hooks/exhaustive-deps
+  const openLog = (r: LessonRecurrence, date = today()) => navigate(liveLessonPath({ recurrenceId: r.id, date }));
 
   const deleteRec = async () => {
     if (delRecId == null || deleting) return;
@@ -209,9 +189,9 @@ export default function Lessons() {
                           <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                             <h3 className="flex items-center gap-2 font-serif text-xl font-semibold">{dot(l.subjectId)}{subjectName(l.subjectId)}</h3>
                             <div className="text-xs text-muted-foreground">{formatDate(l.date, lang)}</div>
-                            {!!l.notes?.length && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{l.notes.map((n) => n.text).join(" · ")}</p>}
+                            {Array.isArray(l.notes) && l.notes.length > 0 && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{l.notes.map((n) => n.text).join(" · ")}</p>}
                           </div>
-                          <button onClick={() => openEditLesson(l)} className={iconBtn} aria-label={`${t("common.edit")} ${formatDate(l.date, lang)}`}><Pencil className="h-4 w-4" /></button>
+                          <button onClick={() => navigate(liveLessonPath({ lessonId: l.id }))} className={iconBtn} aria-label={`${t("common.edit")} ${formatDate(l.date, lang)}`}><Pencil className="h-4 w-4" /></button>
                           <button onClick={() => l.id && setDelLessonId(l.id)} className={`${iconBtn} hover:text-destructive`} aria-label={`${t("common.delete")} ${formatDate(l.date, lang)}`}><Trash2 className="h-4 w-4" /></button>
                         </div>
                         {las.length > 0 && (
@@ -300,15 +280,6 @@ export default function Lessons() {
           if (!o) setEditingRec(null);
         }}
         recurrence={editingRec}
-      />
-
-      <LessonLogSheet
-        open={logOpen}
-        onOpenChange={(o) => {
-          setLogOpen(o);
-          if (!o) setLogContext(null);
-        }}
-        context={logContext || undefined}
       />
 
       {recapOpen && <Suspense fallback={<ResponsiveSheet open onOpenChange={setRecapOpen} title={t("recap.title")} description={t("recap.subtitle")}><p role="status" className="text-sm text-muted-foreground">{t("common.loading")}</p></ResponsiveSheet>}>

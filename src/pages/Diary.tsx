@@ -31,7 +31,6 @@ import { SessionFAB } from "@/components/diary/SessionFAB";
 import { CompletionBar } from "@/components/diary/CompletionBar";
 import { WeekStrip } from "@/components/diary/WeekStrip";
 import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
-import { HomeworkInput } from "@/components/lessons/HomeworkInput";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { FloatingActions } from "@/components/shared/FloatingActions";
@@ -49,6 +48,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { pickQuote } from "@/lib/quotes";
+import { liveLessonPath } from "@/lib/liveLesson";
+import { useLiveLesson } from "@/presentation/hooks/useLiveLesson";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -223,7 +224,7 @@ export default function Diary() {
       {todayLessons.length > 0 && (
         <div className="mb-6 space-y-4">
           {todayLessons.map(({ rec, slot }) => (
-            <LessonTodayBanner key={`${rec.id}-${slot?.dayOfWeek}-${slot?.startTime}`} rec={rec} slot={slot} subjects={subjects ?? []} t={t} navigate={navigate} />
+            <LessonTodayBanner key={`${rec.id}-${slot?.dayOfWeek}-${slot?.startTime}`} rec={rec} slot={slot} subjects={subjects ?? []} t={t} />
           ))}
         </div>
       )}
@@ -658,16 +659,14 @@ function LessonTodayBanner({
   slot,
   subjects,
   t,
-  navigate,
 }: {
   rec: LessonRecurrence;
   slot?: ReturnType<typeof slotForDate>;
   subjects: Subject[];
   t: (k: string, v?: Record<string, string | number>) => string;
-  navigate: ReturnType<typeof useNavigate>;
 }) {
   const subject = subjects.find((s) => s.id === rec.subjectId);
-  const link = "inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4";
+  const live = useLiveLesson();
   return (
     <div className="rounded-lg bg-info-subtle p-6 shadow-soft">
       <h2 className="font-sans text-sm font-semibold text-info">
@@ -678,12 +677,11 @@ function LessonTodayBanner({
           {subject?.name}{subject && slot ? " · " : ""}{slot ? slot.startTime : ""}
         </p>
       )}
-      <HomeworkInput recurrence={rec} date={today()} className="mt-3 flex gap-2" />
-      <div className="mt-2 flex flex-wrap items-center gap-x-5">
-        <button onClick={() => navigate("/lessons", { state: { openLogForRecurrenceId: rec.id, date: today() } })} className={link}>
-          {t("lesson.log")} <ArrowRightIcon className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      <Button asChild className="mt-3 min-h-11">
+        <Link to={live ?? liveLessonPath({ recurrenceId: rec.id, date: today() })}>
+          {t(live ? "lessonLive.resume" : "lessonLive.title")} <ArrowRightIcon className="h-3.5 w-3.5" />
+        </Link>
+      </Button>
       <LessonExtraActions subjectId={rec.subjectId} />
     </div>
   );

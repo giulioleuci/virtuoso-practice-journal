@@ -258,11 +258,6 @@
   "teacher.schedules": "Schedule",
   "teacher.addSchedule": "Add day",
   "teacher.scheduleN": "Day {{n}}",
-  "lesson.log": "Log lesson",
-  "lesson.edit": "Edit lesson",
-  "lesson.with": "with {{teacher}}",
-  "lesson.notes": "Notes",
-  "lesson.notesPlaceholder": "What was discussed, what landed, what didn't…",
   "recap.generalQuestions": "General questions",
   "recap.title": "Ask the Teacher",
   "recap.subtitle": "Open questions and recorded answers, grouped by subject.",
@@ -306,7 +301,6 @@
   "errors.bpmRange": "BPM out of range",
   "errors.dateRequired": "Date is required",
   "errors.teacherRequired": "Teacher name required",
-  "errors.noSubjectLinked": "No subject linked",
   "errors.subjectExists": "Subject already exists",
   "errors.invalidFile": "Invalid file",
   "errors.couldNotSave": "Could not save",
@@ -325,8 +319,6 @@
   "toast.exported": "Exported",
   "toast.imported": "Imported",
   "toast.ignored": "Ignored",
-  "toast.lessonLogged": "Lesson logged",
-  "toast.lessonUpdated": "Lesson updated",
   "toast.lessonDeleted": "Lesson deleted",
   "toast.answerSaved": "Answer saved",
   "toast.markedResolved": "Marked resolved",
@@ -1094,5 +1086,7 @@
   "lessonLive.finish": "Finish lesson",
   "lessonLive.dateTaken": "Another lesson already exists on that day",
   "lessonLive.removed": "Removed",
-  "lessonLive.emptyEdit": "Write something, or delete the entry"
+  "lessonLive.emptyEdit": "Write something, or delete the entry",
+  "lessonLive.resume": "Resume lesson",
+  "lessonLive.backToLesson": "Back to lesson"
 }

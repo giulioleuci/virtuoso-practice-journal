@@ -258,11 +258,6 @@
   "teacher.schedules": "Orario",
   "teacher.addSchedule": "Aggiungi giorno",
   "teacher.scheduleN": "Giorno {{n}}",
-  "lesson.log": "Registra lezione",
-  "lesson.edit": "Modifica lezione",
-  "lesson.with": "con {{teacher}}",
-  "lesson.notes": "Note",
-  "lesson.notesPlaceholder": "Cosa è stato discusso, cosa ha funzionato, cosa no…",
   "recap.generalQuestions": "Domande generali",
   "recap.title": "Chiedi al maestro",
   "recap.subtitle": "Domande aperte e risposte registrate, raggruppate per materia.",
@@ -306,7 +301,6 @@
   "errors.bpmRange": "BPM fuori intervallo",
   "errors.dateRequired": "La data è obbligatoria",
   "errors.teacherRequired": "Il nome dell'insegnante è obbligatorio",
-  "errors.noSubjectLinked": "Nessuna materia collegata",
   "errors.subjectExists": "La materia esiste già",
   "errors.invalidFile": "File non valido",
   "errors.couldNotSave": "Impossibile salvare",
@@ -325,8 +319,6 @@
   "toast.exported": "Esportato",
   "toast.imported": "Importato",
   "toast.ignored": "Ignorato",
-  "toast.lessonLogged": "Lezione registrata",
-  "toast.lessonUpdated": "Lezione aggiornata",
   "toast.lessonDeleted": "Lezione eliminata",
   "toast.answerSaved": "Risposta salvata",
   "toast.markedResolved": "Segnato come risolto",
@@ -1094,5 +1086,7 @@
   "lessonLive.finish": "Termina lezione",
   "lessonLive.dateTaken": "Esiste già una lezione in quel giorno",
   "lessonLive.removed": "Rimosso",
-  "lessonLive.emptyEdit": "Scrivi qualcosa, oppure elimina la voce"
+  "lessonLive.emptyEdit": "Scrivi qualcosa, oppure elimina la voce",
+  "lessonLive.resume": "Riprendi lezione",
+  "lessonLive.backToLesson": "Torna alla lezione"
 }

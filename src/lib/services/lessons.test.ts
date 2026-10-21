@@ -177,6 +177,20 @@ describe("lessonsService notes and date", () => {
     expect((await db.lessons.get(id))!.notes).toEqual([{ id: a, text: "A" }, { id: b, text: "B" }]);
   });
 
+  it("note writes on a legacy string row start a fresh list instead of spreading the string", async () => {
+    const id = await lessonsService.ensureFor(1, null, "2025-03-01");
+    const legacy = () => db.lessons.update(id, { notes: "old text" as never });
+    const notes = async () => (await db.lessons.get(id))!.notes;
+    await legacy(); await lessonsService.updateNote(id, "x", "X");
+    expect(await notes()).toEqual([]);
+    await legacy(); await lessonsService.removeNote(id, "x");
+    expect(await notes()).toEqual([]);
+    await legacy(); await lessonsService.reinsertNote(id, { id: "r", text: "R" }, 0);
+    expect(await notes()).toEqual([{ id: "r", text: "R" }]);
+    await legacy(); const a = await lessonsService.addNote(id, "A");
+    expect(await notes()).toEqual([{ id: a, text: "A" }]);
+  });
+
   it("reinsertAssignment brings the removed record back unchanged", async () => {
     const id = await lessonsService.ensureFor(1, null, "2025-03-01");
     const assignmentId = await lessonsService.addAssignment(id, "Scales");

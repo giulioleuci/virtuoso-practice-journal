@@ -3,6 +3,12 @@ const DRAFT = "virtuoso-lesson-draft-";
 export const LIVE_LESSON_EVENT = "virtuoso-live-lesson";
 const notify = () => window.dispatchEvent(new Event(LIVE_LESSON_EVENT));
 
+/** `lesson=` opens a logged lesson on its own date; a teacher or subject slot needs the `date`. */
+export function liveLessonPath(at: { lessonId?: number; recurrenceId?: number; subjectId?: number; date?: string }) {
+  const [key, id] = at.lessonId ? ["lesson", at.lessonId] : at.recurrenceId ? ["recurrence", at.recurrenceId] : ["subject", at.subjectId];
+  return `/lessons/live?${key}=${id}${at.date ? `&date=${at.date}` : ""}`;
+}
+
 /** The `/lessons/live?...` path of the lesson being taken, if any. */
 export function readLiveLesson(): string | undefined {
   try { return localStorage.getItem(POINTER) ?? undefined; } catch { return undefined; }

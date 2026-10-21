@@ -258,11 +258,6 @@
   "teacher.schedules": "Zeitplan",
   "teacher.addSchedule": "Tag hinzufügen",
   "teacher.scheduleN": "Tag {{n}}",
-  "lesson.log": "Stunde erfassen",
-  "lesson.edit": "Stunde bearbeiten",
-  "lesson.with": "mit {{teacher}}",
-  "lesson.notes": "Notizen",
-  "lesson.notesPlaceholder": "Was besprochen wurde, was gut lief, was nicht…",
   "recap.generalQuestions": "Allgemeine Fragen",
   "recap.title": "Lehrer fragen",
   "recap.subtitle": "Offene Fragen und aufgezeichnete Antworten, nach Fach gruppiert.",
@@ -306,7 +301,6 @@
   "errors.bpmRange": "BPM außerhalb des Bereichs",
   "errors.dateRequired": "Datum ist erforderlich",
   "errors.teacherRequired": "Lehrername ist erforderlich",
-  "errors.noSubjectLinked": "Kein Fach verknüpft",
   "errors.subjectExists": "Fach existiert bereits",
   "errors.invalidFile": "Ungültige Datei",
   "errors.couldNotSave": "Konnte nicht speichern",
@@ -325,8 +319,6 @@
   "toast.exported": "Exportiert",
   "toast.imported": "Importiert",
   "toast.ignored": "Ignoriert",
-  "toast.lessonLogged": "Stunde erfasst",
-  "toast.lessonUpdated": "Stunde aktualisiert",
   "toast.lessonDeleted": "Stunde gelöscht",
   "toast.answerSaved": "Antwort gespeichert",
   "toast.markedResolved": "Als gelöst markiert",
@@ -1094,5 +1086,7 @@
   "lessonLive.finish": "Stunde beenden",
   "lessonLive.dateTaken": "An diesem Tag gibt es bereits eine Stunde",
   "lessonLive.removed": "Entfernt",
-  "lessonLive.emptyEdit": "Schreib etwas oder lösche den Eintrag"
+  "lessonLive.emptyEdit": "Schreib etwas oder lösche den Eintrag",
+  "lessonLive.resume": "Stunde fortsetzen",
+  "lessonLive.backToLesson": "Zurück zur Stunde"
 }

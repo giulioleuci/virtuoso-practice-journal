@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHorizontal, Printer, Settings, Shapes } from "lucide-react";
+import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHorizontal, NotebookPen, Printer, Settings, Shapes } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { useReminderSchedule } from "@/hooks/useReminderSchedule";
 import { useActiveTasks, useAssignments } from "@/presentation/hooks/useEntities";
+import { useLiveLesson } from "@/presentation/hooks/useLiveLesson";
 import { assignmentsToPlan } from "@/presentation/utils/assignments";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
@@ -20,6 +21,8 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const location = useLocation();
   const pageKey = "/" + (location.pathname.split("/")[1] ?? "");
   const pendingHomework = assignmentsToPlan(useAssignments(), useActiveTasks()).length;
+  const liveLesson = useLiveLesson();
+  const backToLesson = location.pathname === "/lessons/live" ? undefined : liveLesson;
   const items = [
     { to: "/", label: t("nav.today"), icon: CalendarDays, also: ["/log"] },
     { to: "/tasks", label: t("nav.plan"), short: t("nav.planShort"), icon: ListChecks },
@@ -126,6 +129,12 @@ export default function AppShell({ profile }: { profile: Profile }) {
             );
           })}
         </nav>
+        {backToLesson && (
+          <Link to={backToLesson} className="mt-4 flex min-h-11 items-center gap-3 rounded-lg bg-primary/10 px-2.5 py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:bg-primary/15 min-[1151px]:px-3.5 min-[1151px]:text-sm">
+            <NotebookPen className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+            {t("lessonLive.backToLesson")}
+          </Link>
+        )}
         <div className="mt-auto grid gap-1.5">
           {secondary.map(({ to, label, icon: Icon }) => (
             <Link
@@ -173,6 +182,13 @@ export default function AppShell({ profile }: { profile: Profile }) {
         // inert (React 18 lacks the prop) also drops the hidden links from the tab order, which aria-hidden did not.
         {...(navHidden ? { inert: "" } : {})}
       >
+        {/* pb-3 keeps the label clear of the raised Today button below it */}
+        {backToLesson && (
+          <Link to={backToLesson} className="flex min-h-11 items-center gap-2 px-3 pb-3 pt-1 text-sm font-medium text-primary">
+            <NotebookPen className="h-4 w-4 shrink-0" />
+            {t("lessonLive.backToLesson")}
+          </Link>
+        )}
         <div className="flex h-[72px] items-stretch justify-around">
           {mobileItems.map(({ to, label, short, icon: Icon, also, badge }) => {
             const active = isActive(to, also);

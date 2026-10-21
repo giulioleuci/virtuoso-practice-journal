@@ -4,6 +4,8 @@ import { now } from "@/lib/date";
 import type { LessonPort } from "@/domain/ports/lesson";
 export async function buildDexieLessonSnapshot(subjectId: number, recurrence: LessonRecurrence | null | undefined, piecePlayedIds: number[] = []) { const [subject, pieces] = await Promise.all([db.subjects.get(subjectId), piecePlayedIds.length ? db.library.where("id").anyOf(piecePlayedIds).toArray() : []]); return { snapshot: { subjectName: subject?.name ?? "—", teacher: recurrence?.teacher, frequency: recurrence?.schedules?.[0]?.frequency }, piecesPlayedTitles: pieces.map((piece) => piece.title) }; }
 const findSlot = (subjectId: number, recurrenceId: number | undefined, date: string) => db.lessons.where("date").equals(date).and((lesson) => lesson.subjectId === subjectId && lesson.recurrenceId === recurrenceId).first();
+// Rows written before notes became a list may still hold a string: start a fresh list rather than spread it.
+const notesOf = (l: Lesson): LessonNote[] => (Array.isArray(l.notes) ? l.notes : []);
 export const lessonRepository = {
   list: () => db.lessons.toArray(), get: (id: number) => db.lessons.get(id), listRecurrences: () => db.recurrences.toArray(),
   upsertRecurrence: async (data: Omit<LessonRecurrence, "id">, id?: number) => { if (id) { await db.recurrences.put({ ...data, id }); return id; } return db.recurrences.add(data) as Promise<number>; }, deleteRecurrence: async (id: number) => { await db.recurrences.delete(id); },
@@ -20,10 +22,10 @@ export const lessonRepository = {
     for (const text of assignmentTexts) await lessonRepository.addAssignment(id, text);
     return id;
   },
-  async addNote(lessonId: number, text: string) { const trimmed = text.trim(); if (!trimmed) return ""; const id = crypto.randomUUID(); await db.lessons.where("id").equals(lessonId).modify((l) => { l.notes = [...(l.notes ?? []), { id, text: trimmed }]; }); return id; },
-  async updateNote(lessonId: number, noteId: string, text: string) { const trimmed = text.trim(); if (trimmed) await db.lessons.where("id").equals(lessonId).modify((l) => { l.notes = l.notes?.map((n) => (n.id === noteId ? { ...n, text: trimmed } : n)); }); },
-  async removeNote(lessonId: number, noteId: string) { await db.lessons.where("id").equals(lessonId).modify((l) => { l.notes = l.notes?.filter((n) => n.id !== noteId); }); },
-  async reinsertNote(lessonId: number, note: LessonNote, index: number) { await db.lessons.where("id").equals(lessonId).modify((l) => { const notes = [...(l.notes ?? [])]; if (!notes.some((n) => n.id === note.id)) notes.splice(index, 0, note); l.notes = notes; }); },
+  async addNote(lessonId: number, text: string) { const trimmed = text.trim(); if (!trimmed) return ""; const id = crypto.randomUUID(); await db.lessons.where("id").equals(lessonId).modify((l) => { l.notes = [...notesOf(l), { id, text: trimmed }]; }); return id; },
+  async updateNote(lessonId: number, noteId: string, text: string) { const trimmed = text.trim(); if (trimmed) await db.lessons.where("id").equals(lessonId).modify((l) => { l.notes = notesOf(l).map((n) => (n.id === noteId ? { ...n, text: trimmed } : n)); }); },
+  async removeNote(lessonId: number, noteId: string) { await db.lessons.where("id").equals(lessonId).modify((l) => { l.notes = notesOf(l).filter((n) => n.id !== noteId); }); },
+  async reinsertNote(lessonId: number, note: LessonNote, index: number) { await db.lessons.where("id").equals(lessonId).modify((l) => { const notes = [...notesOf(l)]; if (!notes.some((n) => n.id === note.id)) notes.splice(index, 0, note); l.notes = notes; }); },
   async setDate(lessonId: number, date: string) {
     await db.transaction("rw", db.lessons, async () => {
       const lesson = await db.lessons.get(lessonId);

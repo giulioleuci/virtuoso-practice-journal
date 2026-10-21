@@ -6,7 +6,6 @@ import { db } from "@/lib/db";
 import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import { I18nContext, translate } from "@/lib/i18n";
-import { LessonLogSheet } from "./LessonLogSheet";
 import { RecurrenceSheet } from "./RecurrenceSheet";
 import { TeacherRecapSheet } from "./TeacherRecapSheet";
 import { MemoryRouter } from "react-router-dom";
@@ -14,24 +13,6 @@ import { MemoryRouter } from "react-router-dom";
 const t = (key: string) => translate("en", key);
 beforeEach(async () => { await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
-
-it("keeps lesson notes and reports a failed save before a successful retry", async () => {
-  const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
-  const close = vi.fn();
-  render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><LessonLogSheet open onOpenChange={close} context={{ subjectId }} /></I18nContext.Provider>);
-  const notes = screen.getByPlaceholderText(t("lesson.notesPlaceholder"));
-  fireEvent.change(notes, { target: { value: "Discussed phrasing" } });
-  vi.spyOn(db.lessons, "add").mockRejectedValueOnce(new Error("Disk unavailable"));
-  await waitFor(() => expect(screen.getByRole("button", { name: t("lesson.log") })).toBeEnabled());
-  fireEvent.click(screen.getByRole("button", { name: t("lesson.log") }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(t("errors.couldNotSave"));
-  expect(notes).toHaveValue("Discussed phrasing");
-  expect(close).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: t("lesson.log") }));
-  await waitFor(() => expect(close).toHaveBeenCalledWith(false));
-  expect(await db.lessons.count()).toBe(1);
-  expect((await db.lessons.toArray())[0].notes).toBe("Discussed phrasing");
-});
 
 it("keeps teacher edits when recurrence storage fails", async () => {
   const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });

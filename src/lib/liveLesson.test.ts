@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearLiveLesson, readLessonDraft, readLiveLesson, setLiveLesson, writeLessonDraft } from "@/lib/liveLesson";
+import { clearLiveLesson, liveLessonPath, readLessonDraft, readLiveLesson, setLiveLesson, writeLessonDraft } from "@/lib/liveLesson";
 
 afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
 
@@ -40,6 +40,11 @@ describe("live lesson pointer", () => {
     clearLiveLesson();
     window.removeEventListener("virtuoso-live-lesson", on);
     expect(on).toHaveBeenCalledTimes(3);
+  });
+
+  it("builds the live lesson path for a lesson, a teacher or a subject", () => {
+    expect([liveLessonPath({ lessonId: 4 }), liveLessonPath({ recurrenceId: 2, date: "2026-10-21" }), liveLessonPath({ subjectId: 1, date: "2026-10-21" })])
+      .toEqual(["/lessons/live?lesson=4", "/lessons/live?recurrence=2&date=2026-10-21", "/lessons/live?subject=1&date=2026-10-21"]);
   });
 
   it("read survives a throwing localStorage", () => {

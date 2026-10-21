@@ -4,13 +4,14 @@ import { MemoryRouter } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { I18nContext, translate } from "@/lib/i18n";
 import type { Profile } from "@/domain/entities/profile";
+import { readLiveLesson, setLiveLesson } from "@/lib/liveLesson";
 
-const state = vi.hoisted(() => ({ assignments: [] as { taskIds: number[]; ignored?: boolean }[] }));
-vi.mock("@/presentation/hooks/useEntities", () => ({ useAssignments: () => state.assignments, useActiveTasks: () => [{ id: 3 }] }));
+const state = vi.hoisted(() => ({ assignments: [] as { taskIds: number[]; ignored?: boolean }[], lessons: [] as { id: number }[] | undefined, recurrences: [{ id: 2 }] as { id: number }[] | undefined }));
+vi.mock("@/presentation/hooks/useEntities", () => ({ useAssignments: () => state.assignments, useActiveTasks: () => [{ id: 3 }], useLessons: () => state.lessons, useRecurrences: () => state.recurrences }));
 vi.mock("@/hooks/useAndroidBackButton", () => ({ useAndroidBackButton: () => {} }));
 vi.mock("@/hooks/useKeyboardInset", () => ({ useKeyboardInset: () => 0 }));
 
-afterEach(() => { cleanup(); state.assignments = []; });
+afterEach(() => { cleanup(); state.assignments = []; state.lessons = []; state.recurrences = [{ id: 2 }]; localStorage.clear(); });
 const t = (key: string, vars?: Record<string, string | number>) => translate("it", key, vars);
 
 function show(path = "/") {
@@ -83,4 +84,30 @@ it("marks the current secondary destination in the sidebar", () => {
 it("keeps the bottom navigation out of the way while logging, so the save bar stays put", () => {
   show("/log");
   expect(screen.getAllByRole("navigation", { name: t("nav.main"), hidden: true })[1]).toHaveAttribute("inert");
+});
+
+it("offers the way back to the lesson in progress on every page but the lesson itself", () => {
+  const live = "/lessons/live?recurrence=2&date=2026-10-21";
+  setLiveLesson(live);
+  show("/print/weekly");
+  const back = screen.getAllByRole("link", { name: t("lessonLive.backToLesson") });
+  expect(back.map(link => link.getAttribute("href"))).toEqual([live, live]);
+  cleanup();
+  show(live);
+  expect(screen.queryByRole("link", { name: t("lessonLive.backToLesson") })).not.toBeInTheDocument();
+});
+
+it("keeps the lesson in progress while teachers and lessons are still loading", () => {
+  state.lessons = undefined;
+  state.recurrences = undefined;
+  setLiveLesson("/lessons/live?lesson=5");
+  show("/print/weekly");
+  expect(readLiveLesson()).toBe("/lessons/live?lesson=5");
+});
+
+it.each(["/lessons/live?lesson=5", "/lessons/live?recurrence=9&date=2026-10-21"])("drops %s once it no longer exists", live => {
+  setLiveLesson(live);
+  show("/print/weekly");
+  expect(readLiveLesson()).toBeUndefined();
+  expect(screen.queryByRole("link", { name: t("lessonLive.backToLesson") })).not.toBeInTheDocument();
 });

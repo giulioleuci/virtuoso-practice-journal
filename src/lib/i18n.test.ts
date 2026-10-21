@@ -124,7 +124,7 @@ describe("no raw key leakage in UI strings", () => {
     "errors.titleRequired",
     "errors.pickSubject",
     "toast.taskAdded",
-    "toast.lessonLogged",
+    "lessonLive.title",
     "notFound.heading",
     "profile.settings",
   ];
