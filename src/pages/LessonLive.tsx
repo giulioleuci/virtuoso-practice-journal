@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { BookOpen, Trash2 } from "lucide-react";
 import { useAssignmentsForLesson, useLessons, useRecurrences, useSubjects } from "@/presentation/hooks/useEntities";
 import { lessonsService } from "@/lib/services";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import { today } from "@/lib/date";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PageSkeleton } from "@/components/shared/Loading";
 import { LessonEntryField, LessonEntryList } from "@/components/lessons/LessonEntryList";
@@ -66,6 +68,14 @@ export default function LessonLive() {
   };
   // ponytail: years 1000-2999 only, enough to reject half-typed values.
   const commitDate = () => { if (/^[12]\d{3}-\d{2}-\d{2}$/.test(dateValue) && dateValue !== date) void changeDate(dateValue); else setTyped(undefined); };
+  // Closes the live page and drops the lesson row (with its homework) if one was written.
+  const discard = async () => {
+    try { if (lesson?.id) await lessonsService.deleteLesson(lesson.id); }
+    catch { toast.error(t("errors.couldNotSave")); return; }
+    clearLiveLesson();
+    toast.success(t("toast.lessonDeleted"));
+    if (alive.current) navigate("/lessons", { replace: true });
+  };
   // Text typed but not sent is saved first; each stored draft goes as its line lands, so a retry adds nothing twice.
   const finish = async () => {
     try {
@@ -90,6 +100,20 @@ export default function LessonLive() {
               onChange={(e) => setTyped({ base: date, value: e.target.value })} onBlur={commitDate} onKeyDown={(e) => { if (e.key === "Enter") commitDate(); }} />
           </label>
           <LessonExtraActions subjectId={subjectId} />
+          <Button asChild variant="ghost" className="min-h-11 px-2"><Link to="/"><BookOpen className="h-4 w-4" /> {t("lessonLive.toDiary")}</Link></Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild><Button variant="ghost" className="min-h-11 px-2 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /> {t("lessonLive.discard")}</Button></AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("dialog.deleteLesson")}</AlertDialogTitle>
+                <AlertDialogDescription>{t("dialog.deleteLessonDesc")}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void discard()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
         {dateError && <p id="lesson-live-date-error" role="alert" className="text-sm text-destructive">{dateError}</p>}
       </div>

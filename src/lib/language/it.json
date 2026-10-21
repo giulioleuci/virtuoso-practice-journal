@@ -1089,5 +1089,8 @@
   "lessonLive.emptyEdit": "Scrivi qualcosa, oppure elimina la voce",
   "lessonLive.resume": "Riprendi lezione",
   "lessonLive.backToLesson": "Torna alla lezione",
-  "lessonLive.notSaved": "Non salvato. Il testo è ancora lì: riprova."
+  "lessonLive.notSaved": "Non salvato. Il testo è ancora lì: riprova.",
+  "lessonLive.toDiary": "Diario di oggi",
+  "lessonLive.discard": "Elimina lezione",
+  "print.sinceLesson": "Dall'ultima lezione"
 }

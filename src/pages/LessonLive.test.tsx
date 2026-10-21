@@ -302,3 +302,18 @@ it("deleted recurrence in the pointer clears the pointer", async () => {
   expect(await screen.findByText("lessons page")).toBeInTheDocument();
   expect(readLiveLesson()).toBeUndefined();
 });
+
+it("discarding asks first, then deletes the lesson and leaves the page", async () => {
+  renderPage();
+  add(await noteInput(), "Relax the wrist");
+  await screen.findByText("Relax the wrist");
+  expect(screen.getByRole("link", { name: t("lessonLive.toDiary") })).toHaveAttribute("href", "/");
+  fireEvent.click(screen.getByRole("button", { name: t("lessonLive.discard") }));
+  fireEvent.click(await screen.findByRole("button", { name: t("common.cancel") }));
+  expect(await db.lessons.count()).toBe(1);
+  fireEvent.click(screen.getByRole("button", { name: t("lessonLive.discard") }));
+  fireEvent.click(await screen.findByRole("button", { name: t("common.delete") }));
+  expect(await screen.findByText("lessons page")).toBeInTheDocument();
+  expect(await db.lessons.count()).toBe(0);
+  expect(readLiveLesson()).toBeUndefined();
+});

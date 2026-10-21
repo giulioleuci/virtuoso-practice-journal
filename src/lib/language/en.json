@@ -1089,5 +1089,8 @@
   "lessonLive.emptyEdit": "Write something, or delete the entry",
   "lessonLive.resume": "Resume lesson",
   "lessonLive.backToLesson": "Back to lesson",
-  "lessonLive.notSaved": "Not saved. Your text is still there: try again."
+  "lessonLive.notSaved": "Not saved. Your text is still there: try again.",
+  "lessonLive.toDiary": "Today's diary",
+  "lessonLive.discard": "Discard lesson",
+  "print.sinceLesson": "Since the last lesson"
 }

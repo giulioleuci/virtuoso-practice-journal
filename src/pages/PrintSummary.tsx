@@ -1,12 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAllLibrary, useAssignments, useLessons, useProfile, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
-import { addDays, dayKey, endOfWeek, formatDate, getDefaultWeekStartsOn, startOfWeek } from "@/lib/date";
+import { addDays, dayKey, endOfWeek, formatDate, getDefaultWeekStartsOn, parseDayKey, startOfWeek } from "@/lib/date";
 import { tempoLabel } from "@/lib/format";
 import type { NoteVal } from "@/domain/entities/common";
 import { PageSkeleton } from "@/components/shared/Loading";
+import { Switch } from "@/components/ui/switch";
 import { StateNotice } from "@/components/shared/StateNotice";
 import { topMark } from "@/domain/logic/sessionMetrics";
 
@@ -22,12 +23,17 @@ export default function PrintSummary() {
 
   const now = new Date();
   const weekStart = profile?.weekStartsOn ?? getDefaultWeekStartsOn(lang);
-  const from = dayKey(startOfWeek(now, weekStart));
-  const to = dayKey(endOfWeek(now, weekStart));
+  const lessons = useLessons();
+  const [sinceLesson, setSinceLesson] = useState(true);
+  // Day after the last past lesson (of the subject, if filtered) up to today; no such lesson: the calendar week.
+  const lastLesson = (lessons ?? []).filter((l) => l.date < dayKey(now) && (subjectId === undefined || l.subjectId === subjectId)).reduce<string | undefined>((max, l) => (!max || l.date > max ? l.date : max), undefined);
+  const lessonRange = sinceLesson && lastLesson ? lastLesson : undefined;
+  const from = lessonRange ? dayKey(addDays(parseDayKey(lessonRange), 1)) : dayKey(startOfWeek(now, weekStart));
+  const to = lessonRange ? dayKey(now) : dayKey(endOfWeek(now, weekStart));
+  const rangeDays = Math.round((parseDayKey(to).getTime() - parseDayKey(from).getTime()) / 864e5) + 1;
 
   const sessions = useSessionsInRange(from, to);
   const items = useAllLibrary();
-  const lessons = useLessons();
   const assignments = useAssignments();
 
   const itemById = useMemo(() => new Map((items ?? []).map((item) => [item.id, item])), [items]);
@@ -58,8 +64,8 @@ export default function PrintSummary() {
   }, [list, itemById, t]);
 
   const weekLessonIds = useMemo(
-    () => new Set((lessons ?? []).filter((lesson) => lesson.date >= from && lesson.date <= to).map((lesson) => lesson.id)),
-    [lessons, from, to],
+    () => new Set((lessons ?? []).filter((lesson) => lesson.date >= (lessonRange ?? from) && lesson.date <= to).map((lesson) => lesson.id)),
+    [lessons, from, to, lessonRange],
   );
   const weekAssignments = useMemo(
     () =>
@@ -88,6 +94,9 @@ export default function PrintSummary() {
         <Link to="/history" className="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground min-h-[44px]">
           <ArrowLeft className="h-4 w-4" /> {t("common.back")}
         </Link>
+        <label className="flex items-center gap-2 text-sm">
+          <Switch checked={sinceLesson} onCheckedChange={setSinceLesson} /> {t("print.sinceLesson")}
+        </label>
         <button
           type="button"
           onClick={() => window.print()}
@@ -113,7 +122,7 @@ export default function PrintSummary() {
         </div>
         <div className="rounded-lg border border-border p-3">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("print.practiceDays")}</p>
-          <p className="text-xl tabular-nums">{practiceDays} / 7</p>
+          <p className="text-xl tabular-nums">{practiceDays} / {rangeDays}</p>
         </div>
       </section>
 

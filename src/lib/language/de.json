@@ -1089,5 +1089,8 @@
   "lessonLive.emptyEdit": "Schreib etwas oder lösche den Eintrag",
   "lessonLive.resume": "Stunde fortsetzen",
   "lessonLive.backToLesson": "Zurück zur Stunde",
-  "lessonLive.notSaved": "Nicht gespeichert. Dein Text ist noch da: versuch es noch einmal."
+  "lessonLive.notSaved": "Nicht gespeichert. Dein Text ist noch da: versuch es noch einmal.",
+  "lessonLive.toDiary": "Heutiges Tagebuch",
+  "lessonLive.discard": "Unterricht verwerfen",
+  "print.sinceLesson": "Seit der letzten Stunde"
 }
