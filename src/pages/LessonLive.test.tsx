@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-imports -- Integration test exercises real local persistence. */
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { db } from "@/lib/db";
@@ -35,8 +35,8 @@ const renderPage = (path = `/lessons/live?recurrence=${recurrenceId}&date=${DATE
     </MemoryRouter>
   </I18nContext.Provider>,
 );
-const noteInput = () => screen.findByRole("textbox", { name: t("lessonLive.addNote") });
-const homeworkInput = () => screen.getByRole("textbox", { name: t("homework.add") });
+const noteInput = () => screen.findByRole("textbox", { name: t("lessonLive.notes") });
+const homeworkInput = () => screen.getByRole("textbox", { name: t("lessonLive.homework") });
 const add = (input: HTMLElement, text: string) => { fireEvent.change(input, { target: { value: text } }); fireEvent.submit(input.closest("form")!); };
 
 it("adding a note creates the lesson and lists the note", async () => {
@@ -52,6 +52,36 @@ it("adding a note creates the lesson and lists the note", async () => {
   fireEvent.click(screen.getByRole("button", { name: t("lessonLive.finish") }));
   expect(await screen.findByText("lessons page")).toBeInTheDocument();
   expect(readLiveLesson()).toBeUndefined();
+});
+
+it("Enter adds the line, Shift+Enter keeps typing", async () => {
+  renderPage();
+  const notes = await noteInput();
+  fireEvent.change(notes, { target: { value: "Line one" } });
+  expect(fireEvent.keyDown(notes, { key: "Enter", shiftKey: true })).toBe(true); // not prevented: the browser inserts the newline
+  expect(notes).toHaveValue("Line one");
+  expect(fireEvent.keyDown(notes, { key: "Enter" })).toBe(false);
+  expect(await screen.findByText("Line one")).toBeInTheDocument();
+  expect(notes).toHaveValue("");
+  await waitFor(async () => expect((await db.lessons.toArray())[0]?.notes?.map((n) => n.text)).toEqual(["Line one"]));
+});
+
+it("lists stay hidden until they have entries and show the newest first", async () => {
+  const id = await db.lessons.add({ subjectId, recurrenceId, date: DATE, notes: [{ id: "n1", text: "Oldest" }, { id: "n2", text: "Middle" }], createdAt: 1 });
+  renderPage(`/lessons/live?lesson=${id}`);
+  const notes = (await screen.findByRole("heading", { name: t("lessonLive.notes") })).parentElement!;
+  expect(screen.queryByRole("heading", { name: t("lessonLive.homework") })).not.toBeInTheDocument();
+  add(await noteInput(), "Newest");
+  await screen.findByText("Newest");
+  expect(within(notes).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Newest", "Middle", "Oldest"]);
+  await waitFor(async () => expect((await db.lessons.get(id))?.notes?.map((n) => n.text)).toEqual(["Oldest", "Middle", "Newest"]));
+});
+
+it("a legacy string in notes renders without crashing", async () => {
+  const id = await db.lessons.add({ subjectId, recurrenceId, date: DATE, notes: "old free text" as never, createdAt: 1 });
+  renderPage(`/lessons/live?lesson=${id}`);
+  expect(await noteInput()).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: t("lessonLive.notes") })).not.toBeInTheDocument();
 });
 
 it("two quick adds create one lesson", async () => {

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PageSkeleton } from "@/components/shared/Loading";
-import { LessonEntryList } from "@/components/lessons/LessonEntryList";
+import { LessonEntryField, LessonEntryList } from "@/components/lessons/LessonEntryList";
 import { LessonExtraActions } from "@/components/lessons/LessonExtraActions";
 
 /** A lesson kept open from start to end: homework and notes are saved as they are typed. */
@@ -48,7 +48,8 @@ export default function LessonLive() {
   const lessonId = async () => given?.id ?? lessonsService.ensureFor(subjectId, recurrence, date);
   const scope = lessonParam ? `lesson-${lessonParam}` : `${recurrenceId ? `recurrence-${recurrenceId}` : `subject-${subjectId}`}-${date}`;
 
-  const notes = lesson?.notes; // a legacy string must not crash the list
+  const homework = assignments ?? [];
+  const notes = Array.isArray(lesson?.notes) ? lesson.notes : []; // a legacy string must not crash the list
   const dateValue = typed?.base === date ? typed.value : date;
   const changeDate = async (next: string) => {
     setDateError(undefined);
@@ -62,32 +63,39 @@ export default function LessonLive() {
   const finish = () => { clearLiveLesson(); navigate("/lessons"); };
 
   return (
-    <div className="pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+    <div className="pb-[calc(1.5rem+env(safe-area-inset-bottom))] [&>header]:mb-1.5">
       <PageHeader title={t("lessonLive.title")} actions={<Button className="min-h-11" onClick={finish}>{t("lessonLive.finish")}</Button>} />
-      <div className="mb-8 space-y-3">
-        <p className="break-words text-sm text-muted-foreground">{[recurrence?.teacher ?? lesson?.snapshot?.teacher, subject?.name ?? lesson?.snapshot?.subjectName].filter(Boolean).join(" · ")}</p>
-        <label className="flex flex-wrap items-center gap-3 text-sm font-medium">
-          {t("common.date")}
-          <Input type="date" required aria-invalid={!!dateError} aria-describedby={dateError ? "lesson-live-date-error" : undefined} value={dateValue} className="min-h-11 w-auto max-w-full"
-            onChange={(e) => setTyped({ base: date, value: e.target.value })} onBlur={commitDate} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
-        </label>
+      <div className="mb-5 grid gap-1">
+        <p className="break-words text-sm font-medium">{[recurrence?.teacher ?? lesson?.snapshot?.teacher, subject?.name ?? lesson?.snapshot?.subjectName].filter(Boolean).join(" · ")}</p>
+        <div className="flex flex-wrap items-center gap-x-5">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            {t("common.date")}
+            <Input type="date" required aria-invalid={!!dateError} aria-describedby={dateError ? "lesson-live-date-error" : undefined} value={dateValue} className="min-h-11 w-auto max-w-full text-foreground"
+              onChange={(e) => setTyped({ base: date, value: e.target.value })} onBlur={commitDate} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+          </label>
+          <LessonExtraActions subjectId={subjectId} />
+        </div>
         {dateError && <p id="lesson-live-date-error" role="alert" className="text-sm text-destructive">{dateError}</p>}
-        <LessonExtraActions subjectId={subjectId} />
       </div>
-      <div className="space-y-8">
-        <LessonEntryList key={`${scope}-homework`} draftScope={`${scope}-homework`} title={t("lessonLive.homework")} placeholder={t("homework.textPlaceholder")} addLabel={t("homework.add")}
-          entries={assignments ?? []}
-          onAdd={async (text) => lessonsService.addAssignment(await lessonId(), text)}
-          onEdit={(id, text) => lessonsService.updateAssignment(Number(id), text)}
-          onRemove={(id) => lessonsService.removeAssignment(Number(id))}
-          onRestore={(assignment) => lessonsService.reinsertAssignment(assignment)} />
-        <LessonEntryList key={`${scope}-notes`} draftScope={`${scope}-notes`} title={t("lessonLive.notes")} placeholder={t("lessonLive.notePlaceholder")} addLabel={t("lessonLive.addNote")}
-          entries={Array.isArray(notes) ? notes : []}
-          onAdd={async (text) => lessonsService.addNote(await lessonId(), text)}
-          onEdit={async (id, text) => lessonsService.updateNote(await lessonId(), String(id), text)}
-          onRemove={async (id) => lessonsService.removeNote(await lessonId(), String(id))}
-          onRestore={async (note, index) => lessonsService.reinsertNote(await lessonId(), note, index)} />
+      {/* Capture first: both fields under the header, the entries below the rule. */}
+      <div className="space-y-3.5">
+        <LessonEntryField key={`${scope}-homework`} draftScope={`${scope}-homework`} label={t("lessonLive.homework")} placeholder={t("homework.textPlaceholder")} addLabel={t("homework.add")}
+          onAdd={async (text) => lessonsService.addAssignment(await lessonId(), text)} />
+        <LessonEntryField key={`${scope}-notes`} draftScope={`${scope}-notes`} label={t("lessonLive.notes")} placeholder={t("lessonLive.notePlaceholder")} addLabel={t("lessonLive.addNote")}
+          onAdd={async (text) => lessonsService.addNote(await lessonId(), text)} />
       </div>
+      {(homework.length > 0 || notes.length > 0) && (
+        <div key={scope} className="mt-8 space-y-7 border-t border-border pt-8">
+          <LessonEntryList title={t("lessonLive.homework")} entries={homework}
+            onEdit={(id, text) => lessonsService.updateAssignment(Number(id), text)}
+            onRemove={(id) => lessonsService.removeAssignment(Number(id))}
+            onRestore={(assignment) => lessonsService.reinsertAssignment(assignment)} />
+          <LessonEntryList title={t("lessonLive.notes")} entries={notes}
+            onEdit={async (id, text) => lessonsService.updateNote(await lessonId(), String(id), text)}
+            onRemove={async (id) => lessonsService.removeNote(await lessonId(), String(id))}
+            onRestore={async (note, index) => lessonsService.reinsertNote(await lessonId(), note, index)} />
+        </div>
+      )}
     </div>
   );
 }
