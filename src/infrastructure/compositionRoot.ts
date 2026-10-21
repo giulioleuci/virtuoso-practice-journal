@@ -12,6 +12,7 @@ import { ImportBackupUseCase } from "@/application/useCases/importBackup";
 import { CapacitorBackupFileGateway } from "./gateways/CapacitorBackupFileGateway";
 import { browserAudio } from "./audio/browserAudio";
 import { clearSessionDrafts } from "@/lib/sessionDrafts";
+import { clearLiveLesson } from "@/lib/liveLesson";
 import { backupRepository } from "./repositories/dexie/backupRepository";
 import { taskRepository } from "./repositories/dexie/taskRepository";
 import { sessionRepository } from "./repositories/dexie/sessionRepository";
@@ -34,7 +35,7 @@ export const application = {
     export: new ExportBackupUseCase(backupRepository, backupFiles),
     csv: new ExportCsvUseCase(sessionRepository, backupFiles),
     import: new ImportBackupUseCase(backupRepository, backupFiles, browserAudio),
-    wipe: async () => { await backupRepository.wipeAll(); await browserAudio.wipe(); clearSessionDrafts(); },
+    wipe: async () => { await backupRepository.wipeAll(); await browserAudio.wipe(); clearSessionDrafts(); clearLiveLesson(); },
   },
 };
 export { taskRepository, sessionRepository, studyRoutineRepository };
