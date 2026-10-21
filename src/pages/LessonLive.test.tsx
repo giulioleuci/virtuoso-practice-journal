@@ -9,6 +9,7 @@ import { configurePresentationQueries } from "@/application/queries/presentation
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import { I18nContext, translate } from "@/lib/i18n";
 import { readLiveLesson, setLiveLesson } from "@/lib/liveLesson";
+import { lessonsService } from "@/lib/services";
 import LessonLive from "./LessonLive";
 
 const t = (key: string) => translate("en", key);
@@ -42,9 +43,11 @@ it("adding a note creates the lesson and lists the note", async () => {
   renderPage();
   add(await noteInput(), "Relax the wrist");
   expect(await screen.findByText("Relax the wrist")).toBeInTheDocument();
-  const lessons = await db.lessons.toArray();
-  expect(lessons).toHaveLength(1);
-  expect(lessons[0]).toMatchObject({ subjectId, recurrenceId, date: DATE, notes: [{ text: "Relax the wrist" }] });
+  await waitFor(async () => {
+    const lessons = await db.lessons.toArray();
+    expect(lessons).toHaveLength(1);
+    expect(lessons[0]).toMatchObject({ subjectId, recurrenceId, date: DATE, notes: [{ text: "Relax the wrist" }] });
+  });
   expect(readLiveLesson()).toBe(`/lessons/live?recurrence=${recurrenceId}&date=${DATE}`);
   fireEvent.click(screen.getByRole("button", { name: t("lessonLive.finish") }));
   expect(await screen.findByText("lessons page")).toBeInTheDocument();
@@ -59,9 +62,11 @@ it("two quick adds create one lesson", async () => {
   add(notes, "Second");
   add(homeworkInput(), "Scales at 80");
   for (const text of ["First", "Second", "Scales at 80"]) expect(await screen.findByText(text)).toBeInTheDocument();
-  expect(await db.lessons.count()).toBe(1);
-  expect((await db.lessons.toArray())[0].notes?.map((n) => n.text).sort()).toEqual(["First", "Second"]);
-  expect((await db.assignments.toArray()).map((a) => a.text)).toEqual(["Scales at 80"]);
+  await waitFor(async () => {
+    expect(await db.lessons.count()).toBe(1);
+    expect((await db.lessons.toArray())[0].notes?.map((n) => n.text).sort()).toEqual(["First", "Second"]);
+    expect((await db.assignments.toArray()).map((a) => a.text)).toEqual(["Scales at 80"]);
+  });
 });
 
 it("editing a note updates it and an empty edit is rejected", async () => {
@@ -72,28 +77,32 @@ it("editing a note updates it and an empty edit is rejected", async () => {
   fireEvent.change(field, { target: { value: "   " } });
   fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
   expect(field).toHaveAttribute("aria-invalid", "true");
-  expect((await db.lessons.get(id))?.notes).toEqual([{ id: "n1", text: "Old" }]);
+  expect(field).toHaveAccessibleDescription(t("lessonLive.emptyEdit"));
+  await waitFor(async () => expect((await db.lessons.get(id))?.notes).toEqual([{ id: "n1", text: "Old" }]));
   fireEvent.change(field, { target: { value: "New" } });
+  expect(field).not.toHaveAttribute("aria-invalid", "true");
   fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
   expect(await screen.findByText("New")).toBeInTheDocument();
-  expect((await db.lessons.get(id))?.notes).toEqual([{ id: "n1", text: "New" }]);
+  await waitFor(() => expect(screen.getByRole("button", { name: `${t("common.edit")}: New` })).toHaveFocus());
+  await waitFor(async () => expect((await db.lessons.get(id))?.notes).toEqual([{ id: "n1", text: "New" }]));
 });
 
 it("deleting a homework removes it and undo restores it", async () => {
   const id = await db.lessons.add({ subjectId, recurrenceId, date: DATE, createdAt: 1 });
-  await db.assignments.add({ lessonId: id, text: "Scales", taskIds: [], createdAt: 1 });
+  const assignmentId = await db.assignments.add({ lessonId: id, text: "Scales", taskIds: [7], ignored: true, createdAt: 5 });
+  const before = await db.assignments.get(assignmentId);
   const success = vi.spyOn(toast, "success");
   renderPage(`/lessons/live?lesson=${id}`);
   fireEvent.click(await screen.findByRole("button", { name: `${t("common.delete")}: Scales` }));
   await waitFor(() => expect(success).toHaveBeenCalled());
   await waitFor(() => expect(screen.queryByText("Scales")).not.toBeInTheDocument());
-  expect(await db.assignments.count()).toBe(0);
+  await waitFor(async () => expect(await db.assignments.count()).toBe(0));
   const [message, options] = success.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
   expect(message).toBe(t("lessonLive.removed"));
   expect(options.action.label).toBe(t("common.undo"));
   options.action.onClick();
   expect(await screen.findByText("Scales")).toBeInTheDocument();
-  expect((await db.assignments.toArray()).map((a) => [a.lessonId, a.text])).toEqual([[id, "Scales"]]);
+  await waitFor(async () => expect(await db.assignments.toArray()).toEqual([before]));
 });
 
 it("unsent text is restored after remount", async () => {
@@ -117,16 +126,49 @@ it("date change on an existing lesson moves it, collision shows an alert", async
   await db.lessons.add({ subjectId, recurrenceId, date: "2026-10-28", createdAt: 2 });
   renderPage();
   await screen.findByText("Existing note");
-  fireEvent.change(screen.getByLabelText(t("common.date")), { target: { value: "2026-10-22" } });
+  const date = screen.getByLabelText(t("common.date"));
+  fireEvent.change(date, { target: { value: "2026-10-22" } });
+  fireEvent.blur(date);
   await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("date=2026-10-22"));
-  expect((await db.lessons.get(id))?.date).toBe("2026-10-22");
+  await waitFor(async () => expect((await db.lessons.get(id))?.date).toBe("2026-10-22"));
   expect(readLiveLesson()).toBe(`/lessons/live?recurrence=${recurrenceId}&date=2026-10-22`);
   await screen.findByText("Existing note");
-  fireEvent.change(screen.getByLabelText(t("common.date")), { target: { value: "2026-10-28" } });
+  date.focus();
+  fireEvent.change(date, { target: { value: "2026-10-28" } });
+  fireEvent.keyDown(date, { key: "Enter" });
   expect(await screen.findByRole("alert")).toHaveTextContent(t("lessonLive.dateTaken"));
-  expect((await db.lessons.get(id))?.date).toBe("2026-10-22");
-  expect(screen.getByLabelText(t("common.date"))).toHaveValue("2026-10-22");
+  expect(date).toHaveAccessibleDescription(t("lessonLive.dateTaken"));
+  await waitFor(async () => expect((await db.lessons.get(id))?.date).toBe("2026-10-22"));
+  expect(date).toHaveValue("2026-10-22");
   expect(screen.getByTestId("where")).toHaveTextContent("date=2026-10-22");
+});
+
+it("typing a date commits it only when the field is left", async () => {
+  const id = await db.lessons.add({ subjectId, recurrenceId, date: DATE, notes: [{ id: "n1", text: "Existing note" }], createdAt: 1 });
+  const setDate = vi.spyOn(lessonsService, "setDate");
+  renderPage();
+  await screen.findByText("Existing note");
+  const date = screen.getByLabelText(t("common.date"));
+  for (const value of ["0002-10-22", "0202-10-22", "2026-10-22"]) fireEvent.change(date, { target: { value } });
+  expect(date).toHaveValue("2026-10-22");
+  expect(setDate).not.toHaveBeenCalled();
+  expect(screen.getByTestId("where")).toHaveTextContent(`date=${DATE}`);
+  fireEvent.blur(date);
+  await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("date=2026-10-22"));
+  expect(setDate).toHaveBeenCalledTimes(1);
+  expect(setDate).toHaveBeenCalledWith(id, "2026-10-22");
+  await waitFor(async () => expect((await db.lessons.get(id))?.date).toBe("2026-10-22"));
+});
+
+it("date change on a slot with no lesson only changes the address", async () => {
+  renderPage();
+  const date = (await screen.findByLabelText(t("common.date")));
+  await noteInput();
+  fireEvent.change(date, { target: { value: "2026-10-23" } });
+  fireEvent.blur(date);
+  await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("date=2026-10-23"));
+  expect(readLiveLesson()).toBe(`/lessons/live?recurrence=${recurrenceId}&date=2026-10-23`);
+  await waitFor(async () => expect(await db.lessons.count()).toBe(0));
 });
 
 it("deleted recurrence in the pointer clears the pointer", async () => {

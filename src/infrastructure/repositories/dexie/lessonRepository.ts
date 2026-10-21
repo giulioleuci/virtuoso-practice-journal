@@ -1,5 +1,5 @@
 import { db } from "@/infrastructure/dexie/db";
-import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
+import type { Assignment, Lesson, LessonNote, LessonRecurrence } from "@/domain/entities/lesson";
 import { now } from "@/lib/date";
 import type { LessonPort } from "@/domain/ports/lesson";
 export async function buildDexieLessonSnapshot(subjectId: number, recurrence: LessonRecurrence | null | undefined, piecePlayedIds: number[] = []) { const [subject, pieces] = await Promise.all([db.subjects.get(subjectId), piecePlayedIds.length ? db.library.where("id").anyOf(piecePlayedIds).toArray() : []]); return { snapshot: { subjectName: subject?.name ?? "—", teacher: recurrence?.teacher, frequency: recurrence?.schedules?.[0]?.frequency }, piecesPlayedTitles: pieces.map((piece) => piece.title) }; }
@@ -23,6 +23,7 @@ export const lessonRepository = {
   async addNote(lessonId: number, text: string) { const trimmed = text.trim(); if (!trimmed) return ""; const id = crypto.randomUUID(); await db.lessons.where("id").equals(lessonId).modify((l) => { l.notes = [...(l.notes ?? []), { id, text: trimmed }]; }); return id; },
   async updateNote(lessonId: number, noteId: string, text: string) { const trimmed = text.trim(); if (trimmed) await db.lessons.where("id").equals(lessonId).modify((l) => { l.notes = l.notes?.map((n) => (n.id === noteId ? { ...n, text: trimmed } : n)); }); },
   async removeNote(lessonId: number, noteId: string) { await db.lessons.where("id").equals(lessonId).modify((l) => { l.notes = l.notes?.filter((n) => n.id !== noteId); }); },
+  async reinsertNote(lessonId: number, note: LessonNote, index: number) { await db.lessons.where("id").equals(lessonId).modify((l) => { const notes = [...(l.notes ?? [])]; if (!notes.some((n) => n.id === note.id)) notes.splice(index, 0, note); l.notes = notes; }); },
   async setDate(lessonId: number, date: string) {
     await db.transaction("rw", db.lessons, async () => {
       const lesson = await db.lessons.get(lessonId);
@@ -35,6 +36,7 @@ export const lessonRepository = {
   async addAssignment(lessonId: number, text: string) { const trimmed = text.trim(); return trimmed ? db.assignments.add({ lessonId, text: trimmed, taskIds: [], createdAt: now() }) as Promise<number> : 0; },
   async updateAssignment(id: number, text: string) { const trimmed = text.trim(); if (trimmed) await db.assignments.update(id, { text: trimmed }); },
   removeAssignment: async (id: number) => { await db.assignments.delete(id); },
+  reinsertAssignment: async (assignment: Assignment) => { await db.assignments.put(assignment); },
   async deleteLesson(id: number) { await db.transaction("rw", db.lessons, db.assignments, async () => { await db.assignments.where("lessonId").equals(id).delete(); await db.lessons.delete(id); }); },
   update: async (id: number, patch: Partial<Lesson>) => { await db.lessons.update(id, patch); },
   remove: async (id: number) => { await db.transaction("rw", db.lessons, db.assignments, async () => { await db.assignments.where("lessonId").equals(id).delete(); await db.lessons.delete(id); }); },

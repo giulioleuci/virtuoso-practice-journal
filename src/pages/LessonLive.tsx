@@ -22,6 +22,8 @@ export default function LessonLive() {
   const recurrences = useRecurrences();
   const subjects = useSubjects();
   const [dateError, setDateError] = useState<string>();
+  // Typed date, committed on blur or Enter: desktop pickers fire change for half-typed years (0002-, 0202-).
+  const [typed, setTyped] = useState<{ base: string; value: string }>();
 
   // `?lesson=<id>` opens an existing lesson; `?recurrence=<id>|subject=<id>&date=` a slot whose row appears on the first write.
   const lessonParam = Number(params.get("lesson")) || undefined;
@@ -46,14 +48,17 @@ export default function LessonLive() {
   const lessonId = async () => given?.id ?? lessonsService.ensureFor(subjectId, recurrence, date);
   const scope = lessonParam ? `lesson-${lessonParam}` : `${recurrenceId ? `recurrence-${recurrenceId}` : `subject-${subjectId}`}-${date}`;
 
+  const notes = lesson?.notes; // a legacy string must not crash the list
+  const dateValue = typed?.base === date ? typed.value : date;
   const changeDate = async (next: string) => {
-    if (!next || next === date) return;
     setDateError(undefined);
     const moveUrl = () => { if (lessonParam) return; const p = new URLSearchParams(params); p.set("date", next); setParams(p, { replace: true }); };
     if (!lesson?.id) return moveUrl();
     try { await lessonsService.setDate(lesson.id, next); moveUrl(); }
-    catch (error) { setDateError(error instanceof Error && error.message === "lesson-exists" ? t("lessonLive.dateTaken") : t("errors.couldNotSave")); }
+    catch (error) { setTyped(undefined); setDateError(error instanceof Error && error.message === "lesson-exists" ? t("lessonLive.dateTaken") : t("errors.couldNotSave")); }
   };
+  // ponytail: years 1000-2999 only, enough to reject half-typed values.
+  const commitDate = () => { if (/^[12]\d{3}-\d{2}-\d{2}$/.test(dateValue) && dateValue !== date) void changeDate(dateValue); else setTyped(undefined); };
   const finish = () => { clearLiveLesson(); navigate("/lessons"); };
 
   return (
@@ -61,8 +66,12 @@ export default function LessonLive() {
       <PageHeader title={t("lessonLive.title")} actions={<Button className="min-h-11" onClick={finish}>{t("lessonLive.finish")}</Button>} />
       <div className="mb-8 space-y-3">
         <p className="break-words text-sm text-muted-foreground">{[recurrence?.teacher ?? lesson?.snapshot?.teacher, subject?.name ?? lesson?.snapshot?.subjectName].filter(Boolean).join(" · ")}</p>
-        <Input type="date" required aria-label={t("common.date")} aria-invalid={!!dateError} value={date} onChange={(e) => void changeDate(e.target.value)} className="min-h-11 w-auto max-w-full" />
-        {dateError && <p role="alert" className="text-sm text-destructive">{dateError}</p>}
+        <label className="flex flex-wrap items-center gap-3 text-sm font-medium">
+          {t("common.date")}
+          <Input type="date" required aria-invalid={!!dateError} aria-describedby={dateError ? "lesson-live-date-error" : undefined} value={dateValue} className="min-h-11 w-auto max-w-full"
+            onChange={(e) => setTyped({ base: date, value: e.target.value })} onBlur={commitDate} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+        </label>
+        {dateError && <p id="lesson-live-date-error" role="alert" className="text-sm text-destructive">{dateError}</p>}
         <LessonExtraActions subjectId={subjectId} />
       </div>
       <div className="space-y-8">
@@ -71,13 +80,13 @@ export default function LessonLive() {
           onAdd={async (text) => lessonsService.addAssignment(await lessonId(), text)}
           onEdit={(id, text) => lessonsService.updateAssignment(Number(id), text)}
           onRemove={(id) => lessonsService.removeAssignment(Number(id))}
-          onRestore={async (text) => lessonsService.addAssignment(await lessonId(), text)} />
+          onRestore={(assignment) => lessonsService.reinsertAssignment(assignment)} />
         <LessonEntryList key={`${scope}-notes`} draftScope={`${scope}-notes`} title={t("lessonLive.notes")} placeholder={t("lessonLive.notePlaceholder")} addLabel={t("lessonLive.addNote")}
-          entries={lesson?.notes ?? []}
+          entries={Array.isArray(notes) ? notes : []}
           onAdd={async (text) => lessonsService.addNote(await lessonId(), text)}
           onEdit={async (id, text) => lessonsService.updateNote(await lessonId(), String(id), text)}
           onRemove={async (id) => lessonsService.removeNote(await lessonId(), String(id))}
-          onRestore={async (text) => lessonsService.addNote(await lessonId(), text)} />
+          onRestore={async (note, index) => lessonsService.reinsertNote(await lessonId(), note, index)} />
       </div>
     </div>
   );

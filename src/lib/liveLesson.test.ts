@@ -8,6 +8,7 @@ describe("live lesson pointer", () => {
     expect(readLiveLesson()).toBeUndefined();
     setLiveLesson("/lessons/live?teacher=1");
     expect(readLiveLesson()).toBe("/lessons/live?teacher=1");
+    expect(localStorage.getItem("virtuoso-lesson-live")).toBe("/lessons/live?teacher=1");
   });
 
   it("clear removes pointer and drafts", () => {
@@ -17,6 +18,7 @@ describe("live lesson pointer", () => {
     localStorage.setItem("virtuoso-session-x", "keep");
     clearLiveLesson();
     expect(readLiveLesson()).toBeUndefined();
+    expect(localStorage.getItem("virtuoso-lesson-live")).toBeNull();
     expect(readLessonDraft("a")).toBe("");
     expect(readLessonDraft("b")).toBe("");
     expect(localStorage.getItem("virtuoso-session-x")).toBe("keep");

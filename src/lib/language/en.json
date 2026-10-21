@@ -1093,5 +1093,6 @@
   "lessonLive.notePlaceholder": "A point from the lesson…",
   "lessonLive.finish": "Finish lesson",
   "lessonLive.dateTaken": "Another lesson already exists on that day",
-  "lessonLive.removed": "Removed"
+  "lessonLive.removed": "Removed",
+  "lessonLive.emptyEdit": "Write something, or delete the entry"
 }

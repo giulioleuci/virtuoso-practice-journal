@@ -1,4 +1,4 @@
-const POINTER = "virtuoso-live-lesson";
+const POINTER = "virtuoso-lesson-live";
 const DRAFT = "virtuoso-lesson-draft-";
 export const LIVE_LESSON_EVENT = "virtuoso-live-lesson";
 const notify = () => window.dispatchEvent(new Event(LIVE_LESSON_EVENT));

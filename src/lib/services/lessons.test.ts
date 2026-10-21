@@ -167,6 +167,27 @@ describe("lessonsService notes and date", () => {
     expect((await db.lessons.get(id))!.notes).toEqual([{ id: b, text: "B" }]);
   });
 
+  it("reinsertNote puts the same note back at its position, once", async () => {
+    const id = await lessonsService.ensureFor(1, null, "2025-03-01");
+    const a = await lessonsService.addNote(id, "A");
+    const b = await lessonsService.addNote(id, "B");
+    await lessonsService.removeNote(id, a);
+    await lessonsService.reinsertNote(id, { id: a, text: "A" }, 0);
+    await lessonsService.reinsertNote(id, { id: a, text: "A" }, 0);
+    expect((await db.lessons.get(id))!.notes).toEqual([{ id: a, text: "A" }, { id: b, text: "B" }]);
+  });
+
+  it("reinsertAssignment brings the removed record back unchanged", async () => {
+    const id = await lessonsService.ensureFor(1, null, "2025-03-01");
+    const assignmentId = await lessonsService.addAssignment(id, "Scales");
+    await lessonsService.linkTask(assignmentId, 7);
+    await lessonsService.ignoreAssignment(assignmentId);
+    const before = (await db.assignments.get(assignmentId))!;
+    await lessonsService.removeAssignment(assignmentId);
+    await lessonsService.reinsertAssignment(before);
+    expect(await db.assignments.toArray()).toEqual([before]);
+  });
+
   it("setDate moves the lesson", async () => {
     const id = await lessonsService.ensureFor(1, null, "2025-03-01");
     await lessonsService.setDate(id, "2025-03-02");

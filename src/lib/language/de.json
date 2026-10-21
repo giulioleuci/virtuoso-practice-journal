@@ -1093,5 +1093,6 @@
   "lessonLive.notePlaceholder": "Ein Punkt aus der Stunde…",
   "lessonLive.finish": "Stunde beenden",
   "lessonLive.dateTaken": "An diesem Tag gibt es bereits eine Stunde",
-  "lessonLive.removed": "Entfernt"
+  "lessonLive.removed": "Entfernt",
+  "lessonLive.emptyEdit": "Schreib etwas oder lösche den Eintrag"
 }

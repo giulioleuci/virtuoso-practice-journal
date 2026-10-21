@@ -1,4 +1,4 @@
-import type { Assignment, Lesson, LessonRecurrence } from "../entities/lesson";
+import type { Assignment, Lesson, LessonNote, LessonRecurrence } from "../entities/lesson";
 
 export interface LessonPort {
   list(): Promise<Lesson[]>;
@@ -15,11 +15,15 @@ export interface LessonPort {
   addNote(lessonId: number, text: string): Promise<string>;
   updateNote(lessonId: number, noteId: string, text: string): Promise<void>;
   removeNote(lessonId: number, noteId: string): Promise<void>;
+  /** Undo of removeNote: puts the same note back at its old position. */
+  reinsertNote(lessonId: number, note: LessonNote, index: number): Promise<void>;
   /** Throws Error("lesson-exists") when another lesson holds that slot and day. */
   setDate(lessonId: number, date: string): Promise<void>;
   addAssignment(lessonId: number, text: string): Promise<number>;
   updateAssignment(id: number, text: string): Promise<void>;
   removeAssignment(id: number): Promise<void>;
+  /** Undo of removeAssignment: the record comes back unchanged (id, task links, ignored flag). */
+  reinsertAssignment(assignment: Assignment): Promise<void>;
   deleteLesson(id: number): Promise<void>;
   ignoreAssignment(id: number): Promise<void>;
   restoreAssignment(id: number): Promise<void>;
