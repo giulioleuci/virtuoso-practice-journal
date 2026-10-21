@@ -70,7 +70,7 @@ describe("lessonsService.deleteRecurrence", () => {
 
 describe("lessonsService.log", () => {
   it("creates a lesson with no assignments", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, []);
+    const lessonId = await lessonsService.log(1, null, "2025-03-01", []);
     const lesson = await db.lessons.get(lessonId);
     expect(lesson).toBeDefined();
     expect(lesson!.date).toBe("2025-03-01");
@@ -79,42 +79,16 @@ describe("lessonsService.log", () => {
   });
 
   it("creates a lesson and bulk-inserts assignments atomically", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", "Good session", [
+    const lessonId = await lessonsService.log(1, null, "2025-03-01", [
       "Practice scales",
       "Work on dynamics",
     ]);
 
     const lesson = await db.lessons.get(lessonId);
-    expect(lesson!.notes).toBe("Good session");
-
     const assignments = await db.assignments.where("lessonId").equals(lessonId).toArray();
     expect(assignments).toHaveLength(2);
     expect(assignments.map((a) => a.text).sort()).toEqual(["Practice scales", "Work on dynamics"]);
     expect(assignments[0].taskIds).toEqual([]);
-  });
-
-  it("trims whitespace from notes and leaves undefined when empty", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", "  ", []);
-    const lesson = await db.lessons.get(lessonId);
-    expect(lesson!.notes).toBeUndefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// updateLesson
-// ---------------------------------------------------------------------------
-
-describe("lessonsService.updateLesson", () => {
-  it("updates date and notes and leaves the assignments alone", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", "Old notes", ["Keep me"]);
-    const lesson = (await db.lessons.get(lessonId))!;
-
-    await lessonsService.updateLesson(lesson, "2025-03-02", "New notes");
-
-    const updated = await db.lessons.get(lessonId);
-    expect(updated!.date).toBe("2025-03-02");
-    expect(updated!.notes).toBe("New notes");
-    expect((await db.assignments.where("lessonId").equals(lessonId).toArray()).map((a) => a.text)).toEqual(["Keep me"]);
   });
 });
 
@@ -140,16 +114,70 @@ describe("lessonsService.ensureFor", () => {
     expect(rows[0].taskIds).toEqual([]);
   });
 
-  it("log() keeps the lesson created by earlier homework and sets its notes", async () => {
+  it("creates one lesson when called concurrently", async () => {
+    const [a, b] = await Promise.all([lessonsService.ensureFor(1, null, "2025-04-01"), lessonsService.ensureFor(1, null, "2025-04-01")]);
+    expect(a).toBe(b);
+    expect(await db.lessons.count()).toBe(1);
+  });
+
+  it("log() keeps the lesson created by earlier homework", async () => {
     const recurrence = { id: 6, subjectId: 1, teacher: "T", schedules: [], startDate: "2025-01-01", color: "blue" as const, createdAt: 1 };
     const id = await lessonsService.ensureFor(1, recurrence, "2025-03-05");
     await lessonsService.addAssignment(id, "Arpeggios");
 
-    const logged = await lessonsService.log(1, recurrence, "2025-03-05", "Good lesson");
+    const logged = await lessonsService.log(1, recurrence, "2025-03-05");
 
     expect(logged).toBe(id);
-    expect((await db.lessons.get(id))!.notes).toBe("Good lesson");
     expect(await db.assignments.where("lessonId").equals(id).count()).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// notes list / setDate
+// ---------------------------------------------------------------------------
+
+describe("lessonsService notes and date", () => {
+  it("addNote trims and stores", async () => {
+    const id = await lessonsService.ensureFor(1, null, "2025-03-01");
+    const noteId = await lessonsService.addNote(id, "  Watch the left hand  ");
+    expect(noteId).toBeTruthy();
+    expect((await db.lessons.get(id))!.notes).toEqual([{ id: noteId, text: "Watch the left hand" }]);
+  });
+
+  it("addNote ignores blank", async () => {
+    const id = await lessonsService.ensureFor(1, null, "2025-03-01");
+    expect(await lessonsService.addNote(id, "   ")).toBe("");
+    expect((await db.lessons.get(id))!.notes ?? []).toEqual([]);
+  });
+
+  it("updateNote changes only that note", async () => {
+    const id = await lessonsService.ensureFor(1, null, "2025-03-01");
+    const a = await lessonsService.addNote(id, "A");
+    const b = await lessonsService.addNote(id, "B");
+    await lessonsService.updateNote(id, a, "A2");
+    await lessonsService.updateNote(id, b, "  ");
+    expect((await db.lessons.get(id))!.notes).toEqual([{ id: a, text: "A2" }, { id: b, text: "B" }]);
+  });
+
+  it("removeNote leaves the others", async () => {
+    const id = await lessonsService.ensureFor(1, null, "2025-03-01");
+    const a = await lessonsService.addNote(id, "A");
+    const b = await lessonsService.addNote(id, "B");
+    await lessonsService.removeNote(id, a);
+    expect((await db.lessons.get(id))!.notes).toEqual([{ id: b, text: "B" }]);
+  });
+
+  it("setDate moves the lesson", async () => {
+    const id = await lessonsService.ensureFor(1, null, "2025-03-01");
+    await lessonsService.setDate(id, "2025-03-02");
+    expect((await db.lessons.get(id))!.date).toBe("2025-03-02");
+  });
+
+  it("setDate refuses a same slot and day", async () => {
+    const id = await lessonsService.ensureFor(1, null, "2025-03-01");
+    await lessonsService.ensureFor(1, null, "2025-03-02");
+    await expect(lessonsService.setDate(id, "2025-03-02")).rejects.toThrow("lesson-exists");
+    expect((await db.lessons.get(id))!.date).toBe("2025-03-01");
   });
 });
 
@@ -159,7 +187,7 @@ describe("lessonsService.ensureFor", () => {
 
 describe("lessonsService.deleteLesson", () => {
   it("deletes the lesson and all its assignments atomically", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, [
+    const lessonId = await lessonsService.log(1, null, "2025-03-01", [
       "Do this",
       "Do that",
     ]);
@@ -171,8 +199,8 @@ describe("lessonsService.deleteLesson", () => {
   });
 
   it("does not delete assignments from other lessons", async () => {
-    const id1 = await lessonsService.log(1, null, "2025-03-01", undefined, ["A1"]);
-    const id2 = await lessonsService.log(1, null, "2025-03-08", undefined, ["A2"]);
+    const id1 = await lessonsService.log(1, null, "2025-03-01", ["A1"]);
+    const id2 = await lessonsService.log(1, null, "2025-03-08", ["A2"]);
 
     await lessonsService.deleteLesson(id1);
 
@@ -186,7 +214,7 @@ describe("lessonsService.deleteLesson", () => {
 
 describe("lessonsService.ignoreAssignment / restoreAssignment", () => {
   it("sets ignored=true then false", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, ["Practice"]);
+    const lessonId = await lessonsService.log(1, null, "2025-03-01", ["Practice"]);
     const [assignment] = await db.assignments.where("lessonId").equals(lessonId).toArray();
     const id = assignment.id!;
 
@@ -204,7 +232,7 @@ describe("lessonsService.ignoreAssignment / restoreAssignment", () => {
 
 describe("lessonsService.linkTask", () => {
   it("links the assignment to a task, once per task", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, ["Scales"]);
+    const lessonId = await lessonsService.log(1, null, "2025-03-01", ["Scales"]);
     const [assignment] = await db.assignments.where("lessonId").equals(lessonId).toArray();
     const id = assignment.id!;
     const taskId = (await db.tasks.add({
@@ -223,7 +251,7 @@ describe("lessonsService.linkTask", () => {
   });
 
   it("does not mutate other assignments on the same lesson", async () => {
-    const lessonId = await lessonsService.log(1, null, "2025-03-01", undefined, ["A", "B"]);
+    const lessonId = await lessonsService.log(1, null, "2025-03-01", ["A", "B"]);
     const assignments = await db.assignments.where("lessonId").equals(lessonId).toArray();
     const taskId = (await db.tasks.add({
       subjectId: 1, title: "A", date: "2025-03-02", plan: [], done: false, createdAt: Date.now(),

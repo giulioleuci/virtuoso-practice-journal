@@ -8,11 +8,15 @@ export interface LessonPort {
   deleteRecurrence(id: number): Promise<void>;
   /** Lesson of that slot and day, created empty when missing. */
   ensureFor(subjectId: number, recurrence: LessonRecurrence | null | undefined, date: string): Promise<number>;
-  log(subjectId: number, recurrence: LessonRecurrence | null | undefined, date: string, notes: string | undefined, assignmentTexts?: string[]): Promise<number>;
+  log(subjectId: number, recurrence: LessonRecurrence | null | undefined, date: string, assignmentTexts?: string[]): Promise<number>;
   update(id: number, patch: Partial<Lesson>): Promise<void>;
   remove(id: number): Promise<void>;
   assignmentsForLesson(lessonId: number): Promise<Assignment[]>;
-  updateLesson(lesson: Lesson, date: string, notes: string | undefined): Promise<void>;
+  addNote(lessonId: number, text: string): Promise<string>;
+  updateNote(lessonId: number, noteId: string, text: string): Promise<void>;
+  removeNote(lessonId: number, noteId: string): Promise<void>;
+  /** Throws Error("lesson-exists") when another lesson holds that slot and day. */
+  setDate(lessonId: number, date: string): Promise<void>;
   addAssignment(lessonId: number, text: string): Promise<number>;
   updateAssignment(id: number, text: string): Promise<void>;
   removeAssignment(id: number): Promise<void>;

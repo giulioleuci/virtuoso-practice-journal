@@ -209,7 +209,7 @@ export default function Lessons() {
                           <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                             <h3 className="flex items-center gap-2 font-serif text-xl font-semibold">{dot(l.subjectId)}{subjectName(l.subjectId)}</h3>
                             <div className="text-xs text-muted-foreground">{formatDate(l.date, lang)}</div>
-                            {l.notes && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{l.notes}</p>}
+                            {!!l.notes?.length && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{l.notes.map((n) => n.text).join(" · ")}</p>}
                           </div>
                           <button onClick={() => openEditLesson(l)} className={iconBtn} aria-label={`${t("common.edit")} ${formatDate(l.date, lang)}`}><Pencil className="h-4 w-4" /></button>
                           <button onClick={() => l.id && setDelLessonId(l.id)} className={`${iconBtn} hover:text-destructive`} aria-label={`${t("common.delete")} ${formatDate(l.date, lang)}`}><Trash2 className="h-4 w-4" /></button>

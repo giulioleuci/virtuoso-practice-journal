@@ -27,12 +27,17 @@ export interface LessonSnapshot {
   frequency?: LessonFrequency;
 }
 
+export interface LessonNote {
+  id: string;
+  text: string;
+}
+
 export interface Lesson {
   id?: number;
   recurrenceId?: number;
   subjectId: number;
   date: string;
-  notes?: string;
+  notes?: LessonNote[];
   piecesPlayed?: number[];
   piecesPlayedTitles?: string[];
   snapshot?: LessonSnapshot;

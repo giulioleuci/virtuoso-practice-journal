@@ -130,12 +130,11 @@ describe("Dexie repositories", () => {
 
   it("implements lesson port reads, updates, and assignment lookup", async () => {
     const subject = await subjectId();
-    const lessonId = await lessonRepository.log(subject, undefined, "2026-01-01", "note", ["practice"]);
+    const lessonId = await lessonRepository.log(subject, undefined, "2026-01-01", ["practice"]);
     expect((await lessonRepository.list()).map((lesson) => lesson.id)).toEqual([lessonId]);
-    expect((await lessonRepository.get(lessonId))?.notes).toBe("note");
     expect((await lessonRepository.assignmentsForLesson(lessonId)).map((assignment) => assignment.text)).toEqual(["practice"]);
-    await lessonRepository.update(lessonId, { notes: "updated" });
-    expect((await lessonRepository.get(lessonId))?.notes).toBe("updated");
+    await lessonRepository.update(lessonId, { notes: [{ id: "n1", text: "updated" }] });
+    expect((await lessonRepository.get(lessonId))?.notes).toEqual([{ id: "n1", text: "updated" }]);
     await lessonRepository.remove(lessonId);
     expect(await lessonRepository.get(lessonId)).toBeUndefined();
   });

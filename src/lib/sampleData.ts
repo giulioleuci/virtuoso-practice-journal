@@ -435,7 +435,7 @@ targetBpm: 84, noteVal: "quarter",
 
     const lessonId = (await db.lessons.add({
       recurrenceId: lessonRecId, subjectId: pianoId, date: dayKey(d),
-      notes: "Voicing of inner lines; pedaling for legato bass; tempo control.",
+      notes: [{ id: "n1", text: "Voicing of inner lines; pedaling for legato bass; tempo control." }],
       piecesPlayed: pieceIds, piecesPlayedTitles, snapshot,
       createdAt: d.getTime(),
     })) as number;
@@ -462,7 +462,7 @@ targetBpm: 84, noteVal: "quarter",
 
     const lessonId = (await db.lessons.add({
       recurrenceId: harmonyRecId, subjectId: harmonyId, date: dayKey(d),
-      notes: "Reviewed secondary dominants; introduced Neapolitan sixth.",
+      notes: [{ id: "n1", text: "Reviewed secondary dominants; introduced Neapolitan sixth." }],
       piecesPlayed: pieceIds, piecesPlayedTitles, snapshot,
       createdAt: d.getTime(),
     })) as number;
