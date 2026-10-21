@@ -1085,5 +1085,13 @@
   "routine.warningsTitle": "Vor dem Speichern prüfen",
   "routine.subjectChangeWarning": "Ein Fachwechsel leert die Materialien aller Gruppen. Fortfahren?",
   "routine.noneSelected": "Für {{group}} ist noch kein Material ausgewählt.",
-  "routine.errorGroupEmpty": "{{group}} hat noch keine Materialien"
+  "routine.errorGroupEmpty": "{{group}} hat noch keine Materialien",
+  "lessonLive.title": "Stunde erfassen",
+  "lessonLive.homework": "Aufgaben",
+  "lessonLive.notes": "Notizen",
+  "lessonLive.addNote": "Notiz hinzufügen",
+  "lessonLive.notePlaceholder": "Ein Punkt aus der Stunde…",
+  "lessonLive.finish": "Stunde beenden",
+  "lessonLive.dateTaken": "An diesem Tag gibt es bereits eine Stunde",
+  "lessonLive.removed": "Entfernt"
 }

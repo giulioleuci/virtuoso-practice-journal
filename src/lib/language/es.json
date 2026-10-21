@@ -1085,5 +1085,13 @@
   "routine.warningsTitle": "Revisar antes de guardar",
   "routine.subjectChangeWarning": "Cambiar la materia vacía los materiales de cada grupo. ¿Continuar?",
   "routine.noneSelected": "Aún no hay materiales seleccionados para {{group}}.",
-  "routine.errorGroupEmpty": "{{group}} aún no tiene materiales"
+  "routine.errorGroupEmpty": "{{group}} aún no tiene materiales",
+  "lessonLive.title": "Registrar lección",
+  "lessonLive.homework": "Tareas",
+  "lessonLive.notes": "Notas",
+  "lessonLive.addNote": "Añadir nota",
+  "lessonLive.notePlaceholder": "Un punto de la lección…",
+  "lessonLive.finish": "Terminar lección",
+  "lessonLive.dateTaken": "Ya existe una lección ese día",
+  "lessonLive.removed": "Eliminado"
 }

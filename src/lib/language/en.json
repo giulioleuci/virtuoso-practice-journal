@@ -1085,5 +1085,13 @@
   "routine.warningsTitle": "Check before saving",
   "routine.subjectChangeWarning": "Changing the subject empties the materials of every group. Continue?",
   "routine.noneSelected": "No materials selected for {{group}} yet.",
-  "routine.errorGroupEmpty": "{{group}} has no materials yet"
+  "routine.errorGroupEmpty": "{{group}} has no materials yet",
+  "lessonLive.title": "Log lesson",
+  "lessonLive.homework": "Homework",
+  "lessonLive.notes": "Notes",
+  "lessonLive.addNote": "Add note",
+  "lessonLive.notePlaceholder": "A point from the lesson…",
+  "lessonLive.finish": "Finish lesson",
+  "lessonLive.dateTaken": "Another lesson already exists on that day",
+  "lessonLive.removed": "Removed"
 }

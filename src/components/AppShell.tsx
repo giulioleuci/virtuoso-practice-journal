@@ -45,7 +45,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
   const main = useRef<HTMLElement>(null);
   const keyboardInset = useKeyboardInset();
   // Forms keep their save bar pinned low: no navigation beside Save while logging or planning.
-  const onForm = ["/log", "/tasks/new", "/tasks/edit/", "/tasks/bulk"].some((p) => p.endsWith("/") ? location.pathname.startsWith(p) : location.pathname === p);
+  const onForm = ["/log", "/tasks/new", "/tasks/edit/", "/tasks/bulk", "/lessons/live"].some((p) => p.endsWith("/") ? location.pathname.startsWith(p) : location.pathname === p);
   const navHidden = hidden || keyboardInset > 0 || onForm;
 
   useEffect(() => {
