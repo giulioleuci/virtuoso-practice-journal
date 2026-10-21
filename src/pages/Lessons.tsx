@@ -2,7 +2,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { useActiveTasks, useAssignments, useLessons, useOpenHelpRequestCount, useRecurrences, useSubjects } from "@/presentation/hooks/useEntities";
 import { subjectColorCss } from "@/lib/subjectColors";
 import { LESSON_QUOTES, pickQuote } from "@/lib/quotes";
-import type { LessonRecurrence } from "@/domain/entities/lesson";
+import { lessonNotes, type LessonRecurrence } from "@/domain/entities/lesson";
 import { lessonsService } from "@/lib/services";
 import { assignmentsToPlan } from "@/presentation/utils/assignments";
 import { useI18n } from "@/lib/i18n";
@@ -183,13 +183,14 @@ export default function Lessons() {
                 <ul className="divide-y divide-border border-t border-border">
                   {lessons.slice(recentPage * PAGE_SIZE, (recentPage + 1) * PAGE_SIZE).map((l) => {
                     const las = (assignments ?? []).filter((a) => a.lessonId === l.id);
+                    const notes = lessonNotes(l);
                     return (
                       <li key={l.id} className="py-4">
                         <div className="flex items-start gap-3">
                           <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                             <h3 className="flex items-center gap-2 font-serif text-xl font-semibold">{dot(l.subjectId)}{subjectName(l.subjectId)}</h3>
                             <div className="text-xs text-muted-foreground">{formatDate(l.date, lang)}</div>
-                            {Array.isArray(l.notes) && l.notes.length > 0 && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{l.notes.map((n) => n.text).join(" · ")}</p>}
+                            {notes.length > 0 && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{notes.map((n) => n.text).join(" · ")}</p>}
                           </div>
                           <button onClick={() => navigate(liveLessonPath({ lessonId: l.id }))} className={iconBtn} aria-label={`${t("common.edit")} ${formatDate(l.date, lang)}`}><Pencil className="h-4 w-4" /></button>
                           <button onClick={() => l.id && setDelLessonId(l.id)} className={`${iconBtn} hover:text-destructive`} aria-label={`${t("common.delete")} ${formatDate(l.date, lang)}`}><Trash2 className="h-4 w-4" /></button>

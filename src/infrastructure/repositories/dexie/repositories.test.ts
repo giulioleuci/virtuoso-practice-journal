@@ -139,6 +139,13 @@ describe("Dexie repositories", () => {
     expect(await lessonRepository.get(lessonId)).toBeUndefined();
   });
 
+  it("addNote on a lesson whose notes are a legacy string keeps the text and appends", async () => {
+    const lessonId = await lessonRepository.ensureFor(await subjectId(), undefined, "2026-01-01");
+    await db.lessons.update(lessonId, { notes: "old text" as never });
+    const added = await lessonRepository.addNote(lessonId, "new");
+    expect((await lessonRepository.get(lessonId))?.notes).toEqual([{ id: "legacy", text: "old text" }, { id: added, text: "new" }]);
+  });
+
   it("returns initialized profile and rolls back its subjects when profile write fails", async () => {
     const profile = await profileRepository.initialize({ subjects: [{ name: "Piano", type: "instrument" }], name: "Alice", lang: "en", reminderTime: "09:00", reminderFreq: "daily", reminderDays: [], lateRecoveryDays: 1, graceDay: false, groupByPhase: false, onboarded: true });
     expect(profile.id).toBe("me");

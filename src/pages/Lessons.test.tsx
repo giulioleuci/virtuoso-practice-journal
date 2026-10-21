@@ -40,3 +40,10 @@ it("logs a teacher's lesson on the live page for today", async () => {
   fireEvent.click(await screen.findByRole("button", { name: t("lessons.log") }));
   expect(await screen.findByText(`live?recurrence=${id}&date=${today()}`)).toBeInTheDocument();
 });
+
+it("shows the notes of a lesson logged before notes became a list", async () => {
+  const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
+  await db.lessons.add({ subjectId, date: "2026-10-01", notes: "old free text" as never, createdAt: 1 });
+  showRoutes();
+  expect(await screen.findByText("old free text")).toBeInTheDocument();
+});

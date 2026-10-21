@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-imports -- Integration test exercises real local persistence. */
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { db } from "@/lib/db";
@@ -78,11 +78,76 @@ it("lists stay hidden until they have entries and show the newest first", async 
   await waitFor(async () => expect((await db.lessons.get(id))?.notes?.map((n) => n.text)).toEqual(["Oldest", "Middle", "Newest"]));
 });
 
-it("a legacy string in notes renders without crashing", async () => {
-  const id = await db.lessons.add({ subjectId, recurrenceId, date: DATE, notes: "old free text" as never, createdAt: 1 });
+it("a legacy string in notes is kept as a note that can be edited and removed", async () => {
+  const id = await db.lessons.add({ subjectId, recurrenceId, date: DATE, notes: " old free text " as never, createdAt: 1 });
   renderPage(`/lessons/live?lesson=${id}`);
-  expect(await noteInput()).toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: t("lessonLive.notes") })).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole("button", { name: `${t("common.edit")}: old free text` }));
+  fireEvent.change(screen.getByRole("textbox", { name: `${t("common.edit")}: old free text` }), { target: { value: "edited text" } });
+  fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
+  await waitFor(async () => expect((await db.lessons.get(id))?.notes).toEqual([{ id: "legacy", text: "edited text" }]));
+  fireEvent.click(await screen.findByRole("button", { name: `${t("common.delete")}: edited text` }));
+  await waitFor(async () => expect((await db.lessons.get(id))?.notes).toEqual([]));
+});
+
+it("Finish saves unsent text", async () => {
+  renderPage();
+  fireEvent.change(await noteInput(), { target: { value: " Unsent note " } });
+  fireEvent.change(homeworkInput(), { target: { value: "Unsent homework" } });
+  fireEvent.click(screen.getByRole("button", { name: t("lessonLive.finish") }));
+  expect(await screen.findByText("lessons page")).toBeInTheDocument();
+  expect((await db.lessons.toArray()).map((l) => l.notes?.map((n) => n.text))).toEqual([["Unsent note"]]);
+  expect((await db.assignments.toArray()).map((a) => a.text)).toEqual(["Unsent homework"]);
+  expect(readLiveLesson()).toBeUndefined();
+});
+
+it("a failed save on Finish stays on the page with the text", async () => {
+  vi.spyOn(lessonsService, "addNote").mockRejectedValueOnce(new Error("quota"));
+  const error = vi.spyOn(toast, "error");
+  renderPage();
+  fireEvent.change(await noteInput(), { target: { value: "Keep me" } });
+  fireEvent.click(screen.getByRole("button", { name: t("lessonLive.finish") }));
+  await waitFor(() => expect(error).toHaveBeenCalledWith(t("lessonLive.notSaved")));
+  expect(await noteInput()).toHaveValue("Keep me");
+  expect(screen.queryByText("lessons page")).not.toBeInTheDocument();
+  expect(readLiveLesson()).toBe(`/lessons/live?recurrence=${recurrenceId}&date=${DATE}`);
+});
+
+it("Enter then an immediate Finish adds the line once", async () => {
+  const addNote = vi.spyOn(lessonsService, "addNote");
+  renderPage();
+  add(await noteInput(), "Once");
+  fireEvent.click(screen.getByRole("button", { name: t("lessonLive.finish") }));
+  expect(await screen.findByText("lessons page")).toBeInTheDocument();
+  await waitFor(() => expect(addNote).toHaveBeenCalled());
+  await Promise.all(addNote.mock.results.map((r) => r.value));
+  expect((await db.lessons.toArray())[0].notes?.map((n) => n.text)).toEqual(["Once"]);
+  expect(addNote).toHaveBeenCalledTimes(1);
+});
+
+it("Finish while a date change is saving stays finished", async () => {
+  const id = await db.lessons.add({ subjectId, recurrenceId, date: DATE, createdAt: 1 });
+  const setDate = vi.spyOn(lessonsService, "setDate");
+  renderPage();
+  const date = await screen.findByLabelText(t("common.date"));
+  fireEvent.change(date, { target: { value: "2026-10-22" } });
+  fireEvent.blur(date); // tapping Finish leaves the date field first
+  fireEvent.click(screen.getByRole("button", { name: t("lessonLive.finish") }));
+  expect(await screen.findByText("lessons page")).toBeInTheDocument();
+  await act(() => setDate.mock.results[0].value);
+  expect((await db.lessons.get(id))?.date).toBe("2026-10-22");
+  expect(screen.getByText("lessons page")).toBeInTheDocument();
+  expect(readLiveLesson()).toBeUndefined();
+});
+
+it("with two lessons in one slot, writes go to the one shown", async () => {
+  const older = await db.lessons.add({ subjectId, recurrenceId, date: DATE, createdAt: 1 });
+  const shown = await db.lessons.add({ subjectId, recurrenceId, date: DATE, notes: [{ id: "n1", text: "Shown" }], createdAt: 2 });
+  renderPage();
+  await screen.findByText("Shown");
+  add(await noteInput(), "Added");
+  expect(await screen.findByText("Added")).toBeInTheDocument();
+  expect((await db.lessons.get(shown))?.notes?.map((n) => n.text)).toEqual(["Shown", "Added"]);
+  expect((await db.lessons.get(older))?.notes).toBeUndefined();
 });
 
 it("a failed add keeps the text in the field and says so", async () => {
@@ -157,6 +222,8 @@ it("deleting a row moves focus to the next row", async () => {
   fireEvent.click(await screen.findByRole("button", { name: `${t("common.delete")}: Newer` }));
   expect(screen.getByRole("button", { name: `${t("common.edit")}: Older` })).toHaveFocus();
   await waitFor(() => expect(screen.queryByText("Newer")).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: `${t("common.delete")}: Older` }));
+  expect(await noteInput()).toHaveFocus(); // the last row goes: focus falls back to the list's add field
 });
 
 it("unsent text is restored after remount", async () => {
@@ -190,6 +257,7 @@ it("date change on an existing lesson moves it, collision shows an alert", async
   date.focus();
   fireEvent.change(date, { target: { value: "2026-10-28" } });
   fireEvent.keyDown(date, { key: "Enter" });
+  expect(date).toHaveFocus();
   expect(await screen.findByRole("alert")).toHaveTextContent(t("lessonLive.dateTaken"));
   expect(date).toHaveAccessibleDescription(t("lessonLive.dateTaken"));
   await waitFor(async () => expect((await db.lessons.get(id))?.date).toBe("2026-10-22"));
@@ -217,10 +285,11 @@ it("typing a date commits it only when the field is left", async () => {
 it("date change on a slot with no lesson only changes the address", async () => {
   renderPage();
   const date = (await screen.findByLabelText(t("common.date")));
-  await noteInput();
+  fireEvent.change(await noteInput(), { target: { value: "Still typing" } });
   fireEvent.change(date, { target: { value: "2026-10-23" } });
   fireEvent.blur(date);
   await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("date=2026-10-23"));
+  expect(await noteInput()).toHaveValue("Still typing"); // the date is not part of the draft
   expect(readLiveLesson()).toBe(`/lessons/live?recurrence=${recurrenceId}&date=2026-10-23`);
   await waitFor(async () => expect(await db.lessons.count()).toBe(0));
 });

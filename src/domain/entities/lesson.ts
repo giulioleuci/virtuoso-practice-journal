@@ -44,6 +44,13 @@ export interface Lesson {
   createdAt: number;
 }
 
+/** Rows written before notes became a list hold one string: it reads as the note "legacy", so writes keep it. */
+export function lessonNotes(l: Lesson): LessonNote[] {
+  const notes: unknown = l.notes;
+  if (Array.isArray(notes)) return notes;
+  return typeof notes === "string" && notes.trim() ? [{ id: "legacy", text: notes.trim() }] : [];
+}
+
 export interface Assignment {
   id: number;
   lessonId: number;

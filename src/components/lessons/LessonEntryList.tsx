@@ -35,9 +35,8 @@ type EntryId = string | number;
 const notSaved = (t: (key: string) => string) => toast.error(t("lessonLive.notSaved"));
 
 /** Add field of a live lesson list: Enter adds the line, unsent text survives a reload under `draftScope`. */
-export function LessonEntryField({ label, placeholder, addLabel, draftScope, onAdd }: { label: string; placeholder: string; addLabel: string; draftScope: string; onAdd(text: string): Promise<unknown> }) {
+export function LessonEntryField({ id, label, placeholder, addLabel, draftScope, onAdd }: { id: string; label: string; placeholder: string; addLabel: string; draftScope: string; onAdd(text: string): Promise<unknown> }) {
   const { t } = useI18n();
-  const id = useId();
   const [draft, setDraft] = useState(() => readLessonDraft(draftScope));
   const latest = useRef(draft);
   const [added, setAdded] = useState(""); // spoken after each add: the field just empties otherwise
@@ -46,9 +45,9 @@ export function LessonEntryField({ label, placeholder, addLabel, draftScope, onA
   const add = async () => {
     const text = latest.current.trim();
     if (!text) return;
-    // Cleared before awaiting: a second Enter finds nothing to add, and the next entry can be typed at once.
-    latest.current = ""; setDraft("");
-    try { await onAdd(text); writeLessonDraft(draftScope, latest.current); setAdded(`${t("toast.added")}: ${text}`); }
+    // Field and stored draft cleared before awaiting: a second Enter or a quick Finish finds nothing to add twice.
+    type("");
+    try { await onAdd(text); setAdded(`${t("toast.added")}: ${text}`); }
     catch { notSaved(t); if (!latest.current.trim()) type(text); }
   };
 
@@ -66,6 +65,8 @@ export function LessonEntryField({ label, placeholder, addLabel, draftScope, onA
 
 interface ListProps<T extends { id: EntryId; text: string }> {
   title: string;
+  /** The list's add field: focus goes there when the last row is deleted. */
+  addFieldId: string;
   entries: T[];
   onEdit(id: EntryId, text: string): Promise<unknown>;
   onRemove(id: EntryId): Promise<unknown>;
@@ -76,7 +77,7 @@ interface ListProps<T extends { id: EntryId; text: string }> {
 const iconBtn = "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground";
 
 /** Entries of a live lesson list (homework or notes), newest first: edit in place, delete with undo. */
-export function LessonEntryList<T extends { id: EntryId; text: string }>({ title, entries, onEdit, onRemove, onRestore }: ListProps<T>) {
+export function LessonEntryList<T extends { id: EntryId; text: string }>({ title, addFieldId, entries, onEdit, onRemove, onRestore }: ListProps<T>) {
   const { t } = useI18n();
   const errorId = useId();
   const returnFocus = useRef<EntryId>();
@@ -113,9 +114,9 @@ export function LessonEntryList<T extends { id: EntryId; text: string }>({ title
                 <button type="button" ref={(el) => { if (el && returnFocus.current === entry.id) { returnFocus.current = undefined; el.focus(); } }} className={iconBtn} aria-label={`${t("common.edit")}: ${entry.text}`} onClick={() => setEditing({ id: entry.id, text: entry.text })}><Pencil className="h-4 w-4" /></button>
                 <button type="button" className={`${iconBtn} hover:text-destructive`} aria-label={`${t("common.delete")}: ${entry.text}`}
                   onClick={(e) => {
-                    // Focus moves to the neighbouring row instead of falling to the page when this row goes.
+                    // Focus moves to the neighbouring row, or to the add field when the last row goes, instead of falling to the page.
                     const row = e.currentTarget.closest("li");
-                    (row?.nextElementSibling ?? row?.previousElementSibling)?.querySelector("button")?.focus();
+                    ((row?.nextElementSibling ?? row?.previousElementSibling)?.querySelector("button") ?? document.getElementById(addFieldId) ?? document.getElementById("main-content"))?.focus();
                     void deleteWithUndo({ remove: () => onRemove(entry.id), restore: () => onRestore(entry, index), message: t("lessonLive.removed"), undoLabel: t("common.undo"), toast: (message, options) => toast.success(message, options), onError: () => toast.error(t("errors.couldNotSave")) });
                   }}><Trash2 className="h-4 w-4" /></button>
               </div>
