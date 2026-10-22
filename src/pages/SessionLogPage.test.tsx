@@ -33,6 +33,24 @@ async function rate() {
   fireEvent.click(within((await screen.findAllByRole("group", { name: t("session.confidenceLabel") })).at(-1)!).getAllByRole("button")[3]);
 }
 
+it("records a theory session with custom aspects and methods", async () => {
+  const task = (await db.tasks.get(taskId))!;
+  await db.subjects.update(task.subjectId, { type: "theory", layers: ["Historical context"] });
+  const method = await db.techniques.add({ subjectId: task.subjectId, name: "Oral explanation", createdAt: 1 });
+  show();
+  fireEvent.click(await screen.findByRole("button", { name: t("session.layers") }));
+  fireEvent.click(await screen.findByRole("checkbox", { name: "Historical context" }));
+  fireEvent.keyDown(document, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("checkbox", { name: "Historical context" })).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: t("session.techniquesPracticed") }));
+  fireEvent.click(await screen.findByRole("checkbox", { name: "Oral explanation" }));
+  fireEvent.keyDown(document, { key: "Escape" });
+  await screen.findByRole("button", { name: t("common.removeItem", { label: "Oral explanation" }) });
+  await rate();
+  fireEvent.click(screen.getByRole("button", { name: t("session.saveSession") }));
+  await waitFor(async () => expect((await db.sessions.toArray())[0]?.marks[0]).toMatchObject({ layers: ["Historical context"], techniques: [method] }));
+});
+
 it("keeps task context and starts with neutral confidence guidance, with optional ratings collapsed", async () => {
   show();
   await screen.findByText("Sonata exposition");

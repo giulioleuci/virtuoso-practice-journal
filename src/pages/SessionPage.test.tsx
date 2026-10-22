@@ -31,6 +31,17 @@ it("says when the session happened", async () => {
   expect(await screen.findByText(formatDate("2026-09-20", "en", "long"))).toBeInTheDocument();
 });
 
+it("shows custom theory aspects alongside translated historical aspects", async () => {
+  await db.subjects.update(subjectId, { type: "theory", layers: ["Historical context"] });
+  const id = await session("2026-09-20", 60);
+  await db.sessions.update(id, { marks: [{ layers: ["analytical", "Historical context"], techniques: [], confidence: 3 }] });
+  show(id);
+  expect(await screen.findByText("Analytical · Historical context")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: t("common.edit") }));
+  fireEvent.click(screen.getByRole("button", { name: t("session.layers") }));
+  expect(await screen.findByRole("checkbox", { name: "Historical context" })).toBeInTheDocument();
+});
+
 it("never pre-selects a slower reached tempo as the next target, and Apply can be undone", async () => {
   const success = vi.spyOn(toast, "success");
   show(await session("2026-09-20", 60));

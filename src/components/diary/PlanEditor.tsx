@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Copy } from "lucide-react";
 import type { Subject, SegmentEntry } from "@/domain/entities/common";
 import type { Segment } from "@/domain/entities/library";
-import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+import { getSubjectLayers, getSubjectLayerLabel } from "@/lib/domain/subjectLayers";
 import { useI18n } from "@/lib/i18n";
 import { useTechniques } from "@/presentation/hooks/useEntities";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,7 @@ import { MultiChipPicker } from "@/components/shared/MultiChipPicker";
 export function PlanEditor({ plan, onChange, sections, subject }: { plan: SegmentEntry[]; onChange: (plan: SegmentEntry[]) => void; sections?: Segment[]; subject?: Subject }) {
   const { t } = useI18n();
   const techniques = useTechniques();
-  const isTheory = subject?.type === "theory";
-  const layerOptions = useMemo(() => getSubjectLayers(subject).map((l) => ({ value: l, label: isTheory ? t(`library.mastery.${l}`) : l })), [subject, isTheory, t]);
+  const layerOptions = useMemo(() => getSubjectLayers(subject).map((l) => ({ value: l, label: getSubjectLayerLabel(subject, l, t) })), [subject, t]);
   const techniqueOptions = useMemo(() => (techniques ?? []).filter((x) => x.subjectId === subject?.id).map((x) => ({ value: x.id, label: x.name })), [techniques, subject?.id]);
   const patch = (i: number, p: Partial<SegmentEntry>) => onChange(plan.map((e, j) => (j === i ? { ...e, ...p } : e)));
 

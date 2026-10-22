@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
-import { db } from "@/lib/db";
+import { db, THEORY_LAYERS } from "@/lib/db";
 import { subjectsService } from "@/lib/services/subjects";
 
 beforeEach(async () => {
@@ -27,6 +27,7 @@ describe("subjectsService.create", () => {
     const id = await subjectsService.create("Harmony", "theory");
     const subject = await db.subjects.get(id);
     expect(subject!.type).toBe("theory");
+    expect(subject!.layers).toEqual([...THEORY_LAYERS]);
   });
 
   it("returns distinct ids for different subjects", async () => {
@@ -70,6 +71,15 @@ describe("subjectsService.remove", () => {
 // ---------------------------------------------------------------------------
 
 describe("subjectsService.addLayer", () => {
+  it("preserves default theory aspects when editing an unconfigured subject", async () => {
+    const id = await db.subjects.add({ name: "Harmony", type: "theory", createdAt: 1 });
+    await subjectsService.addLayer(id, "Oral explanation");
+    expect((await db.subjects.get(id))!.layers).toEqual([...THEORY_LAYERS, "Oral explanation"]);
+    await subjectsService.renameLayer(id, "analytical", "Analysis");
+    await subjectsService.removeLayer(id, "conceptual");
+    expect((await db.subjects.get(id))!.layers).toEqual(["Analysis", "aural", "compositional", "reading", "Oral explanation"]);
+  });
+
   it("appends a layer to an empty subject", async () => {
     const id = await subjectsService.create("Piano", "instrument");
     await subjectsService.addLayer(id, "slow");

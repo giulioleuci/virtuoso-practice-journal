@@ -1,4 +1,7 @@
 import "@testing-library/jest-dom";
+import { configure } from "@testing-library/react";
+
+configure({ asyncUtilTimeout: 3000 });
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,

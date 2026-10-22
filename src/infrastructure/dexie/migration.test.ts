@@ -17,6 +17,12 @@ it("upgrades session references and removes only obsolete study status", async (
   const legacy = new Dexie("virtuoso");
   legacy.version(13).stores(V13);
   await legacy.open();
+  await legacy.table("subjects").bulkAdd([
+    { id: 7, name: "Piano", type: "instrument", layers: ["RH"], createdAt: 1 },
+    { id: 8, name: "Harmony", type: "theory", layers: [], createdAt: 1 },
+    { id: 9, name: "History", type: "theory", createdAt: 1 },
+    { id: 10, name: "Analysis", type: "theory", layers: ["Compare scores"], createdAt: 1 },
+  ]);
   await legacy.table("tasks").add({ id: 1, date: "2026-10-01", subjectId: 7, linkType: "item", itemId: 3, title: "Ballade", plan: [], done: true, createdAt: 1 });
   await legacy.table("sessions").bulkAdd([
     { id: 1, taskId: 1, date: "2026-10-01", notes: "kept", marks: [{ layers: [], techniques: [], confidence: 4 }], createdAt: 1 },
@@ -27,6 +33,11 @@ it("upgrades session references and removes only obsolete study status", async (
 
   const { db } = await import("./db");
   await db.open();
+
+  expect((await db.subjects.get(7))?.layers).toEqual(["RH"]);
+  expect((await db.subjects.get(8))?.layers).toEqual(["conceptual", "analytical", "aural", "compositional", "reading"]);
+  expect((await db.subjects.get(9))?.layers).toEqual(["conceptual", "analytical", "aural", "compositional", "reading"]);
+  expect((await db.subjects.get(10))?.layers).toEqual(["Compare scores"]);
 
   expect(await db.sessions.get(1)).toMatchObject({ taskId: 1, subjectId: 7, linkType: "item", itemId: 3, notes: "kept", marks: [{ confidence: 4 }] });
   expect((await db.sessions.get(1))?.marks[0].mood).toBeUndefined();

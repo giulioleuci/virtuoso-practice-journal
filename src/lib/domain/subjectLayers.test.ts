@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { getSubjectLayers } from "@/lib/domain/subjectLayers";
+import { getSubjectLayers, getSubjectLayerLabel } from "@/lib/domain/subjectLayers";
 import { THEORY_LAYERS, type Subject } from "@/lib/db";
+import { translate } from "@/lib/i18n";
 
 const make = (over: Partial<Subject>): Subject => ({
   name: "S",
@@ -10,8 +11,16 @@ const make = (over: Partial<Subject>): Subject => ({
 });
 
 describe("getSubjectLayers", () => {
-  it("returns the fixed theory layers for theory subjects", () => {
-    expect(getSubjectLayers(make({ type: "theory", layers: ["ignored"] }))).toEqual([...THEORY_LAYERS]);
+  it("uses the theory subject's configured aspects", () => {
+    expect(getSubjectLayers(make({ type: "theory", layers: ["Contesto storico", "Ascolto"] }))).toEqual(["Contesto storico", "Ascolto"]);
+  });
+
+  it("keeps an explicitly empty theory configuration", () => {
+    expect(getSubjectLayers(make({ type: "theory", layers: [] }))).toEqual([]);
+  });
+
+  it("defaults to the existing theory aspects only when not configured", () => {
+    expect(getSubjectLayers(make({ type: "theory" }))).toEqual([...THEORY_LAYERS]);
   });
 
   it("returns the subject's own layers for non-theory subjects", () => {
@@ -23,4 +32,12 @@ describe("getSubjectLayers", () => {
     expect(getSubjectLayers(undefined)).toEqual([]);
     expect(getSubjectLayers(null)).toEqual([]);
   });
+});
+
+it("translates built-in theory aspects and preserves custom or practical names", () => {
+  const t = (key: string) => translate("it", key);
+  const theory = make({ type: "theory" });
+  expect(getSubjectLayerLabel(theory, "analytical", t)).toBe("Analitico");
+  expect(getSubjectLayerLabel(theory, "Contesto storico", t)).toBe("Contesto storico");
+  expect(getSubjectLayerLabel(make({}), "reading", t)).toBe("reading");
 });

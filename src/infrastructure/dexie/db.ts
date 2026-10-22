@@ -1,4 +1,5 @@
 import Dexie, { type Table } from "dexie";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { Draft } from "@/domain/entities/common";
 import type { Profile } from "@/domain/entities/profile";
 import type { Subject, Technique } from "@/domain/entities/common";
@@ -65,6 +66,12 @@ export class VirtuosoDB extends Dexie {
     this.version(15).stores({ recordings: "++id, &uid, sessionId" });
     this.version(16).stores({}).upgrade(async tx => {
       await tx.table("library").toCollection().modify(item => { delete item.studyStatus; });
+    });
+    // Previously, theory aspects were fixed even when subjects stored an empty list.
+    this.version(17).stores({}).upgrade(async tx => {
+      await tx.table("subjects").toCollection().modify((subject: Subject) => {
+        if (subject.type === "theory" && !subject.layers?.length) subject.layers = [...THEORY_LAYERS];
+      });
     });
     this.version(18).stores({
       tempoProgressions: "++id, [owner.kind+owner.id], &[owner.kind+owner.id+contextKey]",

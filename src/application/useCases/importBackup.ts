@@ -5,6 +5,7 @@ import type { SegmentMark } from "@/domain/entities/common";
 import { tempoContextKey } from "@/domain/logic/tempoProgression";
 import { sessionTempoIndexes } from "@/domain/entities/session";
 import { z } from "zod";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import { isPerformable } from "@/domain/logic/repertoireReview";
 import type { AudioPort } from "@/domain/ports/audio";
 import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
@@ -50,7 +51,11 @@ export class ImportBackupUseCase {
         ids.add(key);
       }
     }
-    const subjects = (data.subjects ?? []).map(value => row.extend({ name: z.string().min(1), type: z.enum(["instrument", "theory", "composition", "other"]) }).parse(value));
+    const subjects = (data.subjects ?? []).map(value => {
+      const subject = row.extend({ name: z.string().min(1), type: z.enum(["instrument", "theory", "composition", "other"]), layers: z.array(z.string()).optional() }).parse(value);
+      if (subject.type === "theory" && (subject.layers === undefined || (parsed.version === 4 && !subject.layers.length))) subject.layers = [...THEORY_LAYERS];
+      return subject;
+    });
     const techniques = (data.techniques ?? []).map(value => row.extend({ subjectId: id, name: z.string().min(1) }).parse(value));
     const items = (data.library ?? []).map(value => {
       const current = row.extend({ inRepertoire: z.boolean().optional() }).parse(value);

@@ -18,7 +18,7 @@ interface Props {
   techniqueIds: number[]; setTechniqueIds: (v: number[]) => void;
   segments: SegmentInput[]; setSegments: (v: SegmentInput[]) => void;
   techniqueOptions: { value: number; label: string }[];
-  subjectLayers: string[];
+  layerOptions: { value: string; label: string }[];
   collectionIds?: number[]; setCollectionIds?: (v: number[]) => void;
   collectionOptions?: { value: number; label: string }[];
   onCreateCollection?: () => void;
@@ -75,7 +75,7 @@ export function LibraryItemKindFields(p: Props) {
         itemTempo={{ targetBpm: p.targetBpm, noteVal: p.noteVal }}
         segments={p.segments}
         onChange={p.setSegments}
-        subjectLayers={p.subjectLayers}
+        layerOptions={p.layerOptions}
         techniqueOptions={p.techniqueOptions}
       />
     </>

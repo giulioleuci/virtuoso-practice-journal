@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, MessageSquareQuote } from "lucide-react";
 import { toast } from "sonner";
-import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import { getSubjectLayers, getSubjectLayerLabel } from "@/lib/domain/subjectLayers";
 import type { SegmentMark, Subject } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
@@ -154,8 +154,8 @@ function useSubjectOptions(subject: Subject | undefined) {
   const techniques = useTechniques();
   const isTheory = subject?.type === "theory";
   const layerOptions = useMemo(
-    () => (isTheory ? THEORY_LAYERS.map((l) => ({ value: l as string, label: t(`library.mastery.${l}`) })) : (subject?.layers ?? []).map((l) => ({ value: l, label: l }))),
-    [subject, isTheory, t],
+    () => getSubjectLayers(subject).map(l => ({ value: l, label: getSubjectLayerLabel(subject, l, t) })),
+    [subject, t],
   );
   const techniqueOptions = useMemo(() => (techniques ?? []).filter((x) => x.subjectId === subject?.id).map((x) => ({ value: x.id, label: x.name })), [techniques, subject]);
   return { isTheory, layerOptions, techniqueOptions };

@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import { getSubjectLayers, getSubjectLayerLabel } from "@/lib/domain/subjectLayers";
 import { RATING_KEYS, type SegmentMark, type Subject } from "@/domain/entities/common";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { Recording, Session } from "@/domain/entities/session";
@@ -72,12 +72,10 @@ function SessionView({ session, latest }: { session: Session; latest: boolean })
 
   const snap = session.snapshot;
   const sections = (snap?.segments ?? []).map((s) => ({ id: Number(s.id), label: s.barStart === undefined ? s.label : `${s.label} · ${t("segments.bars", { start: s.barStart, end: s.barEnd! })}` }));
-  const layerOptions = isTheory
-    ? THEORY_LAYERS.map((l) => ({ value: l as string, label: t(`library.mastery.${l}`) }))
-    : (subject?.layers ?? []).map((l) => ({ value: l, label: l }));
+  const layerOptions = getSubjectLayers(subject).map(l => ({ value: l, label: getSubjectLayerLabel(subject, l, t) }));
   const techniqueOptions = (techniques ?? []).filter((x) => x.subjectId === session.subjectId).map((x) => ({ value: x.id, label: x.name }));
   const techName = (tid: number) => techniques?.find((x) => x.id === tid)?.name;
-  const layerLabel = (l: string) => (isTheory ? t(`library.mastery.${l}`) : l);
+  const layerLabel = (l: string) => getSubjectLayerLabel(subject, l, t);
 
   const errors = useMemo(() => {
     const e = date ? [] : [t("session.dateRequired")];

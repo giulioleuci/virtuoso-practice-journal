@@ -2,6 +2,7 @@ import { db } from "@/infrastructure/dexie/db";
 import type { Profile } from "@/domain/entities/profile";
 import type { OnboardingInput, ProfilePort } from "@/domain/ports/profile";
 import { now } from "@/lib/date";
+import { getSubjectLayers } from "@/lib/domain/subjectLayers";
 export type { OnboardingInput } from "@/domain/ports/profile";
 export const profileRepository = {
   get: () => db.profile.get("me"),
@@ -11,7 +12,7 @@ export const profileRepository = {
     const row: Profile = { ...profile, id: "me", createdAt: ts };
     await db.transaction("rw", db.subjects, db.profile, async () => {
       for (const subject of subjects) {
-        await db.subjects.add({ ...subject, createdAt: ts });
+        await db.subjects.add({ ...subject, layers: getSubjectLayers(subject), createdAt: ts });
       }
       await db.profile.put(row);
     });
