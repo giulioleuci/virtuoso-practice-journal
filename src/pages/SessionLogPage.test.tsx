@@ -137,3 +137,46 @@ it("offers to open the saved session rather than a next task that may not exist"
   }, { timeout: 5000 });
   expect(success.mock.calls[0][1]).toMatchObject({ action: { label: t("toast.openSession") } });
 }, 10000);
+
+it("updates only expected tempo on initialization and preserves the captured cycle when the draft is saved later", async () => {
+  const subjectId=(await db.subjects.toArray())[0].id!;
+  const itemId=await db.library.add({ subjectId,kind:"piece",title:"Sonata",createdAt:1 });
+  await db.studyRoutines.add({ id:1,subjectId,groups:[],matrix:{},weeksAhead:1,repetitionCap:1,startDate:today(),createdAt:1,tempoRule:{enabled:true,successes:3,minConfidence:5,increase:{kind:"percent",value:3}},tempoRuleRevision:1 });
+  await db.tasks.update(taskId,{ itemId,studyRoutineId:1,plan:[{bpm:70,noteVal:"quarter",layers:[],techniques:[]}] });
+  localStorage.setItem(`virtuoso-session-task-${taskId}-1`,JSON.stringify({marks:[{bpm:68,noteVal:"quarter",confidence:3,layers:[],techniques:[]}],notes:"Keep this draft",clips:[],needHelp:false,helpText:""}));
+  show();
+  fireEvent.click(await screen.findByText(t("tempo.title")));
+  fireEvent.change(await screen.findByRole("spinbutton",{name:t("tempo.initial")}),{target:{value:"70"}});
+  fireEvent.click(screen.getByRole("button",{name:t("tempo.review")}));
+  fireEvent.click(await screen.findByRole("button",{name:t("tempo.apply",{count:1})},{timeout:5000}));
+  await waitFor(async()=>expect(await db.tempoProgressions.count()).toBe(1));
+  await waitFor(()=>expect(JSON.parse(localStorage.getItem(`virtuoso-session-task-${taskId}-1`)!).marks[0].progression?.minConfidence).toBe(5));
+  await applicationCommands.tempoProgression.configure({kind:"routine",id:1},{enabled:true,successes:4,minConfidence:4,increase:{kind:"percent",value:3}});
+  fireEvent.click(screen.getByRole("button",{name:t("session.saveSession")}));
+  await waitFor(async()=>expect(await db.sessions.count()).toBe(1));
+  const saved=(await db.sessions.toArray())[0];
+  expect(saved.marks[0]).toMatchObject({bpm:68,confidence:3,targetBpm:70,progression:{cycle:1,minConfidence:5}});
+  expect(saved.notes).toBe("Keep this draft");
+  expect((await db.tempoProgressions.toArray())[0].cycle).toBe(2);
+});
+
+it("merges initialization into the latest marks when editing continues during acceptance",async()=>{
+  const subjectId=(await db.subjects.toArray())[0].id!;
+  const itemId=await db.library.add({subjectId,kind:"piece",title:"Sonata",createdAt:1});
+  await db.studyRoutines.add({id:1,subjectId,groups:[],matrix:{},weeksAhead:1,repetitionCap:1,startDate:today(),createdAt:1,tempoRule:{enabled:true,successes:3,minConfidence:5,increase:{kind:"percent",value:3}},tempoRuleRevision:1});
+  await db.tasks.update(taskId,{itemId,studyRoutineId:1,plan:[{bpm:70,noteVal:"quarter",layers:[],techniques:[]}]});
+  let release=()=>{};const pending=new Promise<void>(resolve=>{release=resolve;});
+  const accept=applicationCommands.tempoProgression.accept.bind(applicationCommands.tempoProgression);
+  const delayed=vi.spyOn(applicationCommands.tempoProgression,"accept").mockImplementation(async preview=>{await pending;return accept(preview);});
+  show();fireEvent.click(await screen.findByText(t("tempo.title")));
+  fireEvent.change(await screen.findByRole("spinbutton",{name:t("tempo.initial")}),{target:{value:"70"}});
+  fireEvent.click(screen.getByRole("button",{name:t("tempo.review")}));
+  fireEvent.click(await screen.findByRole("button",{name:t("tempo.apply",{count:1})},{timeout:5000}));
+  await waitFor(()=>expect(delayed).toHaveBeenCalledOnce());
+  const inputs=screen.getAllByRole("spinbutton");
+  fireEvent.change(inputs.find(input=>input.getAttribute('aria-label')!==t("tempo.initial"))!,{target:{value:"69"}});
+  await rate();release();
+  await waitFor(()=>expect(JSON.parse(localStorage.getItem(`virtuoso-session-task-${taskId}-1`)!).marks[0].progression?.minConfidence).toBe(5));
+  const mark=JSON.parse(localStorage.getItem(`virtuoso-session-task-${taskId}-1`)!).marks[0];
+  expect(mark).toMatchObject({bpm:69,confidence:4,targetBpm:70,progression:{cycle:1,minConfidence:5}});
+});

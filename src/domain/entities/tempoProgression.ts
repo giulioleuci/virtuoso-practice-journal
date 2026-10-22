@@ -1,0 +1,10 @@
+import type { SegmentEntry, SegmentMark, Tempo, TempoStep } from "./common";
+export type TempoOwner = { kind: "routine" | "recurrence"; id: number };
+export type TempoContext = { itemId: number; segmentId?: number; layers: string[]; techniques: number[] };
+export type TempoProgressionRule = { enabled: boolean; successes: number; window?: number; minConfidence: number; increase: TempoStep; decrease?: { failures: number; step: TempoStep } };
+export type TempoProgressionRef = { id: number; cycle: number; minConfidence: number };
+export type TempoProgression = { id: number; owner: TempoOwner; context: TempoContext; contextKey: string; tempo: Tempo; cycle: number; startedAt: number; ruleRevision: number };
+export type TempoObservation = { sessionId: number; taskId?: number; date: string; createdAt: number; context: TempoContext; mark: SegmentMark };
+export type TempoEvaluation = { evaluated: number; successes: number; trailingSuccesses: number; trailingFailures: number; suggestion?: { direction: "increase" | "decrease"; tempo: Tempo; reason: "successes" | "failures" }; blocked?: "tempo-out-of-range" };
+export type TempoPlanUpdate = { taskId: number; date: string; plan: SegmentEntry[] };
+export type TempoPlanExclusion = { taskId: number; reason: "source" | "studied" | "customized" | "closed" | "past" };

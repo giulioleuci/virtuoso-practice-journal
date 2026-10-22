@@ -15,6 +15,7 @@ import type { PerformanceEvent, PerformanceItem } from "@/domain/entities/perfor
 export type { HelpRequest, StudyPoolEntry, StudyGroup, StudyRoutine };
 
 export class VirtuosoDB extends Dexie {
+  declare tempoProgressions: Table<import("@/domain/entities/tempoProgression").TempoProgression, number, Draft<import("@/domain/entities/tempoProgression").TempoProgression>>;
   declare profile: Table<Profile, string>;
   declare subjects: Table<Subject, number, Draft<Subject>>;
   declare techniques: Table<Technique, number, Draft<Technique>>;
@@ -64,6 +65,14 @@ export class VirtuosoDB extends Dexie {
     this.version(15).stores({ recordings: "++id, &uid, sessionId" });
     this.version(16).stores({}).upgrade(async tx => {
       await tx.table("library").toCollection().modify(item => { delete item.studyStatus; });
+    });
+    this.version(18).stores({
+      tempoProgressions: "++id, [owner.kind+owner.id], &[owner.kind+owner.id+contextKey]",
+      sessions: "++id, taskId, date, subjectId, itemId, *tempoProgressionIds, *tempoSegmentIds",
+    }).upgrade(async tx => {
+      await tx.table("sessions").toCollection().modify((s: Session) => {
+        s.tempoSegmentIds = [...new Set(s.marks.flatMap(m => m.segmentId === undefined ? [] : [m.segmentId]))].sort((a,b) => a-b);
+      });
     });
   }
 }

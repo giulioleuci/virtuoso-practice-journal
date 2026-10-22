@@ -1,3 +1,4 @@
+import { BPM_MIN, BPM_MAX } from "@/domain/constants/noteValues";
 /** Kind-specific form fields for library items, extracted from NewLibraryItemSheet
  *  to keep the parent sheet focused on layout & save orchestration. */
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ export function LibraryItemKindFields(p: Props) {
     <>
       {p.kind !== "theory" && (<>      {p.kind === "technique" ? (
         <>
-          <label className="grid gap-1.5 text-xs font-medium">{t("library.startingTempo")}<Input type="number" inputMode="numeric" min={20} max={400} value={p.startBpm ?? ""} onChange={e => p.setStartBpm(e.target.value === "" ? undefined : Number(e.target.value))} /></label>
+          <label className="grid gap-1.5 text-xs font-medium">{t("library.startingTempo")}<Input type="number" inputMode="numeric" min={BPM_MIN} max={BPM_MAX} value={p.startBpm ?? ""} onChange={e => p.setStartBpm(e.target.value === "" ? undefined : Number(e.target.value))} /></label>
           <BpmCoupler bpm={p.targetBpm} noteVal={p.noteVal} onChange={(n) => { p.setTargetBpm(n.bpm); p.setNoteVal(n.noteVal); }} label={t("library.targetTempo")} />
         </>
       ) : (

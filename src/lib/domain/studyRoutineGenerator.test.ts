@@ -227,3 +227,16 @@ describe("collectRoutineWarnings", () => {
     expect(warnings.some((w) => w.kind === "capTooLow")).toBe(true);
   });
 });
+
+it("inherits accepted context tempo and cycle, excluding other owners and uninitialized contexts", () => {
+  const context = { itemId: 1, layers: [], techniques: [] };
+  const tempoRule = { enabled: true, successes: 3, minConfidence: 4, increase: { kind: "percent" as const, value: 3 } };
+  const r = routine({ tempoRule });
+  const state = { id: 1, owner: { kind: "routine" as const, id: r.id }, context, contextKey: JSON.stringify([1,null,[],[]]), tempo: { bpm: 72, noteVal: "quarter" as const }, cycle: 2, startedAt: 1, ruleRevision: 1 };
+  const groupItems = new Map([["g1", [{ ...item(1), plan: [{ bpm: 60, noteVal: "quarter" as const, layers: [], techniques: [] }] }]]]);
+  const generate = (states = [state], enabled = true) => generateRoutineTasks({ routine: { ...r, tempoRule: { ...tempoRule, enabled } }, groupItems, fromDate: r.startDate, createdAt: 1, tempoProgressions: states });
+  expect(generate()[0].plan[0]).toMatchObject({ bpm: 72, progression: { id: 1, cycle: 2, minConfidence: 4 } });
+  expect(generate([{ ...state, owner: { kind: "routine", id: 999 } }])[0].plan[0].bpm).toBe(60);
+  expect(generate([],true)[0].plan[0].progression).toBeUndefined();
+  expect(generate([state],false)[0].plan[0].bpm).toBe(60);
+});

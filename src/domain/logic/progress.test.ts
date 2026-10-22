@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { weeklyProgress } from "./progress";
 
-const entry = { layers: [], techniques: [] };
+const entry = { layers: [], techniques: [],noteVal: "quarter" as const };
 const tasks = [{ id: 1, subjectId: 10, plan: [{ ...entry, bpm: 100 }] }, { id: 2, subjectId: 20 }];
 const sessions = [
   { taskId: 1, subjectId: 10, date: "2026-10-05", marks: [{ ...entry, bpm: 90, confidence: 2 }] },
@@ -31,4 +31,13 @@ describe("weeklyProgress", () => {
     ];
     expect(weeklyProgress(rated, tasks, 10, 1, "2026-10-08")[0]).toMatchObject({ mood: 3, focus: 3 });
   });
+});
+
+it("compares reached and historical planned figures exactly, without inventing missing figures", () => {
+  const sessions = [{ subjectId: 1,date: "2026-10-22",marks: [
+    { ...entry,bpm: 100,noteVal: "eighth" as const,targetBpm: 50,targetNoteVal: "quarter" as const },
+    { ...entry,bpm: 33,noteVal: "dotted-quarter" as const,targetBpm: 50,targetNoteVal: "quarter" as const },
+    { ...entry,bpm: 400,noteVal: undefined,targetBpm: 1,targetNoteVal: "quarter" as const },
+  ] }];
+  expect(weeklyProgress(sessions,[],1,1,"2026-10-22")[0]).toMatchObject({ bpm: 50,goalRate: 50 });
 });

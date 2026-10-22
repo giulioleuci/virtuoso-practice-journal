@@ -88,3 +88,19 @@ it("says that editing one day of a series leaves the other days alone", async ()
   show(`/tasks/edit/${id}`);
   expect(await screen.findByText(/Cambia solo questo giorno/)).toBeInTheDocument();
 });
+
+it("saves progression only on the recurrence root and blocks an invalid numeric draft", async () => {
+  show("/tasks/new",{ prefill: { itemSubjectId: subjectId,itemId } });
+  await waitFor(() => expect(screen.getByRole("textbox",{ name:t("common.title") })).toHaveValue("Ballata"));
+  fireEvent.click(screen.getByRole("switch",{ name:t("recurrence.repeat") }));
+  fireEvent.click(screen.getByRole("switch",{ name:t("tempo.title") }));
+  fireEvent.change(screen.getByLabelText(t("tempo.window")),{ target:{ value:"1" } });
+  expect(screen.getByRole("button",{ name:t("tasks.addTask") })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText(t("tempo.window")),{ target:{ value:"" } });
+  fireEvent.click(screen.getByRole("button",{ name:t("tasks.addTask") }));
+  await waitFor(async () => expect(await db.tasks.count()).toBeGreaterThan(1));
+  const tasks=await db.tasks.toArray(),root=tasks.find(task=>task.recurrence)!;
+  expect(root.tempoRule).toMatchObject({ enabled:true,successes:3,minConfidence:4 });
+  expect(root.tempoRule?.window).toBeUndefined();
+  expect(tasks.filter(task=>task.recurrenceTaskId).every(task=>task.tempoRule===undefined && task.tempoRuleRevision===undefined)).toBe(true);
+});

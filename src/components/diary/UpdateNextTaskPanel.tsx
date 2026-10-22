@@ -1,3 +1,6 @@
+import { compareTempos } from "@/domain/logic/tempo";
+import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
+import { tempoOwner } from "@/domain/logic/tempoProgression";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -16,6 +19,7 @@ export function UpdateNextTaskPanel({ session }: { session: Session }) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const tasks = useActiveTasks();
+  const routines = usePresentationRead<import("@/domain/ports/studyRoutine").StudyRoutine[]>("routines.active");
   const [picked, setPicked] = useState<(number | undefined)[] | null>(null);
   const [extras, setExtras] = useState(false);
   const next = useMemo(() => followUpTasks(
@@ -42,9 +46,12 @@ export function UpdateNextTaskPanel({ session }: { session: Session }) {
   // Pre-select only real progress: a faster tempo in the same figure. A slower or re-figured result stays opt-in.
   const faster = (id: number | undefined) => {
     const e = next.plan.find((x) => x.segmentId === id); const m = entryFor(session.marks, id);
-    return !!e && !!m?.bpm && (m.noteVal ?? e.noteVal) === e.noteVal && m.bpm > (e.bpm ?? 0);
+    return !!e?.bpm && !!e.noteVal && !!m?.bpm && !!m.noteVal && compareTempos({ bpm: m.bpm,noteVal: m.noteVal },{ bpm: e.bpm,noteVal: e.noteVal }) > 0;
   };
-  const tempo = new Set(picked ?? tempoProposal(next.plan, session.marks).filter(faster));
+  const owner = tempoOwner(next);
+  const rule = owner?.kind === "routine" ? routines?.find(r => r.id === owner.id)?.tempoRule : owner ? tasks.find(t => t.id === owner.id)?.tempoRule : undefined;
+  const managed = (_id: number | undefined) => !!rule?.enabled;
+  const tempo = new Set((picked ?? tempoProposal(next.plan, session.marks).filter(id => !managed(id) && faster(id))).filter(id => !managed(id)));
   const labels = new Map((session.snapshot?.segments ?? []).map((s) => [Number(s.id), s.label]));
   const rows = next.plan.flatMap((e) => { const m = entryFor(session.marks, e.segmentId); return m ? [{ e, m }] : []; });
   const toggle = (segmentId: number | undefined, on: boolean) => setPicked([...tempo].filter((id) => id !== segmentId).concat(on ? [segmentId] : []));
@@ -65,10 +72,10 @@ export function UpdateNextTaskPanel({ session }: { session: Session }) {
             <div className="tabular-nums text-muted-foreground">
               {t("nextTask.planned")}: {e.bpm ? tempoLabel(e.noteVal, e.bpm) : "—"} · {t("nextTask.reached")}: {m.bpm ? tempoLabel(m.noteVal, m.bpm) : "—"}
             </div>
-            {m.bpm ? (
+            {m.bpm && !managed(e.segmentId) ? (
               <label className="flex min-h-11 items-center gap-2"><Checkbox checked={tempo.has(e.segmentId)} onCheckedChange={(on) => toggle(e.segmentId, on === true)} />{t("nextTask.useAsTarget")}</label>
             ) : (
-              <p className="text-xs text-muted-foreground">{t("nextTask.noTempo")}</p>
+              <p className="text-xs text-muted-foreground">{t(managed(e.segmentId) ? "tempo.title" : "nextTask.noTempo")}</p>
             )}
           </li>
         ))}

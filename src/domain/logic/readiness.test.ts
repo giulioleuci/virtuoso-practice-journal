@@ -26,11 +26,11 @@ describe("pieceEvidence", () => {
     expect(e.lowConfidence).toEqual(["A"]);
   });
 
-  it("never compares tempi across note values and has no denominator for a whole piece", () => {
+  it("keeps missing figures out of verified maxima and has no denominator for a whole piece", () => {
     const e = pieceEvidence({}, [], [mk(1, "2026-10-01", [m(undefined, { bpm: 120, noteVal: "eighth" })]), mk(2, "2026-10-02", [m(undefined, { bpm: 70 })])]);
     expect(e.total).toBe(0);
     expect(e.toDo).toEqual([]);
-    expect(e.best).toEqual(expect.arrayContaining([{ bpm: 120, noteVal: "eighth", date: "2026-10-01" }, { bpm: 70, noteVal: "quarter", date: "2026-10-02" }]));
+    expect(e.best).toEqual([{ bpm: 120, noteVal: "eighth", date: "2026-10-01" }]);
     expect(e.sections[0].lastTempo).toMatchObject({ bpm: 70 });
   });
 });

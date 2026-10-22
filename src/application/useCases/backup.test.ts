@@ -30,26 +30,26 @@ const valid = (): BackupData => ({
 });
 
 describe("backup use cases", () => {
-  it("exports v4 using one timestamp for content and filename", async () => {
+  it("exports v6 using one timestamp for content and filename", async () => {
     const files = new FakeFiles();
     let calls = 0;
     await new ExportBackupUseCase(new FakeBackupRepository(valid()), files, () => ++calls === 1 ? 123 : 86_400_000).execute();
     expect(files.saved?.filename).toBe("virtuoso-backup-1970-01-01.json");
-    expect(JSON.parse(files.saved!.content)).toEqual({ version: 4, exportedAt: 123, data: valid() });
+    expect(JSON.parse(files.saved!.content)).toEqual({ version: 6, exportedAt: 123, data: valid() });
   });
   it("round trips every new field including distinct historical figures and bars", async () => {
     const data = valid();
     const repository = new FakeBackupRepository(data);
     const content = await new ExportBackupUseCase(repository, new FakeFiles()).createContent();
     await new ImportBackupUseCase(repository, new FakeFiles(content)).execute();
-    expect(repository.imported).toEqual(data);
+    expect(repository.imported).toEqual({ ...data, sessions: data.sessions.map(session => ({ ...session as object, tempoProgressionIds: [], tempoSegmentIds: [1] })) });
   });
   it("drops obsolete study status from older v4 backups and keeps the remaining fields", async () => {
     const data = valid();
     const repository = new FakeBackupRepository();
     const legacy = { ...data, library: data.library.map(item => ({ ...item as object, studyStatus: "consolidated" })) };
     await new ImportBackupUseCase(repository, new FakeFiles()).importContent(JSON.stringify({ version: 4, data: legacy }));
-    expect(repository.imported).toEqual(data);
+    expect(repository.imported).toEqual({ ...data,sessions: data.sessions.map(session => ({...session as object,tempoProgressionIds:[],tempoSegmentIds:[1]})) });
   });
   it.each([undefined, 1, 2, 3, 99])("rejects incompatible version %s without mutations", async version => {
     const repository = new FakeBackupRepository();
@@ -85,4 +85,48 @@ describe("backup use cases", () => {
     expect(await new ImportBackupUseCase(repository, new FakeFiles()).execute()).toBeNull();
     expect(repository.imported).toBeUndefined();
   });
+});
+
+it("round trips v6 cycles, validates ownership and rebuilds session indexes", async () => {
+  const data = valid();
+  const rule = { enabled: true, successes: 3, minConfidence: 4, increase: { kind: "percent", value: 3 } };
+  const context = { itemId: 1, segmentId: 1, layers: [], techniques: [] };
+  data.studyRoutines = [{ id: 1, subjectId: 1, groups: [], tempoRule: rule, tempoRuleRevision: 2, createdAt: 1 }];
+  data.tasks[0] = { ...data.tasks[0] as object, studyRoutineId: 1 };
+  data.tempoProgressions = [{ id: 1, owner: { kind: "routine", id: 1 }, context, contextKey: JSON.stringify([1,1,[],[]]), tempo: { bpm: 1, noteVal: "quarter" }, cycle: 2, startedAt: 1, ruleRevision: 2 }];
+  data.sessions[0] = { ...data.sessions[0] as object, tempoProgressionIds: [999], marks: [{ segmentId: 1, bpm: 10, noteVal: "dotted-quarter", confidence: 4, layers: [], techniques: [], progression: { id: 1, cycle: 1, minConfidence: 4 } }] };
+  const repository = new FakeBackupRepository(data);
+  const exported = await new ExportBackupUseCase(repository,new FakeFiles()).createContent();
+  expect(JSON.parse(exported).version).toBe(6);
+  await new ImportBackupUseCase(repository,new FakeFiles()).importContent(exported);
+  expect(repository.imported?.tempoProgressions).toEqual(data.tempoProgressions);
+  expect((repository.imported?.sessions[0] as { tempoProgressionIds: number[] }).tempoProgressionIds).toEqual([1]);
+  for (const mutate of [
+    (d: BackupData) => { d.studyRoutines = []; },
+    (d: BackupData) => { d.tempoProgressions[0] = { ...d.tempoProgressions[0] as object, contextKey: "wrong" }; },
+    (d: BackupData) => { d.tempoProgressions[0] = { ...d.tempoProgressions[0] as object, cycle: 0 }; },
+    (d: BackupData) => { d.tempoProgressions.push({ ...d.tempoProgressions[0] as object, id: 2 }); },
+  ]) {
+    const invalid = JSON.parse(exported); mutate(invalid.data);
+    const target = new FakeBackupRepository();
+    await expect(new ImportBackupUseCase(target,new FakeFiles()).importContent(JSON.stringify(invalid))).rejects.toThrow();
+    expect(target.imported).toBeUndefined();
+  }
+});
+
+it.each([4,5])("rebuilds history indexes for legacy v%s combined sessions",async version=>{
+  const data=valid();data.tasks[0]={...data.tasks[0] as object,itemId:undefined,linkType:"free"};
+  data.sessions[0]={...data.sessions[0] as object,itemId:undefined,linkType:"free",snapshot:undefined};
+  const repository=new FakeBackupRepository();
+  await new ImportBackupUseCase(repository,new FakeFiles()).importContent(JSON.stringify({version,data}));
+  expect(repository.imported?.sessions[0]).toMatchObject({tempoProgressionIds:[],tempoSegmentIds:[1]});
+});
+it("rejects a task plan linked to another owner's progression before changing data",async()=>{
+  const data=valid(),rule={enabled:true,successes:3,minConfidence:4,increase:{kind:"percent",value:3}};
+  data.studyRoutines=[1,2].map(id=>({id,subjectId:1,groups:[],createdAt:1,tempoRule:rule,tempoRuleRevision:1}));
+  data.tempoProgressions=[{id:1,owner:{kind:"routine",id:1},context:{itemId:1,segmentId:1,layers:[],techniques:[]},contextKey:JSON.stringify([1,1,[],[]]),tempo:{bpm:70,noteVal:"quarter"},cycle:1,startedAt:1,ruleRevision:1}];
+  data.tasks[0]={...data.tasks[0] as object,studyRoutineId:2,plan:[{segmentId:1,bpm:70,noteVal:"quarter",layers:[],techniques:[],progression:{id:1,cycle:1,minConfidence:4}}]};
+  const repository=new FakeBackupRepository();
+  await expect(new ImportBackupUseCase(repository,new FakeFiles()).importContent(JSON.stringify({version:6,data}))).rejects.toThrow();
+  expect(repository.imported).toBeUndefined();
 });

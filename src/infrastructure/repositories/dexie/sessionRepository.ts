@@ -1,6 +1,9 @@
+import { segmentMarkSchema } from "@/lib/schemas";
+import type { SegmentMark } from "@/domain/entities/common";
+import { sessionContext } from "@/domain/logic/sessionContext";
 import { db } from "@/infrastructure/dexie/db";
 import { browserAudio } from "@/infrastructure/audio/browserAudio";
-import type { Session } from "@/domain/entities/session";
+import { sessionTempoIndexes, type Session } from "@/domain/entities/session";
 import type { Task } from "@/domain/entities/task";
 import type { SessionLogTransaction, SessionPort, SessionTarget } from "@/domain/ports/session";
 import { planCovered, planSegmentIds } from "@/domain/logic/plan";
@@ -30,12 +33,23 @@ async function syncTaskDone(taskId: number) {
   const [task, sessions] = await Promise.all([db.tasks.get(taskId), db.sessions.where("taskId").equals(taskId).toArray()]);
   if (task) await db.tasks.update(taskId, { done: planCovered(task.plan, sessions) });
 }
+async function validateProgressionReferences(marks: SegmentMark[]) {
+  segmentMarkSchema.array().parse(marks);
+  for (const mark of marks) if (mark.progression) {
+    const state = await db.tempoProgressions.get(mark.progression.id);
+    if (!state || mark.progression.cycle > state.cycle) throw new Error("Invalid tempo progression reference");
+  }
+}
 export const sessionRepository = {
   list: () => db.sessions.toArray(), byTask: (taskId: number) => db.sessions.where("taskId").equals(taskId).toArray(),
-  async log(task: Task, date: string, input: Omit<Session, "id" | "taskId" | "snapshot" | "createdAt">) { return db.sessions.add({ taskId: task.id!, date, ...input, snapshot: await buildDexieSessionSnapshot(task), createdAt: now() }) as Promise<number>; },
+  async log(task: Task, date: string, input: Omit<Session, "id" | "taskId" | "snapshot" | "createdAt">) {
+    const snapshot = await buildDexieSessionSnapshot(task);
+    return this.transaction(tx => tx.createSession({ taskId: task.id!,...sessionContext(task),...input,date,snapshot,createdAt: now() }));
+  },
   async update(id: number, patch: Partial<Session>) {
-    await db.transaction("rw", db.tasks, db.sessions, async () => {
-      await db.sessions.update(id, patch);
+    await db.transaction("rw", [db.tasks, db.sessions, db.tempoProgressions], async () => {
+      if (patch.marks) await validateProgressionReferences(patch.marks);
+      await db.sessions.update(id, { ...patch, ...(patch.marks ? sessionTempoIndexes(patch.marks) : {}) });
       const taskId = (await db.sessions.get(id))?.taskId;
       if (patch.marks && taskId !== undefined) await syncTaskDone(taskId);
     });
@@ -43,8 +57,11 @@ export const sessionRepository = {
   remove: async (id: number) => { await db.sessions.delete(id); },
   buildSnapshot: buildDexieSessionSnapshot,
   transaction<T>(operation: (transaction: SessionLogTransaction) => Promise<T>) {
-    return db.transaction("rw", db.tasks, db.sessions, db.helpRequests, db.recordings, () => operation({
-      createSession: (session) => db.sessions.add(session) as Promise<number>,
+    return db.transaction("rw", [db.tasks, db.sessions, db.helpRequests, db.recordings, db.tempoProgressions], async () => await operation({
+      createSession: async (session) => {
+        await validateProgressionReferences(session.marks);
+        return db.sessions.add({ ...session, ...sessionTempoIndexes(session.marks) }) as Promise<number>;
+      },
       createRecording: async (recording) => { await db.recordings.add(recording); },
       syncTaskDone,
       createHelpRequest: async (request) => { await db.helpRequests.add({ ...request, resolved: false }); },

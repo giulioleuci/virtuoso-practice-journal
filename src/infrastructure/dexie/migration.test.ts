@@ -36,3 +36,15 @@ it("upgrades session references and removes only obsolete study status", async (
   expect(await db.tasks.count()).toBe(1);
   expect(await db.sessions.where("itemId").equals(3).count()).toBe(1);
 });
+
+it("upgrades v17 additively without initializing rules or rewriting historical marks", async () => {
+  const {db}=await import("./db");await db.delete();
+  const legacy=new Dexie("virtuoso");legacy.version(17).stores({...V13,sessions:"++id, taskId, date, subjectId, itemId",recordings:"++id, &uid, sessionId"});
+  await legacy.open();
+  const session={id:1,itemId:3,date:"2026-10-22",createdAt:1,marks:[{segmentId:7,bpm:10,noteVal:"dotted-quarter",layers:[],techniques:[],confidence:4}]};
+  await legacy.table("sessions").add(session);legacy.close();await db.open();
+  expect(await db.tempoProgressions.count()).toBe(0);
+  expect((await db.sessions.get(1))?.marks).toEqual(session.marks);
+  expect((await db.sessions.get(1))?.tempoProgressionIds).toBeUndefined();
+  expect((await db.sessions.get(1))?.tempoSegmentIds).toEqual([7]);
+});

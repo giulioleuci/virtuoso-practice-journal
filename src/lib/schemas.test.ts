@@ -40,10 +40,10 @@ describe("study materials", () => {
 
 describe("bpmSchema", () => {
   it("accepts in-range integers", () => {
-    expect(bpmSchema.safeParse(120).success).toBe(true);
+    for (const bpm of [1, 10, 120, 400]) expect(bpmSchema.safeParse(bpm).success).toBe(true);
   });
   it("rejects out-of-range", () => {
-    expect(bpmSchema.safeParse(10).success).toBe(false);
+    for (const bpm of [0, 401, NaN, 1.5]) expect(bpmSchema.safeParse(bpm).success).toBe(false);
     expect(bpmSchema.safeParse(500).success).toBe(false);
   });
 });
@@ -88,8 +88,8 @@ describe("flattenErrors", () => {
   });
 
   it("returns 'value: message' for top-level primitive errors", () => {
-    const errs = flattenErrors(bpmSchema.safeParse(10));
-    expect(errs).toContain("value: Number must be greater than or equal to 20");
+    const errs = flattenErrors(bpmSchema.safeParse(0));
+    expect(errs).toContain("value: Number must be greater than or equal to 1");
   });
 
   it("returns 'field: message' for object property errors", () => {

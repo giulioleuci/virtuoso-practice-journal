@@ -2,7 +2,8 @@ import { useTasksByItem } from "@/presentation/hooks/useEntities";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Session } from "@/domain/entities/session";
 import { useMemo } from "react";
-import { topBpm } from "@/domain/logic/sessionMetrics";
+import { convertTempo } from "@/domain/logic/tempo";
+import { topMark } from "@/domain/logic/sessionMetrics";
 import { useI18n } from "@/lib/i18n";
 
 interface Props {
@@ -24,10 +25,10 @@ export function BpmSparkline({ itemId, weeks = 8 }: Props) {
     today.setHours(0, 0, 0, 0);
     const buckets: (number | null)[] = Array(weeks).fill(null);
 
-    if (new Set((sessions ?? []).flatMap(s => s.marks.filter(m => m.bpm !== undefined).map(m => m.noteVal ?? "quarter"))).size > 1) return { points: [], max: 0, min: 0 };
 
     for (const s of sessions ?? []) {
-      const bpm = topBpm(s.marks);
+      const mark = topMark(s.marks);
+      const bpm = mark?.bpm !== undefined && mark.noteVal ? convertTempo({ bpm: mark.bpm,noteVal: mark.noteVal },"quarter") : undefined;
       if (!bpm) continue;
       const sd = new Date(s.date);
       const diffDays = Math.floor((today.getTime() - sd.getTime()) / 86400000);
@@ -68,7 +69,7 @@ export function BpmSparkline({ itemId, weeks = 8 }: Props) {
       <svg viewBox={`0 0 ${w} ${h}`} className="h-5 w-20" preserveAspectRatio="none">
         <path d={path} fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="text-xs text-muted-foreground tabular-nums">{max}</span>
+      <span className="text-xs text-muted-foreground tabular-nums">♩ = {max}</span>
     </div>
   );
 }

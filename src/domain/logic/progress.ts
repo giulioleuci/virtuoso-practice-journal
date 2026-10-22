@@ -1,3 +1,4 @@
+import { compareTempos,convertTempo } from "./tempo";
 import { RATING_KEYS, type SegmentEntry } from "../entities/common";
 import type { Session } from "../entities/session";
 import { entryFor } from "./plan";
@@ -5,7 +6,7 @@ import { meanRating } from "./sessionMetrics";
 
 export interface ProgressWeek {
   weekKey: string;
-  /** Best BPM reached during the week (null if none logged). */
+  /** Best verified tempo in quarter-note BPM (null if none complete). */
   bpm: number | null;
   /** Average confidence 1..5 (null if none rated). */
   confidence: number | null;
@@ -63,13 +64,12 @@ export function weeklyProgress(
     // Session first, then week: a task with many sections weighs as one observation.
     for (const key of RATING_KEYS) { const value = meanRating(marks, key); if (value) a[key].push(value); }
     for (const m of marks) {
-      if (!m.bpm) continue;
-      a.bpm = Math.max(a.bpm ?? 0, m.bpm);
-      const target = m.targetBpm ?? entryFor(task?.plan ?? [], m.segmentId)?.bpm;
-      if (target) {
-        a.tracked++;
-        if (m.bpm >= target) a.hit++;
-      }
+      if (!m.bpm || !m.noteVal) continue;
+      const reached = { bpm: m.bpm,noteVal: m.noteVal };
+      a.bpm = Math.max(a.bpm ?? 0,convertTempo(reached,"quarter"));
+      const planned = entryFor(task?.plan ?? [],m.segmentId);
+      const target = m.targetBpm !== undefined && m.targetNoteVal !== undefined ? { bpm: m.targetBpm,noteVal: m.targetNoteVal } : m.targetBpm === undefined && m.targetNoteVal === undefined && planned?.bpm !== undefined && planned.noteVal !== undefined ? { bpm: planned.bpm,noteVal: planned.noteVal } : undefined;
+      if (target) { a.tracked++; if (compareTempos(reached,target) >= 0) a.hit++; }
     }
   }
   const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((x, y) => x + y, 0) / xs.length) * 100) / 100 : null);

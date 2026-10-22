@@ -1,0 +1,32 @@
+/* eslint-disable no-restricted-imports -- Integration test verifies the real preview and persistence boundary. */
+import "fake-indexeddb/auto";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import { db } from "@/infrastructure/dexie/db";
+import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
+import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
+import { I18nContext, translate } from "@/lib/i18n";
+import { tempoProgressionRepository } from "@/infrastructure/repositories/dexie/tempoProgressionRepository";
+import { BpmSuggestion } from "./BpmSuggestion";
+import { today } from "@/lib/date";
+afterEach(cleanup);
+it("shows a historical initial source and writes only after explicit preview confirmation", async () => {
+  await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);
+  await db.library.add({ id: 1, title: "Sonata", subjectId: 1, kind: "piece", createdAt: 1 });
+  await db.studyRoutines.add({ id: 1, subjectId: 1, groups: [], matrix: {}, startDate: today(), weeksAhead: 1, repetitionCap: 1, createdAt: 1 });
+  const task = { id: 1, title: "Sonata", subjectId: 1, itemId: 1, studyRoutineId: 1, date: today(), plan: [{ bpm: 80, noteVal: "quarter" as const, layers: [], techniques: [] }], done: false, createdAt: 1 };
+  await db.tasks.add(task);
+  await db.sessions.add({ id: 1, itemId: 1, date: today(), marks: [{ bpm: 68, noteVal: "eighth", confidence: 4, layers: [], techniques: [] }], createdAt: 1 });
+  await tempoProgressionRepository.configure({ kind: "routine",id: 1 },{ enabled: true, successes: 3,minConfidence: 4,increase: { kind: "percent",value: 3 } },Date.now());
+  const initialized = vi.fn();
+  render(<I18nContext.Provider value={{ lang: "it",setLang: () => {},t: (k,v) => translate("it",k,v) }}><BpmSuggestion task={task} onInitialized={initialized} /></I18nContext.Provider>);
+  fireEvent.click(screen.getByText("Progressione del tempo"));
+  expect(await screen.findByText(/Ultimo risultato:/)).toHaveTextContent("68");
+  fireEvent.click(screen.getByRole("button", { name: /rivedi aggiornamento/i }));
+  const confirm = await screen.findByRole("button", { name: /applica a 1 attività/i });
+  expect(await db.tempoProgressions.count()).toBe(0);
+  fireEvent.click(confirm);
+  await waitFor(() => expect(initialized).toHaveBeenCalledOnce());
+  expect((await db.tasks.get(1))!.plan[0]).toMatchObject({ bpm: 68,noteVal: "eighth",progression: { cycle: 1,minConfidence: 4 } });
+  expect((await db.sessions.get(1))!.marks[0].bpm).toBe(68);
+});

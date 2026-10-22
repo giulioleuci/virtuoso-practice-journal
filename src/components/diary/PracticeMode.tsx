@@ -3,7 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Dialog, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import { COMPOUND_NOTES, SIMPLE_NOTES } from "@/domain/constants/noteValues";
+import { BPM_MIN, BPM_MAX, COMPOUND_NOTES, SIMPLE_NOTES } from "@/domain/constants/noteValues";
 import type { SegmentMark } from "@/domain/entities/common";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
@@ -33,9 +33,6 @@ interface Props {
 }
 
 const DEFAULT_BPM = 60;
-// Same bounds as the stored tempo (bpmSchema), so a saved 300 can be nudged instead of snapping to a narrower range.
-const BPM_MIN = 20;
-const BPM_MAX = 400;
 
 export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnswers }: Props) {
   const { t } = useI18n();
@@ -123,17 +120,27 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     const ctx = ensureCtx();
     let beat = 0;
     let next = ctx.currentTime + 0.05;
+    let last = next - 60 / live.current.bpm;
+    let scheduledBpm = live.current.bpm;
     const pulses: number[] = [];
     const schedule = () => {
       const { bpm, beatsPerBar, muted } = live.current;
-      // After a stall, rejoin the grid silently instead of firing the missed beats at once.
-      while (next < ctx.currentTime) { next += 60 / bpm; beat += 1; }
+      if (bpm !== scheduledBpm) {
+        next = Math.max(last + 60 / bpm, ctx.currentTime);
+        scheduledBpm = bpm;
+      }
+      // Skip missed beats in constant time after suspension.
+      if (next < ctx.currentTime) {
+        const missed = Math.ceil((ctx.currentTime - next) / (60 / bpm));
+        next += missed * 60 / bpm; beat += missed;
+      }
       const horizon = ctx.currentTime + (document.hidden ? 1.5 : 0.1);
       while (next < horizon) {
         if (!muted) click(ctx, next, beat % beatsPerBar === 0);
         const shown = beat + 1;
         pulses.push(window.setTimeout(() => setPulse(shown), Math.max(0, (next - ctx.currentTime) * 1000)));
         beat += 1;
+        last = next;
         next += 60 / live.current.bpm;
       }
     };

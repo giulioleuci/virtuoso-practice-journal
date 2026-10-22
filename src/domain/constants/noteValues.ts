@@ -16,3 +16,6 @@ export const NOTE_GLYPH: Record<NoteVal, string> = {
   "dotted-quarter": "♩.",
   "dotted-eighth": "♪.",
 };
+
+export const BPM_MIN = 1;
+export const BPM_MAX = 400;

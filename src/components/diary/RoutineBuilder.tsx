@@ -1,3 +1,5 @@
+import { TempoProgressionFields } from "./TempoProgressionFields";
+import { tempoRuleSchema } from "@/lib/schemas";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Check, ChevronDown, Copy, ListChecks, Minus, MoreHorizontal, Plus, Trash2 } from "lucide-react";
@@ -59,6 +61,8 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
   const [collectionId, setCollectionId] = useState<number>();
   const isEdit = !!initial;
 
+  const [tempoRule,setTempoRule] = useState(initial?.tempoRule);
+  const [tempoValid,setTempoValid] = useState(true);
   const [name, setName] = useState(initial?.name ?? "");
   const [subjectId, setSubjectId] = useState<number | undefined>(initial?.subjectId);
   const [groups, setGroups] = useState<StudyGroup[]>(initial?.groups ?? [{ id: genId(), name: t("routine.groupDaily"), pool: [] }]);
@@ -206,10 +210,11 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (errors.length || subject === undefined || submitting) return;
+    if (errors.length || !tempoValid || subject === undefined || submitting) return;
+    if (tempoRule) tempoRuleSchema.parse(tempoRule);
     const clean: Matrix = {};
     for (const d of activeDays) clean[String(d)] = rowOf(d);
-    const ok = await submit({ name: name.trim() || suggestedName, subjectId: subject, groups, matrix: clean, weeksAhead: weeks, repetitionCap: cap, adaptivity, avoidBackToBack, startDate });
+    const ok = await submit({ name: name.trim() || suggestedName, subjectId: subject, groups, matrix: clean, weeksAhead: weeks, repetitionCap: cap, adaptivity, avoidBackToBack, startDate, tempoRule });
     if (ok) {
       toast.success(t(isEdit ? "toast.routineUpdated" : "toast.routineCreated"));
       onDone();
@@ -509,6 +514,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
           <p className="mt-3 text-xs text-muted-foreground">{t("routine.adaptivityHelp")}</p>
         </details>
 
+        <TempoProgressionFields value={tempoRule} onChange={setTempoRule} onValidityChange={setTempoValid} disabled={submitting} />
         {errors.length > 0 && (
           <StateNotice className="mt-6">
             <p className="font-medium">{t("routine.errorsTitle")}</p>
@@ -516,9 +522,9 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
           </StateNotice>
         )}
         {isEdit && <p className="mt-6 text-xs text-muted-foreground">{t("routine.appliesFrom", { date: formatDate(today(), lang, "medium") })}</p>}
-        <FloatingActions>
+        <FloatingActions className="flex-wrap [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:whitespace-normal">
           <Button type="button" variant="ghost" onClick={onCancel}>{t("common.cancel")}</Button>
-          <Button type="submit" disabled={errors.length > 0 || submitting}><Check />{t(isEdit ? "routine.save" : "routine.create")}</Button>
+          <Button type="submit" disabled={errors.length > 0 || !tempoValid || submitting}><Check />{t(isEdit ? "routine.save" : "routine.create")}</Button>
         </FloatingActions>
       </form>
 

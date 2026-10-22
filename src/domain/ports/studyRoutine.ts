@@ -26,6 +26,8 @@ export interface StudyPoolStat {
 }
 
 export interface StudyRoutine {
+  tempoRule?: import("@/domain/entities/tempoProgression").TempoProgressionRule;
+  tempoRuleRevision?: number;
   id: number;
   name?: string;
   parentTaskId?: number;

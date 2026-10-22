@@ -37,3 +37,17 @@ describe("BpmTimelineChart", () => {
     expect(screen.getAllByText("♪ = 56").length).toBeGreaterThan(0);
   });
 });
+
+it("plots different figures in declared quarter notes and preserves original values", () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  render(<I18nContext.Provider value={{ lang: "it",setLang:()=>{},t:(k,v)=>translate("it",k,v) }}><BpmTimelineChart sessions={[
+    { id:1,date:"2026-10-01",createdAt:1,marks:[{ bpm:50,noteVal:"quarter",layers:[],techniques:[] }] },
+    { id:2,date:"2026-10-02",createdAt:2,marks:[{ bpm:100,noteVal:"eighth",layers:[],techniques:[] }] },
+    { id:3,date:"2026-10-03",createdAt:3,marks:[{ bpm:75,noteVal:"dotted-quarter",layers:[],techniques:[] }] },
+  ]} /></I18nContext.Provider>);
+  expect(screen.getByText(/Figura di riferimento/)).toHaveTextContent("Semiminima");
+  expect(screen.getByText("♪ = 100")).toBeInTheDocument();
+  expect(screen.getAllByText("♩. = 75").length).toBeGreaterThan(0);
+  expect(screen.getByRole("slider")).toHaveAttribute("aria-valuetext",expect.stringContaining("♩. = 75"));
+  expect(screen.getByText(/112.5/)).toBeInTheDocument();
+});

@@ -107,7 +107,7 @@ describe("study sample data", () => {
     }
     for (const link of await db.performanceItems.toArray()) expect(isPerformable(items.find(i => i.id === link.itemId)!.kind)).toBe(true);
     const backup = await backupService.exportAll();
-    expect(JSON.parse(backup).version).toBe(4);
+    expect(JSON.parse(backup).version).toBe(6);
     await backupService.importAll(backup);
     expect(await db.library.toArray()).toEqual(items);
   });

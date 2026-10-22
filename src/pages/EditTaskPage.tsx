@@ -1,3 +1,6 @@
+import { TempoProgressionFields } from "@/components/diary/TempoProgressionFields";
+import type { TempoProgressionRule } from "@/domain/entities/tempoProgression";
+import { bpmSchema, tempoRuleSchema } from "@/lib/schemas";
 import { useMemo, useState } from "react";
 import { useItem, useSegmentsByIds, useSubjects, useTask } from "@/presentation/hooks/useEntities";
 import { useNavigate, useParams } from "react-router-dom";
@@ -47,6 +50,13 @@ function EditTaskForm({ task }: { task: Task }) {
   const navigate = useNavigate();
   const subjects = useSubjects();
 
+  const root = useTask(task.recurrenceTaskId ?? (task.recurrence ? task.id : undefined));
+  const [tempoRule,setTempoRule] = useState<TempoProgressionRule | undefined>(task.tempoRule);
+  const [planChanged,setPlanChanged] = useState(false);
+  const [tempoChanged,setTempoChanged] = useState(false);
+  const [tempoValid,setTempoValid] = useState(true);
+  const [saving,setSaving] = useState(false);
+  const [saveError,setSaveError] = useState("");
   const [subjectId, setSubjectId] = useState<number | undefined>(task.subjectId);
   const [linkType, setLinkType] = useState<TaskLinkType>(task.linkType ?? (task.collectionId ? "collection" : task.itemId ? "item" : "free"));
   const [itemId, setItemId] = useState<number | undefined>(task.itemId);
@@ -68,7 +78,7 @@ function EditTaskForm({ task }: { task: Task }) {
     if (!date) e.push(t("errors.dateRequired"));
     if (linkType === "item" && !itemId) e.push(t("errors.pickItem"));
     if (linkType === "collection" && !collectionId) e.push(t("errors.pickCollection"));
-    if (plan.some((entry) => entry.bpm !== undefined && (entry.bpm < 20 || entry.bpm > 400))) e.push(t("errors.bpmRange"));
+    if (plan.some((entry) => entry.bpm !== undefined && !bpmSchema.safeParse(entry.bpm).success)) e.push(t("errors.bpmRange"));
     return e;
   }, [subjectId, title, date, plan, linkType, itemId, collectionId, t]);
 
@@ -80,23 +90,32 @@ function EditTaskForm({ task }: { task: Task }) {
   // Problems are listed only after a save attempt, then focused so the musician sees what is missing.
   const [attempted, setAttempted] = useState(false);
   const save = async () => {
-    if (!task.id || errors.length || subjectId === undefined) {
+    if (saving) return;
+    if (!task.id || errors.length || !tempoValid || subjectId === undefined) {
       setAttempted(true);
       const first = !subjectId ? "task-subject" : !title.trim() ? "task-title" : "task-errors";
       requestAnimationFrame(() => document.getElementById(first)?.focus());
       return;
     }
-    await tasksService.update(task.id, {
+    setSaving(true); setSaveError("");
+    try {
+    if (tempoChanged && tempoRule) tempoRuleSchema.parse(tempoRule);
+    const manualChanged = planChanged || subjectId !== task.subjectId || title.trim() !== task.title || date !== task.date ||
+      itemId !== task.itemId || collectionId !== task.collectionId ||
+      JSON.stringify(segmentIds) !== JSON.stringify(planSegmentIds(task.plan)) || executionNotes.trim() !== (task.executionNotes ?? "");
+    await tasksService.update(task.id, tempoChanged && !manualChanged ? { tempoRule } : {
+      ...(tempoChanged ? { tempoRule } : {}),
       subjectId,
       linkType,
       itemId: linkType === "item" ? itemId : undefined,
       collectionId: linkType === "collection" ? collectionId : undefined,
       title: title.trim(), date, plan,
       executionNotes: executionNotes.trim() || undefined,
-      ...(task.studyRoutineId !== undefined ? { customized: true } : {}),
+      ...((task.studyRoutineId !== undefined || task.recurrenceTaskId !== undefined || task.recurrence) && manualChanged ? { customized: true } : {}),
     });
     toast.success(t("toast.taskUpdated"));
     handleCancel();
+    } catch { setSaveError(t("errors.couldNotSave")); } finally { setSaving(false); }
   };
 
   const sectionCls = "mt-6 border-t border-border pt-6";
@@ -114,14 +133,14 @@ function EditTaskForm({ task }: { task: Task }) {
       )}
       <form
         onSubmit={(e) => { e.preventDefault(); void save(); }}
-        className="max-w-[920px] rounded-lg bg-card p-6 shadow-soft"
+        className="min-w-0 max-w-[920px] rounded-lg bg-card p-4 shadow-soft sm:p-6 [&_input]:min-w-0 [&_textarea]:min-w-0"
       >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-1.5">
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+          <div className="grid min-w-0 gap-1.5">
             <Label htmlFor="task-date" className={labelCls}>{t("common.date")}</Label>
             <Input id="task-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
-          <div className="grid gap-1.5">
+          <div className="grid min-w-0 gap-1.5">
             <Label htmlFor="task-subject" className={labelCls}>{t("common.subject")}</Label>
             <Select
               value={subjectId?.toString() ?? ""}
@@ -135,7 +154,7 @@ function EditTaskForm({ task }: { task: Task }) {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1.5 sm:col-span-2">
+          <div className="grid min-w-0 gap-1.5 sm:col-span-2">
             <Label htmlFor="task-title" className={labelCls}>{t("common.title")}</Label>
             <Input id="task-title" value={title} onChange={(e) => setTitle(e.target.value)} aria-invalid={(attempted && !title.trim()) || undefined} aria-describedby={attempted && !title.trim() ? "task-errors" : undefined} />
           </div>
@@ -157,7 +176,7 @@ function EditTaskForm({ task }: { task: Task }) {
 
         {plan.length > 0 && (
           <div className={sectionCls}>
-            <PlanEditor plan={plan} onChange={setPlan} sections={sections} subject={selectedSubject} />
+            <PlanEditor plan={plan} onChange={next => { setPlanChanged(true); setPlan(next); }} sections={sections} subject={selectedSubject} />
           </div>
         )}
 
@@ -172,11 +191,16 @@ function EditTaskForm({ task }: { task: Task }) {
           />
         </div>
 
+        {(task.recurrence || task.recurrenceTaskId) && root && <>
+          <p className="mt-6 text-sm text-muted-foreground">{t("tempo.seriesRule")}</p>
+          <TempoProgressionFields key={root.id} value={tempoChanged ? tempoRule : root.tempoRule} onChange={value => { setTempoChanged(true); setTempoRule(value); }} onValidityChange={setTempoValid} disabled={saving} />
+        </>}
+        {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
         <FormErrors id="task-errors" errors={attempted ? errors : []} className="mt-6" />
 
-        <FloatingActions className="min-[700px]:max-w-[920px]">
+        <FloatingActions className="flex-wrap min-[700px]:max-w-[920px] [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:whitespace-normal">
           <Button type="button" variant="ghost" onClick={handleCancel}>{t("common.cancel")}</Button>
-          <Button type="submit">{t("common.save")}</Button>
+          <Button type="submit" disabled={saving || !tempoValid}>{t("common.save")}</Button>
         </FloatingActions>
       </form>
     </div>

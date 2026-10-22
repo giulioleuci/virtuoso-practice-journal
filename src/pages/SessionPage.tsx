@@ -1,3 +1,4 @@
+import { BpmSuggestion } from "@/components/diary/BpmSuggestion";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Pencil, Trash2 } from "lucide-react";
@@ -143,6 +144,7 @@ function SessionView({ session, latest }: { session: Session; latest: boolean })
       ) : (
         <div className="grid gap-8 min-[901px]:grid-cols-[minmax(0,1fr)_260px] min-[1151px]:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0 space-y-10">
+            {task && <BpmSuggestion task={task} sourceSession={session} />}
             <section>
               <SectionHeader title={t("sessionPage.measures")} />
               <ul className="divide-y divide-border border-t border-border">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { presentationQueries, type PresentationQueryService } from "@/application/queries/presentationQueryService";
 
 /** In-memory last-known results so revisited pages render instantly (stale-while-revalidate). */
@@ -21,20 +21,25 @@ export function usePresentationQuery<T>(
     key: cacheKey,
     value: cacheFor(queries).get(cacheKey) as T | undefined,
   }));
-  const load = useCallback(() => {
-    queries.execute<T>(operation, ...parameters).then((value) => {
-      cacheFor(queries).set(cacheKey, value);
-      setState({ key: cacheKey, value });
-    // Rethrow from a state update so the nearest ErrorBoundary shows a recoverable error.
-    }, (error) => setState(() => { throw error; }));
-  // parameterKey prevents an inline argument array from re-subscribing each render.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [operation, parameterKey, queries]);
-
   useEffect(() => {
+    let active = true;
+    let latest = 0;
+    const load = () => {
+      const request = ++latest;
+      queries.execute<T>(operation, ...parameters).then(value => {
+        if (!active || request !== latest) return;
+        cacheFor(queries).set(cacheKey,value);
+        setState({ key: cacheKey,value });
+      }, error => {
+        if (active && request === latest) setState(() => { throw error; });
+      });
+    };
     load();
-    return queries.subscribe(load);
-  }, [load, queries]);
+    const unsubscribe = queries.subscribe(load);
+    return () => { active = false; unsubscribe(); };
+  // parameterKey keeps inline parameter arrays from resubscribing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [operation,parameterKey,queries]);
 
   if (state.key !== cacheKey) return cacheFor(queries).get(cacheKey) as T | undefined;
   return state.value;

@@ -15,7 +15,7 @@ describe("backupService export / import", () => {
 
     const json = await backupService.exportAll();
     const parsed = JSON.parse(json);
-    expect(parsed.version).toBe(4);
+    expect(parsed.version).toBe(6);
     expect(parsed.data.subjects).toHaveLength(1);
     expect(parsed.data.library).toHaveLength(1);
 

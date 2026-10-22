@@ -1,3 +1,4 @@
+import { compareTempos } from "@/domain/logic/tempo";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
@@ -54,7 +55,7 @@ export default function PrintSummary() {
       const top = topMark(session.marks);
       const current = map.get(key) ?? { key, title, composer: item?.composer ?? session.snapshot?.itemComposer, count: 0, topBpm: 0, noteVal: top?.noteVal };
       current.count += 1;
-      if ((top?.bpm ?? 0) > current.topBpm) {
+      if (top?.bpm !== undefined && top.noteVal && (!current.noteVal || compareTempos({ bpm: top.bpm,noteVal: top.noteVal },{ bpm: current.topBpm,noteVal: current.noteVal }) > 0)) {
         current.topBpm = top?.bpm ?? 0;
         current.noteVal = top?.noteVal;
       }
