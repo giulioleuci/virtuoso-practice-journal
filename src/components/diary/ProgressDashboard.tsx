@@ -72,7 +72,7 @@ export function ProgressDashboard({ from, to, onFiltersChange }: { from?: string
       <ChartCard title={t("progress.consistency")} data={data} dataKey="activeDays" kind="bar" domain={[0, 7]} />
       <ChartCard title={t("progress.goals")} data={data} dataKey="goalRate" kind="line" domain={[0, 100]} unit="%" />
       {itemId != null ? (
-        <ChartCard title={t("progress.bpm")} data={data} dataKey="bpm" kind="line" />
+        <ChartCard title={`${t("progress.bpm")} · ${t("note.quarter")}`} data={data} dataKey="bpm" kind="line" />
       ) : (
         <p className="text-xs text-muted-foreground italic text-center">{t("progress.bpmHint")}</p>
       )}

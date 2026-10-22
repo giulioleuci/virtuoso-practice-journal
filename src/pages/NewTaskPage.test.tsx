@@ -49,6 +49,17 @@ it("titles a multi-section task in the app language", async () => {
   await waitFor(() => expect(screen.getByRole("textbox", { name: t("common.title") })).toHaveValue(`Ballata — ${t("library.segments", { count: 2 })}`));
 });
 
+it("plans theory work with the subject's custom aspects", async () => {
+  await db.subjects.update(subjectId, { type: "theory", layers: ["Contesto storico", "Ascolto"] });
+  await db.library.update(itemId, { kind: "theory" });
+  show("/tasks/new", { prefill: { itemSubjectId: subjectId, itemId } });
+  await screen.findByRole("button", { name: t("common.removeItem", { label: "Contesto storico" }) });
+  expect(screen.queryByText("library.mastery.Contesto storico")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: t("common.removeItem", { label: "Ascolto" }) }));
+  fireEvent.click(screen.getByRole("button", { name: t("tasks.addTask") }));
+  await waitFor(async () => expect((await db.tasks.toArray())[0]?.plan[0].layers).toEqual(["Contesto storico"]));
+});
+
 it("labels the edit form the same way", async () => {
   const id = await db.tasks.add({ subjectId, title: "Scale", date: "2026-10-20", plan: [], done: false, createdAt: 1 });
   show(`/tasks/edit/${id}`);
@@ -87,4 +98,20 @@ it("says that editing one day of a series leaves the other days alone", async ()
   const id = await db.tasks.add({ subjectId, title: "Scale", date: "2026-10-21", plan: [], done: false, createdAt: 1, recurrenceTaskId: first } as never);
   show(`/tasks/edit/${id}`);
   expect(await screen.findByText(/Cambia solo questo giorno/)).toBeInTheDocument();
+});
+
+it("saves progression only on the recurrence root and blocks an invalid numeric draft", async () => {
+  show("/tasks/new",{ prefill: { itemSubjectId: subjectId,itemId } });
+  await waitFor(() => expect(screen.getByRole("textbox",{ name:t("common.title") })).toHaveValue("Ballata"));
+  fireEvent.click(screen.getByRole("switch",{ name:t("recurrence.repeat") }));
+  fireEvent.click(screen.getByRole("switch",{ name:t("tempo.title") }));
+  fireEvent.change(screen.getByLabelText(t("tempo.window")),{ target:{ value:"1" } });
+  expect(screen.getByRole("button",{ name:t("tasks.addTask") })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText(t("tempo.window")),{ target:{ value:"" } });
+  fireEvent.click(screen.getByRole("button",{ name:t("tasks.addTask") }));
+  await waitFor(async () => expect(await db.tasks.count()).toBeGreaterThan(1));
+  const tasks=await db.tasks.toArray(),root=tasks.find(task=>task.recurrence)!;
+  expect(root.tempoRule).toMatchObject({ enabled:true,successes:3,minConfidence:4 });
+  expect(root.tempoRule?.window).toBeUndefined();
+  expect(tasks.filter(task=>task.recurrenceTaskId).every(task=>task.tempoRule===undefined && task.tempoRuleRevision===undefined)).toBe(true);
 });

@@ -3,6 +3,7 @@ import { useCollectionLinksByItem, useCollections, useSegmentsByItem, useSubject
 import type { LibraryKind } from "@/domain/entities/common";
 import type { LibraryItem, SegmentInput } from "@/domain/entities/library";
 import { useI18n } from "@/lib/i18n";
+import { getSubjectLayers, getSubjectLayerLabel } from "@/lib/domain/subjectLayers";
 import {
   Sheet,
   SheetContent,
@@ -88,9 +89,12 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
       .map((t) => ({ value: t.id, label: t.name })),
     [allTechniques, subjectId]
   );
-  const subjectLayers = useMemo(
-    () => subjects?.find((s) => s.id === subjectId)?.layers ?? [],
-    [subjects, subjectId]
+  const layerOptions = useMemo(
+    () => {
+      const subject = subjects?.find((s) => s.id === subjectId);
+      return getSubjectLayers(subject).map(layer => ({ value: layer, label: getSubjectLayerLabel(subject, layer, t) }));
+    },
+    [subjects, subjectId, t]
   );
   // Default subject when sheet opens / subjects load (create mode)
   useEffect(() => {
@@ -278,7 +282,7 @@ export function NewLibraryItemSheet({ open, onOpenChange, kind, item, collection
             techniqueIds={techniqueIds} setTechniqueIds={setTechniqueIds}
             segments={segments} setSegments={setSegments}
             techniqueOptions={subjectTechniqueOptions}
-            subjectLayers={subjectLayers}
+            layerOptions={layerOptions}
             collectionIds={collectionIds}
             setCollectionIds={setCollectionIds}
             collectionOptions={collectionOptions}

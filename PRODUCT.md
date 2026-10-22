@@ -26,7 +26,7 @@ Used at the instrument (hands busy, phone or tablet) and in lessons (fast typing
 - Study materials have five types: piece, study, technical exercise, exercise and theory content. Manuals and collections are separate containers with mixed, ordered indexes and per-link references/pages; materials retain one identity and history across containers.
 - Segments have stable IDs, positions, optional bar ranges and either a complete tempo override or the material’s tempo. New plans resolve defaults; saved plans and historical targets/results keep their own values and figures.
 - Pieces and studies may enter repertoire and performance programmes.
-- Backups use version 4 and validate references before atomic import. There are no production contents to convert: update fixtures directly and reject incompatible backup formats. Demo replacement remains an explicit user action; no startup reset.
+- Backups export version 6 and import versions 4–6, validating owners, contexts and historical references before atomic replacement. Legacy backups have no inferred progression. Demo replacement remains an explicit user action; no startup reset.
 - Three per-section star ratings (1-5): mood, focus, confidence. Confidence is required for a new session; mood and focus are optional context only; confidence alone feeds routine weighting. No quality scale, no per-layer or per-technique scores.
 
 ## Product Principles
@@ -37,3 +37,13 @@ Used at the instrument (hands busy, phone or tablet) and in lessons (fast typing
 
 ## Evidence on Hand
 No users, testimonials or analytics. Sample data in `src/lib/sampleData.ts`.
+
+## Tempo progression
+
+Absolute BPM values are integers from 1 to 400; musical comparisons use exact BPM × note-value weights, with fractional conversions preserved. Stored and displayed original figures remain available.
+
+Optional rules belong to a routine or recurrence root. Contexts separate material/section, layers and techniques. Success requires the planned working tempo and minimum confidence; rules choose consecutive successes or N within the last M evaluable sessions, with optional reduction after consecutive failures. Reduction takes priority. Missing data is neutral.
+
+Initialization proposes the latest compatible qualified historical result and requires explicit confirmation. Each accepted change or effective rule edit starts a new persisted cycle. Session references preserve their original cycle and historical confidence threshold, including drafts saved later. Target evidence survives cycle changes and does not cap working tempo.
+
+Every change is previewed and explicitly accepted in one transaction. Changed previews require confirmation again; studied, closed, past, source and customized activities are protected. New compatible occurrences inherit only confirmed tempos. Counts derive from sessions, never persisted counters.

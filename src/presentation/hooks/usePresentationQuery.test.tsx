@@ -58,3 +58,19 @@ describe("presentation query adapter", () => {
     await waitFor(() => expect(result.current).toEqual(updated));
   });
 });
+
+it("ignores an older read finishing after a newer invalidation and ignores reads after unmount",async()=>{
+  const pending:((value:string)=>void)[]=[];
+  let notify=()=>{};
+  const reads:PresentationReadPort={read:()=>new Promise(resolve=>pending.push(resolve as (value:string)=>void)),subscribe:listener=>{notify=listener;return()=>{};},assignmentsForLesson:async()=>[],openHelpRequestCount:async()=>0};
+  const queries=new PresentationQueryService(reads);
+  const view=renderHook(()=>usePresentationQuery<string>(queries,"tempo.progression"));
+  act(()=>notify());
+  await act(async()=>pending[1]("current"));
+  await act(async()=>pending[0]("obsolete"));
+  expect(view.result.current).toBe("current");
+  act(()=>notify());view.unmount();
+  await act(async()=>pending[2]("after-unmount"));
+  const next=renderHook(()=>usePresentationQuery<string>(queries,"tempo.progression"));
+  expect(next.result.current).toBe("current");next.unmount();
+});

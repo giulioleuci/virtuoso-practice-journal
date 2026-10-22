@@ -52,7 +52,7 @@ export function MultiChipPicker<T extends string | number>({
       ) : (
         <>
           <div className="flex items-center gap-2">
-          <Popover open={open} onOpenChange={setOpen}>
+          <Popover modal open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <button
                 type="button"
@@ -102,7 +102,7 @@ export function MultiChipPicker<T extends string | number>({
               </ul></ScrollList>
             </PopoverContent>
           </Popover>
-          {selectionSummary && <Popover>
+          {selectionSummary && <Popover modal>
             <PopoverTrigger asChild>
               <button type="button" disabled={!selectedOpts.length} aria-label={`${label ?? effectivePlaceholder}: ${t("common.selected", { count: selectedOpts.length })}`} className="flex h-11 min-w-11 shrink-0 items-center justify-center rounded-md border border-input text-sm tabular-nums hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{selectedOpts.length}</button>
             </PopoverTrigger>

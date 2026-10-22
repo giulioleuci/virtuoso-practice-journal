@@ -1,6 +1,8 @@
 import type { NoteVal } from "../constants/noteValues";
 
 export type { NoteVal };
+export type Tempo = { bpm: number; noteVal: NoteVal };
+export type TempoStep = { kind: "fixed"; value: number; noteVal: NoteVal } | { kind: "percent"; value: number };
 export type Lang = "en" | "it" | "es" | "de";
 export type SubjectType = "instrument" | "theory" | "composition" | "other";
 export type LibraryKind = "piece" | "study" | "technique" | "exercise" | "theory";
@@ -10,6 +12,7 @@ export type ReminderFreq = "daily" | "weekdays" | "custom";
 
 /** What is planned (task) or what was done (session) on one section; `segmentId` is empty for a whole-task entry. */
 export interface SegmentEntry {
+  progression?: import("./tempoProgression").TempoProgressionRef;
   segmentId?: number;
   bpm?: number;
   noteVal?: NoteVal;

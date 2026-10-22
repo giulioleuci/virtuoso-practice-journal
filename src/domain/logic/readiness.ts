@@ -1,3 +1,4 @@
+import { compareTempos } from "./tempo";
 /** What the practice log shows about a repertoire piece: coverage, latest results and their dates. Deliberately no score. */
 import type { NoteVal } from "../entities/common";
 import type { LibraryItem, Segment } from "../entities/library";
@@ -25,7 +26,7 @@ export interface PieceEvidence {
   toDo: string[];
   /** Labels whose latest confidence is 1 or 2 ("" for a whole piece). */
   lowConfidence: string[];
-  /** Highest tempo ever logged, one per note value: tempi counted in different note values are never compared. */
+  /** Best complete result per note value, ordered by equivalent musical velocity. */
   best: Tempo[];
   targetBpm?: number;
 }
@@ -49,7 +50,8 @@ export function pieceEvidence(item: Pick<LibraryItem, "targetBpm">, segments: Pi
   const sections = segments.length ? segments.map((s) => evidenceFor(s.id, s.label)) : [evidenceFor(undefined, "")];
   const best = new Map<NoteVal, Tempo>();
   for (const s of ordered) for (const m of s.marks) {
-    const noteVal = m.noteVal ?? "quarter";
+    const noteVal = m.noteVal;
+    if (noteVal === undefined) continue;
     if (m.bpm && m.bpm > (best.get(noteVal)?.bpm ?? 0)) best.set(noteVal, { bpm: m.bpm, noteVal, date: s.date });
   }
   return {
@@ -59,7 +61,7 @@ export function pieceEvidence(item: Pick<LibraryItem, "targetBpm">, segments: Pi
     lastStudied: ordered.at(-1)?.date,
     toDo: segments.length ? sections.filter((r) => !r.lastStudied).map((r) => r.label) : [],
     lowConfidence: sections.filter((r) => r.lastConfidence && r.lastConfidence.value <= 2).map((r) => r.label),
-    best: [...best.values()],
+    best: [...best.values()].sort((a,b) => compareTempos({ bpm: b.bpm,noteVal: b.noteVal! },{ bpm: a.bpm,noteVal: a.noteVal! })),
     targetBpm: item.targetBpm,
   };
 }

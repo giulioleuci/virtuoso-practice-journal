@@ -1,11 +1,18 @@
+import { belongsToOwner } from "@/domain/logic/tempoProgression";
+import type { Task } from "@/domain/entities/task";
+import type { TempoProgression } from "@/domain/entities/tempoProgression";
+import type { SegmentMark } from "@/domain/entities/common";
+import { tempoContextKey } from "@/domain/logic/tempoProgression";
+import { sessionTempoIndexes } from "@/domain/entities/session";
 import { z } from "zod";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import { isPerformable } from "@/domain/logic/repertoireReview";
 import type { AudioPort } from "@/domain/ports/audio";
 import type { BackupFileGateway } from "@/domain/ports/BackupFileGateway";
 import type { BackupData, BackupPort } from "@/domain/ports/backup";
-import { collectionInputSchema, collectionLinkInputSchema, libraryItemInputSchema, segmentInputSchema, segmentEntrySchema, segmentMarkSchema, taskInputSchema, taskLinkTypeSchema, studyGroupSchema } from "@/lib/schemas";
+import { collectionInputSchema, collectionLinkInputSchema, libraryItemInputSchema, segmentInputSchema, segmentEntrySchema, segmentMarkSchema, taskInputSchema, taskLinkTypeSchema, studyGroupSchema, tempoRuleSchema, tempoProgressionSchema } from "@/lib/schemas";
 
-const SUPPORTED_VERSIONS = [4];
+const SUPPORTED_VERSIONS = [4, 5, 6];
 const id = z.number().int().positive();
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const row = z.object({ id, createdAt: z.number(), deletedAt: z.number().optional() }).passthrough();
@@ -33,7 +40,7 @@ export class ImportBackupUseCase {
     const parsed = backupSchema.parse(JSON.parse(text));
     if (!SUPPORTED_VERSIONS.includes(parsed.version)) throw new Error(`Unsupported backup version: ${parsed.version}`);
     const data: BackupData = { ...parsed.data };
-    const tables = new Set(["profile", "subjects", "techniques", "library", "segments", "collections", "collectionItems", "tasks", "sessions", "recordings", "performances", "performanceItems", "studyRoutines", "recurrences", "lessons", "assignments", "helpRequests"]);
+    const tables = new Set(["profile", "subjects", "techniques", "library", "segments", "collections", "collectionItems", "tasks", "sessions", "recordings", "performances", "performanceItems", "studyRoutines", "recurrences", "lessons", "assignments", "helpRequests", "tempoProgressions"]);
     for (const [table, rows] of Object.entries(data)) {
       if (!tables.has(table)) throw new Error(`Unknown backup table: ${table}`);
       const ids = new Set<number | string>();
@@ -44,7 +51,11 @@ export class ImportBackupUseCase {
         ids.add(key);
       }
     }
-    const subjects = (data.subjects ?? []).map(value => row.extend({ name: z.string().min(1), type: z.enum(["instrument", "theory", "composition", "other"]) }).parse(value));
+    const subjects = (data.subjects ?? []).map(value => {
+      const subject = row.extend({ name: z.string().min(1), type: z.enum(["instrument", "theory", "composition", "other"]), layers: z.array(z.string()).optional() }).parse(value);
+      if (subject.type === "theory" && (subject.layers === undefined || (parsed.version === 4 && !subject.layers.length))) subject.layers = [...THEORY_LAYERS];
+      return subject;
+    });
     const techniques = (data.techniques ?? []).map(value => row.extend({ subjectId: id, name: z.string().min(1) }).parse(value));
     const items = (data.library ?? []).map(value => {
       const current = row.extend({ inRepertoire: z.boolean().optional() }).parse(value);
@@ -54,8 +65,10 @@ export class ImportBackupUseCase {
     const segments = (data.segments ?? []).map(value => ({ ...row.extend({ itemId: id }).parse(value), ...segmentInputSchema.parse(value) }));
     const collections = (data.collections ?? []).map(value => ({ ...row.extend({ updatedAt: z.number() }).parse(value), ...collectionInputSchema.parse(value) }));
     const links = (data.collectionItems ?? []).map(value => ({ ...row.extend({ collectionId: id, itemId: id, position: z.number().int().nonnegative() }).parse(value), ...collectionLinkInputSchema.parse(value) }));
-    const tasks = (data.tasks ?? []).map(value => ({ ...row.extend({ done: z.boolean() }).parse(value), ...taskInputSchema.parse(value) }));
-    const sessions = (data.sessions ?? []).map(value => sessionRow.parse(value));
+    const tasks = (data.tasks ?? []).map(value => ({ ...row.extend({ done: z.boolean(), tempoRule: tempoRuleSchema.optional(), tempoRuleRevision: id.optional(), studyRoutineId: id.optional(), recurrenceTaskId: id.optional(), recurrence: z.object({ kind: z.enum(["weekdays", "interval"]), startDate: day }).passthrough().optional() }).parse(value), ...taskInputSchema.parse(value) }));
+    const sessions = (data.sessions ?? []).map(value => { const session = sessionRow.parse(value); return { ...session, ...sessionTempoIndexes(session.marks as SegmentMark[]) }; });
+    const states = (data.tempoProgressions ?? []).map(value => tempoProgressionSchema.parse(value) as TempoProgression);
+    const routines = (data.studyRoutines ?? []).map(value => row.extend({ subjectId: id, groups: z.array(studyGroupSchema), tempoRule: tempoRuleSchema.optional(), tempoRuleRevision: id.optional() }).parse(value));
     const events = (data.performances ?? []).map(value => row.extend({ name: z.string().trim().min(1), kind: z.enum(["concert", "exam", "audition"]), subjectId: id.optional(), date: day }).parse(value));
     const programs = (data.performanceItems ?? []).map(value => row.extend({ eventId: id, itemId: id }).parse(value));
     const recordings = z.array(recordingRow).parse(data.recordings ?? []);
@@ -73,7 +86,7 @@ export class ImportBackupUseCase {
     };
     const checkEntries = (entries: z.infer<typeof segmentEntrySchema>[], itemId: number | undefined, subjectId: number | undefined) => {
       for (const entry of entries) {
-        if (entry.segmentId !== undefined) requireReference(itemId !== undefined && segmentById.get(entry.segmentId)?.itemId === itemId, `segment ${entry.segmentId}`);
+        if (entry.segmentId !== undefined) requireReference(segmentById.has(entry.segmentId) && (itemId === undefined ? itemById.get(segmentById.get(entry.segmentId)?.itemId)?.subjectId === subjectId : segmentById.get(entry.segmentId)?.itemId === itemId), `segment ${entry.segmentId}`);
         checkTechniques(entry.techniques, subjectId);
       }
     };
@@ -125,8 +138,7 @@ export class ImportBackupUseCase {
       requireReference(!uids.has(recording.uid), "duplicate recording UID"); uids.add(recording.uid);
       if (recording.segmentId !== undefined) requireReference(session?.itemId !== undefined && segmentById.get(recording.segmentId)?.itemId === session.itemId, "recording segment");
     }
-    for (const value of data.studyRoutines ?? []) {
-      const routine = row.extend({ subjectId: id, groups: z.array(studyGroupSchema) }).parse(value);
+    for (const routine of routines) {
       requireReference(subjectIds.has(routine.subjectId), "routine subject");
       for (const entry of routine.groups.flatMap(group => group.pool)) {
         if (entry.type === "item") requireReference(itemById.get(entry.id)?.subjectId === routine.subjectId, "routine material");
@@ -134,7 +146,34 @@ export class ImportBackupUseCase {
         if (entry.type === "collection") requireReference(collectionIds.has(entry.id), "routine collection");
       }
     }
-    for (const [table, rows] of Object.entries({ subjects, techniques, library: items, segments, collections, collectionItems: links, tasks, sessions, performances: events, performanceItems: programs, recordings })) if (table in data) data[table] = rows;
+    const stateById = new Map(states.map(state => [state.id, state]));
+    const identities = new Set<string>();
+    for (const state of states) {
+      const root = state.owner.kind === "routine" ? routines.find(r => r.id === state.owner.id) : tasks.find(t => t.id === state.owner.id && t.recurrence && t.recurrenceTaskId === undefined);
+      requireReference(!!root && state.ruleRevision <= (root.tempoRuleRevision ?? 0), "progression owner/revision");
+      requireReference(itemById.has(state.context.itemId), "progression material");
+      if (state.context.segmentId !== undefined) requireReference(segmentById.get(state.context.segmentId)?.itemId === state.context.itemId, "progression section");
+      checkTechniques(state.context.techniques, itemById.get(state.context.itemId)?.subjectId);
+      requireReference(state.contextKey === tempoContextKey(state.context), "progression context key");
+      const identity = JSON.stringify([state.owner,state.contextKey]);
+      requireReference(!identities.has(identity), "duplicate progression context"); identities.add(identity);
+    }
+    for (const task of tasks) {
+      for (const entry of task.plan) if (entry.progression) {
+        const state = stateById.get(entry.progression.id);
+        requireReference(!!state && belongsToOwner(task as Task,state.owner), "progression task owner");
+      }
+      if (task.tempoRule) requireReference(!!task.recurrence && task.recurrenceTaskId === undefined && task.tempoRuleRevision !== undefined, "rule on recurrence root");
+      if (task.recurrenceTaskId !== undefined) requireReference(tasks.some(t => t.id === task.recurrenceTaskId && !!t.recurrence && t.recurrenceTaskId === undefined), "recurrence root");
+    }
+    for (const record of [...tasks.map(t => ({ itemId: t.itemId, entries: t.plan })), ...sessions.map(s => ({ itemId: s.itemId, entries: s.marks }))]) {
+      for (const entry of record.entries) if (entry.progression) {
+        const state = stateById.get(entry.progression.id);
+        const itemId = entry.segmentId === undefined ? record.itemId : segmentById.get(entry.segmentId)?.itemId;
+        requireReference(!!state && entry.progression.cycle <= state.cycle && itemId === state.context.itemId && entry.segmentId === state.context.segmentId, "progression reference");
+      }
+    }
+    for (const [table, rows] of Object.entries({ subjects, techniques, library: items, segments, collections, collectionItems: links, tasks, sessions, performances: events, performanceItems: programs, recordings, studyRoutines: routines, tempoProgressions: states })) if (table in data) data[table] = rows;
     await this.backups.importAll(data);
     const available = this.clips && recordings.length ? (await this.clips.available(recordings.map(r => r.uid))).size : 0;
     return { recordings: recordings.length, available };

@@ -1,3 +1,7 @@
+import { convertTempo } from "@/domain/logic/tempo";
+import { TempoProgressionUseCase } from "@/application/useCases/tempoProgression";
+import { tempoProgressionRepository } from "@/infrastructure/repositories/dexie/tempoProgressionRepository";
+import type { TempoOwner, TempoContext } from "@/domain/entities/tempoProgression";
 import Dexie from "dexie";
 import { isPerformable } from "@/domain/logic/repertoireReview";
 import { meanConfidence, topBpm, topMark } from "@/domain/logic/sessionMetrics";
@@ -27,6 +31,7 @@ export const dexiePresentationReads: PresentationReadPort = {
   async read<T>(operation: string, parameters: readonly unknown[] = []): Promise<T> {
     const [first, second] = parameters;
     switch (operation) {
+      case "tempo.progression": return new TempoProgressionUseCase(tempoProgressionRepository).view(first as TempoOwner, second as TempoContext) as Promise<T>;
       case "subjects.active": return db.subjects.filter(active).toArray() as unknown as Promise<T>;
       case "techniques.active": return db.techniques.filter(active).toArray() as unknown as Promise<T>;
       case "library.active": return db.library.filter(active).toArray() as unknown as Promise<T>;
@@ -78,23 +83,9 @@ export const dexiePresentationReads: PresentationReadPort = {
         if (typeof itemId !== "number" || typeof before !== "string") return [];
         const sessions = await db.sessions.where("itemId").equals(itemId).and((session) => session.date < before && topBpm(session.marks) !== undefined).sortBy("date");
         const recent = sessions.slice(-3);
-        if (new Set(recent.map(s => topMark(s.marks)?.noteVal ?? "quarter")).size > 1) return [];
-        return recent.flatMap((session) => topBpm(session.marks) ?? []);
+        return recent.flatMap(session => { const mark=topMark(session.marks); return mark?.bpm !== undefined && mark.noteVal ? [convertTempo({ bpm: mark.bpm,noteVal: mark.noteVal },"quarter")] : []; });
       })() as unknown as Promise<T>;
       case "sessions.segmentHistory": return (typeof first === "number" ? db.sessions.where("itemId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;
-      case "sessions.bpmSuggestion": return (async () => {
-        const [itemId, before] = parameters;
-        if (typeof itemId !== "number" || typeof before !== "string") return null;
-        const sessions = await db.sessions.where("itemId").equals(itemId).and((session) => session.date < before && !!topBpm(session.marks)).sortBy("date");
-        const lastThree = sessions.slice(-3);
-        const figure = topMark(lastThree[0]?.marks ?? [])?.noteVal ?? "quarter";
-        if (lastThree.some(s => (topMark(s.marks)?.noteVal ?? "quarter") !== figure) || (typeof parameters[2] === "string" && parameters[2] !== figure)) return null;
-        const bpm = topBpm(lastThree[0]?.marks ?? []);
-        if (lastThree.length < 3 || bpm === undefined || !lastThree.every((session) => topBpm(session.marks) === bpm && (meanConfidence(session.marks) ?? 0) >= 4)) return null;
-        const steps = [2, 3, 4, 5, 8, 10]; const step = steps.find((value) => bpm % value === 0) ?? 5; const next = bpm + step;
-        if (next > 400 || await db.sessions.where("itemId").equals(itemId).and((session) => (topMark(session.marks)?.noteVal ?? "quarter") === figure && (topBpm(session.marks) ?? 0) >= next).first()) return null;
-        return { reached: bpm, next };
-      })() as unknown as Promise<T>;
       case "recordings.session": return (typeof first === "number" ? db.recordings.where("sessionId").equals(first).toArray() : Promise.resolve([])) as unknown as Promise<T>;
       case "recordings.item": return (async () => {
         if (typeof first !== "number") return [];

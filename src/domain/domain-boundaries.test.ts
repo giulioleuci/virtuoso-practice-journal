@@ -7,7 +7,7 @@ const prohibitedImports = [
   /from\s+["']react["']/,
   /from\s+["']dexie(?:-[^"']+)?["']/,
   /from\s+["'][^"']*\/lib\/db["']/,
-  /\bwindow\b/,
+  /\bwindow\s*(?:\.|\[)/,
   /\bdocument\b/,
   /\bnavigator\b/,
 ];

@@ -1,9 +1,10 @@
+import { tempoContextKey, resolveTempoContext } from "@/domain/logic/tempoProgression";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, MessageSquareQuote } from "lucide-react";
 import { toast } from "sonner";
-import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import { getSubjectLayers, getSubjectLayerLabel } from "@/lib/domain/subjectLayers";
 import type { SegmentMark, Subject } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
@@ -120,7 +121,7 @@ function BackLink({ onClick }: { onClick?: () => void }) {
 function Footer({ onCancel, busy, recording }: { onCancel: () => void; busy: boolean; recording: boolean }) {
   const { t } = useI18n();
   return (
-    <FloatingActions className="min-[700px]:max-w-3xl">
+    <FloatingActions className="flex-wrap min-[700px]:max-w-3xl [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:whitespace-normal">
       <Button type="button" variant="ghost" disabled={busy} onClick={onCancel}>{t("draft.leave")}</Button>
       <Button type="submit" disabled={recording || busy}>{busy ? t("logPage.saving") : t("session.saveSession")}</Button>
     </FloatingActions>
@@ -153,8 +154,8 @@ function useSubjectOptions(subject: Subject | undefined) {
   const techniques = useTechniques();
   const isTheory = subject?.type === "theory";
   const layerOptions = useMemo(
-    () => (isTheory ? THEORY_LAYERS.map((l) => ({ value: l as string, label: t(`library.mastery.${l}`) })) : (subject?.layers ?? []).map((l) => ({ value: l, label: l }))),
-    [subject, isTheory, t],
+    () => getSubjectLayers(subject).map(l => ({ value: l, label: getSubjectLayerLabel(subject, l, t) })),
+    [subject, t],
   );
   const techniqueOptions = useMemo(() => (techniques ?? []).filter((x) => x.subjectId === subject?.id).map((x) => ({ value: x.id, label: x.name })), [techniques, subject]);
   return { isTheory, layerOptions, techniqueOptions };
@@ -169,6 +170,7 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   const savedId = useRef<number>();
   const { draft, update, clear, storageFailed } = useSessionDraft(taskDraftScope(task), { marks: initialMarks(task), notes: "", clips: [], needHelp: false, helpText: "" }, prefill);
   const { marks, notes, clips, needHelp, helpText } = draft;
+  const latestMarks = useRef(marks); latestMarks.current = marks;
   const changeMarks = (marks: SegmentMark[]) => update({ marks });
   const [attempted, setAttempted] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -177,7 +179,6 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
     try { await applicationCommands.audio.discard(clips.map(c => c.uid)); clear(); localStorage.removeItem(marksDraftKey(task.id!)); goBack(); }
     catch { toast.error(t("errors.couldNotSave")); }
   };
-  const [bpmDismissed, setBpmDismissed] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
   const subject = usePresentationRead<Subject | undefined>("subjects.one", [task.subjectId]);
   const item = usePresentationRead<LibraryItem | undefined>("library.item", [task.itemId]);
@@ -226,9 +227,12 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
           </button>
         )}
         <form onSubmit={save} className={`${panel} min-w-0`}>
-          {(item ? item.kind !== "theory" : !isTheory) && !bpmDismissed && marks.length === 1 && (
-            <div className="mb-5"><BpmSuggestion task={task} dismissed={bpmDismissed} onDismiss={() => setBpmDismissed(true)} onAccept={(bpm) => { changeMarks(marks.map((m) => ({ ...m, bpm }))); setBpmDismissed(true); }} /></div>
-          )}
+          {(item ? item.kind !== "theory" : !isTheory) && <div className="mb-5"><BpmSuggestion task={task} onInitialized={(state,reference) => {
+            changeMarks(latestMarks.current.map(mark => {
+              const context = resolveTempoContext(task,mark,sections ?? []);
+              return context && tempoContextKey(context) === state.contextKey ? { ...mark,targetBpm: state.tempo.bpm,targetNoteVal: state.tempo.noteVal,progression: reference } : mark;
+            }));
+          }} /></div>}
 
           <LastSessionStrip task={task} onRestart={(previous) => changeMarks(restartFrom(marks, previous))} />
           <div className="mt-4"><MarksEditor marks={marks} onChange={changeMarks} sections={rows} seed={seed} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} showErrors={attempted} /></div>

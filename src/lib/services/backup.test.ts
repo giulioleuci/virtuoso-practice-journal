@@ -15,7 +15,7 @@ describe("backupService export / import", () => {
 
     const json = await backupService.exportAll();
     const parsed = JSON.parse(json);
-    expect(parsed.version).toBe(4);
+    expect(parsed.version).toBe(6);
     expect(parsed.data.subjects).toHaveLength(1);
     expect(parsed.data.library).toHaveLength(1);
 
@@ -34,6 +34,27 @@ describe("backupService export / import", () => {
   it("rejects payloads with the wrong shape", async () => {
     await expect(backupService.importAll("not json")).rejects.toThrow();
     await expect(backupService.importAll(JSON.stringify({ data: { subjects: "no" } }))).rejects.toThrow();
+  });
+
+  it("restores the default aspects from old theory backups", async () => {
+    await backupService.importAll(JSON.stringify({ version: 4, data: { subjects: [
+      { id: 1, name: "Harmony", type: "theory", layers: [], createdAt: 1 },
+      { id: 2, name: "History", type: "theory", createdAt: 1 },
+    ] } }));
+    for (const subject of await db.subjects.toArray()) {
+      expect(subject.layers).toEqual(["conceptual", "analytical", "aural", "compositional", "reading"]);
+    }
+  });
+
+  it("round-trips customized and intentionally empty theory aspects", async () => {
+    await db.subjects.bulkAdd([
+      { name: "Harmony", type: "theory", layers: [], createdAt: 1 },
+      { name: "History", type: "theory", layers: ["Historical context"], createdAt: 1 },
+    ]);
+    const backup = await backupService.exportAll();
+    await backupService.wipeAll();
+    await backupService.importAll(backup);
+    expect((await db.subjects.toArray()).map(subject => subject.layers)).toEqual([[], ["Historical context"]]);
   });
 
   it("replaces existing data entirely on import", async () => {

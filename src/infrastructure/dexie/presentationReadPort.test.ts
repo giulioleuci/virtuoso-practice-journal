@@ -9,10 +9,10 @@ beforeEach(async () => {
 });
 
 describe("dexie presentation reads", () => {
-  it("does not suggest or plot comparable BPM when recent figures differ", async () => {
+  it("converts recent figures to declared quarter notes and removes the implicit suggester", async () => {
     await db.sessions.bulkAdd(["quarter", "eighth", "quarter"].map((noteVal, index) => ({ id: index + 1, itemId: 7, date: `2026-10-0${index + 1}`, createdAt: 1, marks: [{ bpm: 80, noteVal: noteVal as "quarter" | "eighth", confidence: 5, layers: [], techniques: [] }] })));
-    expect(await dexiePresentationReads.read("sessions.bpmSuggestion", [7, "2026-10-17", "quarter"])).toBeNull();
-    expect(await dexiePresentationReads.read("sessions.recentBpms", [7, "2026-10-17"])).toEqual([]);
+    await expect(dexiePresentationReads.read("sessions.bpmSuggestion", [7, "2026-10-17", "quarter"])).rejects.toThrow("Unknown presentation read operation");
+    expect(await dexiePresentationReads.read("sessions.recentBpms", [7, "2026-10-17"])).toEqual([80,40,80]);
   });
   it("offers studies and pieces to programs and filters repertoire by both eligibility and flag", async () => {
     await db.library.bulkAdd([

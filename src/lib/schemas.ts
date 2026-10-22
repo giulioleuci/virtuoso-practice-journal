@@ -1,13 +1,32 @@
 import type { StudyAdaptivity, StudyGroup } from "@/domain/ports/studyRoutine";
 /** Centralized Zod schemas shared across forms. */
 import { z } from "zod";
-import { NOTE_VALUES } from "@/domain/constants/noteValues";
+import { BPM_MIN, BPM_MAX, NOTE_VALUES } from "@/domain/constants/noteValues";
 
 export const noteValSchema = z.enum(NOTE_VALUES);
-export const bpmSchema = z.number().int().min(20).max(400);
+export const bpmSchema = z.number().int().min(BPM_MIN).max(BPM_MAX);
 export const ratingSchema = z.number().int().min(1).max(5);
 
+export const tempoStepSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("fixed"), value: z.number().int().positive().finite(), noteVal: noteValSchema }),
+  z.object({ kind: z.literal("percent"), value: z.number().positive().finite() }),
+]);
+export const tempoRuleSchema = z.object({
+  enabled: z.boolean(), successes: z.number().int().positive(), window: z.number().int().positive().optional(),
+  minConfidence: ratingSchema, increase: tempoStepSchema,
+  decrease: z.object({ failures: z.number().int().positive(), step: tempoStepSchema }).optional(),
+}).refine(v => v.window === undefined || v.window >= v.successes, { path: ["window"], message: "Window must be at least the required successes" })
+  .refine(v => v.decrease?.step.kind !== "percent" || v.decrease.step.value < 100, { path: ["decrease"], message: "Decrease must be below 100%" });
+export const tempoProgressionRefSchema = z.object({ id: z.number().int().positive(), cycle: z.number().int().positive(), minConfidence: ratingSchema });
+export const tempoProgressionSchema = z.object({
+  id: z.number().int().positive(), owner: z.object({ kind: z.enum(["routine", "recurrence"]), id: z.number().int().positive() }),
+  context: z.object({ itemId: z.number().int().positive(), segmentId: z.number().int().positive().optional(), layers: z.array(z.string()), techniques: z.array(z.number().int().positive()) }),
+  contextKey: z.string(), tempo: z.object({ bpm: bpmSchema, noteVal: noteValSchema }),
+  cycle: z.number().int().positive(), startedAt: z.number().finite().nonnegative(), ruleRevision: z.number().int().positive(),
+});
+
 export const segmentEntrySchema = z.object({
+  progression: tempoProgressionRefSchema.optional(),
   segmentId: z.number().int().positive().optional(),
   bpm: bpmSchema.optional(),
   noteVal: noteValSchema.optional(),
@@ -53,7 +72,7 @@ export const taskInputSchema = z.object({
     // Mutual exclusivity: collection ⇒ no item/segments; segments ⇒ requires item
     const hasSegments = v.plan.some((e) => e.segmentId !== undefined);
     if (v.collectionId && (v.itemId || hasSegments)) return false;
-    if (hasSegments && !v.itemId) return false;
+    if (hasSegments && !v.itemId && v.linkType !== "free") return false;
     return true;
   },
   { message: "Invalid link: collection excludes item; segments require an item" },
@@ -127,6 +146,7 @@ export const studyGroupSchema = z.object({
 export type StudyGroupInput = StudyGroup;
 
 export const studyRoutineConfigSchema = z.object({
+  tempoRule: tempoRuleSchema.optional(),
   name: z.string().trim().min(1).max(100),
   subjectId: z.number().int().positive(),
   groups: z.array(studyGroupSchema).min(1),
@@ -139,6 +159,7 @@ export const studyRoutineConfigSchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 export interface StudyRoutineConfig {
+  tempoRule?: import("@/domain/entities/tempoProgression").TempoProgressionRule;
   name: string;
   subjectId: number;
   groups: StudyGroupInput[];

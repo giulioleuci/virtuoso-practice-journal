@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSubjects, useTechniques } from "@/presentation/hooks/useEntities";
-import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import { getSubjectLayers, getSubjectLayerLabel } from "@/lib/domain/subjectLayers";
 import type { Subject, SubjectType, Technique } from "@/domain/entities/common";
 import { subjectsService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
@@ -175,7 +175,7 @@ function SubjectGroup({
                 <span className="block break-words font-serif text-xl leading-snug">{subject.name}</span>
                 <span className="mt-1 block text-sm text-muted-foreground">
                   {t("subjects.layers")}:{" "}
-                  {subject.type === "theory" ? THEORY_LAYERS.length : (subject.layers ?? []).length} ·{" "}
+                  {getSubjectLayers(subject).length} ·{" "}
                   {t("subjects.techniques")}:{" "}
                   {techniques.filter((tech) => tech.subjectId === subject.id).length}
                 </span>
@@ -347,8 +347,8 @@ function SubjectDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const layers =
-    subject.type === "theory" ? THEORY_LAYERS.map((l) => t(`library.mastery.${l}`)) : subject.layers ?? [];
+  const layers = getSubjectLayers(subject);
+  const layerLabel = (layer: string) => getSubjectLayerLabel(subject, layer, t);
   const dotColor = subjectColorCss(subject.color, subject.type, subject.customColor);
   const id = subject.id!;
 
@@ -428,48 +428,41 @@ function SubjectDetail({
                 <span className="ml-2 font-numeric text-sm text-muted-foreground">{layers.length}</span>
               </span>
               <span className="mt-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-normal text-muted-foreground">
-                {layers.length ? layers.join(", ") : t("subjects.layersHint")}
+                {layers.length ? layers.map(layerLabel).join(", ") : t("subjects.layersHint")}
               </span>
             </span>
           </AccordionTrigger>
           <AccordionContent forceMount hidden={section !== "layers"} className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              {subject.type === "theory" ? t("subjects.theoryLayersFixed") : t("subjects.layersHelp")}
+              {t("subjects.layersHelp")}
             </p>
             <ul>
-              {layers.map((layer) =>
-                subject.type === "theory" ? (
-                  <li key={layer} className="break-words border-b border-border py-3 text-base">
-                    {layer}
-                  </li>
-                ) : (
-                  <OptionRow
-                    key={layer}
-                    label={layer}
-                    disabled={saving}
-                    onSave={(name) => subjectsService.renameLayer(id, layer, name)}
-                    onRemove={() => void update(() => subjectsService.removeLayer(id, layer))}
-                  />
-                )
-              )}
-            </ul>
-            {subject.type !== "theory" &&
-              (addingLayer ? (
-                <InlineEdit
-                  label={t("subjects.addLayer")}
-                  adding
-                  onCancel={() => setAddingLayer(false)}
-                  onSave={async (name) => {
-                    await subjectsService.addLayer(id, name);
-                    setAddingLayer(false);
-                  }}
+              {layers.map((layer) => (
+                <OptionRow
+                  key={layer}
+                  label={layerLabel(layer)}
+                  disabled={saving}
+                  onSave={(name) => subjectsService.renameLayer(id, layer, name)}
+                  onRemove={() => void update(() => subjectsService.removeLayer(id, layer))}
                 />
-              ) : (
-                <Button variant="outline" className="min-h-11" onClick={() => setAddingLayer(true)}>
-                  <Plus className="mr-2 h-4 w-4" aria-hidden />
-                  {t("subjects.addLayer")}
-                </Button>
               ))}
+            </ul>
+            {addingLayer ? (
+              <InlineEdit
+                label={t("subjects.addLayer")}
+                adding
+                onCancel={() => setAddingLayer(false)}
+                onSave={async (name) => {
+                  await subjectsService.addLayer(id, name);
+                  setAddingLayer(false);
+                }}
+              />
+            ) : (
+              <Button variant="outline" className="min-h-11" onClick={() => setAddingLayer(true)}>
+                <Plus className="mr-2 h-4 w-4" aria-hidden />
+                {t("subjects.addLayer")}
+              </Button>
+            )}
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="techniques">

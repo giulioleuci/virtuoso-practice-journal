@@ -1,3 +1,6 @@
+import { TempoProgressionFields } from "@/components/diary/TempoProgressionFields";
+import type { TempoProgressionRule } from "@/domain/entities/tempoProgression";
+import { bpmSchema, tempoRuleSchema } from "@/lib/schemas";
 import { useEffect, useMemo, useState } from "react";
 import { useCollection, useItem, useLessons, useRecurrences, useSegmentsByIds, useSubjects } from "@/presentation/hooks/useEntities";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -118,7 +121,7 @@ export default function NewTaskPage() {
     if (linkType === "item" && !itemId) e.push(t("errors.pickItem"));
     if (linkType === "collection" && !collectionId) e.push(t("errors.pickCollection"));
     if (!title.trim()) e.push(t("errors.titleRequired"));
-    if (plan.some((entry) => entry.bpm !== undefined && (entry.bpm < 20 || entry.bpm > 400))) e.push(t("errors.bpmRange"));
+    if (plan.some((entry) => entry.bpm !== undefined && !bpmSchema.safeParse(entry.bpm).success)) e.push(t("errors.bpmRange"));
     if (rec.enabled) {
       if (rec.kind === "weekdays" && !rec.days.length) e.push(t("errors.pickOneDay"));
       if (rec.kind === "interval" && (rec.everyX < 1 || rec.everyX > 60)) e.push(t("errors.intervalRange"));
@@ -135,9 +138,13 @@ export default function NewTaskPage() {
   };
 
   // Problems are listed only after a save attempt, then focused so the musician sees what is missing.
+  const [tempoRule,setTempoRule] = useState<TempoProgressionRule>();
+  const [tempoValid,setTempoValid] = useState(true);
+  const [saving,setSaving] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const save = async () => {
-    if (errors.length || subjectId === undefined) {
+    if (saving) return;
+    if (errors.length || (rec.enabled && !tempoValid) || subjectId === undefined) {
       setAttempted(true);
       const first = !subjectId ? "task-subject" : !title.trim() ? "task-title" : "task-errors";
       requestAnimationFrame(() => document.getElementById(first)?.focus());
@@ -153,10 +160,13 @@ export default function NewTaskPage() {
       executionNotes: executionNotes.trim() || undefined,
     };
     try {
+      setSaving(true);
+      if (recurrence && tempoRule) tempoRuleSchema.parse(tempoRule);
       const firstId = await tasksService.create({
         ...baseTask,
         date: recurrence ? recurrence.startDate : rec.startDate,
         recurrence,
+        tempoRule: recurrence ? tempoRule : undefined,
       });
       if (prefill?.assignmentId) {
         await lessonsService.linkTask(prefill.assignmentId, firstId);
@@ -165,7 +175,7 @@ export default function NewTaskPage() {
       handleCancel();
     } catch (err) {
       toast.error((err as Error).message);
-    }
+    } finally { setSaving(false); }
   };
 
   const sectionCls = "mt-6 border-t border-border pt-6";
@@ -180,10 +190,10 @@ export default function NewTaskPage() {
 
       <form
         onSubmit={(e) => { e.preventDefault(); void save(); }}
-        className="max-w-[920px] rounded-lg bg-card p-6 shadow-soft"
+        className="min-w-0 max-w-[920px] rounded-lg bg-card p-4 shadow-soft sm:p-6 [&_input]:min-w-0 [&_textarea]:min-w-0"
       >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-1.5">
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+          <div className="grid min-w-0 gap-1.5">
             <Label htmlFor="task-subject" className={labelCls}>{t("common.subject")}</Label>
             <Select
               value={subjectId?.toString() ?? ""}
@@ -200,13 +210,13 @@ export default function NewTaskPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1.5">
+          <div className="grid min-w-0 gap-1.5">
             <Label htmlFor="task-title" className={labelCls}>{t("common.title")}</Label>
             <Input id="task-title" value={title} onChange={(e) => { setTitleTouched(true); setTitle(e.target.value); }} placeholder={t("tasks.taskTitle")}
               aria-invalid={(attempted && !title.trim()) || undefined} aria-describedby={attempted && !title.trim() ? "task-errors" : undefined} />
           </div>
           {!rec.enabled && (
-            <div className="grid gap-1.5">
+            <div className="grid min-w-0 gap-1.5">
               <Label htmlFor="task-date" className={labelCls}>{t("common.date")}</Label>
               <Input id="task-date" type="date" required value={rec.startDate} onChange={(e) => setRec({ startDate: e.target.value })} />
             </div>
@@ -248,11 +258,12 @@ export default function NewTaskPage() {
           <RecurrenceFields state={rec} setState={setRec} nextLessonDate={nextLessonDateValue} />
         </div>
 
+        {rec.enabled && <TempoProgressionFields value={tempoRule} onChange={setTempoRule} onValidityChange={setTempoValid} disabled={saving} />}
         <FormErrors id="task-errors" errors={attempted ? errors : []} className="mt-6" />
 
-        <FloatingActions className="min-[700px]:max-w-[920px]">
+        <FloatingActions className="flex-wrap min-[700px]:max-w-[920px] [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:whitespace-normal">
           <Button type="button" variant="ghost" onClick={handleCancel}>{t("common.cancel")}</Button>
-          <Button type="submit">{t("tasks.addTask")}</Button>
+          <Button type="submit" disabled={saving || (rec.enabled && !tempoValid)}>{t("tasks.addTask")}</Button>
         </FloatingActions>
       </form>
     </div>

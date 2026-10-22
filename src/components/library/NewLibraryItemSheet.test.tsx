@@ -8,10 +8,27 @@ import { configurePresentationQueries } from "@/application/queries/presentation
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import { NewLibraryItemSheet } from "./NewLibraryItemSheet";
 
-const t = (key: string) => translate("it", key);
+const t = (key: string, vars?: Record<string, string | number>) => translate("it", key, vars);
 beforeEach(async () => { vi.restoreAllMocks(); await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads); });
 
 describe("NewLibraryItemSheet", () => {
+  it("offers translated default and custom theory aspects without changing their stored values", async () => {
+    const subjectId = await db.subjects.add({ name: "Armonia", type: "theory", layers: ["analytical", "Contesto storico"], createdAt: 1 });
+    const id = await db.library.add({ subjectId, kind: "theory", title: "Cadenze", createdAt: 1 });
+    const segmentId = await db.segments.add({ itemId: id, label: "A", position: 0, layers: ["analytical"], createdAt: 1 });
+    const item = (await db.library.get(id))!;
+    const onClose = vi.fn();
+    render(<I18nContext.Provider value={{ lang: "it", setLang: () => {}, t }}><NewLibraryItemSheet open onOpenChange={onClose} item={item} kind="theory" /></I18nContext.Provider>);
+    fireEvent.click(await screen.findByText("A", { selector: "summary" }));
+    await screen.findByRole("button", { name: t("common.removeItem", { label: "Analitico" }) });
+    fireEvent.click(screen.getByRole("button", { name: t("tasks.layers") }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Contesto storico" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: t("collections.saveChanges") }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledWith(false));
+    expect((await db.segments.get(segmentId))?.layers).toEqual(["analytical", "Contesto storico"]);
+  });
+
   it("keeps unsaved segment edits when live data refreshes", async () => {
     const subjectId = await db.subjects.add({ name: "Piano", type: "instrument", createdAt: 1 });
     const id = await db.library.add({ subjectId, kind: "piece", title: "Prelude", createdAt: 1 });

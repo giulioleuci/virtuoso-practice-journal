@@ -12,6 +12,8 @@ export interface SessionSnapshot {
 }
 
 export interface Session {
+  tempoProgressionIds?: number[];
+  tempoSegmentIds?: number[];
   id: number;
   /** Set only when the session was opened from a planned task. */
   taskId?: number;
@@ -44,3 +46,8 @@ export interface Recording {
   durationMs: number;
   createdAt: number;
 }
+
+export const sessionTempoIndexes = (marks: SegmentMark[]) => ({
+  tempoProgressionIds: [...new Set(marks.flatMap(m => m.progression ? [m.progression.id] : []))].sort((a,b) => a-b),
+  tempoSegmentIds: [...new Set(marks.flatMap(m => m.segmentId === undefined ? [] : [m.segmentId]))].sort((a,b) => a-b),
+});

@@ -1,3 +1,5 @@
+import { TempoProgressionUseCase } from "@/application/useCases/tempoProgression";
+import { tempoProgressionRepository } from "./repositories/dexie/tempoProgressionRepository";
 import { CreateTaskUseCase } from "@/application/useCases/createTask";
 import { DeleteSessionUseCase } from "@/application/useCases/deleteSession";
 import { GenerateStudyRoutineUseCase } from "@/application/useCases/generateStudyRoutine";
@@ -22,6 +24,7 @@ import { studyRoutineRepository } from "./repositories/dexie/studyRoutineReposit
 const backupFiles = new CapacitorBackupFileGateway();
 
 export const application = {
+  tempoProgression: new TempoProgressionUseCase(tempoProgressionRepository),
   tasks: { create: new CreateTaskUseCase(taskRepository), update: new UpdateTaskUseCase(taskRepository), remove: new RemoveTaskUseCase(taskRepository) },
   sessions: { log: new LogSessionUseCase(sessionRepository), remove: new DeleteSessionUseCase(sessionRepository) },
   audio: browserAudio,

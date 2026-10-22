@@ -11,7 +11,7 @@ const reads = vi.hoisted(() => new Map<string, unknown>());
 vi.mock("@/presentation/hooks/usePresentationQuery", () => ({ usePresentationRead: (operation: string) => reads.get(operation) ?? [] }));
 const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
 const show = (node: React.ReactNode) => render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><MemoryRouter>{node}</MemoryRouter></I18nContext.Provider>);
-const session = (id: number, date: string, bpm = 100): Session => ({ id, date, createdAt: id, marks: [{ bpm, targetBpm: 100, layers: [], techniques: [] }] });
+const session = (id: number, date: string, bpm = 100): Session => ({ id, date, createdAt: id, marks: [{ bpm, noteVal: "quarter",targetBpm: 100,targetNoteVal: "quarter", layers: [], techniques: [] }] });
 beforeEach(() => { vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} }); });
 afterEach(() => { cleanup(); reads.clear(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 

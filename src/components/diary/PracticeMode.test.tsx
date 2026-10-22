@@ -121,3 +121,38 @@ it("swings the pendulum on the scheduled beat and marks every beat, even with on
   expect(pendulum.style.transform).not.toBe(first.swing);
   expect(beat()).not.toBe(first.mark);
 });
+
+it("schedules 1 BPM sixty seconds apart, applies 1→120 promptly and skips suspended beats", async () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  const starts: number[] = [];
+  const clock = { now: 0 };
+  vi.stubGlobal("AudioContext", class {
+    state = "running"; destination = {};
+    get currentTime() { return clock.now; }
+    resume() { return Promise.resolve(); }
+    close() { return Promise.resolve(); }
+    createGain() { return { gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: (d: unknown) => d }; }
+    createOscillator() { return { frequency: { value: 0 }, type: "", connect: (g: unknown) => g, start: (when: number) => starts.push(when), stop() {} }; }
+  });
+  await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);
+  localStorage.setItem("virtuoso-session-task-1-1", JSON.stringify({ marks: [{ layers: [], techniques: [], bpm: 1, noteVal: "quarter" }], clips: [], notes: "", needHelp: false, helpText: "" }));
+  const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
+  render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><PracticeMode task={{ id: 1, title: "Scales", subjectId: 1, plan: [], date: "2026-10-22", done: false, createdAt: 1 }} onClose={() => {}} onFinish={() => {}} /></I18nContext.Provider>);
+  const start = await screen.findByRole("button", { name: t("practice.start") });
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+  try {
+    fireEvent.click(start);
+    clock.now = 60; vi.advanceTimersByTime(25);
+    expect(starts[1] - starts[0]).toBeCloseTo(60);
+    const five = screen.getByRole("button",{ name: t("practice.bpmIncrease",{ step: 5 }) });
+    const one = screen.getByRole("button",{ name: t("practice.bpmIncrease",{ step: 1 }) });
+    for (let i = 0; i < 23; i++) fireEvent.click(five);
+    for (let i = 0; i < 4; i++) fireEvent.click(one);
+    clock.now = 60.5; vi.advanceTimersByTime(25);
+    expect(starts.at(-1)).toBeCloseTo(60.55);
+    const before = starts.length;
+    clock.now = 3600; vi.advanceTimersByTime(25);
+    expect(starts.length - before).toBeLessThanOrEqual(1);
+    expect(starts.at(-1)).toBeGreaterThanOrEqual(clock.now);
+  } finally { vi.useRealTimers(); }
+}, 20000);

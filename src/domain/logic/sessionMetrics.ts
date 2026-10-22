@@ -1,8 +1,9 @@
+import { compareTempos } from "./tempo";
 import type { RatingKey, SegmentMark } from "../entities/common";
 
 /** Mark with the highest tempo, carrying its note value. */
 export const topMark = (marks: SegmentMark[]): SegmentMark | undefined =>
-  new Set(marks.filter(m => m.bpm !== undefined).map(m => m.noteVal ?? "quarter")).size > 1 ? undefined : marks.reduce<SegmentMark | undefined>((best, m) => (m.bpm && (!best?.bpm || m.bpm > best.bpm) ? m : best), undefined);
+  marks.reduce<SegmentMark | undefined>((best,m) => m.bpm !== undefined && m.noteVal !== undefined && (!best || compareTempos({ bpm: m.bpm,noteVal: m.noteVal },{ bpm: best.bpm!,noteVal: best.noteVal! }) > 0) ? m : best,undefined);
 
 export const topBpm = (marks: SegmentMark[]): number | undefined => topMark(marks)?.bpm;
 

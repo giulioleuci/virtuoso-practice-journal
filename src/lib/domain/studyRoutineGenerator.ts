@@ -1,3 +1,5 @@
+import { inheritTempoProgressions } from "@/domain/logic/tempoProgression";
+import type { TempoProgression, TempoProgressionRule } from "@/domain/entities/tempoProgression";
 /** Pure study-routine task generation: pool keys, adaptive weighting, sampling, day loop.
  *
  * No Dexie access — the repository resolves pool entries and collects practice
@@ -188,6 +190,8 @@ export function routineAdaptivity(routine: Pick<StudyRoutine, "adaptivity" | "us
 }
 
 export interface GenerateRoutineTasksOptions {
+  tempoProgressions?: readonly TempoProgression[];
+  tempoRule?: TempoProgressionRule;
   routine: StudyRoutine;
   groupItems: Map<string, ResolvedPoolItem[]>;
   stats?: Map<string, PoolStat> | null;
@@ -213,6 +217,8 @@ export function generateRoutineTasks({
   seedCounters,
   weekStartsOn = 1,
   rng = Math.random,
+  tempoProgressions = [],
+  tempoRule = routine.tempoRule,
 }: GenerateRoutineTasksOptions): Omit<Task, "id">[] {
   const startDate = parseDayKey(fromDate);
   const endDate = addDays(startDate, routine.weeksAhead * 7);
@@ -320,7 +326,9 @@ export function generateRoutineTasks({
     d = addDays(d, 1);
   }
 
-  return tasks.sort((a, b) => a.date.localeCompare(b.date) || routineTaskOrder(a, routine) - routineTaskOrder(b, routine));
+  const pool = [...groupItems.values()].flatMap(items => items.flatMap(item => [item, ...(item.sections ?? [])]));
+  const segments = pool.flatMap(item => item.itemId === undefined ? [] : (item.segmentIds ?? item.plan?.flatMap(e => e.segmentId === undefined ? [] : [e.segmentId]) ?? []).map(id => ({ id, itemId: item.itemId! })));
+  return tasks.map(task => inheritTempoProgressions(task,tempoProgressions,tempoRule,segments)).sort((a, b) => a.date.localeCompare(b.date) || routineTaskOrder(a, routine) - routineTaskOrder(b, routine));
 }
 
 /** Schedule problems worth showing before a routine is saved. */

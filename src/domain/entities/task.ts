@@ -12,6 +12,8 @@ export interface TaskRecurrence {
 export type TaskLinkType = "free" | "item" | "collection";
 
 export interface Task {
+  tempoRule?: import("@/domain/entities/tempoProgression").TempoProgressionRule;
+  tempoRuleRevision?: number;
   id?: number;
   date: string;
   subjectId: number;

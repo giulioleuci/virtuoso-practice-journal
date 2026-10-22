@@ -130,16 +130,34 @@ describe("study subjects", () => {
     });
   });
 
-  it("keeps theoretical levels read-only and handles an unknown subject", async () => {
+  it("adds, renames and removes a theory aspect without changing historical sessions", async () => {
+    const sessionId = await db.sessions.add({ subjectId: theoryId, date: "2026-10-01", marks: [{ layers: ["analytical"], techniques: [], confidence: 4 }], createdAt: 1 });
     const view = show(`/study-setup/${theoryId}`);
     fireEvent.click(
       await screen.findByRole("button", {
         name: new RegExp(t("subjects.layers")),
       })
     );
-    expect(screen.getByText(t("subjects.theoryLayersFixed"))).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: t("subjects.addLayer") })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: t("subjects.addLayer") }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Contesto storico" } });
+    fireEvent.click(screen.getByRole("button", { name: t("common.add") }));
+    await screen.findByRole("button", { name: "Contesto storico" });
+    fireEvent.click(screen.getByRole("button", { name: t("library.mastery.analytical") }));
+    expect(screen.getByRole("textbox")).toHaveValue(t("library.mastery.analytical"));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Analisi della partitura" } });
+    fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
+    await screen.findByRole("button", { name: "Analisi della partitura" });
+    fireEvent.keyDown(screen.getByRole("button", { name: `${t("common.more")}: Contesto storico` }), { key: "Enter" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: t("common.remove") }));
+    await waitFor(async () => expect((await db.subjects.get(theoryId))?.layers).toEqual(["conceptual", "Analisi della partitura", "aural", "compositional", "reading"]));
+    expect((await db.sessions.get(sessionId))?.marks[0].layers).toEqual(["analytical"]);
     view.unmount();
+    show(`/study-setup/${theoryId}`);
+    fireEvent.click(await screen.findByRole("button", { name: new RegExp(t("subjects.layers")) }));
+    expect(screen.getByRole("button", { name: "Analisi della partitura" })).toBeInTheDocument();
+  });
+
+  it("handles an unknown subject", async () => {
     show("/study-setup/99999");
     expect(await screen.findByText(t("subjects.notFound"))).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: t("nav.studySetup") }));

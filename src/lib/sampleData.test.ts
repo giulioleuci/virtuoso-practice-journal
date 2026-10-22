@@ -79,7 +79,7 @@ describe("study sample data", () => {
     ]);
   });
 
-  it.each([["complete", seedSampleData], ["guitar", seedGuitarSampleData]] as const)("seeds %s with five types and a mixed manual using valid v4 data", async (name, seed) => {
+  it.each([["complete", seedSampleData], ["guitar", seedGuitarSampleData]] as const)("seeds %s with five types and a mixed manual using valid backup data", async (name, seed) => {
     await seed();
     const items = await db.library.toArray();
     expect(new Set(items.map(item => item.kind))).toEqual(new Set(["piece", "study", "technique", "exercise", "theory"]));
@@ -107,7 +107,7 @@ describe("study sample data", () => {
     }
     for (const link of await db.performanceItems.toArray()) expect(isPerformable(items.find(i => i.id === link.itemId)!.kind)).toBe(true);
     const backup = await backupService.exportAll();
-    expect(JSON.parse(backup).version).toBe(4);
+    expect(JSON.parse(backup).version).toBe(6);
     await backupService.importAll(backup);
     expect(await db.library.toArray()).toEqual(items);
   });

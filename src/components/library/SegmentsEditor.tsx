@@ -19,13 +19,12 @@ interface Props {
   segments: SegmentInput[];
   onChange: (next: SegmentInput[]) => void;
   itemTempo?: Pick<LibraryItem, "targetBpm" | "noteVal">;
-  /** Subject-defined layers (closed vocabulary). */
-  subjectLayers?: string[];
+  layerOptions?: { value: string; label: string }[];
   /** Subject-defined techniques. */
   techniqueOptions?: { value: number; label: string }[];
 }
 
-export function SegmentsEditor({ segments, onChange, itemTempo, subjectLayers = [], techniqueOptions = [] }: Props) {
+export function SegmentsEditor({ segments, onChange, itemTempo, layerOptions = [], techniqueOptions = [] }: Props) {
   const { t } = useI18n();
   const pager = usePagination(segments, 5);
   const [draftLabel, setDraftLabel] = useState("");
@@ -50,8 +49,6 @@ export function SegmentsEditor({ segments, onChange, itemTempo, subjectLayers = 
     [next[i], next[j]] = [next[j], next[i]];
     onChange(next.map((s, position) => ({ ...s, position })));
   };
-
-  const layerOptions = subjectLayers.map((l) => ({ value: l, label: l }));
 
   return (
     <div className="space-y-3">

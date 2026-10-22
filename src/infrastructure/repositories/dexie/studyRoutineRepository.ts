@@ -1,3 +1,6 @@
+import { taskRepository } from "./taskRepository";
+import { tempoProgressionRepository } from "./tempoProgressionRepository";
+import { tempoRuleSchema } from "@/lib/schemas";
 import { db } from "@/infrastructure/dexie/db";
 import type { Task } from "@/domain/entities/task";
 import type {
@@ -124,6 +127,9 @@ async function profileWeekStartsOn() {
 const slotKey = (task: Pick<Task, "date" | "itemId" | "collectionId" | "title">) => `${task.date}|${task.itemId ?? ""}|${task.collectionId ?? ""}|${task.itemId ?? task.collectionId ? "" : task.title}`;
 
 async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: Map<string, number>, kept: Pick<Task, "date" | "itemId" | "collectionId" | "title">[] = []) {
+  return db.transaction("rw", db.tables, async () => {
+  routine = await db.studyRoutines.get(routine.id);
+  if (!routine || routine.deletedAt) return;
   const entries = routine.groups.flatMap((group) => group.pool);
   const pool = await resolvePoolEntries(entries);
   const groupItems = new Map(
@@ -140,6 +146,7 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
     createdAt: now(),
     seedCounters,
     weekStartsOn: await profileWeekStartsOn(),
+    tempoProgressions: await db.tempoProgressions.where("[owner.kind+owner.id]").equals(["routine",routine.id]).toArray(),
   });
   // ponytail: a kept task only suppresses the identical draw on its day; a different draw still lands beside it. Make generation slot-aware if days feel crowded.
   // Any task the routine still has from fromDate on (done today, customized, or left by an earlier run) blocks the same draw.
@@ -147,13 +154,18 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
   const taken = new Set([...kept, ...existing].map(slotKey));
   const fresh = tasks.filter((task) => !taken.has(slotKey(task)));
   if (fresh.length) await db.tasks.bulkAdd(fresh);
+  });
 }
 
 const locks = new Map<number, Promise<void>>();
 
 async function regenerate(routine: StudyRoutine, fromDate: string) {
+  return db.transaction("rw", db.tables, async () => {
+  routine = await db.studyRoutines.get(routine.id);
+  if (!routine || routine.deletedAt) return;
   const future = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.done && task.date >= fromDate).toArray();
-  const replaceable = future.filter((task) => !task.customized);
+  const studied = new Set(await db.sessions.where("taskId").anyOf(future.map(t => t.id!)).uniqueKeys() as number[]);
+  const replaceable = future.filter((task) => !task.customized && !studied.has(task.id!));
   // Customized copies sharing a slot (left by earlier duplicate runs) collapse to one.
   const seen = new Set<string>();
   for (const task of future.filter((t) => t.customized)) { if (seen.has(slotKey(task))) replaceable.push(task); else seen.add(slotKey(task)); }
@@ -168,12 +180,14 @@ async function regenerate(routine: StudyRoutine, fromDate: string) {
     for (const key of keys) counters.set(key, (counters.get(key) ?? 0) + 1);
 }
   await generate(routine, fromDate, counters, future.filter((task) => task.customized && !replaceable.includes(task)));
+  });
 }
 
 export const studyRoutineRepository = {
   async createRoutine(input: StudyRoutineInput, createdAt: number) {
-    const id = await db.studyRoutines.add({ ...input, createdAt }) as number;
-    return { ...input, id, createdAt };
+    if (input.tempoRule) tempoRuleSchema.parse(input.tempoRule);
+    const id = await db.studyRoutines.add({ ...input, tempoRuleRevision: input.tempoRule ? 1 : undefined, createdAt }) as number;
+    return { ...input, tempoRuleRevision: input.tempoRule ? 1 : undefined, id, createdAt };
   },
   resolvePool: resolvePoolEntries,
   stats: computeStats,
@@ -182,7 +196,7 @@ export const studyRoutineRepository = {
     if (tasks.length) await db.tasks.bulkAdd(tasks);
   },
   async create(input: StudyRoutineInput) {
-    const id = await db.studyRoutines.add({ ...input, createdAt: now() }) as number;
+    const id = await db.studyRoutines.add({ ...input, tempoRuleRevision: input.tempoRule ? 1 : undefined, createdAt: now() }) as number;
     const routine = await db.studyRoutines.get(id);
     if (routine) await generate(routine, input.startDate);
     return id;
@@ -194,13 +208,17 @@ export const studyRoutineRepository = {
     return run;
   },
   async update(id: number, patch: Partial<StudyRoutine>) {
-    await db.studyRoutines.update(id, patch);
+    await db.transaction("rw", [db.studyRoutines, db.tempoProgressions, db.tasks, db.sessions, db.segments, db.library], async () => {
+      if ("tempoRule" in patch) await tempoProgressionRepository.configure({ kind: "routine", id },patch.tempoRule,now());
+      const { tempoRule: _rule, tempoRuleRevision: _revision, ...fields } = patch;
+      await db.studyRoutines.update(id,fields);
+    });
     const routine = await db.studyRoutines.get(id);
     if (routine) await this.regenerateFromDate(routine, today());
   },
   async remove(id: number) {
     const future = await db.tasks.where("studyRoutineId").equals(id).filter((task) => !task.done && task.date >= today()).toArray();
-    if (future.length) await db.tasks.bulkDelete(future.map((task) => task.id));
+    if (future.length) await taskRepository.bulkRemove(future.map(task => task.id!));
     await db.studyRoutines.update(id, { deletedAt: now() });
   },
 } satisfies StudyRoutinePort & StudyRoutineGenerationPort;

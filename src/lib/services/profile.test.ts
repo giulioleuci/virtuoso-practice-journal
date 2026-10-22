@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
-import { db } from "@/lib/db";
+import { db, THEORY_LAYERS } from "@/lib/db";
 import { profileService } from "@/lib/services/profile";
 
 beforeEach(async () => {
@@ -41,6 +41,7 @@ describe("profileService.initialize", () => {
     expect(subjects).toHaveLength(2);
     expect(subjects.map((s) => s.name).sort()).toEqual(["Harmony", "Piano"]);
     expect(subjects[0].createdAt).toBeGreaterThan(0);
+    expect(subjects.find(subject => subject.type === "theory")?.layers).toEqual([...THEORY_LAYERS]);
   });
 
   it("stores zero subjects when none are provided", async () => {
