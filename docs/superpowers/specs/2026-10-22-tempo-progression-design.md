@@ -2,7 +2,7 @@
 
 Data: 22 ottobre 2026.
 
-Stato: disegno concordato in conversazione; specifica scritta da revisionare prima del piano di implementazione.
+Stato: specifica scritta approvata dall'utente il 22 ottobre 2026; piano di implementazione in revisione.
 
 Processo: Superpowers brainstorming, percorso architetturale; Ponytail ultra richiesto dall'utente.
 
@@ -299,4 +299,4 @@ Fuori ambito: riconoscimento automatico di errori o BPM dall'audio, machine lear
 
 Il workspace contiene modifiche preesistenti a form, sessioni, backup e schema. Questa fase aggiunge soltanto la specifica e non incorpora quelle modifiche in un commit. Il futuro piano deve lavorare sullo stato effettivo senza sovrascriverle.
 
-La specifica scritta richiede ora revisione dell'utente. Dopo la sua approvazione, il prossimo passaggio Superpowers è `writing-plans`: piano di implementazione da revisionare e scelta del metodo di esecuzione. L'approvazione di questa specifica non avvia da sola modifiche al prodotto.
+La specifica scritta è stata approvata dall'utente. Il piano preparato con `writing-plans` è in `../plans/2026-10-22-tempo-progression.md` e richiede revisione e scelta del metodo di esecuzione. L'approvazione di questa specifica non avvia da sola modifiche al prodotto.
