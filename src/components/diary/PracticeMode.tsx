@@ -24,6 +24,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { X, Volume2, VolumeX, MessageSquareQuote, ChevronLeft, ChevronRight, Check, Dot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NotesHistory } from "./NotesHistory";
 import { FloatingActions } from "@/components/shared/FloatingActions";
 
 interface Props {
@@ -201,7 +202,10 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               )}
             </div>
           </details>
-          <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
+          <div className="flex shrink-0">
+            <NotesHistory itemId={task.itemId} />
+            <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
+          </div>
         </div>
         {marks.length > 1 && (
           <ol className="flex flex-wrap gap-x-3 text-xs text-muted-foreground" aria-label={t("practice.segmentsLabel")}>

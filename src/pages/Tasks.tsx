@@ -3,7 +3,7 @@ import type { Task } from "@/domain/entities/task";
 import type { StudyRoutine } from "@/domain/ports/studyRoutine";
 import { useActiveTasks, useStudyRoutines, useSubjects } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
-import { formatDate } from "@/lib/date";
+import { formatDate, today } from "@/lib/date";
 import type { Lang } from "@/domain/entities/common";
 import { studyRoutinesService, tasksService } from "@/lib/services";
 import { deleteWithUndo } from "@/presentation/utils/deleteWithUndo";
@@ -62,6 +62,7 @@ export default function Tasks() {
   const [params, setParams] = useSearchParams();
   const tab: Tab = TABS.find((x) => x === params.get("tab")) ?? "tasks";
   const [filter, setFilter] = useState<"all" | "active" | "done">("active");
+  const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [q, setQ] = useState("");
 
@@ -72,6 +73,7 @@ export default function Tasks() {
 
   const filtered = useMemo(() => {
     let arr = (tasks ?? []).filter((task) => tab !== "series" || !!task.recurrence);
+    if (upcomingOnly) arr = arr.filter((task) => task.date >= today());
     if (filter === "active") arr = arr.filter((task) => !task.done);
     if (filter === "done") arr = arr.filter((task) => task.done);
     if (subjectFilter !== "all") arr = arr.filter((task) => task.subjectId === Number(subjectFilter));
@@ -84,7 +86,7 @@ export default function Tasks() {
       if (a.done) return b.date.localeCompare(a.date);
       return a.date.localeCompare(b.date);
     });
-  }, [tasks, tab, filter, subjectFilter, q]);
+  }, [tasks, tab, filter, upcomingOnly, subjectFilter, q]);
 
   const { page, setPage, totalPages, pageItems } = usePagination(filtered, PAGE_SIZE);
 
@@ -238,13 +240,15 @@ export default function Tasks() {
           <FilterPanel
             search={{ value: q, onChange: value => { setQ(value); setPage(0); }, placeholder: t("tasks.searchByTitle") }}
             filters={[
+              ...(upcomingOnly ? [{ key: "upcoming", label: t("plan.fromToday"), onRemove: () => { setUpcomingOnly(false); setPage(0); } }] : []),
               ...(subjectFilter !== "all" ? [{ key: "subject", label: `${t("common.subject")}: ${subjectName(Number(subjectFilter))}`, onRemove: () => { setSubjectFilter("all"); setPage(0); } }] : []),
               ...(filter !== "all" ? [{ key: "status", label: t(filter === "active" ? "plan.statusOpen" : "common.done"), onRemove: () => { setFilter("all"); setPage(0); } }] : []),
             ]}
-            onReset={() => { setQ(""); setSubjectFilter("all"); setFilter("all"); setPage(0); }}
+            onReset={() => { setQ(""); setSubjectFilter("all"); setFilter("all"); setUpcomingOnly(false); setPage(0); }}
             resultCount={tasks === undefined ? undefined : filtered.length}
           >
             <FilterSelect label={t("common.subject")} value={subjectFilter} onChange={value => { setSubjectFilter(value); setPage(0); }} options={[{ value: "all", label: t("library.allSubjects") }, ...(subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))]} />
+            <FilterSelect label={t("plan.period")} value={upcomingOnly ? "upcoming" : "all"} onChange={value => { setUpcomingOnly(value === "upcoming"); setPage(0); }} options={[{ value: "upcoming", label: t("plan.fromToday") }, { value: "all", label: t("common.all") }]} />
             <FilterSelect label={t("plan.status")} value={filter} onChange={value => { setFilter(value); setPage(0); }} options={[{ value: "all", label: t("common.all") }, { value: "active", label: t("plan.statusOpen") }, { value: "done", label: t("common.done") }]} />
           </FilterPanel>
 
