@@ -65,6 +65,7 @@ export function SegmentHistory({ itemId, segmentId, targetBpm, targetNoteVal }: 
                       })}
                     </p>
                   )}
+                  {m.notes && <p className="mt-1 whitespace-pre-line break-words text-xs text-muted-foreground">{m.notes}</p>}
                   {m.confidence != null && (
                     <span className="mt-2 block h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-secondary" aria-hidden>
                       <span className={cn("block h-full rounded-full", m.confidence >= 4 ? "bg-primary" : m.confidence >= 2 ? "bg-primary/50" : "bg-muted-foreground/40")} style={{ width: `${m.confidence * 20}%` }} />

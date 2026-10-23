@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { RatingFields } from "@/components/shared/RatingFields";
 import { ClipDraftList, Recorder } from "./Recorder";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { X, Volume2, VolumeX, MessageSquareQuote, ChevronLeft, ChevronRight, Check, Dot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingActions } from "@/components/shared/FloatingActions";
@@ -33,6 +34,8 @@ interface Props {
 }
 
 const DEFAULT_BPM = 60;
+
+const segmentTitle = ({ label, barStart, barEnd }: Segment) => (barStart === undefined || barEnd === undefined ? label : `${label} (${barStart}-${barEnd})`);
 
 export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnswers }: Props) {
   const { t } = useI18n();
@@ -62,6 +65,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   const patchMark = (patch: Partial<SegmentMark>) => setMarks(marks.map((m, i) => (i === current ? { ...m, ...patch } : m)));
   const setBpm = (next: number | ((b: number) => number)) => patchMark({ bpm: typeof next === "function" ? next(bpm) : next });
   const setNoteVal = (nv: SegmentMark["noteVal"]) => patchMark({ noteVal: nv });
+  const segmentOf = (id: number | undefined) => { const sg = segments?.find((x) => x.id === id); return sg && segmentTitle(sg); };
   const focusTechniques = mark.techniques.map((id) => techniques?.find((x) => x.id === id)?.name).filter(Boolean) as string[];
 
   // Seed the starting tempo once the last session loads: its reached tempo and note
@@ -151,7 +155,13 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
   useEffect(() => () => { ctxRef.current?.close().catch(() => undefined); }, []);
 
-  const finish = () => { if (!recording) { update({ marks, clips }); onFinish({ marks, clips }); } };
+  // Read-through without the click: the ratings go on, the metronome tempo is left out of the log.
+  const [skipTempo, setSkipTempo] = useState(false);
+  const finish = () => {
+    if (recording) return;
+    update({ marks, clips });
+    onFinish({ marks: skipTempo ? marks.map((m) => ({ ...m, bpm: undefined, noteVal: undefined })) : marks, clips });
+  };
 
 
   const isAccent = pulse > 0 && (pulse - 1) % beatsPerBar === 0;
@@ -176,20 +186,8 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             <div className="space-y-1 pb-1">
               {item && <p className="text-sm text-muted-foreground">{item.title}{item.composer ? ` · ${item.composer}` : ""}</p>}
               {collection && <p className="text-sm italic text-muted-foreground">{t("practice.collectionLabel")}: {collection.name}</p>}
-              {marks.length > 1 && (
-                <ol className="flex flex-wrap gap-x-3 text-xs text-muted-foreground" aria-label={t("practice.segmentsLabel")}>
-                  {marks.map((m, i) => (
-                    <li key={m.segmentId ?? i}>
-                      <button type="button" aria-current={i === current} onClick={() => setCurrent(i)} className={cn("inline-flex min-h-11 items-center gap-1", i === current ? "font-semibold text-primary" : "hover:text-foreground")}>
-                        <span className="break-words">{segments?.find((sg) => sg.id === m.segmentId)?.label}</span>
-                        {m.confidence !== undefined && <span className="inline-flex items-center gap-0.5 tabular-nums"><Check className="h-3 w-3" />{m.confidence}</span>}
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              )}
               {marks.length === 1 && !!segments?.length && (
-                <p className="text-xs text-muted-foreground" aria-label={t("practice.segmentLabel")}>{segments.map((sg) => sg.label).join(" · ")}</p>
+                <p className="text-xs text-muted-foreground" aria-label={t("practice.segmentLabel")}>{segments.map(segmentTitle).join(" · ")}</p>
               )}
               {(!!mark.layers.length || !!focusTechniques.length) && (
                 <p className="text-xs text-muted-foreground">{[...mark.layers, ...focusTechniques].join(", ")}</p>
@@ -205,6 +203,18 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
           </details>
           <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
         </div>
+        {marks.length > 1 && (
+          <ol className="flex flex-wrap gap-x-3 text-xs text-muted-foreground" aria-label={t("practice.segmentsLabel")}>
+            {marks.map((m, i) => (
+              <li key={m.segmentId ?? i}>
+                <button type="button" aria-current={i === current} onClick={() => setCurrent(i)} className={cn("inline-flex min-h-11 items-center gap-1", i === current ? "font-semibold text-primary" : "hover:text-foreground")}>
+                  <span className="break-words">{segmentOf(m.segmentId)}</span>
+                  {m.confidence !== undefined && <span className="inline-flex items-center gap-0.5 tabular-nums"><Check className="h-3 w-3" />{m.confidence}</span>}
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
 
         <section className="grid min-w-0 gap-x-8 gap-y-2.5 rounded-lg bg-card p-3.5 shadow-soft min-[700px]:p-7 min-[900px]:grid-cols-2 short-landscape:grid-cols-2 short-landscape:p-4" aria-label={t("practice.metronome")}>
           <div className="col-span-full flex flex-wrap items-center justify-between gap-2">
@@ -225,7 +235,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={current === 0} onClick={() => setCurrent(current - 1)} aria-label={t("practice.prevSection")}><ChevronLeft /></Button>
               <p className="min-w-0 flex-1 text-center leading-tight">
                 <span className="block text-xs tabular-nums text-muted-foreground">{t("session.segmentIndicator", { current: String(current + 1), total: String(marks.length) })}</span>
-                <span className="block break-words font-serif text-base font-semibold">{segments?.find((sg) => sg.id === mark.segmentId)?.label}</span>
+                <span className="block break-words font-serif text-base font-semibold">{segmentOf(mark.segmentId)}</span>
               </p>
               <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={current === marks.length - 1} onClick={() => setCurrent(current + 1)} aria-label={t("practice.nextSection")}><ChevronRight /></Button>
             </div>
@@ -233,18 +243,17 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
           <div className="grid min-w-0 gap-2">
             <div className="flex items-center justify-between gap-1.5">
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 {[-5, -1].map((d) => (
-                  <Button key={d} type="button" variant="outline" className="min-h-11 min-w-11 px-1.5 tabular-nums" onClick={() => setBpm((b) => Math.min(BPM_MAX, Math.max(BPM_MIN, b + d)))} aria-label={t("practice.bpmDecrease", { step: Math.abs(d) })}>{d}</Button>
+                  <Button key={d} type="button" variant="outline" className="h-10 min-w-10 px-1 text-xs tabular-nums" onClick={() => setBpm((b) => Math.min(BPM_MAX, Math.max(BPM_MIN, b + d)))} aria-label={t("practice.bpmDecrease", { step: Math.abs(d) })}>{d}</Button>
                 ))}
               </div>
               <div className="min-w-0 text-center" aria-live="off">
-                <p className="text-sm leading-none text-muted-foreground">{NOTE_GLYPH[noteVal ?? "quarter"]} =</p>
-                <p className="font-numeric text-[3.25rem] leading-none min-[700px]:text-[4.5rem] tabular-nums">{bpm}</p>
+                <p className="flex items-center justify-center gap-1.5 font-numeric text-[3.25rem] leading-none min-[700px]:text-[4.5rem] tabular-nums"><span aria-hidden="true">{NOTE_GLYPH[noteVal ?? "quarter"]}</span>{bpm}</p>
               </div>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 {[1, 5].map((d) => (
-                  <Button key={d} type="button" variant="outline" className="min-h-11 min-w-11 px-1.5 tabular-nums" onClick={() => setBpm((b) => Math.min(BPM_MAX, Math.max(BPM_MIN, b + d)))} aria-label={t("practice.bpmIncrease", { step: d })}>+{d}</Button>
+                  <Button key={d} type="button" variant="outline" className="h-10 min-w-10 px-1 text-xs tabular-nums" onClick={() => setBpm((b) => Math.min(BPM_MAX, Math.max(BPM_MIN, b + d)))} aria-label={t("practice.bpmIncrease", { step: d })}>+{d}</Button>
                 ))}
               </div>
             </div>
@@ -308,6 +317,11 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               </div>
             </div>
           </details>
+
+          <label className="col-span-full flex min-h-11 items-center justify-between gap-3 text-sm">
+            {t("practice.skipTempo")}
+            <Switch checked={skipTempo} onCheckedChange={setSkipTempo} />
+          </label>
 
           <div className="col-span-full pt-2.5">
             {marks.length > 1 && current < marks.length - 1 && <p className="mb-2 text-xs font-medium">{t("practice.rateNext")}</p>}

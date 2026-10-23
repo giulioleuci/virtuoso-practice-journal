@@ -19,6 +19,8 @@ export function sortDiaryTasks(tasks: Task[], routines: StudyRoutine[], order: D
     return [task, routine ? routineTaskOrder(task, routine) : Infinity];
   }));
   return [...tasks].sort((a, b) => {
+    const done = Number(a.done) - Number(b.done);
+    if (done) return done;
     if (order === "routine") {
       const origin = Number(b.studyRoutineId !== undefined) - Number(a.studyRoutineId !== undefined);
       if (origin) return origin;
@@ -27,8 +29,6 @@ export function sortDiaryTasks(tasks: Task[], routines: StudyRoutine[], order: D
       const routine = a.studyRoutineId - b.studyRoutineId || ranks.get(a) - ranks.get(b);
       if (routine) return routine;
     }
-    const done = Number(a.done) - Number(b.done);
-    if (done) return done;
     if (order === "title") {
       const title = a.title.localeCompare(b.title, locale, { numeric: true, sensitivity: "base" });
       if (title) return title;

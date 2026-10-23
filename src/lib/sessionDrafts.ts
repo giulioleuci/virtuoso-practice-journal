@@ -28,7 +28,7 @@ const draftSchema = z.object({
 });
 /** Whether the musician has entered anything worth discarding: ratings, notes, recordings, a question or a title. Tempos, layers and techniques seeded from the plan do not count. */
 export const draftHasContent = (d: SessionDraft): boolean =>
-  !!(d.notes.trim() || d.clips.length || d.needHelp || d.title?.trim() || d.marks.some((m) => m.confidence || m.mood || m.focus));
+  !!(d.notes.trim() || d.clips.length || d.needHelp || d.title?.trim() || d.marks.some((m) => m.confidence || m.mood || m.focus || m.notes?.trim()));
 export const sessionDraftKey = (scope: string) => `virtuoso-session-${scope}`;
 export const taskDraftScope = (task: { id?: number; createdAt: number }) => `task-${task.id}-${task.createdAt}`;
 

@@ -45,9 +45,9 @@ describe("diary task order", () => {
     expect(sortDiaryTasks(tasks, [r], "routine", "it").map(t => t.id)).toEqual([1, 2]);
   });
 
-  it("keeps groups in sequence when a task is completed", () => {
+  it("moves completed tasks after the pending ones, even across routine groups", () => {
     const tasks = [task(1, "Arpeggi", { studyRoutineId: 1, itemId: 3 }),
       task(2, "Scale", { studyRoutineId: 1, itemId: 2, done: true })];
-    expect(sortDiaryTasks(tasks, [routine], "routine", "it").map(t => t.id)).toEqual([2, 1]);
+    expect(sortDiaryTasks(tasks, [routine], "routine", "it").map(t => t.id)).toEqual([1, 2]);
   });
 });

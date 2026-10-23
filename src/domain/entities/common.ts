@@ -27,6 +27,8 @@ export interface SegmentMark extends SegmentEntry {
   mood?: number;
   /** 1 very low … 5 very high: how well attention held. */
   focus?: number;
+  /** Free text about how working on this section went. */
+  notes?: string;
   targetBpm?: number;
   targetNoteVal?: NoteVal;
 }

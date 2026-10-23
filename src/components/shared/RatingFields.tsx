@@ -1,6 +1,7 @@
 import type { SegmentMark } from "@/domain/entities/common";
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
+import { Textarea } from "@/components/ui/textarea";
 import { RatingScale } from "./RatingScale";
 
 /** Mood, focus and confidence of one section as stars. Confidence is required for a new session, mood and focus never are. */
@@ -19,6 +20,10 @@ export function RatingFields({ mark, onChange, requireRatings = true, showErrors
       <details className="border-t border-border pt-3">
         <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-muted-foreground hover:text-foreground">{t("rating.optionalContext")}</summary>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">{scale("mood")}{scale("focus")}</div>
+      </details>
+      <details open={!!mark.notes} className="border-t border-border pt-3">
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-muted-foreground hover:text-foreground">{t("rating.sectionNote")}</summary>
+        <Textarea rows={2} maxLength={2000} aria-label={t("rating.sectionNote")} value={mark.notes ?? ""} onChange={(e) => onChange({ notes: e.target.value || undefined })} placeholder={t("session.notesPlaceholder")} />
       </details>
     </div>
   );

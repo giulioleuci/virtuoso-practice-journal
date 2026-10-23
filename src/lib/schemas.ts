@@ -38,6 +38,7 @@ export const segmentMarkSchema = segmentEntrySchema.extend({
   confidence: ratingSchema.optional(),
   mood: ratingSchema.optional(),
   focus: ratingSchema.optional(),
+  notes: z.string().max(2000).optional(),
   targetBpm: bpmSchema.optional(),
   targetNoteVal: noteValSchema.optional(),
 });
