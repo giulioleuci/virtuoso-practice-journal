@@ -11,6 +11,8 @@ export interface StudyGroup {
   repetitionCap?: number;
   /** Fold everything the group draws on a day into one task whose sections span several library items. */
   combine?: boolean;
+  /** Importance given to every task the group generates. */
+  importance?: import("../entities/task").TaskImportance;
 }
 
 /** How strongly the draw favours the entries you feel least sure about. */

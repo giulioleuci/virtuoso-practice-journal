@@ -4,7 +4,7 @@ import { bpmSchema, tempoRuleSchema } from "@/lib/schemas";
 import { useMemo, useState } from "react";
 import { useItem, useSegmentsByIds, useSubjects, useTask } from "@/presentation/hooks/useEntities";
 import { useNavigate, useParams } from "react-router-dom";
-import type { Task, TaskLinkType } from "@/domain/entities/task";
+import type { Task, TaskImportance, TaskLinkType } from "@/domain/entities/task";
 import { planSegmentIds } from "@/domain/logic/plan";
 import { tasksService } from "@/lib/services";
 import { useI18n } from "@/lib/i18n";
@@ -17,6 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { PlanEditor } from "@/components/diary/PlanEditor";
+import { ImportanceSelect } from "@/components/diary/ImportanceSelect";
 import { useTaskPlan } from "@/components/diary/useTaskPlan";
 import { LinkTargetFields } from "@/components/diary/LinkTargetFields";
 import { toast } from "sonner";
@@ -62,6 +63,7 @@ function EditTaskForm({ task }: { task: Task }) {
   const [itemId, setItemId] = useState<number | undefined>(task.itemId);
   const [segmentIds, setSegmentIds] = useState<number[]>(planSegmentIds(task.plan));
   const [collectionId, setCollectionId] = useState<number | undefined>(task.collectionId);
+  const [importance, setImportance] = useState<TaskImportance>(task.importance ?? "medium");
   const [title, setTitle] = useState(task.title);
   const [date, setDate] = useState(task.date);
   const [executionNotes, setExecutionNotes] = useState(task.executionNotes ?? "");
@@ -102,14 +104,14 @@ function EditTaskForm({ task }: { task: Task }) {
     if (tempoChanged && tempoRule) tempoRuleSchema.parse(tempoRule);
     const manualChanged = planChanged || subjectId !== task.subjectId || title.trim() !== task.title || date !== task.date ||
       itemId !== task.itemId || collectionId !== task.collectionId ||
-      JSON.stringify(segmentIds) !== JSON.stringify(planSegmentIds(task.plan)) || executionNotes.trim() !== (task.executionNotes ?? "");
+      JSON.stringify(segmentIds) !== JSON.stringify(planSegmentIds(task.plan)) || executionNotes.trim() !== (task.executionNotes ?? "") || importance !== (task.importance ?? "medium");
     await tasksService.update(task.id, tempoChanged && !manualChanged ? { tempoRule } : {
       ...(tempoChanged ? { tempoRule } : {}),
       subjectId,
       linkType,
       itemId: linkType === "item" ? itemId : undefined,
       collectionId: linkType === "collection" ? collectionId : undefined,
-      title: title.trim(), date, plan,
+      title: title.trim(), date, plan, importance,
       executionNotes: executionNotes.trim() || undefined,
       ...((task.studyRoutineId !== undefined || task.recurrenceTaskId !== undefined || task.recurrence) && manualChanged ? { customized: true } : {}),
     });
@@ -179,6 +181,11 @@ function EditTaskForm({ task }: { task: Task }) {
             <PlanEditor plan={plan} onChange={next => { setPlanChanged(true); setPlan(next); }} sections={sections} subject={selectedSubject} />
           </div>
         )}
+
+        <div className={`${sectionCls} grid gap-1.5`}>
+          <Label htmlFor="task-importance" className={labelCls}>{t("importance.label")}</Label>
+          <ImportanceSelect id="task-importance" value={importance} onChange={setImportance} />
+        </div>
 
         <div className={`${sectionCls} grid gap-1.5`}>
           <Label htmlFor="task-notes" className={labelCls}>{t("tasks.executionNotes")}</Label>

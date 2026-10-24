@@ -4,6 +4,7 @@ import { profileService } from "@/lib/services";
 import type { ImportSummary } from "@/application/useCases/importBackup";
 import { applicationCommands } from "@/lib/applicationCommands";
 import { ensureNotificationPermission, isNative } from "@/lib/platform";
+import { DEFAULT_ALERT_TIME, DEFAULT_MISSED_AFTER } from "@/lib/domain/taskAlerts";
 import { getDefaultWeekStartsOn } from "@/lib/date";
 import { useI18n, SUPPORTED_LANGS } from "@/lib/i18n";
 import { useProfile } from "@/presentation/hooks/useEntities";
@@ -331,6 +332,66 @@ export default function Profile() {
             </div>
           </div>
         )}
+
+        <div className="h-px bg-border" />
+
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium">{t("alerts.title")}</h3>
+          {!isNative() && <p className="text-xs text-muted-foreground">{t("alerts.nativeOnly")}</p>}
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">{t("alerts.recurringEnabled")}</span>
+            <Switch aria-label={t("alerts.recurringEnabled")} checked={profile.recurringAlertEnabled !== false} onCheckedChange={(v) => update({ recurringAlertEnabled: v })} />
+          </div>
+          {profile.recurringAlertEnabled !== false && (
+            <div className="flex flex-wrap gap-1">
+              {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+                const days = profile.recurringAlertDays?.length ? profile.recurringAlertDays : [0, 1, 2, 3, 4, 5, 6];
+                const sel = days.includes(i);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-label={t(`weekday.${i}`)}
+                    aria-pressed={sel}
+                    // The last selected day stays on: an empty list would mean every day.
+                    onClick={() => { const next = sel ? days.filter((d) => d !== i) : [...days, i].sort(); if (next.length) void update({ recurringAlertDays: next }); }}
+                    className={"h-11 w-11 rounded-full text-xs font-medium transition-colors " + (sel ? "bg-primary text-primary-foreground" : "bg-background border border-border text-muted-foreground")}
+                  >
+                    {t(`weekday.${i}`).slice(0, 1)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">{t("alerts.missedEnabled")}</span>
+            <Switch aria-label={t("alerts.missedEnabled")} checked={profile.missedAlertEnabled !== false} onCheckedChange={(v) => update({ missedAlertEnabled: v })} />
+          </div>
+          {profile.missedAlertEnabled !== false && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">{t("alerts.missedAfter")}</span>
+              <input
+                aria-label={t("alerts.missedAfter")}
+                type="number" min={1} max={30}
+                value={profile.missedAlertAfter ?? DEFAULT_MISSED_AFTER}
+                onChange={(e) => { if (e.target.value && e.target.validity.valid) void update({ missedAlertAfter: Number(e.target.value) }); }}
+                className={`${nativeSelect} w-20`}
+              />
+            </div>
+          )}
+          {(profile.recurringAlertEnabled !== false || profile.missedAlertEnabled !== false) && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">{t("alerts.time")}</span>
+              <input
+                aria-label={t("alerts.time")}
+                type="time"
+                value={profile.alertTime ?? DEFAULT_ALERT_TIME}
+                onChange={(e) => { if (e.target.value) void update({ alertTime: e.target.value }); }}
+                className={nativeSelect}
+              />
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Grouped collapsibles */}

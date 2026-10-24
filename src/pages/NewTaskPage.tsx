@@ -4,7 +4,7 @@ import { bpmSchema, tempoRuleSchema } from "@/lib/schemas";
 import { useEffect, useMemo, useState } from "react";
 import { useCollection, useItem, useLessons, useRecurrences, useSegmentsByIds, useSubjects } from "@/presentation/hooks/useEntities";
 import { useNavigate, useLocation } from "react-router-dom";
-import type { TaskLinkType } from "@/domain/entities/task";
+import type { TaskImportance, TaskLinkType } from "@/domain/entities/task";
 import { nextLessonDate } from "@/lib/domain/lessonSchedule";
 import { useI18n } from "@/lib/i18n";
 import { today } from "@/lib/date";
@@ -16,6 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { PlanEditor } from "@/components/diary/PlanEditor";
+import { ImportanceSelect } from "@/components/diary/ImportanceSelect";
 import { useTaskPlan } from "@/components/diary/useTaskPlan";
 import { LinkTargetFields } from "@/components/diary/LinkTargetFields";
 import { RecurrenceFields } from "@/components/diary/RecurrenceFields";
@@ -57,6 +58,7 @@ export default function NewTaskPage() {
   const [itemId, setItemId] = useState<number | undefined>(prefill?.itemId);
   const [segmentIds, setSegmentIds] = useState<number[]>(prefill?.segmentIds ?? []);
   const [collectionId, setCollectionId] = useState<number | undefined>(prefill?.collectionId);
+  const [importance, setImportance] = useState<TaskImportance>("medium");
   const [title, setTitle] = useState(prefill?.itemTitle ?? prefill?.title ?? "");
   // Once the musician types a title, picking material or sections no longer rewrites it.
   const [titleTouched, setTitleTouched] = useState(false);
@@ -157,6 +159,7 @@ export default function NewTaskPage() {
       collectionId: linkType === "collection" ? collectionId : undefined,
       title: title.trim(),
       plan,
+      importance,
       executionNotes: executionNotes.trim() || undefined,
     };
     try {
@@ -242,6 +245,11 @@ export default function NewTaskPage() {
             <PlanEditor plan={plan} onChange={setPlan} sections={selectedSegments} subject={selectedSubject} />
           </div>
         )}
+
+        <div className={`${sectionCls} grid gap-1.5`}>
+          <Label htmlFor="task-importance" className={labelCls}>{t("importance.label")}</Label>
+          <ImportanceSelect id="task-importance" value={importance} onChange={setImportance} />
+        </div>
 
         <div className={`${sectionCls} grid gap-1.5`}>
           <Label htmlFor="task-notes" className={labelCls}>{t("tasks.executionNotes")}</Label>

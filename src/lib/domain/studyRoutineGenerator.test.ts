@@ -94,6 +94,12 @@ describe("generateRoutineTasks", () => {
     expect(tasks[0].createdAt).toBe(100);
   });
 
+  it("gives generated tasks the importance of their group", () => {
+    const r = routine({ groups: [{ id: "g1", name: "Warm", pool: [{ type: "item", id: 1 }], importance: "warmup" }, { id: "g2", name: "Plain", pool: [{ type: "item", id: 2 }] }], matrix: { "1": { g1: 1, g2: 1 } } });
+    const tasks = generateRoutineTasks({ routine: r, groupItems: new Map([["g1", [item(1)]], ["g2", [item(2)]]]), stats: null, fromDate: "2026-05-18", createdAt: 0 });
+    expect(tasks.map(t => t.importance)).toEqual(["warmup", undefined]);
+  });
+
   it("respects repetitionCap per week", () => {
     const groupItems = new Map([["g1", [item(1)]]]);
     const r = routine({ matrix: { "1": { g1: 1 }, "3": { g1: 1 } }, repetitionCap: 1, weeksAhead: 2 });

@@ -8,7 +8,8 @@ import type { TempoProgression, TempoProgressionRule } from "@/domain/entities/t
 import type { StudyPoolEntry, StudyRoutine, Task, SegmentEntry } from "@/lib/db";
 import { emptyEntry } from "@/domain/logic/plan";
 import { parseDayKey, dayKey, addDays, weekKey } from "@/lib/date";
-import { routineTaskOrder } from "./taskOrder";
+import { importanceRank, routineTaskOrder } from "./taskOrder";
+import type { TaskImportance } from "@/domain/entities/task";
 
 export interface ResolvedPoolItem {
   key: string;
@@ -168,6 +169,7 @@ function buildTask(
   subjectId: number,
   routineId: number,
   createdAt: number,
+  importance?: TaskImportance,
 ): Omit<Task, "id"> {
   return {
     date,
@@ -180,6 +182,7 @@ function buildTask(
     done: false,
     studyRoutineId: routineId,
     createdAt,
+    ...(importance && { importance }),
   };
 }
 
@@ -248,7 +251,8 @@ export function generateRoutineTasks({
       const dateStr = dayKey(d);
       const previousDay = dayKey(addDays(d, -1));
       const daySelected: ResolvedPoolItem[] = [];
-      const combined: { name: string; items: ResolvedPoolItem[] }[] = [];
+      const combined: { name: string; items: ResolvedPoolItem[]; importance?: TaskImportance }[] = [];
+      const importanceOf = new Map<ResolvedPoolItem, TaskImportance | undefined>();
 
       for (const { id: groupId } of routine.groups) {
         const count = groupCounts[groupId] ?? 0;
@@ -276,9 +280,10 @@ export function generateRoutineTasks({
 
         // A "combine" group spanning several library items becomes one task; sections of different items sit in one plan.
         const group = routine.groups.find((g) => g.id === groupId);
+        for (const item of selected) importanceOf.set(item, group?.importance);
         const merge = group?.combine ? selected.filter((i) => i.type !== "collection") : [];
         if (group && new Set(merge.map((i) => i.itemId)).size > 1) {
-          combined.push({ name: group.name, items: merge });
+          combined.push({ name: group.name, items: merge, importance: group.importance });
           daySelected.push(...selected.filter((i) => !merge.includes(i)));
         } else daySelected.push(...selected);
       }
@@ -296,13 +301,13 @@ export function generateRoutineTasks({
           entry.segs.push(item);
           segsByItem.set(item.itemId, entry);
         } else {
-          tasks.push(buildTask(item, dateStr, routine.subjectId, routine.id, createdAt));
+          tasks.push(buildTask(item, dateStr, routine.subjectId, routine.id, createdAt, importanceOf.get(item)));
         }
       }
-      for (const { name, items } of combined) {
+      for (const { name, items, importance } of combined) {
         const plan = new Map<number | undefined, SegmentEntry>();
         for (const i of items) for (const e of i.sections?.length ? i.sections.flatMap((s) => s.plan ?? []) : i.plan ?? []) plan.set(e.segmentId ?? -plan.size - 1, e);
-        tasks.push(buildTask({ key: `group:${name}`, type: "item", title: name, plan: [...plan.values()], linkType: "free" }, dateStr, routine.subjectId, routine.id, createdAt));
+        tasks.push(buildTask({ key: `group:${name}`, type: "item", title: name, plan: [...plan.values()], linkType: "free" }, dateStr, routine.subjectId, routine.id, createdAt, importance));
       }
       for (const [itemId, { segs, title }] of segsByItem) {
         tasks.push(buildTask(
@@ -319,6 +324,8 @@ export function generateRoutineTasks({
           routine.subjectId,
           routine.id,
           createdAt,
+          // Segments drawn by several groups: the most urgent importance wins.
+          segs.map((s) => importanceOf.get(s)).filter((i) => i !== undefined).sort((a, b) => importanceRank(a) - importanceRank(b))[0],
         ));
       }
     }

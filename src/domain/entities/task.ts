@@ -9,6 +9,10 @@ export interface TaskRecurrence {
   occurrences?: number;
 }
 
+/** Practice order in a day, most urgent first; a task without one counts as "medium". */
+export const TASK_IMPORTANCE = ["preparation", "warmup", "technique", "high", "medium", "low"] as const;
+export type TaskImportance = typeof TASK_IMPORTANCE[number];
+
 export type TaskLinkType = "free" | "item" | "collection";
 
 export interface Task {
@@ -21,6 +25,7 @@ export interface Task {
   itemId?: number;
   collectionId?: number;
   title: string;
+  importance?: TaskImportance;
   /** Per-section targets; one entry without `segmentId` when the task has no sections. */
   plan: SegmentEntry[];
   done: boolean;

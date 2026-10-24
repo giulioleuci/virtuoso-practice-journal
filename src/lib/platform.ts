@@ -6,11 +6,16 @@
  * plugin isn't available, so the same code paths work in tests and the dev
  * server.
  */
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 
 export const isNative = (): boolean => Capacitor.isNativePlatform();
 export const platform = (): string => Capacitor.getPlatform();
 export const isAndroid = (): boolean => Capacitor.getPlatform() === "android";
+
+const Print = registerPlugin<{ printHtml(o: { html: string; name: string }): Promise<void> }>("Print");
+
+/** Android WebView has no window.print(): hand a self-contained HTML document to the system print flow. */
+export const printHtml = (html: string, name: string): Promise<void> => Print.printHtml({ html, name });
 
 /** Initialize platform UI plumbing: status bar, keyboard insets. Idempotent. */
 export async function configurePlatform(): Promise<void> {
@@ -106,4 +111,18 @@ export async function scheduleReminders(schedule: ReminderSchedule | null): Prom
     smallIcon: "ic_stat_icon",
   }));
   await LocalNotifications.schedule({ notifications: items }).catch(() => undefined);
+}
+
+/** One-off notifications (ids 2000..2099); each call replaces the previous set. Native only, like scheduleReminders. */
+const ALERT_ID_BASE = 2000;
+export async function scheduleAlerts(alerts: { at: Date; title: string; body: string }[]): Promise<void> {
+  if (!isNative()) return;
+  const { LocalNotifications } = await import("@capacitor/local-notifications");
+  const pending = await LocalNotifications.getPending().catch(() => ({ notifications: [] }));
+  const stale = pending.notifications.filter((n) => n.id >= ALERT_ID_BASE && n.id < ALERT_ID_BASE + 100);
+  if (stale.length) await LocalNotifications.cancel({ notifications: stale.map((n) => ({ id: n.id })) }).catch(() => undefined);
+  if (!alerts.length || !(await ensureNotificationPermission())) return;
+  await LocalNotifications.schedule({
+    notifications: alerts.slice(0, 100).map((a, i) => ({ id: ALERT_ID_BASE + i, title: a.title, body: a.body, schedule: { at: a.at, allowWhileIdle: true }, smallIcon: "ic_stat_icon" })),
+  }).catch(() => undefined);
 }

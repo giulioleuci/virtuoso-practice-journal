@@ -1,6 +1,7 @@
 import type { StudyAdaptivity, StudyGroup } from "@/domain/ports/studyRoutine";
 /** Centralized Zod schemas shared across forms. */
 import { z } from "zod";
+import { TASK_IMPORTANCE } from "@/domain/entities/task";
 import { BPM_MIN, BPM_MAX, NOTE_VALUES } from "@/domain/constants/noteValues";
 
 export const noteValSchema = z.enum(NOTE_VALUES);
@@ -68,6 +69,7 @@ export const taskInputSchema = z.object({
   collectionId: z.number().int().positive().optional(),
   plan: z.array(segmentEntrySchema),
   executionNotes: z.string().trim().max(2000).optional(),
+  importance: z.enum(TASK_IMPORTANCE).optional(),
 }).refine(
   (v) => {
     // Mutual exclusivity: collection ⇒ no item/segments; segments ⇒ requires item
@@ -143,6 +145,7 @@ export const studyGroupSchema = z.object({
   ])),
   repetitionCap: z.number().int().min(1).optional(),
   combine: z.boolean().optional(),
+  importance: z.enum(TASK_IMPORTANCE).optional(),
 });
 export type StudyGroupInput = StudyGroup;
 

@@ -1,5 +1,5 @@
 import { compareTempos } from "@/domain/logic/tempo";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAllLibrary, useAssignments, useLessons, useProfile, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
@@ -10,11 +10,13 @@ import type { NoteVal } from "@/domain/entities/common";
 import { PageSkeleton } from "@/components/shared/Loading";
 import { Switch } from "@/components/ui/switch";
 import { StateNotice } from "@/components/shared/StateNotice";
+import { isAndroid, printHtml } from "@/lib/platform";
 import { topMark } from "@/domain/logic/sessionMetrics";
 
 /** Print-optimised weekly summary for the teacher (Save as PDF via the print dialog). */
 export default function PrintSummary() {
   const { t, lang } = useI18n();
+  const pageRef = useRef<HTMLDivElement>(null);
   const profile = useProfile();
   const [searchParams] = useSearchParams();
   const subjectParam = searchParams.get("subject");
@@ -89,31 +91,40 @@ export default function PrintSummary() {
     <StateNotice action={<Link className="inline-flex min-h-11 items-center text-primary hover:underline" to="/print/weekly">{t("library.allSubjects")}</Link>}>{t("subjects.notFound")}</StateNotice>
   </div>;
 
+  // Android WebView ignores window.print(): ship the page plus the stylesheet rules as one standalone document.
+  const print = () => {
+    if (!isAndroid() || !pageRef.current) return window.print();
+    const css = Array.from(document.styleSheets).map((sheet) => { try { return Array.from(sheet.cssRules).map((rule) => rule.cssText).join(""); } catch { return ""; } }).join("");
+    const html = `<!doctype html><html class="${document.documentElement.className}"><head><meta charset="utf-8"><style>${css}</style></head><body>${pageRef.current.outerHTML}</body></html>`;
+    void printHtml(html, t("print.title")).catch(() => window.print());
+  };
+
   return (
-    <div className="print-summary min-h-screen bg-background text-foreground px-5 py-6 [overflow-wrap:anywhere] max-w-3xl mx-auto">
-      <div className="no-print flex items-center justify-between gap-3 mb-5">
+    <div ref={pageRef} className="print-summary min-h-screen bg-background text-foreground px-5 py-6 [overflow-wrap:anywhere] max-w-3xl mx-auto">
+      <div className="no-print mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <Link to="/history" className="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground min-h-[44px]">
           <ArrowLeft className="h-4 w-4" /> {t("common.back")}
         </Link>
-        <label className="flex items-center gap-2 text-sm">
-          <Switch checked={sinceLesson} onCheckedChange={setSinceLesson} /> {t("print.sinceLesson")}
-        </label>
         <button
           type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 min-h-[44px] text-sm font-medium"
+          onClick={print}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground px-4 min-h-[44px] text-sm font-medium sm:order-3 sm:w-auto"
         >
           <Printer className="h-4 w-4" /> {t("print.print")}
         </button>
+        <label className="flex min-h-[44px] w-full items-center gap-3 border-t border-border text-sm sm:w-auto sm:border-t-0">
+          <Switch checked={sinceLesson} onCheckedChange={setSinceLesson} /> {t("print.sinceLesson")}
+        </label>
       </div>
 
       <header className="border-b border-border pb-3 mb-4">
-        <h1 className="font-serif text-3xl leading-tight">{t("print.title")}</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-serif text-3xl leading-tight text-balance">{t("print.title")}</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground font-numeric">
           {formatDate(from, lang, "medium")} – {formatDate(to, lang, "medium")}
-          {profile?.name ? ` · ${profile.name}` : ""}
-          {subjectName ? ` · ${subjectName}` : ""}
         </p>
+        {(profile?.name || subjectName) && (
+          <p className="text-sm text-muted-foreground">{[profile?.name, subjectName].filter(Boolean).join(" · ")}</p>
+        )}
       </header>
 
       <section className="grid grid-cols-2 gap-3 mb-5">

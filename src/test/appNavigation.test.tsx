@@ -8,6 +8,7 @@ import { readLiveLesson, setLiveLesson } from "@/lib/liveLesson";
 
 const state = vi.hoisted(() => ({ assignments: [] as { taskIds: number[]; ignored?: boolean }[], lessons: [] as { id: number }[] | undefined, recurrences: [{ id: 2 }] as { id: number }[] | undefined }));
 vi.mock("@/presentation/hooks/useEntities", () => ({ useAssignments: () => state.assignments, useActiveTasks: () => [{ id: 3 }], useLessons: () => state.lessons, useRecurrences: () => state.recurrences }));
+vi.mock("@/hooks/useAlertSchedule", () => ({ useAlertSchedule: () => {} }));
 vi.mock("@/hooks/useAndroidBackButton", () => ({ useAndroidBackButton: () => {} }));
 vi.mock("@/hooks/useKeyboardInset", () => ({ useKeyboardInset: () => 0 }));
 

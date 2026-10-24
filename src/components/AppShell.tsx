@@ -4,6 +4,7 @@ import { BarChart3, BookMarked, CalendarDays, GraduationCap, ListChecks, MoreHor
 import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { useAlertSchedule } from "@/hooks/useAlertSchedule";
 import { useReminderSchedule } from "@/hooks/useReminderSchedule";
 import { useActiveTasks, useAssignments } from "@/presentation/hooks/useEntities";
 import { useLiveLesson } from "@/presentation/hooks/useLiveLesson";
@@ -62,6 +63,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
 
   useAndroidBackButton(t("toast.pressBackAgainToExit"));
   useReminderSchedule(profile, lang);
+  useAlertSchedule(profile, lang);
 
   useEffect(() => {
     const onScroll = () => {

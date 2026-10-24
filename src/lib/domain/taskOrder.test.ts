@@ -32,6 +32,13 @@ describe("diary task order", () => {
     expect(sortDiaryTasks([task(2, "A", { createdAt: 0 }), task(1, "A", { createdAt: 0 })], [], "routine", "it").map(t => t.id)).toEqual([1, 2]);
   });
 
+  it("orders by importance before routine origin, treating a missing one as medium", () => {
+    const tasks = [task(1, "Libero"), task(2, "Basso", { importance: "low" }), task(3, "Routine", { studyRoutineId: 1 }),
+      task(4, "Tecnica", { importance: "technique" }), task(5, "Riscaldamento", { importance: "warmup" }), task(6, "Prep", { importance: "preparation" }), task(7, "Alto", { importance: "high" })];
+    expect(sortDiaryTasks(tasks, [routine], "routine", "it").map(t => t.id)).toEqual([6, 5, 4, 7, 3, 1, 2]);
+    expect(sortDiaryTasks(tasks, [routine], "created", "it").map(t => t.id)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
   it("recognizes collections and follows reordered groups immediately", () => {
     expect(routineTaskOrder(task(1, "Manuale", { collectionId: 4 }), routine)).toBe(2);
     const reordered = { ...routine, groups: [...routine.groups].reverse() };

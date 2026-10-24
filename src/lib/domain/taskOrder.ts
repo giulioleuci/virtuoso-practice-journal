@@ -1,7 +1,9 @@
-import type { Task } from "@/domain/entities/task";
+import { TASK_IMPORTANCE, type Task, type TaskImportance } from "@/domain/entities/task";
 import type { StudyRoutine } from "@/domain/ports/studyRoutine";
 
 export type DiaryTaskOrder = "routine" | "title" | "created";
+
+export const importanceRank = (importance: TaskImportance = "medium") => TASK_IMPORTANCE.indexOf(importance);
 
 export function routineTaskOrder(task: Task, routine: StudyRoutine): number {
   const index = routine.groups.findIndex(group =>
@@ -22,6 +24,8 @@ export function sortDiaryTasks(tasks: Task[], routines: StudyRoutine[], order: D
     const done = Number(a.done) - Number(b.done);
     if (done) return done;
     if (order === "routine") {
+      const importance = importanceRank(a.importance) - importanceRank(b.importance);
+      if (importance) return importance;
       const origin = Number(b.studyRoutineId !== undefined) - Number(a.studyRoutineId !== undefined);
       if (origin) return origin;
     }

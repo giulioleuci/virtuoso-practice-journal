@@ -33,6 +33,7 @@ import { StateNotice } from "@/components/shared/StateNotice";
 import { FilterPanel, FilterSelect } from "@/components/shared/FilterPanel";
 import { FloatingActions } from "@/components/shared/FloatingActions";
 
+import { ImportanceSelect } from "./ImportanceSelect";
 import { nativeSelect } from "./WhenFields";
 
 const DAYS = [1, 2, 3, 4, 5, 6, 0]; // Monday first
@@ -267,6 +268,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
                     <Input aria-label={t("routine.groupName", { n: i + 1 })} placeholder={t("routine.groupName", { n: i + 1 })} value={g.name} required maxLength={80} onChange={(e) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, name: e.target.value } : x)))} />
                     {g.combine && <span className="mt-1 inline-block text-xs text-muted-foreground">{t("routine.mergedTag")}</span>}
                     <span className="mt-1 block text-xs tabular-nums text-muted-foreground">{t("routine.groupCount", { count: g.pool.length })}</span>
+                    <div className="mt-1.5"><ImportanceSelect ariaLabel={`${t("importance.label")}: ${g.name}`} value={g.importance} onChange={(importance) => setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, importance } : x)))} /></div>
                   </div>
                   <div className="flex shrink-0 items-center">
                     {/* aria-disabled, not disabled: the arrow that reaches the end keeps focus instead of dropping it to the page. */}

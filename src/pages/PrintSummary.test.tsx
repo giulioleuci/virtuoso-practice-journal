@@ -9,6 +9,9 @@ import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadP
 import { I18nContext, translate } from "@/lib/i18n";
 import PrintSummary from "./PrintSummary";
 
+const platform = vi.hoisted(() => ({ android: false, printHtml: vi.fn(() => Promise.resolve()) }));
+vi.mock("@/lib/platform", () => ({ isAndroid: () => platform.android, printHtml: platform.printHtml }));
+
 const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-10-20T12:00:00"));
@@ -50,4 +53,13 @@ it("covers the days since the last lesson by default and the calendar week when 
   expect(screen.getByText("2 / 6")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("switch"));
   expect(await screen.findByText(t("history.sessions", { count: 1 }))).toBeInTheDocument();
+});
+
+it("prints through the native plugin on Android and window.print elsewhere", async () => {
+  const print = vi.fn(); vi.stubGlobal("print", print);
+  show(); const button = await screen.findByRole("button", { name: t("print.print") });
+  fireEvent.click(button); expect(print).toHaveBeenCalledTimes(1); expect(platform.printHtml).not.toHaveBeenCalled();
+  platform.android = true; fireEvent.click(button);
+  expect(platform.printHtml).toHaveBeenCalledWith(expect.stringContaining("print-summary"), t("print.title")); expect(print).toHaveBeenCalledTimes(1);
+  platform.android = false; vi.unstubAllGlobals();
 });
