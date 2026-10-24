@@ -568,6 +568,22 @@ describe("studyRoutinesService.update", () => {
     expect(undone.every((t) => t.itemId === item2)).toBe(true);
   });
 
+  it("propagates a group importance change to future tasks, sparing customized ones", async () => {
+    const subjectId = await seedSubject();
+    const itemId = await seedItem(subjectId);
+    const routineId = await studyRoutinesService.create(
+      makeConfig(subjectId, [{ type: "item", id: itemId }], { matrix: { "1": { g1: 1 } }, weeksAhead: 2 }),
+    );
+    const [first] = await db.tasks.where("studyRoutineId").equals(routineId).sortBy("date");
+    await db.tasks.update(first.id!, { customized: true, importance: "low" });
+
+    await studyRoutinesService.update(routineId, { groups: [{ id: "g1", name: "Group", pool: [{ type: "item", id: itemId }], importance: "warmup" }] });
+
+    const after = await db.tasks.where("studyRoutineId").equals(routineId).sortBy("date");
+    expect(after[0].importance).toBe("low");
+    expect(after.slice(1).every((t) => t.importance === "warmup")).toBe(true);
+  });
+
   it("returns early without crashing when routine does not exist", async () => {
     await expect(studyRoutinesService.update(9999, { weeksAhead: 3 })).resolves.toBeUndefined();
   });

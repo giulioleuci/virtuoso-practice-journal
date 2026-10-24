@@ -164,7 +164,7 @@ export default function Tasks() {
     if (!routine.id || regeneratingId != null) return;
     setRegeneratingId(routine.id);
     try {
-      await studyRoutinesService.regenerateFromDate(routine, new Date().toISOString().slice(0, 10));
+      await studyRoutinesService.regenerateFromDate(routine, today());
       toast.success(t("toast.routineRegenerated"));
     } finally {
       setRegeneratingId(null);
