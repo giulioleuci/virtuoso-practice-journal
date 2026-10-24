@@ -326,6 +326,20 @@ describe("tasksService.update", () => {
     expect(task!.date).toBe("2025-01-01");
     expect(task!.subjectId).toBe(subjectId);
   });
+
+  it("carries an importance change to later undone, uncustomized occurrences of the series", async () => {
+    const subjectId = await seedSubject();
+    const root = await tasksService.create({
+      title: "Serie", date: "2025-01-01", subjectId, plan: [],
+      recurrence: { kind: "interval", everyXDays: 1, startDate: "2025-01-01", occurrences: 5 },
+    });
+    const kids = (await db.tasks.where("recurrenceTaskId").equals(root).sortBy("date")).map(t => t.id!);
+    await db.tasks.update(kids[1], { customized: true });
+    await db.tasks.update(kids[2], { done: true });
+    await tasksService.update(root, { importance: "high" });
+    const got = await Promise.all(kids.map(id => db.tasks.get(id)));
+    expect(got.map(t => t!.importance)).toEqual(["high", undefined, undefined, "high"]);
+  });
 });
 
 // ---------------------------------------------------------------------------

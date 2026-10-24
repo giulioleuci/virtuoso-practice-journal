@@ -60,6 +60,9 @@ export const taskRepository = {
       }
       const { tempoRule: _rule, tempoRuleRevision: _revision, ...fields } = patch;
       await db.tasks.update(id, fields);
+      // Importance is a series trait: later undone, untouched occurrences follow it.
+      const root = current?.recurrenceTaskId ?? (current?.recurrence ? id : undefined);
+      if (current && root !== undefined && fields.importance !== undefined) await db.tasks.where("recurrenceTaskId").equals(root).filter(t => t.date > current.date && !t.done && !t.customized).modify({ importance: fields.importance });
       // Sections added to an already logged plan need their own coverage.
       if (!patch.plan) return;
       const sessions = await db.sessions.where("taskId").equals(id).toArray();
