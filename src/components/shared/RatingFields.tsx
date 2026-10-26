@@ -5,13 +5,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { RatingScale } from "./RatingScale";
 
 /** Mood, focus and confidence of one section as stars. Confidence is required for a new session, mood and focus never are. */
-export function RatingFields({ mark, onChange, requireRatings = true, showErrors = false, children }: { mark: SegmentMark; onChange: (patch: Partial<SegmentMark>) => void; requireRatings?: boolean; showErrors?: boolean; children?: ReactNode }) {
+export function RatingFields({ mark, onChange, requireRatings = true, showErrors = false, compact = false, children }: { mark: SegmentMark; onChange: (patch: Partial<SegmentMark>) => void; requireRatings?: boolean; showErrors?: boolean; compact?: boolean; children?: ReactNode }) {
   const { t } = useI18n();
   const scale = (key: "confidence" | "mood" | "focus") => {
     const labels = [1, 2, 3, 4, 5].map((n) => t(`rating.${key}.${n}`));
     return <RatingScale key={key} label={key === "confidence" ? t("session.confidenceLabel") : t(`rating.${key}`)} question={t(`rating.${key}Question`)} labels={labels} value={mark[key]}
       onChange={(value) => onChange({ [key]: value })} unanswered={t("rating.unanswered")}
-      scaleHint={t("rating.scaleHint", { low: labels[0], high: labels[4] })} clearLabel={t("rating.clear")} required={requireRatings && key === "confidence"} showError={showErrors} />;
+      scaleHint={t("rating.scaleHint", { low: labels[0], high: labels[4] })} clearLabel={t("rating.clear")} required={requireRatings && key === "confidence"} showError={showErrors} compact={compact} />;
   };
   return (
     <div className="space-y-4">

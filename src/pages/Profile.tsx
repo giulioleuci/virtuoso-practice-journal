@@ -340,9 +340,9 @@ export default function Profile() {
           {!isNative() && <p className="text-xs text-muted-foreground">{t("alerts.nativeOnly")}</p>}
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">{t("alerts.recurringEnabled")}</span>
-            <Switch aria-label={t("alerts.recurringEnabled")} checked={profile.recurringAlertEnabled !== false} onCheckedChange={(v) => update({ recurringAlertEnabled: v })} />
+            <Switch aria-label={t("alerts.recurringEnabled")} checked={profile.recurringAlertEnabled === true} onCheckedChange={(v) => update({ recurringAlertEnabled: v })} />
           </div>
-          {profile.recurringAlertEnabled !== false && (
+          {profile.recurringAlertEnabled === true && (
             <div className="flex flex-wrap gap-1">
               {[0, 1, 2, 3, 4, 5, 6].map((i) => {
                 const days = profile.recurringAlertDays?.length ? profile.recurringAlertDays : [0, 1, 2, 3, 4, 5, 6];
@@ -365,9 +365,9 @@ export default function Profile() {
           )}
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">{t("alerts.missedEnabled")}</span>
-            <Switch aria-label={t("alerts.missedEnabled")} checked={profile.missedAlertEnabled !== false} onCheckedChange={(v) => update({ missedAlertEnabled: v })} />
+            <Switch aria-label={t("alerts.missedEnabled")} checked={profile.missedAlertEnabled === true} onCheckedChange={(v) => update({ missedAlertEnabled: v })} />
           </div>
-          {profile.missedAlertEnabled !== false && (
+          {profile.missedAlertEnabled === true && (
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-muted-foreground">{t("alerts.missedAfter")}</span>
               <input
@@ -379,7 +379,7 @@ export default function Profile() {
               />
             </div>
           )}
-          {(profile.recurringAlertEnabled !== false || profile.missedAlertEnabled !== false) && (
+          {(profile.recurringAlertEnabled === true || profile.missedAlertEnabled === true) && (
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-muted-foreground">{t("alerts.time")}</span>
               <input

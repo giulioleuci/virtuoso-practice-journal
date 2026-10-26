@@ -3,11 +3,16 @@ import type { Profile } from "@/domain/entities/profile";
 import type { Task } from "@/domain/entities/task";
 import { planAlerts } from "./taskAlerts";
 
-const profile = { alertTime: "09:00" } as Profile;
+const profile = { alertTime: "09:00", recurringAlertEnabled: true, missedAlertEnabled: true } as Profile;
 const task = (date: string, extra: Partial<Task> = {}): Task => ({ date, subjectId: 1, title: "t", plan: [], done: false, createdAt: 1, ...extra });
 const now = new Date("2026-10-21T08:00:00"); // Wednesday
 
 describe("planAlerts", () => {
+  it("schedules nothing unless alerts are enabled in settings", () => {
+    const tasks = [task("2026-10-21", { recurrenceTaskId: 1 }), task("2026-10-20")];
+    expect(planAlerts({ alertTime: "09:00" } as Profile, tasks, [], now)).toEqual([]);
+  });
+
   it("alerts on days with open recurring tasks, on the chosen weekdays only", () => {
     const tasks = [task("2026-10-21", { recurrenceTaskId: 1 }), task("2026-10-22", { recurrenceTaskId: 1 }), task("2026-10-23", { recurrenceTaskId: 1, done: true }), task("2026-10-24")];
     const all = planAlerts({ ...profile, missedAlertEnabled: false }, tasks, [], now);

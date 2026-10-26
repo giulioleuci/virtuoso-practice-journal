@@ -14,11 +14,11 @@ export interface Profile {
   reminderIncludeContext?: boolean;
   /** Task alerts: "HH:MM" for both kinds, default 09:00. */
   alertTime?: string;
-  /** Alert on days with open recurring tasks (default on). */
+  /** Alert on days with open recurring tasks (off unless enabled in settings). */
   recurringAlertEnabled?: boolean;
   /** Weekdays 0..6 (0 = Sun) for recurring-task alerts; empty or missing = every day. */
   recurringAlertDays?: number[];
-  /** Alert after `missedAlertAfter` planned practice days in a row without practice (default on, 3). */
+  /** Alert after `missedAlertAfter` planned practice days in a row without practice (off unless enabled in settings). */
   missedAlertEnabled?: boolean;
   missedAlertAfter?: number;
   lateRecoveryDays: number;

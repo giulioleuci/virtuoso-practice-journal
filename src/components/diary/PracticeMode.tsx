@@ -22,8 +22,9 @@ import { RatingFields } from "@/components/shared/RatingFields";
 import { ClipDraftList, Recorder } from "./Recorder";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { X, Volume2, VolumeX, MessageSquareQuote, ChevronLeft, ChevronRight, Check, Dot } from "lucide-react";
+import { X, Volume2, VolumeX, MessageSquareQuote, CircleHelp, ChevronLeft, ChevronRight, Check, Dot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { NotesHistory } from "./NotesHistory";
 import { FloatingActions } from "@/components/shared/FloatingActions";
 
@@ -57,6 +58,8 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   const setMarks = (value: SegmentMark[]) => update({ marks: value });
   const setClips = (value: AudioDraft[] | ((all: AudioDraft[]) => AudioDraft[])) => update({ clips: typeof value === "function" ? value(clips) : value });
   const [current, setCurrent] = useState(0);
+  useEffect(() => { document.querySelector("[data-seg-current]")?.scrollIntoView?.({ inline: "center", block: "nearest" }); }, [current]);
+  const [asking, setAsking] = useState(false);
   const [recording, setRecording] = useState(false);
   const returnFocus = useRef(document.activeElement as HTMLElement | null);
   const onClose = () => { if (!storageFailed || window.confirm(t("draft.leaveWarning"))) closeOverlay(); };
@@ -166,6 +169,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
 
   const isAccent = pulse > 0 && (pulse - 1) % beatsPerBar === 0;
+  const last = lastSession ? entryFor(lastSession.marks, mark.segmentId) : undefined;
   const targetGlyph = NOTE_GLYPH[mark.targetNoteVal ?? "quarter"];
 
   return (
@@ -187,9 +191,6 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             <div className="space-y-1 pb-1">
               {item && <p className="text-sm text-muted-foreground">{item.title}{item.composer ? ` · ${item.composer}` : ""}</p>}
               {collection && <p className="text-sm italic text-muted-foreground">{t("practice.collectionLabel")}: {collection.name}</p>}
-              {marks.length === 1 && !!segments?.length && (
-                <p className="text-xs text-muted-foreground" aria-label={t("practice.segmentLabel")}>{segments.map(segmentTitle).join(" · ")}</p>
-              )}
               {(!!mark.layers.length || !!focusTechniques.length) && (
                 <p className="text-xs text-muted-foreground">{[...mark.layers, ...focusTechniques].join(", ")}</p>
               )}
@@ -203,16 +204,17 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             </div>
           </details>
           <div className="flex shrink-0">
+            {task.itemId !== undefined && <Button type="button" size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={() => setAsking(true)} aria-label={t("practice.askTeacher")}><CircleHelp /></Button>}
             <NotesHistory itemId={task.itemId} />
             <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={onClose} aria-label={t("practice.close")}><X /></Button>
           </div>
         </div>
-        {marks.length > 1 && (
-          <ol className="flex flex-wrap gap-x-3 text-xs text-muted-foreground" aria-label={t("practice.segmentsLabel")}>
+        {(marks.length > 1 || !!segmentOf(mark.segmentId)) && (
+          <ol className="-mx-4 flex flex-nowrap gap-x-4 overflow-x-auto px-4 text-xs min-[700px]:mx-0 min-[700px]:px-0 text-muted-foreground" aria-label={t("practice.segmentsLabel")}>
             {marks.map((m, i) => (
-              <li key={m.segmentId ?? i}>
-                <button type="button" aria-current={i === current} onClick={() => setCurrent(i)} className={cn("inline-flex min-h-11 items-center gap-1", i === current ? "font-semibold text-primary" : "hover:text-foreground")}>
-                  <span className="break-words">{segmentOf(m.segmentId)}</span>
+              <li key={m.segmentId ?? i} className="shrink-0">
+                <button type="button" aria-current={i === current} data-seg-current={i === current || undefined} onClick={() => setCurrent(i)} className={cn("inline-flex min-h-11 items-center gap-1", i === current ? "font-semibold text-primary" : "hover:text-foreground")}>
+                  <span className="whitespace-nowrap">{segmentOf(m.segmentId)}</span>
                   {m.confidence !== undefined && <span className="inline-flex items-center gap-0.5 tabular-nums"><Check className="h-3 w-3" />{m.confidence}</span>}
                 </button>
               </li>
@@ -224,6 +226,10 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
           <div className="col-span-full flex flex-wrap items-center justify-between gap-2">
             <Recorder sections={[]} segmentId={mark.segmentId} compact onClip={(clip) => setClips((c) => [...c, clip])} onRecordingChange={setRecording} />
             <div className="flex items-center gap-2">
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                {t("practice.skipTempo")}
+                <Switch checked={skipTempo} onCheckedChange={setSkipTempo} />
+              </label>
               <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => setMuted((m) => !m)} aria-label={muted ? t("practice.unmute") : t("practice.mute")}>
                 {muted ? <VolumeX /> : <Volume2 />}
               </Button>
@@ -237,10 +243,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
           {marks.length > 1 && (
             <div className="col-span-full flex items-center justify-between gap-2 border-t border-border pt-1">
               <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={current === 0} onClick={() => setCurrent(current - 1)} aria-label={t("practice.prevSection")}><ChevronLeft /></Button>
-              <p className="min-w-0 flex-1 text-center leading-tight">
-                <span className="block text-xs tabular-nums text-muted-foreground">{t("session.segmentIndicator", { current: String(current + 1), total: String(marks.length) })}</span>
-                <span className="block break-words font-serif text-base font-semibold">{segmentOf(mark.segmentId)}</span>
-              </p>
+              <p className="min-w-0 flex-1 text-center text-sm tabular-nums text-muted-foreground">{t("session.segmentIndicator", { current: String(current + 1), total: String(marks.length) })}</p>
               <Button type="button" size="icon" variant="ghost" className="h-11 w-11" disabled={current === marks.length - 1} onClick={() => setCurrent(current + 1)} aria-label={t("practice.nextSection")}><ChevronRight /></Button>
             </div>
           )}
@@ -261,7 +264,6 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
                 ))}
               </div>
             </div>
-            <p className="text-center text-[0.6875rem] uppercase tracking-wider text-muted-foreground">{t("practice.bpmUnit")}</p>
             <Slider value={[bpm]} min={BPM_MIN} max={BPM_MAX} step={1} onValueChange={(v) => setBpm(v[0])} aria-label={t("practice.bpmUnit")} />
             <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-end gap-2 border-b border-border">
               <div className="flex flex-wrap gap-1.5 self-center" aria-hidden="true">
@@ -280,7 +282,10 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
                   <span className={cn("absolute -left-2 -top-1 h-5 w-5 rounded-full border-2 border-primary", isAccent ? "bg-primary" : "bg-background")} />
                 </div>
               </div>
-              <p className="self-center text-right font-numeric text-xs tabular-nums text-muted-foreground">{!!mark.targetBpm && t("diary.targetBpm", { note: targetGlyph, bpm: mark.targetBpm })}</p>
+              <p className="flex flex-col items-end self-center font-numeric text-xs tabular-nums text-muted-foreground">
+                {!!mark.targetBpm && <span>{t("diary.targetBpm", { note: targetGlyph, bpm: mark.targetBpm })}</span>}
+                {last?.bpm !== undefined && <span>{t("practice.lastBpm", { note: NOTE_GLYPH[last.noteVal ?? "quarter"], bpm: last.bpm })}</span>}
+              </p>
             </div>
           </div>
 
@@ -322,14 +327,8 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             </div>
           </details>
 
-          <label className="col-span-full flex min-h-11 items-center justify-between gap-3 text-sm">
-            {t("practice.skipTempo")}
-            <Switch checked={skipTempo} onCheckedChange={setSkipTempo} />
-          </label>
-
           <div className="col-span-full pt-2.5">
-            {marks.length > 1 && current < marks.length - 1 && <p className="mb-2 text-xs font-medium">{t("practice.rateNext")}</p>}
-            <RatingFields mark={mark} onChange={patchMark} />
+            <RatingFields compact mark={mark} onChange={patchMark} />
           </div>
 
           {clips.length > 0 && (
@@ -346,6 +345,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
           <Button disabled={recording} onClick={finish}>{t("practice.finishLog")}</Button>
         </FloatingActions>
       </div>
+      {task.itemId !== undefined && <ItemHelpSheet open={asking} onOpenChange={setAsking} itemId={task.itemId} itemTitle={item?.title ?? task.title} prefix={segmentOf(mark.segmentId) ? `${segmentOf(mark.segmentId)}: ` : ""} />}
     </DialogPrimitive.Content>
     </DialogPortal>
     </Dialog>

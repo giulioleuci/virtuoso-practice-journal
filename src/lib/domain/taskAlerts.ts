@@ -29,7 +29,7 @@ export function planAlerts(profile: Profile, tasks: Task[], sessions: Pick<Sessi
   const live = tasks.filter((task) => !task.deletedAt);
   const alerts: PlannedAlert[] = [];
 
-  if (profile.recurringAlertEnabled !== false) {
+  if (profile.recurringAlertEnabled === true) {
     const days = profile.recurringAlertDays?.length ? profile.recurringAlertDays : [0, 1, 2, 3, 4, 5, 6];
     for (let i = 0; i < AHEAD_DAYS; i++) {
       const day = addDays(now, i);
@@ -44,7 +44,7 @@ export function planAlerts(profile: Profile, tasks: Task[], sessions: Pick<Sessi
   const after = profile.missedAlertAfter ?? DEFAULT_MISSED_AFTER;
   const practiced = new Set(sessions.map((session) => session.date));
   for (const task of live) if (task.done) practiced.add(task.date);
-  if (profile.missedAlertEnabled !== false && !practiced.has(dayKey(now))) {
+  if (profile.missedAlertEnabled === true && !practiced.has(dayKey(now))) {
     const planned = new Set(live.map((task) => task.date));
     let missed = 0;
     for (let i = 1; i <= LOOKBACK_DAYS; i++) {

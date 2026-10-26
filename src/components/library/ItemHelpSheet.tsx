@@ -19,10 +19,12 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   itemId: number;
   itemTitle: string;
+  /** Prepended to each new question, e.g. the section it is about. */
+  prefix?: string;
 }
 
 /** Question list and composer for one library item (used in the item page and in the sheet). */
-export function ItemQuestions({ itemId }: { itemId: number }) {
+export function ItemQuestions({ itemId, prefix = "" }: { itemId: number; prefix?: string }) {
   const { t, lang } = useI18n();
   const reqs = usePresentationRead<HelpRequest[]>("helpRequests.item", [itemId]);
 
@@ -35,7 +37,7 @@ export function ItemQuestions({ itemId }: { itemId: number }) {
     if (!draft.trim() || pending) return;
     setPending(true);
     try {
-      await helpRequestsService.add(itemId, draft.trim());
+      await helpRequestsService.add(itemId, prefix + draft.trim());
       setDraft("");
       toast.success(t("help.questionSaved"));
     } catch { toast.error(t("quick.failed")); }
@@ -204,7 +206,7 @@ export function ItemQuestions({ itemId }: { itemId: number }) {
   );
 }
 
-export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) {
+export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle, prefix }: Props) {
   const { t } = useI18n();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -218,7 +220,7 @@ export function ItemHelpSheet({ open, onOpenChange, itemId, itemTitle }: Props) 
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] mt-4">
-          {open && <ItemQuestions itemId={itemId} />}
+          {open && <ItemQuestions itemId={itemId} prefix={prefix} />}
         </div>
       </SheetContent>
     </Sheet>
