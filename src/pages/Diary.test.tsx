@@ -22,9 +22,9 @@ beforeEach(async () => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
 
-function show() {
+function show(url = "/") {
   const profile = { id: "me", name: "Clara", hideHeroQuote: true } as Profile;
-  return render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><MemoryRouter>
+  return render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><MemoryRouter initialEntries={[url]}>
     <Routes><Route element={<Outlet context={{ profile }} />}><Route index element={<Diary />} /></Route></Routes>
   </MemoryRouter></I18nContext.Provider>);
 }
@@ -34,6 +34,12 @@ it("shows a free session logged today instead of an empty day with a 0/0 bar", a
   show();
   expect(await screen.findByRole("link", { name: /Sight reading/ })).toHaveAttribute("href", `/sessions/${id}`);
   expect(screen.queryByText(t("diary.doneSummary", { done: 0, total: 0 }))).not.toBeInTheDocument();
+});
+
+it("reopens the practice mode of the task named by ?practice and drops the parameter", async () => {
+  const id = await db.tasks.add({ subjectId, title: "Hanon 1", date: today(), plan: [], done: false, createdAt: 1 });
+  show(`/?practice=${id}`);
+  expect(await screen.findByRole("dialog", { name: t("practice.practiceMode") })).toBeInTheDocument();
 });
 
 it("names each row's log link by its task and announces a completion", async () => {

@@ -109,11 +109,11 @@ function useGoBack() {
   return () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
 }
 
-function BackLink({ onClick }: { onClick?: () => void }) {
+function BackLink({ onClick, to = "/", label }: { onClick?: () => void; to?: string; label?: string }) {
   const { t } = useI18n();
   return (
-    <Link to="/" onClick={onClick ? (event) => { event.preventDefault(); onClick(); } : undefined} className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
-      <ChevronLeft className="h-4 w-4" />{t("nav.today")}
+    <Link to={to} onClick={onClick ? (event) => { event.preventDefault(); onClick(); } : undefined} className="mb-4 inline-flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline underline-offset-4">
+      <ChevronLeft className="h-4 w-4" />{label ?? t("nav.today")}
     </Link>
   );
 }
@@ -168,6 +168,8 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   const goBack = useGoBack();
   const navigate = useNavigate();
   const savedId = useRef<number>();
+  const fromPractice = useSearchParams()[0].get("from") === "practice";
+  const practiceUrl = `/?practice=${task.id}`;
   const { draft, update, clear, storageFailed } = useSessionDraft(taskDraftScope(task), { marks: initialMarks(task), notes: "", clips: [], needHelp: false, helpText: "" }, prefill);
   const { marks, notes, clips, needHelp, helpText } = draft;
   const latestMarks = useRef(marks); latestMarks.current = marks;
@@ -213,7 +215,7 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
 
   return (
     <div className="pb-24">
-      <BackLink onClick={leave} />
+      <BackLink onClick={fromPractice ? () => navigate(practiceUrl) : leave} to={fromPractice ? practiceUrl : "/"} label={fromPractice ? t("practice.practiceMode") : undefined} />
       <PageHeader title={t("logPage.title")}  />
       <div className="-mt-3 mb-5 space-y-1">
         <p className="break-words text-base font-semibold">{task.title}</p>

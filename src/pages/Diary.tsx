@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useActiveTasks, useAssignments, useSessions, useStudyRoutines, useSubjects } from "@/presentation/hooks/useEntities";
+import { useEffect, useMemo, useState } from "react";
+import { useActiveTasks, useAssignments, useSessions, useStudyRoutines, useSubjects, useTask } from "@/presentation/hooks/useEntities";
 import { assignmentsToPlan } from "@/presentation/utils/assignments";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Task } from "@/domain/entities/task";
@@ -116,6 +116,13 @@ export default function Diary() {
   const carryoverTasks = usePresentationRead<Task[]>("tasks.carryover", [carryoverFrom, todayKey]);
 
   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
+  // `/?practice=ID` reopens practice mode, e.g. from the log page it led to.
+  const requested = useTask(Number(params.get("practice")) || undefined);
+  useEffect(() => {
+    if (!requested) return;
+    setPracticeTask(requested);
+    setParams((p) => { p.delete("practice"); return p; }, { replace: true });
+  }, [requested, setParams]);
   const [answersFor, setAnswersFor] = useState<{ itemId: number; title: string } | null>(null);
   const answeredItemIds = usePresentationRead<Set<number>>("helpRequests.answeredItemIds") ?? new Set<number>();
   const [confirmUncomplete, setConfirmUncomplete] = useState<Task | null>(null);
@@ -374,6 +381,12 @@ export default function Diary() {
                                 >
                                   <PlayIcon /> {t("diary.start")}
                                 </Button>}
+                                {task.done && <Button variant="outline" onClick={() => void reopen(task)} aria-label={`${t("diary.markNotDone")}: ${task.title}`} className="min-h-11 px-3">
+                                  <ResetIcon /> {t("dialog.reopen")}
+                                </Button>}
+                                {task.done && last && <Button asChild variant="ghost" className="min-h-11 px-2">
+                                  <Link to={`/sessions/${last.id}`} aria-label={`${t("common.edit")}: ${task.title}`}>{t("common.edit")}</Link>
+                                </Button>}
                                 <Button asChild variant="ghost" className="min-h-11 px-2">
                                   <Link to={`/log?task=${task.id}`} aria-label={`${t("diary.logResults")}: ${task.title}`}>{t("diary.logResults")}</Link>
                                 </Button>
@@ -585,7 +598,7 @@ export default function Diary() {
           task={practiceTask}
           onClose={() => setPracticeTask(null)}
           onFinish={({ marks, clips }) => {
-            navigate(`/log?task=${practiceTask.id}`, { state: { prefill: { marks, clips } } });
+            navigate(`/log?task=${practiceTask.id}&from=practice`, { state: { prefill: { marks, clips } } });
             setPracticeTask(null);
           }}
           onShowAnswers={

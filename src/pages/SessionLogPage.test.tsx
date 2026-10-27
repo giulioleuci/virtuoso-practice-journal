@@ -198,3 +198,15 @@ it("merges initialization into the latest marks when editing continues during ac
   const mark=JSON.parse(localStorage.getItem(`virtuoso-session-task-${taskId}-1`)!).marks[0];
   expect(mark).toMatchObject({bpm:69,confidence:4,targetBpm:70,progression:{cycle:1,minConfidence:5}});
 });
+
+it("sends the back link to the practice mode of the task when the log came from it", async () => {
+  render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><MemoryRouter initialEntries={[`/log?task=${taskId}&from=practice`]}><SessionLogPage /></MemoryRouter></I18nContext.Provider>);
+  const back = await screen.findByRole("link", { name: t("practice.practiceMode") });
+  expect(back).toHaveAttribute("href", `/?practice=${taskId}`);
+  expect(screen.queryByRole("link", { name: t("nav.today") })).not.toBeInTheDocument();
+});
+
+it("keeps the Today back link when the log did not come from practice mode", async () => {
+  show();
+  expect(await screen.findByRole("link", { name: t("nav.today") })).toHaveAttribute("href", "/");
+});

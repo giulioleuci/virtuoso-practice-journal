@@ -4,12 +4,15 @@ import { Dialog, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { BPM_MIN, BPM_MAX, COMPOUND_NOTES, SIMPLE_NOTES } from "@/domain/constants/noteValues";
-import type { SegmentMark } from "@/domain/entities/common";
+import type { SegmentMark, Tempo } from "@/domain/entities/common";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Session } from "@/domain/entities/session";
 import type { Task } from "@/domain/entities/task";
 import type { AudioDraft } from "@/domain/ports/audio";
+import { resolveTempoContext, tempoOwner } from "@/domain/logic/tempoProgression";
+import type { TempoContext, TempoOwner } from "@/domain/entities/tempoProgression";
+import type { TempoProgressionView } from "@/application/useCases/tempoProgression";
 import { entryFor, marksFromPlan, planSegmentIds } from "@/domain/logic/plan";
 import { useTechniques } from "@/presentation/hooks/useEntities";
 import { useSessionDraft } from "@/presentation/hooks/useSessionDraft";
@@ -21,8 +24,7 @@ import { Button } from "@/components/ui/button";
 import { RatingFields } from "@/components/shared/RatingFields";
 import { ClipDraftList, Recorder } from "./Recorder";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { X, Volume2, VolumeX, MessageSquareQuote, CircleHelp, ChevronLeft, ChevronRight, Check, Dot } from "lucide-react";
+import { X, Volume2, VolumeX, MessageSquareQuote, CircleHelp, ChevronLeft, ChevronRight, Check, Dot, TimerOff, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { NotesHistory } from "./NotesHistory";
@@ -226,10 +228,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
           <div className="col-span-full flex flex-wrap items-center justify-between gap-2">
             <Recorder sections={[]} segmentId={mark.segmentId} compact onClip={(clip) => setClips((c) => [...c, clip])} onRecordingChange={setRecording} />
             <div className="flex items-center gap-2">
-              <label className="flex min-h-11 items-center gap-2 text-sm">
-                {t("practice.skipTempo")}
-                <Switch checked={skipTempo} onCheckedChange={setSkipTempo} />
-              </label>
+              <Button type="button" size="icon" variant={skipTempo ? "secondary" : "outline"} className="h-11 w-11" aria-pressed={skipTempo} title={t("practice.skipTempo")} aria-label={t("practice.skipTempo")} onClick={() => setSkipTempo((v) => !v)}><TimerOff /></Button>
               <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => setMuted((m) => !m)} aria-label={muted ? t("practice.unmute") : t("practice.mute")}>
                 {muted ? <VolumeX /> : <Volume2 />}
               </Button>
@@ -285,6 +284,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               <p className="flex flex-col items-end self-center font-numeric text-xs tabular-nums text-muted-foreground">
                 {!!mark.targetBpm && <span>{t("diary.targetBpm", { note: targetGlyph, bpm: mark.targetBpm })}</span>}
                 {last?.bpm !== undefined && <span>{t("practice.lastBpm", { note: NOTE_GLYPH[last.noteVal ?? "quarter"], bpm: last.bpm })}</span>}
+                <TempoHint task={task} mark={mark} segments={segments} onPick={patchMark} />
               </p>
             </div>
           </div>
@@ -349,5 +349,24 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     </DialogPrimitive.Content>
     </DialogPortal>
     </Dialog>
+  );
+}
+
+/** The progression engine's next tempo for this section, offered, never applied: a tap moves the metronome there. */
+function TempoHint({ task, mark, segments, onPick }: { task: Task; mark: SegmentMark; segments?: Segment[]; onPick: (tempo: Tempo) => void }) {
+  const owner = tempoOwner(task);
+  const context = owner && segments ? resolveTempoContext(task, mark, segments) : undefined;
+  return owner && context ? <TempoHintButton owner={owner} context={context} onPick={onPick} /> : null;
+}
+
+function TempoHintButton({ owner, context, onPick }: { owner: TempoOwner; context: TempoContext; onPick: (tempo: Tempo) => void }) {
+  const { t } = useI18n();
+  const suggestion = usePresentationRead<TempoProgressionView>("tempo.progression", [owner, context])?.evaluation?.suggestion;
+  if (!suggestion) return null;
+  const Arrow = suggestion.direction === "decrease" ? ArrowDown : ArrowUp;
+  return (
+    <button type="button" onClick={() => onPick(suggestion.tempo)} className="inline-flex min-h-11 items-center gap-0.5 font-medium text-primary hover:underline underline-offset-4">
+      <Arrow aria-hidden="true" className="h-3 w-3" />{t("practice.suggestBpm", { note: NOTE_GLYPH[suggestion.tempo.noteVal], bpm: suggestion.tempo.bpm })}
+    </button>
   );
 }
