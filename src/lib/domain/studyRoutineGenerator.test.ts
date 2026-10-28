@@ -12,7 +12,7 @@ import {
   type ResolvedPoolItem,
 } from "@/lib/domain/studyRoutineGenerator";
 import { planSegmentIds } from "@/domain/logic/plan";
-import type { StudyRoutine } from "@/lib/db";
+import type { StudyRoutine } from "@/infrastructure/dexie/db";
 
 const item = (id: number, title = `i${id}`): ResolvedPoolItem => ({
   key: `item:${id}`,

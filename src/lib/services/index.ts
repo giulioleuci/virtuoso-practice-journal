@@ -1,10 +1,10 @@
 export { tasksService } from "./tasks";
 export { sessionsService } from "./sessions";
-export { libraryService } from "./library";
+export { libraryRepository as libraryService } from "@/infrastructure/repositories/dexie/libraryRepository";
 export { collectionsService } from "./collections";
 export { studyRoutinesService } from "./studyRoutines";
-export { profileService } from "./profile";
-export { subjectsService } from "./subjects";
-export { lessonsService } from "./lessons";
-export { helpRequestsService } from "./helpRequests";
+export { profileRepository as profileService } from "@/infrastructure/repositories/dexie/profileRepository";
+export { subjectRepository as subjectsService } from "@/infrastructure/repositories/dexie/subjectRepository";
+export { lessonRepository as lessonsService } from "@/infrastructure/repositories/dexie/lessonRepository";
+export { helpRequestRepository as helpRequestsService } from "@/infrastructure/repositories/dexie/helpRequestRepository";
 export { backupService } from "./backup";

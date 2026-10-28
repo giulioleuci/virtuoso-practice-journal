@@ -73,7 +73,7 @@ async function refreshRoutine(routineId: number, fromDate: string, t: ReturnType
   const routine = await presentationQueries().execute<StudyRoutine | undefined>("routines.one", routineId);
   if (!routine || routineAdaptivity(routine) === "uniform") return;
   try {
-    await applicationCommands.routines.regenerate.execute(routine, fromDate);
+    await applicationCommands.routines.regenerate(routine, fromDate);
     toast(t("routine.regenerated"), { description: t("routine.regeneratedKept"), action: { label: t("routine.openPlan"), onClick: openPlan } });
   } catch {
     toast.error(t("routine.regenerateFailed"), { action: { label: t("common.retry"), onClick: () => void refreshRoutine(routineId, fromDate, t, openPlan) } });

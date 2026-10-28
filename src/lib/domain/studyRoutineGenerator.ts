@@ -5,7 +5,9 @@ import type { TempoProgression, TempoProgressionRule } from "@/domain/entities/t
  * No Dexie access — the repository resolves pool entries and collects practice
  * stats from the DB, then hands the resolved inputs here to produce the tasks.
  */
-import type { StudyPoolEntry, StudyRoutine, Task, SegmentEntry } from "@/lib/db";
+import type { StudyPoolEntry, StudyRoutine } from "@/infrastructure/dexie/db";
+import type { Task } from "@/domain/entities/task";
+import type { SegmentEntry } from "@/domain/entities/common";
 import { emptyEntry } from "@/domain/logic/plan";
 import { parseDayKey, dayKey, addDays, weekKey } from "@/lib/date";
 import { importanceRank, routineTaskOrder } from "./taskOrder";

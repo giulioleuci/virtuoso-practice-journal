@@ -183,7 +183,7 @@ export default function Library() {
             <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectColorCss(subject?.color, subject?.type, subject?.customColor) }} title={subject?.name} role="img" aria-label={subject?.name} />
             {it.composer && <span className="italic">{it.composer}</span>}
             {it.kind === "technique" && (it.startBpm || it.targetBpm) && <span>{it.startBpm ?? "—"} → {it.targetBpm ?? "—"} BPM</span>}
-            {it.kind !== "technique" && it.targetBpm && <span>{it.noteVal ? NOTE_GLYPH[it.noteVal] : "♩"} = {it.targetBpm}</span>}
+            {it.kind !== "technique" && it.targetBpm && <span>{it.noteVal ? NOTE_GLYPH[it.noteVal] : NOTE_GLYPH.quarter} = {it.targetBpm}</span>}
             {segs.length > 0 && <span>{t("library.segments", { count: segs.length })}</span>}
             {it.catalog && <span>{it.catalog}</span>}
             {it.tags?.map((tag) => <span key={`tag-${tag}`}>#{tag}</span>)}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAllCollections, useAllLibrary, useAllSegments, useAllTasks, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
+import { useAllCollections, useLibrary, useSegments, useAllTasks, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { LibraryKind, Subject } from "@/domain/entities/common";
@@ -46,8 +46,8 @@ export default function History() {
   // Scope session reads by date range when set — avoids loading the entire table
   const sessions = useSessionsInRange(from || undefined, to || undefined);
   const tasks = useAllTasks();
-  const items = useAllLibrary();
-  const segments = useAllSegments();
+  const items = useLibrary();
+  const segments = useSegments();
   const subjects = useSubjects();
   const collections = useAllCollections();
 

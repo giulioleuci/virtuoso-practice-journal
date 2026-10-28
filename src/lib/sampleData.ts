@@ -1,8 +1,11 @@
-import { db, THEORY_LAYERS, type LessonRecurrence, type NoteVal, type SegmentEntry, type SegmentMark } from "./db";
+import { db } from "@/infrastructure/dexie/db";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { LessonRecurrence } from "@/domain/entities/lesson";
+import type { NoteVal, SegmentEntry, SegmentMark } from "@/domain/entities/common";
 import { sessionContext } from "@/domain/logic/sessionContext";
 import { buildSessionSnapshot, buildLessonSnapshot } from "./domain/snapshots";
 import { backupService } from "./services/backup";
-import { lessonsService } from "./services/lessons";
+import { lessonsService } from "./services";
 import { dayKey, today, addDays } from "./date";
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 // Deterministic pseudo-random in [0,1) from a seed (so re-seeding is stable).

@@ -37,18 +37,13 @@ export const useCollections = (kind?: CollectionKind) => useRead<Collection[]>("
 export const useCollectionLinks = () => useRead<CollectionItem[]>("collectionLinks.all");
 export const useCollectionLinksByItem = (itemId?: number) => useRead<CollectionItem[]>("collectionLinks.item", [itemId]);
 export const useAllTasks = () => useRead<Task[]>("tasks.all");
-export const useAllLibrary = () => useRead<LibraryItem[]>("library.active");
-export const useAllSegments = () => useRead<Segment[]>("segments.active");
 export const useAllCollections = () => useRead<Collection[]>("collections.all");
 export const useCollectionItems = (collectionId?: number) => useRead<CollectionItem[]>("collections.items", [collectionId]);
 export const useCollection = (collectionId?: number) => usePresentationReader(async queries => (await queries.execute<Collection | undefined>("collections.one", collectionId)) ?? null, [collectionId]);
 export const useItem = (id?: number) => usePresentationReader(async queries => (await queries.execute<LibraryItem | undefined>("library.item", id)) ?? null, [id]);
 export const useTask = (id?: number) => useRead<Task | null>("tasks.one", [id]);
 export const useTasksInRange = (from?: string, to?: string) => useRead<Task[]>("tasks.range", [from, to]);
-export const useTasksByDate = (date?: string) => useRead<Task[]>("tasks.date", [date]);
 export const useTasksByItem = (itemId?: number) => useRead<Task[]>("tasks.item", [itemId]);
-export const useTasksBySubjectAndDate = (_subjectId?: number, date?: string) => useRead<Task[]>("tasks.date", [date]);
-export const useRecurrencesBySubject = (_subjectId?: number) => useRead<LessonRecurrence[]>("recurrences.active");
 export const useSegmentsByItem = (itemId?: number) => useRead<Segment[]>("library.segments", [itemId]);
 export const useSegmentsByIds = (ids: readonly number[]) => useRead<Segment[]>("segments.ids", [ids]);
 export const useStudyRoutine = (id?: number) => useRead<StudyRoutine | null>("routines.one", [id]);

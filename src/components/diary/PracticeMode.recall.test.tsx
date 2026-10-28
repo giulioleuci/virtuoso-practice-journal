@@ -2,7 +2,7 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { db } from "@/lib/db";
+import { db } from "@/infrastructure/dexie/db";
 import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import { I18nContext, translate } from "@/lib/i18n";
@@ -17,7 +17,7 @@ const entry = { layers: [], techniques: [] };
 const baseTask: Task = { id: 1, title: "Scales", subjectId: 1, plan: [], date: "2026-10-18", done: false, createdAt: 1 };
 const draftKey = "virtuoso-session-task-1-1";
 const metronome = () => within(screen.getByRole("region", { name: t("practice.metronome") }));
-const tempo = () => metronome().getByText((_, el) => el?.tagName === "P" && /^\S\d+$/.test(el.textContent ?? "") && el.className.includes("font-numeric")).textContent;
+const tempo = () => metronome().getByText((_, el) => el?.tagName === "P" && /^\S\d+$/u.test(el.textContent ?? "") && el.className.includes("font-numeric")).textContent;
 
 function open(task: Task = baseTask, onFinish: (p: unknown) => void = () => {}) {
   return render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><PracticeMode task={task} onClose={() => {}} onFinish={onFinish} /></I18nContext.Provider>);

@@ -63,7 +63,7 @@ Da fare:
 3. Lato JS, rispetta confini Capacitor: `registerPlugin` da `@capacitor/core` deve stare in `src/infrastructure/` o `src/lib/platform.ts`, MAI in `src/presentation/`, `src/pages/`, `src/components/`. Scegli posizione più semplice compatibile con `src/test/architecture/import-boundaries.test.ts`.
 4. In `PrintSummary.tsx`: se `isAndroid()` (da `src/lib/platform.ts`), invia al plugin l'HTML autonomo della pagina (CSS inline, nessun asset esterno, `baseURL` nullo). Altrimenti usa `window.print()` come ora. Se Tailwind/bundle CSS sono necessari, serializza con stili inline o fai in modo che il WebView riceva gli stili. Spiega la strada scelta e perché.
 5. Nessuna nuova dipendenza npm.
-6. Se aggiungi stringhe visibili, usa `t(...)` e aggiungi chiavi in en/it/es/de, poi `npm run i18n:validate`.
+6. Se aggiungi stringhe visibili, usa `t(...)` e aggiungi chiavi in en/it/es/de, poi `npm run i18n:check`.
 
 Verifica:
 - `npx vitest run` sui test toccati + test confini architetturali + `npm run lint`

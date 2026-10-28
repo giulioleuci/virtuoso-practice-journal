@@ -1,3 +1,4 @@
+import { NOTE_GLYPH } from "@/domain/constants/noteValues";
 import { useTasksByItem } from "@/presentation/hooks/useEntities";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import type { Session } from "@/domain/entities/session";
@@ -69,7 +70,7 @@ export function BpmSparkline({ itemId, weeks = 8 }: Props) {
       <svg viewBox={`0 0 ${w} ${h}`} className="h-5 w-20" preserveAspectRatio="none">
         <path d={path} fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="text-xs text-muted-foreground tabular-nums">♩ = {max}</span>
+      <span className="text-xs text-muted-foreground tabular-nums">{NOTE_GLYPH.quarter} = {max}</span>
     </div>
   );
 }

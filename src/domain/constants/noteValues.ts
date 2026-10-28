@@ -7,14 +7,14 @@ export const SIMPLE_NOTES: NoteVal[] = ["whole", "half", "quarter", "eighth", "s
 export const COMPOUND_NOTES: NoteVal[] = ["dotted-half", "dotted-quarter", "dotted-eighth"];
 
 export const NOTE_GLYPH: Record<NoteVal, string> = {
-  whole: "𝅝",
-  half: "𝅗𝅥",
-  quarter: "♩",
-  eighth: "♪",
-  sixteenth: "𝅘𝅥𝅯",
-  "dotted-half": "𝅗𝅥.",
-  "dotted-quarter": "♩.",
-  "dotted-eighth": "♪.",
+  whole: "\u{1D15D}",
+  half: "\u{1D15E}",
+  quarter: "\u{1D15F}",
+  eighth: "\u{1D160}",
+  sixteenth: "\u{1D161}",
+  "dotted-half": "\u{1D15E}.",
+  "dotted-quarter": "\u{1D15F}.",
+  "dotted-eighth": "\u{1D160}.",
 };
 
 export const BPM_MIN = 1;

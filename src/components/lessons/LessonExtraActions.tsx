@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HelpCircle, FileText } from "lucide-react";
-import { useAllLibrary, useHelpRequests } from "@/presentation/hooks/useEntities";
+import { useLibrary, useHelpRequests } from "@/presentation/hooks/useEntities";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { useI18n } from "@/lib/i18n";
 
@@ -16,7 +16,7 @@ export function LessonExtraActions({ subjectId }: Props) {
   const navigate = useNavigate();
   const [recapOpen, setRecapOpen] = useState(false);
   const helpRequests = useHelpRequests();
-  const items = useAllLibrary();
+  const items = useLibrary();
 
   const openCount = useMemo(() => {
     const bySubject = new Map((items ?? []).map((i) => [i.id, i.subjectId]));

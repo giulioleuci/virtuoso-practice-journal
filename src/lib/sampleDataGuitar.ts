@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "@/infrastructure/dexie/db";
 import { backupService } from "./services/backup";
 
 /**

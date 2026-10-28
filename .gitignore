@@ -28,3 +28,7 @@ dist-ssr
 .playwright-mcp/
 .superpowers/
 .impeccable/
+
+# Personal exports
+BU.json
+virtuoso-backup-*.json

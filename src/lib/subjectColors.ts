@@ -1,4 +1,4 @@
-import type { ColorKey, SubjectType } from "@/lib/db";
+import type { ColorKey, SubjectType } from "@/domain/entities/common";
 
 /** Ordered palette for assigning default colors to subjects. */
 export const COLOR_KEYS: ColorKey[] = [

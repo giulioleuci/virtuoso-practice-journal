@@ -11,7 +11,7 @@ describe("tempo summaries", () => {
     expect(topBpm(marks)).toBe(88);
     expect(topMark([marks[0], { ...marks[1], bpm: 150 }])).toBe(marks[0]);
     expect(topBpm([{ bpm: 400, layers: [],techniques: [] }])).toBeUndefined();
-    expect(sessionLabel(marks)).toBe("♩ = 88 · ♪ = 56");
+    expect(sessionLabel(marks)).toBe("\u{1D15F} = 88 · \u{1D160} = 56");
     expect(topBpm([marks[0], { ...marks[0], bpm: 96 }])).toBe(96);
   });
 });

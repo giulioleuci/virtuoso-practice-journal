@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { LessonRecurrence } from "@/domain/entities/lesson";
 import type { Subject } from "@/domain/entities/common";
-import { useActiveTasks, useAllLibrary, useAssignments, useHelpRequests, useLessons } from "@/presentation/hooks/useEntities";
+import { useActiveTasks, useLibrary, useAssignments, useHelpRequests, useLessons } from "@/presentation/hooks/useEntities";
 import { isOpenAssignment } from "@/domain/logic/assignments";
 import { useI18n } from "@/lib/i18n";
 import { formatDate, LANG_LOCALE, parseDayKey, today } from "@/lib/date";
@@ -23,7 +23,7 @@ export function NextLessonPanel({ recurrence, date, subject, onLog, onQuestions 
   const lessons = useLessons();
   const assignments = useAssignments();
   const requests = useHelpRequests();
-  const items = useAllLibrary();
+  const items = useLibrary();
   const [resolvingIds, setResolvingIds] = useState<number[]>([]);
   const slot = slotForDate(recurrence, date);
   const days = Math.round((parseDayKey(date).getTime() - parseDayKey(today()).getTime()) / 86400000);

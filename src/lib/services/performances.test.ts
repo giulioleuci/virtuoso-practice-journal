@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
-import { db } from "@/lib/db";
+import { db } from "@/infrastructure/dexie/db";
 import type { LibraryKind } from "@/domain/entities/common";
 import { isPerformable } from "@/domain/logic/repertoireReview";
 import { performanceRepository, repertoireRepository } from "@/infrastructure/repositories/dexie/performanceRepository";

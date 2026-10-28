@@ -20,7 +20,7 @@ const items: LibraryItem[] = [
 vi.mock("@/presentation/hooks/useEntities", () => ({
   useLibraryByKind: () => mocks.library ?? items,
   useLibrary: () => items,
-  useHelpRequests: () => [], useTechniques: () => [{ id: 9, name: "Arpeggi" }], useSegments: () => mocks.segments, useAllSegments: () => [],
+  useHelpRequests: () => [], useTechniques: () => [{ id: 9, name: "Arpeggi" }], useSegments: () => mocks.segments,
   useSubjects: () => [{ id: 1, name: "Piano", type: "instrument" }],
   useCollections: () => mocks.collections,
   useCollectionLinks: () => [{ collectionId: 1, itemId: 1 }, { collectionId: 1, itemId: 2 }, { collectionId: 1, itemId: 3 }, { collectionId: 2, itemId: 2 }],

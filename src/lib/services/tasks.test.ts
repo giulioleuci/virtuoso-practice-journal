@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
-import { db } from "@/lib/db";
+import { db } from "@/infrastructure/dexie/db";
 import { tasksService } from "@/lib/services/tasks";
 
 beforeEach(async () => {

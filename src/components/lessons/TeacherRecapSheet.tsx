@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAllLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/presentation/hooks/useEntities";
+import { useLibrary, useAllTasks, useHelpRequests, useSubjects } from "@/presentation/hooks/useEntities";
 import type { ColorKey, SubjectType } from "@/domain/entities/common";
 import type { HelpRequest } from "@/domain/ports/helpRequest";
 import { helpRequestsService } from "@/lib/services";
@@ -29,7 +29,7 @@ type Tab = "open" | "answered";
 export function TeacherRecapSheet({ open, onOpenChange, subjectId }: Props) {
   const { t, lang } = useI18n();
   const helpRequests = useHelpRequests();
-  const items = useAllLibrary();
+  const items = useLibrary();
   const subjects = useSubjects();
   const tasks = useAllTasks();
   const taskById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id, task])), [tasks]);

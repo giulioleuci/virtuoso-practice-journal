@@ -3,7 +3,6 @@ import { CreateTaskUseCase } from "./createTask";
 import { RemoveTaskUseCase } from "./removeTask";
 import { UpdateTaskUseCase } from "./updateTask";
 import { LogSessionUseCase } from "./logSession";
-import { DeleteSessionUseCase } from "./deleteSession";
 import { FakeTaskRepository } from "@/test/fakes/FakeTaskRepository";
 import { FakeSessionRepository } from "@/test/fakes/FakeSessionRepository";
 
@@ -122,16 +121,6 @@ describe("task and session use cases", () => {
     expect(tasks.updated.get(1)).toEqual({ done: true });
   });
 
-  it("resets a task after its last session is deleted", async () => {
-    const tasks = new FakeTaskRepository([{ ...baseTask, done: true }]);
-    const sessions = new FakeSessionRepository(tasks, [{ id: 4, taskId: 1, date: baseTask.date, marks: [], createdAt: 1 }]);
-    const useCase = new DeleteSessionUseCase(sessions);
-
-    await useCase.execute(4, 1);
-
-    expect(tasks.updated.get(1)).toEqual({ done: false });
-  });
-
   it("saves a free session without creating or completing any task", async () => {
     const tasks = new FakeTaskRepository([baseTask]);
     const sessions = new FakeSessionRepository(tasks);
@@ -188,7 +177,7 @@ describe("task and session use cases", () => {
     await log.execute(sectioned, { date: "2026-07-21", marks: [rated(3)] });
     expect(tasks.updated.get(1)).toEqual({ done: true });
 
-    await new DeleteSessionUseCase(sessions).execute(2, 1);
+    await sessions.deleteWithTaskReset(2, 1);
     expect(tasks.updated.get(1)).toEqual({ done: false });
     expect(sessions.sessions[0].marks).toHaveLength(2);
   });

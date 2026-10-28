@@ -8,7 +8,7 @@ describe("presentation controller wiring", () => {
   it("exposes application commands used by session, routine, and backup controllers", () => {
     expect(applicationCommands.sessions.log.execute).toBeTypeOf("function");
     expect(applicationCommands.routines.generate.execute).toBeTypeOf("function");
-    expect(applicationCommands.routines.update.execute).toBeTypeOf("function");
+    expect(applicationCommands.routines.update).toBeTypeOf("function");
     expect(applicationCommands.backups.export.execute).toBeTypeOf("function");
     expect(applicationCommands.backups.import.execute).toBeTypeOf("function");
   });

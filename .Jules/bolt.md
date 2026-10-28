@@ -1,3 +1,0 @@
-## 2024-05-10 - Route-Level Code Splitting
-**Learning:** In a single-page application structure like this (using `react-router-dom`), wrapping the `<Suspense>` boundary around individual routes instead of the entire `<Routes>` element is crucial. If `<Suspense>` wraps `<Routes>`, any suspended component will cause the fallback UI to replace the entire routing tree (including the persistent `AppShell` layout).
-**Action:** Always place `<Suspense>` boundaries as tight as possible around lazy-loaded components (e.g., inside the layout outlet or around individual route elements) to prevent UI layout thrashing during asynchronous chunk loading.

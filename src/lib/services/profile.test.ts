@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
-import { db, THEORY_LAYERS } from "@/lib/db";
-import { profileService } from "@/lib/services/profile";
+import { db } from "@/infrastructure/dexie/db";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import { profileService } from "@/lib/services";
 
 beforeEach(async () => {
   await db.delete();

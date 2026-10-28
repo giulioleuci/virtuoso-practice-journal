@@ -1,6 +1,6 @@
 /** Practice-streak computation (pure). */
 import { dayKey, addDays, parseDayKey } from "@/lib/date";
-import type { Session } from "@/lib/db";
+import type { Session } from "@/domain/entities/session";
 
 /** Set of day keys that have at least one session. */
 export function daysFromSessions(sessions: Pick<Session, "date">[]): Set<string> {

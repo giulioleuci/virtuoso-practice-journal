@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { db } from "@/lib/db";
+import { db } from "@/infrastructure/dexie/db";
 import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import { I18nContext, translate } from "@/lib/i18n";
@@ -22,7 +22,7 @@ const show = () => render(<I18nContext.Provider value={{ lang: "en", setLang: ()
 
 it("shows an inherited complete tempo and a useful empty history", async () => {
   show();
-  expect(await screen.findByText(/𝅘𝅥𝅯 = 132/)).toBeInTheDocument();
+  expect(await screen.findByText(/\u{1D161} = 132/u)).toBeInTheDocument();
   expect(screen.getByText(t("segments.inherited"), { exact: false })).toBeInTheDocument();
   expect(await screen.findByText(t("segment.emptyTitle"))).toBeInTheDocument();
 });
@@ -31,7 +31,7 @@ it("preserves the section's own note value in its history target", async () => {
   await db.segments.update(segmentId, { targetBpm: 80, noteVal: "eighth" });
   await db.sessions.add({ itemId, date: "2026-10-01", createdAt: 1, marks: [{ segmentId, bpm: 60, noteVal: "eighth", layers: [], techniques: [] }] });
   show();
-  expect(await screen.findByText(`${t("library.targetTempo")}: ♪ = 80`)).toBeInTheDocument();
+  expect(await screen.findByText(`${t("library.targetTempo")}: \u{1D160} = 80`)).toBeInTheDocument();
 });
 
 it("offers recovery instead of planning for a deleted parent", async () => {

@@ -1,4 +1,5 @@
-import type { TaskRecurrence, LessonRecurrence, LessonScheduleSlot } from "./db";
+import type { TaskRecurrence } from "@/domain/entities/task";
+import type { LessonRecurrence, LessonScheduleSlot } from "@/domain/entities/lesson";
 import { dayKey, parseDayKey } from "./date";
 
 /** End of the current school year (June 30). School year runs Sep 1 – Aug 31. */

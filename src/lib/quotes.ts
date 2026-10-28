@@ -1,7 +1,7 @@
 // Inspirational quotes used in narrative empty states and the diary hero.
 // 100 quotes per language, curated across composers, performers, philosophers,
 // scientists, rock musicians, music theorists and other notable voices.
-import type { Lang } from "./db";
+import type { Lang } from "@/domain/entities/common";
 
 export interface Quote {
   text: string;

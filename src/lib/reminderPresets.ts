@@ -7,7 +7,8 @@
  * the message. Optional context (today's open task count + current streak)
  * can be appended as a localized suffix.
  */
-import { db, type Lang } from "./db";
+import { db } from "@/infrastructure/dexie/db";
+import type { Lang } from "@/domain/entities/common";
 import { translate } from "./i18n";
 import { computeStreakFromSessions } from "./domain/streak";
 import { today as todayISO } from "./date";

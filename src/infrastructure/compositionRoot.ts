@@ -1,13 +1,10 @@
 import { TempoProgressionUseCase } from "@/application/useCases/tempoProgression";
 import { tempoProgressionRepository } from "./repositories/dexie/tempoProgressionRepository";
 import { CreateTaskUseCase } from "@/application/useCases/createTask";
-import { DeleteSessionUseCase } from "@/application/useCases/deleteSession";
 import { GenerateStudyRoutineUseCase } from "@/application/useCases/generateStudyRoutine";
 import { LogSessionUseCase } from "@/application/useCases/logSession";
-import { RegenerateStudyRoutineUseCase } from "@/application/useCases/regenerateStudyRoutine";
 import { RemoveTaskUseCase } from "@/application/useCases/removeTask";
 import { UpdateTaskUseCase } from "@/application/useCases/updateTask";
-import { UpdateStudyRoutineUseCase } from "@/application/useCases/updateStudyRoutine";
 import { ExportCsvUseCase } from "@/application/useCases/exportCsv";
 import { ExportBackupUseCase } from "@/application/useCases/exportBackup";
 import { ImportBackupUseCase } from "@/application/useCases/importBackup";
@@ -26,13 +23,13 @@ const backupFiles = new CapacitorBackupFileGateway();
 export const application = {
   tempoProgression: new TempoProgressionUseCase(tempoProgressionRepository),
   tasks: { create: new CreateTaskUseCase(taskRepository), update: new UpdateTaskUseCase(taskRepository), remove: new RemoveTaskUseCase(taskRepository) },
-  sessions: { log: new LogSessionUseCase(sessionRepository), remove: new DeleteSessionUseCase(sessionRepository) },
+  sessions: { log: new LogSessionUseCase(sessionRepository) },
   audio: browserAudio,
   recordings: recordingRepository,
   routines: {
     generate: new GenerateStudyRoutineUseCase(studyRoutineRepository),
-    update: new UpdateStudyRoutineUseCase(studyRoutineRepository),
-    regenerate: new RegenerateStudyRoutineUseCase(studyRoutineRepository),
+    update: (...args: Parameters<typeof studyRoutineRepository.update>) => studyRoutineRepository.update(...args),
+    regenerate: (...args: Parameters<typeof studyRoutineRepository.regenerateFromDate>) => studyRoutineRepository.regenerateFromDate(...args),
   },
   backups: {
     export: new ExportBackupUseCase(backupRepository, backupFiles),

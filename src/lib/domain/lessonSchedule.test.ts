@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { nextLessonDate } from "@/lib/domain/lessonSchedule";
-import type { Lesson, LessonRecurrence } from "@/lib/db";
+import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
 
 const rec = (over: Partial<LessonRecurrence>): LessonRecurrence => ({
   subjectId: 1,

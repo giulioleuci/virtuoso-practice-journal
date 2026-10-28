@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import { db } from "./db";
+import { db } from "@/infrastructure/dexie/db";
 import { seedSampleData } from "./sampleData";
 import { seedGuitarSampleData } from "./sampleDataGuitar";
 import { backupService } from "./services/backup";

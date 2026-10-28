@@ -34,14 +34,13 @@ You have access to the `codebase-memory-mcp` tool, which maintains a compiled Kn
 
 - **React 18 + TypeScript + Vite** — SPA with React Router v6 for client-side routing
 - **Dexie (IndexedDB)** — all persistence; no backend
-- **dexie-react-hooks** — live queries that trigger reactive re-renders on DB changes
 - **TanStack Query** — set up in `App.tsx` but Dexie live hooks are the primary data layer
 - **shadcn/ui + Tailwind CSS** — UI components in `src/components/ui/`; custom theme colors (terracotta, sage, gold, blue, plum) with Cormorant Garamond / Inter / Manrope fonts
 - **React Hook Form + Zod** — forms and validation; schemas in `src/lib/schemas.ts`
 
-### Data Layer (`src/lib/db.ts`)
+### Data Layer (`src/infrastructure/dexie/db.ts`)
 
-All tables are defined in `src/infrastructure/dexie/db.ts` (re-exported here); v13 reshaped tasks/sessions/assignments and clears pre-release data. v14 back-fills session subject/content references and wipes nothing. Key tables:
+All tables are defined in `src/infrastructure/dexie/db.ts`; v13 reshaped tasks/sessions/assignments and clears pre-release data. v14 back-fills session subject/content references and wipes nothing. Key tables:
 
 | Table | Purpose |
 |---|---|
@@ -65,11 +64,11 @@ All tables are defined in `src/infrastructure/dexie/db.ts` (re-exported here); v
 
 ### Service Layer (`src/lib/services/`)
 
-Business logic is extracted from components into service modules (`collections.ts`, `library.ts`, `sessions.ts`, `tasks.ts`). These are the place to add DB operations — not inside page components.
+Business logic is extracted from components into service modules (`collections.ts`, `sessions.ts`, `tasks.ts`; the rest re-export repositories from `index.ts`). These are the place to add DB operations — not inside page components.
 
-### Live Queries (`src/hooks/useEntities.ts`)
+### Live Queries (`src/presentation/hooks/useEntities.ts`)
 
-All data-fetching hooks live here using `useLiveQuery` from `dexie-react-hooks`. Components import these hooks to get reactively-updating data.
+All data-fetching hooks live here, built on `usePresentationQuery` (re-reads on Dexie `storagemutated`). Components import these hooks, never Dexie.
 
 ### Internationalization (`src/lib/i18n.tsx`)
 

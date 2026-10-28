@@ -91,7 +91,7 @@ export function RoutineBuilder({ initial, onDone, onCancel }: {
 
   const command = useMemo(
     () => async (config: StudyRoutineConfig) => {
-      if (initial) await applicationCommands.routines.update.execute(initial.id, config);
+      if (initial) await applicationCommands.routines.update(initial.id, config);
       else await applicationCommands.routines.generate.execute(config);
     },
     [initial],

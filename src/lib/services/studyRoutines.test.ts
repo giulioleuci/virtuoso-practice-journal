@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import "fake-indexeddb/auto";
-import { db } from "@/lib/db";
+import { db } from "@/infrastructure/dexie/db";
 import { studyRoutinesService } from "@/lib/services/studyRoutines";
 import { planSegmentIds } from "@/domain/logic/plan";
 import type { StudyRoutineConfig } from "@/lib/schemas";

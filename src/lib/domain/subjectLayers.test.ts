@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getSubjectLayers, getSubjectLayerLabel } from "@/lib/domain/subjectLayers";
-import { THEORY_LAYERS, type Subject } from "@/lib/db";
+import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
+import type { Subject } from "@/domain/entities/common";
 import { translate } from "@/lib/i18n";
 
 const make = (over: Partial<Subject>): Subject => ({

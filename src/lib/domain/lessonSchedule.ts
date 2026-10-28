@@ -1,5 +1,5 @@
 /** Next-lesson-date resolution (pure), built on the canonical recurrence expander. */
-import type { Lesson, LessonRecurrence } from "@/lib/db";
+import type { Lesson, LessonRecurrence } from "@/domain/entities/lesson";
 import { addDays, parseDayKey } from "@/lib/date";
 import { upcomingLessonDates } from "@/lib/recurrence";
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
-import { db } from "@/lib/db";
+import { db } from "@/infrastructure/dexie/db";
 import { buildSessionSnapshot, buildLessonSnapshot } from "./snapshots";
 import { LogSessionUseCase } from "@/application/useCases/logSession";
 import { sessionRepository } from "@/infrastructure/repositories/dexie/sessionRepository";

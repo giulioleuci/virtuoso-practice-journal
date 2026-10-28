@@ -17,7 +17,7 @@ import { WhenFields, nativeSelect } from "@/components/diary/WhenFields";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { syncPlan } from "@/domain/logic/plan";
-import { useAllSegments, useCollectionLinks, useCollections, useLibrary, useSubjects } from "@/presentation/hooks/useEntities";
+import { useSegments, useCollectionLinks, useCollections, useLibrary, useSubjects } from "@/presentation/hooks/useEntities";
 
 const MAX_TASKS = 400;
 
@@ -28,7 +28,7 @@ export default function BulkAddTasksPage() {
   const [params] = useSearchParams();
   const subjects = useSubjects();
   const library = useLibrary();
-  const allSegments = useAllSegments();
+  const allSegments = useSegments();
   const collections = useCollections();
   const links = useCollectionLinks();
 

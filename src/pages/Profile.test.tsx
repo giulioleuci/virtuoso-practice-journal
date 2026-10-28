@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { toast } from "sonner";
-import { db } from "@/lib/db";
+import { db } from "@/infrastructure/dexie/db";
 import { applicationCommands } from "@/lib/applicationCommands";
 import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";

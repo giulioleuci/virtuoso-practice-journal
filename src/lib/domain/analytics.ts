@@ -1,6 +1,6 @@
 /** Pure analytics helpers over sessions. */
 import { weekKeyOf } from "@/lib/date";
-import type { Session } from "@/lib/db";
+import type { Session } from "@/domain/entities/session";
 
 export interface WeeklyCount {
   /** Monday-anchored week key (YYYY-MM-DD). */

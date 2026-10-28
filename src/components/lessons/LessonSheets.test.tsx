@@ -2,7 +2,7 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { db } from "@/lib/db";
+import { db } from "@/infrastructure/dexie/db";
 import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import { I18nContext, translate } from "@/lib/i18n";

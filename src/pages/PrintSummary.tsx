@@ -2,7 +2,7 @@ import { compareTempos } from "@/domain/logic/tempo";
 import { useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
-import { useAllLibrary, useAssignments, useLessons, useProfile, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
+import { useLibrary, useAssignments, useLessons, useProfile, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { addDays, dayKey, endOfWeek, formatDate, getDefaultWeekStartsOn, parseDayKey, startOfWeek } from "@/lib/date";
 import { tempoLabel } from "@/lib/format";
@@ -36,7 +36,7 @@ export default function PrintSummary() {
   const rangeDays = Math.round((parseDayKey(to).getTime() - parseDayKey(from).getTime()) / 864e5) + 1;
 
   const sessions = useSessionsInRange(from, to);
-  const items = useAllLibrary();
+  const items = useLibrary();
   const assignments = useAssignments();
 
   const itemById = useMemo(() => new Map((items ?? []).map((item) => [item.id, item])), [items]);

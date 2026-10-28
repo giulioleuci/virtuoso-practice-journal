@@ -10,7 +10,6 @@ import {
   useProfile,
   useSegmentsByItem,
   useSessionsInRange,
-  useTasksByDate,
   useTasksInRange,
 } from "./useEntities";
 
@@ -46,7 +45,6 @@ describe("presentation entity adapters", () => {
   });
 
   it.each([
-    ["task date", () => useTasksByDate("2026-07-20"), "tasks.date", [{ id: 1 }], [{ id: 2 }]],
     ["task range", () => useTasksInRange("2026-07-01", "2026-07-31"), "tasks.range", [{ id: 1 }], [{ id: 2 }]],
     ["library item", () => useItem(7), "library.item", { id: 7, title: "Prelude" }, { id: 7, title: "Fugue" }],
     ["item segment", () => useSegmentsByItem(7), "library.segments", [{ id: 1, label: "A" }], [{ id: 2, label: "B" }]],

@@ -2,13 +2,13 @@ import { useMemo } from "react";
 import type { LibraryItem } from "@/domain/entities/library";
 import type { Session } from "@/domain/entities/session";
 import { pieceEvidence } from "@/domain/logic/readiness";
-import { useAllLibrary, useAllSegments, useSessions } from "./useEntities";
+import { useLibrary, useSegments, useSessions } from "./useEntities";
 
 /** Readiness lookups for library items: sessions and segments per item, and the readiness breakdown. */
 export function useReadiness() {
-  const library = useAllLibrary();
+  const library = useLibrary();
   const sessions = useSessions();
-  const segments = useAllSegments();
+  const segments = useSegments();
 
   return useMemo(() => {
     const byItem = new Map<number, Session[]>();

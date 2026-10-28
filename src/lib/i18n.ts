@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { Lang } from "./db";
+import type { Lang } from "@/domain/entities/common";
 import en from "./language/en.json";
 import it from "./language/it.json";
 import es from "./language/es.json";

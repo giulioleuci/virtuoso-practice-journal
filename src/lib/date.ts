@@ -8,7 +8,7 @@
  * `useDateFormat` hook) so locale conventions stay consistent app-wide.
  */
 
-import type { Lang } from "./db";
+import type { Lang } from "@/domain/entities/common";
 
 /** Local-time `YYYY-MM-DD` key for a Date. */
 export function dayKey(d: Date): string {

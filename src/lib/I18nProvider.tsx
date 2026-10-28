@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import type { Lang } from "./db";
+import type { Lang } from "@/domain/entities/common";
 import { I18nContext, translate, type TranslationVars } from "./i18n";
 
 export function I18nProvider({ children, initial = "en" }: { children: ReactNode; initial?: Lang }) {

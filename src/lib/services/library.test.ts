@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
-import { db } from "@/lib/db";
-import { libraryService } from "@/lib/services/library";
+import { db } from "@/infrastructure/dexie/db";
+import { libraryService } from "@/lib/services";
 import { collectionsService } from "@/lib/services/collections";
 import { backupService } from "@/lib/services/backup";
 import { performanceRepository } from "@/infrastructure/repositories/dexie/performanceRepository";

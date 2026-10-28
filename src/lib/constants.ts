@@ -1,5 +1,5 @@
 import { BookOpen, Music2, Activity, Brain } from "lucide-react";
-import type { LibraryKind } from "@/lib/db";
+import type { LibraryKind } from "@/domain/entities/common";
 
 export { NOTE_GLYPH } from "@/domain/constants/noteValues";
 
