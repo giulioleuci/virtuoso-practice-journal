@@ -1,6 +1,6 @@
 import type { TaskRecurrence } from "@/domain/entities/task";
 import type { LessonRecurrence, LessonScheduleSlot } from "@/domain/entities/lesson";
-import { dayKey, parseDayKey } from "./date";
+import { addDays, dayKey, parseDayKey } from "./date";
 
 /** End of the current school year (June 30). School year runs Sep 1 – Aug 31. */
 export function schoolYearEnd(from = new Date()): string {
@@ -18,7 +18,7 @@ export function expandTaskRecurrence(rec: TaskRecurrence): string[] {
   const end = rec.endDate ? parseDayKey(rec.endDate) : null;
   const horizon = new Date(start);
   horizon.setDate(horizon.getDate() + HORIZON_DAYS);
-  const cap = rec.occurrences ?? MAX_GENERATED;
+  const cap = Math.min(rec.occurrences ?? MAX_GENERATED, MAX_GENERATED);
 
   if (rec.kind === "weekdays") {
     const days = rec.days ?? [];
@@ -39,6 +39,24 @@ export function expandTaskRecurrence(rec: TaskRecurrence): string[] {
     }
   }
   return dates;
+}
+
+/** Recurrence and routine occurrences are written only this far ahead; app open tops them up. */
+export const SCHEDULE_WINDOW_DAYS = 14;
+
+/** Last day (inclusive) written for a series starting at `startDate`, seen from `today`. */
+export function scheduleWindowEnd(startDate: string, today: string): string {
+  return dayKey(addDays(parseDayKey(startDate > today ? startDate : today), SCHEDULE_WINDOW_DAYS));
+}
+
+/** Dates of `rec` after `after` inside the window, plus the next one after today so a sparse series always has it. */
+export function windowedRecurrenceDates(rec: TaskRecurrence, after: string | undefined, today: string): string[] {
+  const end = scheduleWindowEnd(rec.startDate, today);
+  const rest = expandTaskRecurrence(rec).filter((d) => after === undefined || d > after);
+  const kept = rest.filter((d) => d <= end);
+  if (kept.some((d) => d > today)) return kept;
+  const next = rest.find((d) => d > end);
+  return next ? [...kept, next] : kept;
 }
 
 /** Project a single schedule slot to N upcoming dates (from `from`, inclusive). */

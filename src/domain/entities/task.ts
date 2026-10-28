@@ -35,6 +35,8 @@ export interface Task {
   executionNotes?: string;
   recurrenceTaskId?: number;
   recurrence?: TaskRecurrence;
+  /** Recurrence root only: last date written to the DB. */
+  materializedUntil?: string;
   studyRoutineId?: number;
   createdAt: number;
   deletedAt?: number;

@@ -5,8 +5,8 @@ import { db } from "@/infrastructure/dexie/db";
 import type { Task, TaskRecurrence } from "@/domain/entities/task";
 import type { NewTaskInput, TaskPort } from "@/domain/ports/task";
 import { planCovered } from "@/domain/logic/plan";
-import { now } from "@/lib/date";
-import { expandTaskRecurrence } from "@/lib/recurrence";
+import { now, today } from "@/lib/date";
+import { windowedRecurrenceDates } from "@/lib/recurrence";
 
 export type { NewTaskInput } from "@/domain/ports/task";
 const active = <T extends { deletedAt?: number }>(row: T) => !row.deletedAt;
@@ -38,9 +38,9 @@ export const taskRepository = {
         return db.tasks.add(inheritTempoProgressions(task,data.states,data.rule,data.segments)) as Promise<number>;
       });
     }
-    const dates = expandTaskRecurrence(recurrence); if (!dates.length) throw new Error("Recurrence produced no dates");
+    const dates = windowedRecurrenceDates(recurrence, undefined, today()); if (!dates.length) throw new Error("Recurrence produced no dates");
     let firstId = 0;
-    await db.transaction("rw", db.tasks, async () => { firstId = await db.tasks.add({ ...rest, date: dates[0], recurrence, done: false, createdAt: ts }) as number; if (dates.length > 1) await db.tasks.bulkAdd(dates.slice(1).map((date) => ({ ...child, date, done: false, recurrenceTaskId: firstId, createdAt: ts }))); });
+    await db.transaction("rw", db.tasks, async () => { firstId = await db.tasks.add({ ...rest, date: dates[0], recurrence, materializedUntil: dates.at(-1), done: false, createdAt: ts }) as number; if (dates.length > 1) await db.tasks.bulkAdd(dates.slice(1).map((date) => ({ ...child, date, done: false, recurrenceTaskId: firstId, createdAt: ts }))); });
     return firstId;
   },
   async createRecurring(first: Omit<Task, "id">, followUps: Omit<Task, "id">[]) {

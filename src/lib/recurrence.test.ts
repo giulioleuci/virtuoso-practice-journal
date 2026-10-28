@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { schoolYearEnd, expandTaskRecurrence, upcomingLessonDates } from "./recurrence";
+import { schoolYearEnd, expandTaskRecurrence, upcomingLessonDates, scheduleWindowEnd, windowedRecurrenceDates } from "./recurrence";
 import { dayKey, parseDayKey } from "./date";
 import type { LessonRecurrence } from "@/domain/entities/lesson";
 
@@ -251,3 +251,29 @@ describe("upcomingLessonDates", () => {
   });
 });
 
+
+describe("rolling schedule window", () => {
+  const daily = { kind: "interval" as const, everyXDays: 1, startDate: "2026-10-28", endDate: "2027-06-30" };
+
+  it("ends 14 days after the later of start and today", () => {
+    expect(scheduleWindowEnd("2026-10-01", "2026-10-28")).toBe("2026-11-11");
+    expect(scheduleWindowEnd("2026-12-01", "2026-10-28")).toBe("2026-12-15");
+  });
+
+  it("writes only the window of a daily rule", () => {
+    const dates = windowedRecurrenceDates(daily, undefined, "2026-10-28");
+    expect(dates).toHaveLength(15);
+    expect(dates.at(-1)).toBe("2026-11-11");
+  });
+
+  it("keeps the next occurrence of a sparse rule even beyond the window", () => {
+    const rec = { kind: "interval" as const, everyXDays: 30, startDate: "2026-10-20" };
+    expect(windowedRecurrenceDates(rec, undefined, "2026-10-28")).toEqual(["2026-10-20", "2026-11-19"]);
+  });
+
+  it("continues after a given date", () => {
+    const dates = windowedRecurrenceDates(daily, "2026-11-05", "2026-10-28");
+    expect(dates[0]).toBe("2026-11-06");
+    expect(dates.at(-1)).toBe("2026-11-11");
+  });
+});

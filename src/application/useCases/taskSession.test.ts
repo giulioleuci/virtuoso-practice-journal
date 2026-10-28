@@ -35,6 +35,20 @@ describe("task and session use cases", () => {
     expect(tasks.createRecurringCalls).toBe(1);
   });
 
+  it("writes only a 14-day window of a long recurrence and stamps the root", async () => {
+    const tasks = new FakeTaskRepository();
+    const useCase = new CreateTaskUseCase(tasks, () => Date.parse("2026-10-28T12:00:00"));
+
+    await useCase.execute({
+      ...baseTask,
+      date: "2026-10-28",
+      recurrence: { kind: "weekdays", days: [0, 1, 2, 3, 4, 5, 6], startDate: "2026-10-28", endDate: "2027-06-30" },
+    });
+
+    expect(tasks.created).toHaveLength(15);
+    expect(tasks.created[0].materializedUntil).toBe("2026-11-11");
+  });
+
   it("clamps invalid interval steps and caps an unbounded recurrence", async () => {
     const tasks = new FakeTaskRepository();
     const useCase = new CreateTaskUseCase(tasks, () => 10);
@@ -44,7 +58,7 @@ describe("task and session use cases", () => {
       recurrence: { kind: "interval", everyXDays: 0, startDate: "2026-07-20" },
     });
 
-    expect(tasks.created).toHaveLength(200);
+    expect(tasks.created).toHaveLength(15);
     expect(tasks.created[1].date).toBe("2026-07-21");
     expect(tasks.createRecurringCalls).toBe(1);
   });
@@ -58,7 +72,7 @@ describe("task and session use cases", () => {
       recurrence: { kind: "interval", everyXDays: 1, startDate: "2026-07-20", occurrences: 10_000 },
     });
 
-    expect(tasks.created).toHaveLength(200);
+    expect(tasks.created).toHaveLength(15);
   });
 
   it("rejects a recurrence that yields no dates", async () => {
