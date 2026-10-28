@@ -3,6 +3,7 @@
  * All components import from here so changing an icon globally means changing it once.
  */
 import {
+  createLucideIcon,
   Pencil,
   Trash2,
   Plus,
@@ -82,3 +83,9 @@ export {
   AlertTriangle as WarningIcon,
   Search as SearchIcon,
 };
+
+/** lucide ships no metronome: a trapezoid body and a swinging arm. */
+export const MetronomeIcon = createLucideIcon("Metronome", [
+  ["path", { d: "M7 21h10L14.5 4h-5z", key: "body" }],
+  ["path", { d: "m12 16 4.5-9", key: "arm" }],
+]);

@@ -28,6 +28,8 @@ import { cn } from "@/lib/utils";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { NotesHistory } from "./NotesHistory";
 import { FloatingActions } from "@/components/shared/FloatingActions";
+import { BeatDots, Pendulum } from "./Metronome";
+import { useMetronome } from "@/hooks/useMetronome";
 
 interface Props {
   task: Task;
@@ -89,76 +91,10 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   }, [lastMarks, marks, restored, update]);
 
   // Metronome
-  const [meterOn, setMeterOn] = useState(false);
   const [muted, setMuted] = useState(false);
   const [beatsPerBar, setBeatsPerBar] = useState(1);
   const [showDottedNotes, setShowDottedNotes] = useState(false);
-  const [pulse, setPulse] = useState(0);
-  const ctxRef = useRef<AudioContext | null>(null);
-  // Read by the scheduler on every wake-up, so tempo, meter and mute changes apply without restarting the bar.
-  const live = useRef({ bpm, beatsPerBar, muted });
-  live.current = { bpm, beatsPerBar, muted };
-
-  const ensureCtx = () => {
-    if (!ctxRef.current) {
-      const Ctor: typeof AudioContext =
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext ?? AudioContext;
-      ctxRef.current = new Ctor();
-    }
-    if (ctxRef.current.state === "suspended") ctxRef.current.resume().catch(() => undefined);
-    return ctxRef.current;
-  };
-
-  const click = (ctx: AudioContext, when: number, accent: boolean) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = accent ? 1600 : 1100;
-    osc.type = "square";
-    gain.gain.setValueAtTime(0.0001, when);
-    gain.gain.exponentialRampToValueAtTime(accent ? 0.5 : 0.32, when + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.06);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(when);
-    osc.stop(when + 0.07);
-  };
-
-  // Metronome: beats are scheduled ahead on the audio clock; timers only wake the scheduler, so a busy main thread
-  // cannot drift the beat. Hidden tabs wake about once a second, so the horizon grows there.
-  useEffect(() => {
-    if (!meterOn) return;
-    const ctx = ensureCtx();
-    let beat = 0;
-    let next = ctx.currentTime + 0.05;
-    let last = next - 60 / live.current.bpm;
-    let scheduledBpm = live.current.bpm;
-    const pulses: number[] = [];
-    const schedule = () => {
-      const { bpm, beatsPerBar, muted } = live.current;
-      if (bpm !== scheduledBpm) {
-        next = Math.max(last + 60 / bpm, ctx.currentTime);
-        scheduledBpm = bpm;
-      }
-      // Skip missed beats in constant time after suspension.
-      if (next < ctx.currentTime) {
-        const missed = Math.ceil((ctx.currentTime - next) / (60 / bpm));
-        next += missed * 60 / bpm; beat += missed;
-      }
-      const horizon = ctx.currentTime + (document.hidden ? 1.5 : 0.1);
-      while (next < horizon) {
-        if (!muted) click(ctx, next, beat % beatsPerBar === 0);
-        const shown = beat + 1;
-        pulses.push(window.setTimeout(() => setPulse(shown), Math.max(0, (next - ctx.currentTime) * 1000)));
-        beat += 1;
-        last = next;
-        next += 60 / live.current.bpm;
-      }
-    };
-    schedule();
-    const id = window.setInterval(schedule, 25);
-    return () => { clearInterval(id); pulses.forEach(clearTimeout); setPulse(0); };
-  }, [meterOn]);
-
-  useEffect(() => () => { ctxRef.current?.close().catch(() => undefined); }, []);
+  const { on: meterOn, pulse, toggle } = useMetronome({ bpm, beatsPerBar, muted });
 
   // Read-through without the click: the ratings go on, the metronome tempo is left out of the log.
   const [skipTempo, setSkipTempo] = useState(false);
@@ -169,7 +105,6 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   };
 
 
-  const isAccent = pulse > 0 && (pulse - 1) % beatsPerBar === 0;
   const last = lastMarks && entryFor(lastMarks, mark.segmentId);
   const targetGlyph = NOTE_GLYPH[mark.targetNoteVal ?? "quarter"];
 
@@ -231,8 +166,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => setMuted((m) => !m)} aria-label={muted ? t("practice.unmute") : t("practice.mute")}>
                 {muted ? <VolumeX /> : <Volume2 />}
               </Button>
-              {/* The audio context is created and resumed inside the tap: mobile browsers only unlock audio there. */}
-              <Button className="min-h-11" onClick={() => { if (!meterOn) { ensureCtx(); if (mark.bpm === undefined) patchMark({ bpm }); } setMeterOn((v) => !v); }} aria-pressed={meterOn}>
+              <Button className="min-h-11" onClick={() => { if (!meterOn && mark.bpm === undefined) patchMark({ bpm }); toggle(); }} aria-pressed={meterOn}>
                 {meterOn ? t("practice.stop") : t("practice.start")}
               </Button>
             </div>
@@ -264,22 +198,8 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             </div>
             <Slider value={[bpm]} min={BPM_MIN} max={BPM_MAX} step={1} onValueChange={(v) => setBpm(v[0])} aria-label={t("practice.bpmUnit")} />
             <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-end gap-2 border-b border-border">
-              <div className="flex flex-wrap gap-1.5 self-center" aria-hidden="true">
-                {Array.from({ length: beatsPerBar }).map((_, i) => {
-                  const active = meterOn && pulse > 0 && (pulse - 1) % beatsPerBar === i;
-                  const accent = i === 0;
-                  return (
-                    <span key={active ? `beat-${pulse}` : i} data-beat-mark={active ? pulse : undefined} className={cn("h-3.5 w-3.5 rounded-full border", accent ? "border-primary" : "border-muted-foreground/40", active ? cn("animate-beat-flash", accent ? "bg-primary" : "bg-foreground/70") : "bg-transparent")} />
-                  );
-                })}
-              </div>
-              {/* The pendulum swings to the other side on every scheduled beat, so it cannot drift from the click; reduced motion hides it and the beat marks carry the pulse. */}
-              <div className="relative h-16 overflow-hidden motion-reduce:invisible" aria-hidden="true">
-                <div data-pendulum className="metronome-pendulum absolute bottom-1 left-1/2 h-12 w-1 rounded-full bg-primary"
-                  style={{ transform: `translateX(-50%) rotate(${meterOn && pulse ? (pulse % 2 ? 28 : -28) : 0}deg)`, transition: `transform ${60000 / bpm}ms ease-in-out` }}>
-                  <span className={cn("absolute -left-2 -top-1 h-5 w-5 rounded-full border-2 border-primary", isAccent ? "bg-primary" : "bg-background")} />
-                </div>
-              </div>
+              <BeatDots on={meterOn} pulse={pulse} beatsPerBar={beatsPerBar} />
+              <Pendulum on={meterOn} pulse={pulse} bpm={bpm} beatsPerBar={beatsPerBar} />
               <p className="flex flex-col items-end self-center font-numeric text-xs tabular-nums text-muted-foreground">
                 {!!mark.targetBpm && <span>{t("diary.targetBpm", { note: targetGlyph, bpm: mark.targetBpm })}</span>}
                 {last?.bpm !== undefined && <span>{t("practice.lastBpm", { note: NOTE_GLYPH[last.noteVal ?? "quarter"], bpm: last.bpm })}</span>}

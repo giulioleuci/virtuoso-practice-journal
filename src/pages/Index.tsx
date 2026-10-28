@@ -50,6 +50,7 @@ const SessionLogPage = lazy(() => import("./SessionLogPage"));
 const SessionPage = lazy(() => import("./SessionPage"));
 const ReadinessPage = lazy(() => import("./ReadinessPage"));
 const LessonLive = lazy(() => import("./LessonLive"));
+const Metronome = lazy(() => import("./Metronome"));
 
 /** Old public address of the item analysis; now a tab of the item page. */
 const LegacyItemAnalysis = () => <Navigate to={`/library/item/${useParams().id}?tab=analysis`} replace />;
@@ -95,9 +96,10 @@ const Index = () => {
           <Route path="library/events/:id/item/:itemId" element={<Suspense fallback={<Fallback />}><ReadinessPage /></Suspense>} />
           <Route path="library/repertoire" element={<Suspense fallback={<Fallback />}><Repertoire /></Suspense>} />
 
-          <Route path="lessons" element={<Suspense fallback={<Fallback />}><Lessons /></Suspense>} />
+          <Route path="lessons/*" element={<Suspense fallback={<Fallback />}><Lessons /></Suspense>} />
           <Route path="lessons/live" element={<Suspense fallback={<Fallback />}><LessonLive /></Suspense>} />
           <Route path="lessons/assignments" element={<Suspense fallback={<Fallback />}><Assignments /></Suspense>} />
+          <Route path="metronome" element={<Suspense fallback={<Fallback />}><Metronome /></Suspense>} />
           <Route path="history" element={<Suspense fallback={<Fallback />}><History /></Suspense>} />
           <Route path="analytics" element={<Suspense fallback={<Fallback />}><Analytics /></Suspense>} />
 

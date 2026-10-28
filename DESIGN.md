@@ -83,6 +83,16 @@ typography:
     fontSize: "3.25rem"
     fontWeight: 600
     lineHeight: 1
+  practice-readout-page:
+    fontFamily: "Manrope, Inter, system-ui, sans-serif"
+    fontSize: "8rem"
+    fontWeight: 600
+    lineHeight: 1
+  practice-readout-page-phone:
+    fontFamily: "Manrope, Inter, system-ui, sans-serif"
+    fontSize: "6rem"
+    fontWeight: 600
+    lineHeight: 1
   calendar-caption:
     fontFamily: "Inter, system-ui, sans-serif"
     fontSize: "0.6875rem"
@@ -206,6 +216,7 @@ Warm, low-chroma paper neutrals with one earthy action color and muted state hue
 - **Label** (600, 0.75rem, uppercase, wider tracking): small group labels.
 - **Numeric** (Manrope 600, tabular): BPM, counts, durations, badges.
 - **Practice readout** (Manrope 600, 4.5rem, 3.25rem on phone, line height 1): the metronome tempo, flanked by the ±1/±5 steps so practice mode fits one phone screen.
+- **Free-practice readout** (Manrope 600, 8rem, 6rem on phone): the standalone metronome page, where the tempo is the whole screen.
 - **Calendar caption** (0.6875rem): desktop calendar previews; full task text remains in the selected day list.
 - **Status badge** (0.625rem): the secondary filter-count badge; the control’s accessible name includes its count.
 

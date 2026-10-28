@@ -16,7 +16,7 @@ import { computeStreakFromSessions } from "@/lib/domain/streak";
 import { sortDiaryTasks, type DiaryTaskOrder } from "@/lib/domain/taskOrder";
 import { planTempoLabel, sessionLabel } from "@/lib/format";
 import { subjectColorCss } from "@/lib/subjectColors";
-import { CompleteIcon, PlayIcon, CarryOverIcon, CloseIcon, ResetIcon, HideIcon, LessonIcon, ArrowRightIcon, SessionIcon } from "@/lib/icons";
+import { CompleteIcon, PlayIcon, CarryOverIcon, CloseIcon, ResetIcon, HideIcon, LessonIcon, ArrowRightIcon, SessionIcon, MetronomeIcon } from "@/lib/icons";
 import { Link, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -226,7 +226,10 @@ export default function Diary() {
 
       <PageHeader
         title={isToday ? t("diary.hello", { name: profile?.name ?? "Musician" }) : t("diary.dayTasks")}
-        actions={<SessionFAB short />}
+        actions={<>
+          <Link to="/metronome" aria-label={t("practice.metronome")} title={t("practice.metronome")} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-input bg-card text-muted-foreground hover:bg-secondary/40 hover:text-foreground"><MetronomeIcon className="h-5 w-5" aria-hidden /></Link>
+          <SessionFAB short />
+        </>}
       />
       {todayLessons.length > 0 && (
         <div className="mb-6 space-y-4">
