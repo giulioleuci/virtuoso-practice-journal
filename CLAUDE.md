@@ -40,7 +40,7 @@ You have access to the `codebase-memory-mcp` tool, which maintains a compiled Kn
 
 ### Data Layer (`src/infrastructure/dexie/db.ts`)
 
-All tables are defined in `src/infrastructure/dexie/db.ts`; v13 reshaped tasks/sessions/assignments and clears pre-release data. v14 back-fills session subject/content references and wipes nothing. Key tables:
+All tables are defined in `src/infrastructure/dexie/db.ts`; v13 reshaped tasks/sessions/assignments and clears pre-release data. v14 back-fills session subject/content references and wipes nothing. v19 prunes untouched future routine/recurrence tasks beyond the 14-day window (also on every backup import). Key tables:
 
 | Table | Purpose |
 |---|---|

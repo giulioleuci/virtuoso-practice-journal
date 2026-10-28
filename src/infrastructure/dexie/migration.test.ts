@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import Dexie from "dexie";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
+import { PROTECTED_IDS, WINDOW_END, scheduleFixture } from "@/test/scheduleFixture";
 
 // Cumulative v13 schema, copied from db.ts, so the upgrade runs against a real older database.
 const V13 = {
@@ -58,4 +59,28 @@ it("upgrades v17 additively without initializing rules or rewriting historical m
   expect((await db.sessions.get(1))?.marks).toEqual(session.marks);
   expect((await db.sessions.get(1))?.tempoProgressionIds).toBeUndefined();
   expect((await db.sessions.get(1))?.tempoSegmentIds).toEqual([7]);
+});
+
+it("v19 prunes untouched future routine and recurrence rows beyond the window", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-28T12:00:00"));
+  try {
+    const { db } = await import("./db");
+    await db.delete();
+    const legacy = new Dexie("virtuoso");
+    legacy.version(18).stores({
+      ...V13, sessions: "++id, taskId, date, subjectId, itemId, *tempoProgressionIds, *tempoSegmentIds",
+      recordings: "++id, &uid, sessionId", tempoProgressions: "++id, [owner.kind+owner.id], &[owner.kind+owner.id+contextKey]",
+    });
+    await legacy.open();
+    const f = scheduleFixture();
+    for (const [name, rows] of Object.entries(f)) await legacy.table(name).bulkAdd(rows);
+    legacy.close();
+    await db.open();
+    expect(await db.tasks.where("date").above(WINDOW_END).primaryKeys()).toEqual(PROTECTED_IDS);
+    expect(await db.tasks.count()).toBe(36);
+    expect((await db.studyRoutines.get(1))?.materializedUntil).toBe(WINDOW_END);
+  } finally {
+    vi.useRealTimers();
+  }
 });

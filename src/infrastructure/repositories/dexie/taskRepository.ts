@@ -37,12 +37,13 @@ async function extendOne(rootId: number, todayKey: string) {
     const owner = tempoOwner({ ...template, recurrenceTaskId: rootId } as Task);
     const data = owner ? await tempoProgressionRepository.read(owner) : undefined;
     const createdAt = now();
-    await db.tasks.bulkAdd(dates.map((date) => {
+    const have = new Set(live.map((t) => t.date)); // a touched row left past the window must not be doubled
+    await db.tasks.bulkAdd(dates.filter((date) => !have.has(date)).map((date) => {
       const task = { ...template, date, done: false, recurrenceTaskId: rootId, createdAt } as Task;
       return data ? inheritTempoProgressions(task, data.states, data.rule, data.segments) : task;
     }));
     await db.tasks.update(rootId, { materializedUntil: dates.at(-1) });
-    return dates.length;
+    return dates.filter((date) => !have.has(date)).length;
   });
 }
 

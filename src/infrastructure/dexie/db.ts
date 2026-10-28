@@ -5,6 +5,8 @@ import type { Profile } from "@/domain/entities/profile";
 import type { Subject, Technique } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
+import { today } from "@/lib/date";
+import { pruneSchedule } from "./schedulePrune";
 import { withSessionContext } from "@/domain/logic/sessionContext";
 import type { Recording, Session } from "@/domain/entities/session";
 import type { Lesson, LessonFrequency, LessonRecurrence } from "@/domain/entities/lesson";
@@ -81,6 +83,8 @@ export class VirtuosoDB extends Dexie {
         s.tempoSegmentIds = [...new Set(s.marks.flatMap(m => m.segmentId === undefined ? [] : [m.segmentId]))].sort((a,b) => a-b);
       });
     });
+    // v19: the schedule is written only a rolling window ahead; pre-window future rows are dropped unless touched.
+    this.version(19).stores({}).upgrade(tx => pruneSchedule({ tasks: tx.table("tasks"), sessions: tx.table("sessions"), assignments: tx.table("assignments"), studyRoutines: tx.table("studyRoutines") }, today()));
   }
 }
 

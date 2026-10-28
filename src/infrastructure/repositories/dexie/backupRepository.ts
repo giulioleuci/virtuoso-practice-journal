@@ -1,4 +1,6 @@
 import { db } from "@/infrastructure/dexie/db";
+import { pruneSchedule } from "@/infrastructure/dexie/schedulePrune";
+import { today } from "@/lib/date";
 import type { BackupData, BackupPort } from "@/domain/ports/backup";
 
 export const backupRepository = {
@@ -14,6 +16,7 @@ export const backupRepository = {
         const rows = data[table.name];
         if (rows?.length) await table.bulkAdd(rows);
       }
+      await pruneSchedule(db, today());
     });
   },
   async wipeAll() {
