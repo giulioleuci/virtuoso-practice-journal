@@ -12,7 +12,7 @@ import type {
   StudyRoutinePort,
 } from "@/domain/ports/studyRoutine";
 import { dayKey, getDefaultWeekStartsOn, now, parseDayKey, startOfWeek, endOfWeek, today } from "@/lib/date";
-import { latestMarks, planFromHistory, planSegmentIds, syncPlan } from "@/domain/logic/plan";
+import { planSegmentIds, syncPlan } from "@/domain/logic/plan";
 import { meanConfidence } from "@/domain/logic/sessionMetrics";
 import {
   decayedAverage,
@@ -152,8 +152,7 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
   // Any task the routine still has from fromDate on (done today, customized, or left by an earlier run) blocks the same draw.
   const existing = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => !task.deletedAt && task.date >= fromDate).toArray();
   const taken = new Set([...kept, ...existing].map(slotKey));
-  const history = latestMarks(await db.sessions.toArray());
-  const fresh = tasks.filter((task) => !taken.has(slotKey(task))).map((task) => ({ ...task, plan: planFromHistory(task.plan, history) }));
+  const fresh = tasks.filter((task) => !taken.has(slotKey(task)));
   if (fresh.length) await db.tasks.bulkAdd(fresh);
   });
 }
@@ -195,8 +194,7 @@ export const studyRoutineRepository = {
   weekStartsOn: profileWeekStartsOn,
   async persistTasks(tasks: Omit<import("@/domain/entities/task").Task, "id">[]) {
     if (!tasks.length) return;
-    const history = latestMarks(await db.sessions.toArray());
-    await db.tasks.bulkAdd(tasks.map((task) => ({ ...task, plan: planFromHistory(task.plan, history) })));
+    await db.tasks.bulkAdd(tasks);
   },
   async create(input: StudyRoutineInput) {
     const id = await db.studyRoutines.add({ ...input, tempoRuleRevision: input.tempoRule ? 1 : undefined, createdAt: now() }) as number;

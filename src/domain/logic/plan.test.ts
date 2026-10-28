@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SegmentMark } from "../entities/common";
-import { carryMarksToPlan, followUpTasks, latestMarks, marksFromPlan, planFromHistory, restartFrom, sharesSection, syncPlan, tempoProposal } from "./plan";
+import { carryMarksToPlan, followUpTasks, latestMarks, marksFromHistory, marksFromPlan, planFromHistory, restartFrom, sharesSection, syncPlan, tempoProposal } from "./plan";
 
 const e = (segmentId: number | undefined, bpm: number) => ({ segmentId, bpm, layers: [], techniques: [] });
 
@@ -90,5 +90,13 @@ describe("planFromHistory", () => {
   it("leaves sections under a tempo progression alone", () => {
     const owned = { ...e(1, 100), progression: { id: 1, cycle: 1, minConfidence: 5 } };
     expect(planFromHistory([owned], latest)).toEqual([owned]);
+  });
+});
+
+describe("marksFromHistory", () => {
+  it("starts from the last tempo but keeps the plan's tempo as target", () => {
+    const plan = [{ segmentId: 1, bpm: 100, noteVal: "quarter" as const, layers: [], techniques: [] }];
+    const latest = new Map([[1, { segmentId: 1, bpm: 72, noteVal: "eighth" as const, layers: [], techniques: [] }]]);
+    expect(marksFromHistory(plan, latest)[0]).toMatchObject({ bpm: 72, noteVal: "eighth", targetBpm: 100, targetNoteVal: "quarter" });
   });
 });

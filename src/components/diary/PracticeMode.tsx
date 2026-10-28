@@ -53,7 +53,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
 
   // One mark per section: the metronome shows and edits the tempo of the current one.
-  const { draft, update, storageFailed, restored } = useSessionDraft(taskDraftScope(task), { marks: marksFromPlan(task.plan), notes: "", clips: [], needHelp: false, helpText: "" });
+  const { draft, update, storageFailed, restored } = useSessionDraft(taskDraftScope(task), { marks: marksFromPlan(task.plan).map((m) => ({ ...m, bpm: undefined, noteVal: undefined })), notes: "", clips: [], needHelp: false, helpText: "" });
   const marks = draft.marks.length ? draft.marks : marksFromPlan(task.plan);
   const { clips } = draft;
   const setMarks = (value: SegmentMark[]) => update({ marks: value });
@@ -82,9 +82,9 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     update({ marks: marks.map((m) => {
       if (restored && m.bpm !== undefined) return m;
       const prev = entryFor(lastMarks, m.segmentId);
-      if (prev?.bpm !== undefined) return { ...m, bpm: prev.bpm, noteVal: prev.noteVal ?? m.noteVal };
-      if (m.targetBpm) return { ...m, bpm: Math.max(30, Math.round(m.targetBpm / 2)), noteVal: m.noteVal ?? "quarter" };
-      return { ...m, bpm: m.bpm ?? DEFAULT_BPM, noteVal: m.noteVal ?? "quarter" };
+      if (prev?.bpm !== undefined) return { ...m, bpm: prev.bpm, noteVal: prev.noteVal ?? m.targetNoteVal ?? "quarter" };
+      if (m.targetBpm) return { ...m, bpm: Math.max(30, Math.round(m.targetBpm / 2)), noteVal: m.targetNoteVal ?? "quarter" };
+      return { ...m, bpm: DEFAULT_BPM, noteVal: m.targetNoteVal ?? "quarter" };
     }) });
   }, [lastMarks, marks, restored, update]);
 

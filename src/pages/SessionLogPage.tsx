@@ -8,7 +8,7 @@ import { getSubjectLayers, getSubjectLayerLabel } from "@/lib/domain/subjectLaye
 import type { SegmentMark, Subject } from "@/domain/entities/common";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
-import { syncPlan, emptyEntry, marksFromPlan, planFromHistory, planSegmentIds, restartFrom } from "@/domain/logic/plan";
+import { syncPlan, emptyEntry, marksFromHistory, marksFromPlan, planSegmentIds, restartFrom } from "@/domain/logic/plan";
 import { missingRatings } from "@/domain/logic/sessionMetrics";
 import type { AudioDraft } from "@/domain/ports/audio";
 import type { SessionLogInput, SessionTarget } from "@/domain/ports/session";
@@ -190,7 +190,7 @@ function TaskSessionForm({ task, prefill }: { task: Task; prefill?: Prefill }) {
   // Every planned section keeps a row even if the library segment was deleted; newly ticked rows start from the plan.
   const rows = planSegmentIds(task.plan).map((id) => ({ id, label: sections?.find((s) => s.id === id)?.label ?? "—" }));
   const history = usePresentationRead<SegmentMark[]>("sessions.lastMarks", [task.id, task.itemId, planSegmentIds(task.plan), task.date]);
-  const seed = (id: number) => marksFromPlan(planFromHistory(task.plan, new Map(history?.map((m) => [m.segmentId, m])))).find((m) => m.segmentId === id) ?? emptyEntry(id);
+  const seed = (id: number) => marksFromHistory(task.plan, new Map(history?.map((m) => [m.segmentId, m]))).find((m) => m.segmentId === id) ?? emptyEntry(id);
   const submission = useSessionSubmission(async ({ input }: { input: SessionLogInput }) => { savedId.current = await applicationCommands.sessions.log.execute(task, input); });
 
   const errors = useMemo(() => {
@@ -292,7 +292,7 @@ function FreeSessionForm() {
     update({ marks: itemSegments?.length ? [] : marksFromPlan(syncPlan([], [], item)) });
   }, [itemId, item, itemSegments, update]);
   const history = usePresentationRead<SegmentMark[]>("sessions.lastMarks", [undefined, itemId, itemSegments?.map((s) => s.id), todayKey]);
-  const withHistory = (plan: ReturnType<typeof syncPlan>) => planFromHistory(plan, new Map(history?.map((m) => [m.segmentId, m])));
+  const withHistory = (plan: ReturnType<typeof syncPlan>) => marksFromHistory(plan, new Map(history?.map((m) => [m.segmentId, m])));
   const { isTheory, layerOptions, techniqueOptions } = useSubjectOptions(subject);
   const minDate = useMemo(() => { const d = new Date(todayKey); d.setDate(d.getDate() - (profile?.lateRecoveryDays ?? 3)); return d.toISOString().slice(0, 10); }, [todayKey, profile?.lateRecoveryDays]);
 
@@ -358,7 +358,7 @@ function FreeSessionForm() {
           </div>
 
           <div className={section}>
-            <MarksEditor marks={marks} onChange={(marks) => update({ marks })} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label }))} seed={(id) => marksFromPlan(withHistory(syncPlan([], itemSegments?.filter(s => s.id === id) ?? [], item)))[0]} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} showErrors={attempted} />
+            <MarksEditor marks={marks} onChange={(marks) => update({ marks })} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label }))} seed={(id) => withHistory(syncPlan([], itemSegments?.filter(s => s.id === id) ?? [], item))[0]} layerOptions={layerOptions} techniqueOptions={techniqueOptions} isTheory={isTheory} showTempo={item ? item.kind !== "theory" : !isTheory} showErrors={attempted} />
           </div>
 
           <div className={section}><ClipDrafts clips={clips} onChange={(clips) => update({ clips })} sections={itemSegments?.map((s) => ({ id: s.id, label: s.label })) ?? []} onRecordingChange={setRecording} /></div>

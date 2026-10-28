@@ -96,6 +96,12 @@ export const planFromHistory = (plan: SegmentEntry[], latest: Map<number | undef
     return m ? { ...e, bpm: m.bpm, noteVal: m.noteVal ?? e.noteVal } : e;
   });
 
+/** Marks from `plan` whose starting tempo follows `planFromHistory` while the target stays the plan's. */
+export const marksFromHistory = (plan: SegmentEntry[], latest: Map<number | undefined, SegmentMark>): SegmentMark[] => {
+  const start = planFromHistory(plan, latest);
+  return marksFromPlan(plan).map((m, i) => (start[i] ? { ...m, bpm: start[i].bpm, noteVal: start[i].noteVal } : m));
+};
+
 /** Planned sections that none of `sessions` has a result for. */
 export const remainingSegmentIds = (plan: SegmentEntry[], sessions: Pick<Session, "marks">[]): number[] => {
   const studied = new Set(sessions.flatMap((s) => s.marks.map((m) => m.segmentId)));

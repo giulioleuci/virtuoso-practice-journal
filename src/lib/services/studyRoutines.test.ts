@@ -658,7 +658,7 @@ describe("studyRoutinesService — edge cases", () => {
     expect(tasks).toHaveLength(1);
   });
 
-  it("plans a section from its last reached tempo, not the library default", async () => {
+  it("keeps the library target in the plan; the last reached tempo only seeds practice", async () => {
     const subjectId = await seedSubject();
     const itemId = await seedItem(subjectId);
     await db.library.update(itemId, { targetBpm: 100, noteVal: "quarter" });
@@ -667,6 +667,6 @@ describe("studyRoutinesService — edge cases", () => {
     const routineId = await studyRoutinesService.create(makeConfig(subjectId, [{ type: "segment", id: segmentId }]));
     const tasks = await db.tasks.where("studyRoutineId").equals(routineId).toArray();
     expect(tasks.length).toBeGreaterThan(0);
-    for (const task of tasks) expect(task.plan[0]).toMatchObject({ segmentId, bpm: 72, noteVal: "eighth" });
+    for (const task of tasks) expect(task.plan[0]).toMatchObject({ segmentId, bpm: 100, noteVal: "quarter" });
   });
 });
