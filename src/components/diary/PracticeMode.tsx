@@ -7,7 +7,6 @@ import { BPM_MIN, BPM_MAX, COMPOUND_NOTES, SIMPLE_NOTES } from "@/domain/constan
 import type { SegmentMark, Tempo } from "@/domain/entities/common";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
-import type { Session } from "@/domain/entities/session";
 import type { Task } from "@/domain/entities/task";
 import type { AudioDraft } from "@/domain/ports/audio";
 import { resolveTempoContext, tempoOwner } from "@/domain/logic/tempoProgression";
@@ -47,7 +46,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   const segments = usePresentationRead<Segment[]>("segments.ids", [planSegmentIds(task.plan)]);
   const collection = usePresentationRead<Collection | undefined>("collections.one", [task.collectionId]);
   const techniques = useTechniques();
-  const lastSession = usePresentationRead<Session | null>("sessions.lastForTask", [task.id, task.itemId, today()]);
+  const lastMarks = usePresentationRead<SegmentMark[]>("sessions.lastMarks", [task.id, task.itemId, planSegmentIds(task.plan), today()]);
 
   // Screen wake lock so the device doesn't sleep mid-practice
   useWakeLock(true);
@@ -74,20 +73,20 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   const segmentOf = (id: number | undefined) => { const sg = segments?.find((x) => x.id === id); return sg && segmentTitle(sg); };
   const focusTechniques = mark.techniques.map((id) => techniques?.find((x) => x.id === id)?.name).filter(Boolean) as string[];
 
-  // Seed the starting tempo once the last session loads: its reached tempo and note
+  // Seed the starting tempo once the history loads: each section's last reached tempo and note
   // value win; otherwise half the target in the target's note value; otherwise 60 ♩.
   const seededRef = useRef(false);
   useEffect(() => {
-    if (seededRef.current || lastSession === undefined) return;
+    if (seededRef.current || lastMarks === undefined) return;
     seededRef.current = true;
     update({ marks: marks.map((m) => {
       if (restored && m.bpm !== undefined) return m;
-      const prev = lastSession ? entryFor(lastSession.marks, m.segmentId) : undefined;
+      const prev = entryFor(lastMarks, m.segmentId);
       if (prev?.bpm !== undefined) return { ...m, bpm: prev.bpm, noteVal: prev.noteVal ?? m.noteVal };
       if (m.targetBpm) return { ...m, bpm: Math.max(30, Math.round(m.targetBpm / 2)), noteVal: m.noteVal ?? "quarter" };
       return { ...m, bpm: m.bpm ?? DEFAULT_BPM, noteVal: m.noteVal ?? "quarter" };
     }) });
-  }, [lastSession, marks, restored, update]);
+  }, [lastMarks, marks, restored, update]);
 
   // Metronome
   const [meterOn, setMeterOn] = useState(false);
@@ -171,7 +170,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
 
   const isAccent = pulse > 0 && (pulse - 1) % beatsPerBar === 0;
-  const last = lastSession ? entryFor(lastSession.marks, mark.segmentId) : undefined;
+  const last = lastMarks && entryFor(lastMarks, mark.segmentId);
   const targetGlyph = NOTE_GLYPH[mark.targetNoteVal ?? "quarter"];
 
   return (

@@ -657,4 +657,16 @@ describe("studyRoutinesService — edge cases", () => {
     // After dedup, only 1 unique item → 1 task on Monday
     expect(tasks).toHaveLength(1);
   });
+
+  it("plans a section from its last reached tempo, not the library default", async () => {
+    const subjectId = await seedSubject();
+    const itemId = await seedItem(subjectId);
+    await db.library.update(itemId, { targetBpm: 100, noteVal: "quarter" });
+    const segmentId = await seedSegment(itemId);
+    await db.sessions.add({ subjectId, itemId, date: "2026-05-10", marks: [{ segmentId, bpm: 72, noteVal: "eighth", layers: [], techniques: [], confidence: 3 }], createdAt: 1 });
+    const routineId = await studyRoutinesService.create(makeConfig(subjectId, [{ type: "segment", id: segmentId }]));
+    const tasks = await db.tasks.where("studyRoutineId").equals(routineId).toArray();
+    expect(tasks.length).toBeGreaterThan(0);
+    for (const task of tasks) expect(task.plan[0]).toMatchObject({ segmentId, bpm: 72, noteVal: "eighth" });
+  });
 });

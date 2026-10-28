@@ -81,6 +81,21 @@ export function followUpTasks<T extends Pick<Task, "id" | "date" | "subjectId" |
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/** Newest mark with a tempo per section (`undefined` key: whole-task marks) over `sessions`; later sessions win. */
+export const latestMarks = (sessions: Pick<Session, "date" | "createdAt" | "marks">[]): Map<number | undefined, SegmentMark> => {
+  const latest = new Map<number | undefined, SegmentMark>();
+  [...sessions].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt)
+    .forEach((s) => s.marks.forEach((m) => { if (m.bpm !== undefined) latest.set(m.segmentId, m); }));
+  return latest;
+};
+
+/** Plan sections restarted from their last reached tempo; sections under a tempo progression keep the engine's tempo. */
+export const planFromHistory = (plan: SegmentEntry[], latest: Map<number | undefined, SegmentMark>): SegmentEntry[] =>
+  plan.map((e) => {
+    const m = e.progression || e.segmentId === undefined ? undefined : latest.get(e.segmentId);
+    return m ? { ...e, bpm: m.bpm, noteVal: m.noteVal ?? e.noteVal } : e;
+  });
+
 /** Planned sections that none of `sessions` has a result for. */
 export const remainingSegmentIds = (plan: SegmentEntry[], sessions: Pick<Session, "marks">[]): number[] => {
   const studied = new Set(sessions.flatMap((s) => s.marks.map((m) => m.segmentId)));

@@ -77,12 +77,21 @@ describe("practice mode data recall", () => {
     expect(tempo()).toMatch(/70$/);
   });
 
-  it("a section absent from the last session falls back to half its target", async () => {
+  it("a section never practiced falls back to half its target", async () => {
     await db.sessions.add({ taskId: 1, date: "2026-10-17", marks: [{ ...entry, segmentId: 1, bpm: 70, confidence: 4 }], createdAt: 1 });
     await db.segments.bulkAdd([{ id: 1, itemId: 1, label: "Intro", order: 0, createdAt: 1 }, { id: 2, itemId: 1, label: "Coda", order: 1, createdAt: 1 }] as never);
     open({ ...baseTask, plan: [{ ...entry, segmentId: 1 }, { ...entry, segmentId: 2, bpm: 120, noteVal: "quarter" }] });
     fireEvent.click(await screen.findByRole("button", { name: "Coda" }));
     await waitFor(() => expect(tempo()).toMatch(/60$/));
+  });
+
+  it("recalls a section from an older session when a newer one of the same item covered other sections", async () => {
+    await db.sessions.bulkAdd([
+      { taskId: 50, itemId: 7, date: "2026-10-10", marks: [{ ...entry, segmentId: 2, bpm: 90, confidence: 4 }], tempoSegmentIds: [2], createdAt: 1 },
+      { taskId: 51, itemId: 7, date: "2026-10-12", marks: [{ ...entry, segmentId: 1, bpm: 70, confidence: 4 }], tempoSegmentIds: [1], createdAt: 2 },
+    ]);
+    open({ ...baseTask, itemId: 7, plan: [{ ...entry, segmentId: 2, bpm: 120, noteVal: "quarter" }] });
+    await waitFor(() => expect(tempo()).toMatch(/90$/));
   });
 
   it("keeps an edited tempo across closing and reopening, and the last session never overwrites it", async () => {

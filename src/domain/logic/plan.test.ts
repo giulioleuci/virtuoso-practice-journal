@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { carryMarksToPlan, followUpTasks, marksFromPlan, restartFrom, sharesSection, syncPlan, tempoProposal } from "./plan";
+import type { SegmentMark } from "../entities/common";
+import { carryMarksToPlan, followUpTasks, latestMarks, marksFromPlan, planFromHistory, restartFrom, sharesSection, syncPlan, tempoProposal } from "./plan";
 
 const e = (segmentId: number | undefined, bpm: number) => ({ segmentId, bpm, layers: [], techniques: [] });
 
@@ -75,5 +76,19 @@ describe("followUpTasks", () => {
     const done = { ...base, id: 6, date: "2026-10-16", done: true, plan: [e(7, 60)] };
     const sooner = { ...base, id: 7, date: "2026-10-14", plan: [e(7, 60)] };
     expect(followUpTasks(task, marks, [later, otherSection, otherItem, past, done, sooner]).map((t) => t.id)).toEqual([7, 2]);
+  });
+});
+
+describe("planFromHistory", () => {
+  const session = (date: string, ...marks: SegmentMark[]) => ({ date, createdAt: 1, marks });
+  const latest = latestMarks([session("2026-10-02", e(1, 90)), session("2026-10-01", e(1, 50), e(2, 70)), session("2026-10-03", { segmentId: 3, layers: [], techniques: [] })]);
+
+  it("takes each section's newest reached tempo, whichever session holds it", () => {
+    expect(planFromHistory([e(1, 100), e(2, 100), e(3, 100), e(4, 100)], latest).map((x) => x.bpm)).toEqual([90, 70, 100, 100]);
+  });
+
+  it("leaves sections under a tempo progression alone", () => {
+    const owned = { ...e(1, 100), progression: { id: 1, cycle: 1, minConfidence: 5 } };
+    expect(planFromHistory([owned], latest)).toEqual([owned]);
   });
 });

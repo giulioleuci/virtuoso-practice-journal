@@ -1,3 +1,4 @@
+import { latestMarks } from "@/domain/logic/plan";
 import { convertTempo } from "@/domain/logic/tempo";
 import { TempoProgressionUseCase } from "@/application/useCases/tempoProgression";
 import { tempoProgressionRepository } from "@/infrastructure/repositories/dexie/tempoProgressionRepository";
@@ -77,6 +78,18 @@ export const dexiePresentationReads: PresentationReadPort = {
         const rows = typeof itemId === "number" ? db.sessions.where("itemId").equals(itemId) : typeof taskId === "number" ? db.sessions.where("taskId").equals(taskId) : null;
         const sessions = rows ? await rows.and((session) => session.date < before).sortBy("date") : [];
         return sessions.at(-1) ?? null;
+      })() as unknown as Promise<T>;
+      // Newest earlier mark per section across every session that touched it: routines draw different sections each day, so the last session of an item rarely holds them all.
+      case "sessions.lastMarks": return (async () => {
+        const [taskId, itemId, segmentIds, before] = parameters;
+        if (typeof before !== "string") return [];
+        const ids = Array.isArray(segmentIds) ? segmentIds as number[] : [];
+        const found = await Promise.all([
+          typeof taskId === "number" ? db.sessions.where("taskId").equals(taskId).toArray() : [],
+          typeof itemId === "number" ? db.sessions.where("itemId").equals(itemId).toArray() : [],
+          ids.length ? db.sessions.where("tempoSegmentIds").anyOf(ids).toArray() : [],
+        ]);
+        return [...latestMarks([...new Map(found.flat().map((s) => [s.id, s])).values()].filter((s) => s.date < before)).values()];
       })() as unknown as Promise<T>;
       case "sessions.recentBpms": return (async () => {
         const [itemId, before] = parameters;
