@@ -1,5 +1,11 @@
 /* Fonts are served locally (offline-first); licenses in public/fonts. */
 @font-face {
+  font-family: "Note";
+  src: url("/fonts/NotoMusic-Subset.woff2") format("woff2");
+  unicode-range: U+2669-266F, U+1D15D-1D164;
+  font-display: block;
+}
+@font-face {
   font-family: "Inter";
   src: url("/fonts/Inter-Regular.woff2") format("woff2");
   font-weight: 400;
@@ -173,13 +179,13 @@
   }
 
   h1, h2, h3, .font-serif {
-    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-family: 'Note', 'Cormorant Garamond', Georgia, serif;
     letter-spacing: -0.01em;
   }
 
   /* Manrope tabular numerals for BPMs / counts */
   .tabular-nums, .font-numeric {
-    font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+    font-family: 'Note', 'Manrope', 'Inter', system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1, "ss01" 1;
     letter-spacing: -0.01em;

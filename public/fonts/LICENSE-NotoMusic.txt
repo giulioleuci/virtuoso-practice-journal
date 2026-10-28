@@ -1,0 +1,1 @@
+NotoMusic-Subset.woff2: subset of Noto Music (Google), SIL Open Font License 1.1, https://openfontlicense.org
