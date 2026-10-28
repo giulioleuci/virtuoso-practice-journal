@@ -11,7 +11,7 @@ import type {
   StudyRoutineInput,
   StudyRoutinePort,
 } from "@/domain/ports/studyRoutine";
-import { dayKey, getDefaultWeekStartsOn, now, parseDayKey, startOfWeek, endOfWeek, today } from "@/lib/date";
+import { addDays, dayKey, getDefaultWeekStartsOn, now, parseDayKey, startOfWeek, endOfWeek, today } from "@/lib/date";
 import { syncPlan } from "@/domain/logic/plan";
 import { meanConfidence } from "@/domain/logic/sessionMetrics";
 import {
@@ -19,6 +19,7 @@ import {
   generateRoutineTasks,
   poolEntryKey,
   routineAdaptivity,
+  routineWindowEnd,
   taskPoolKeys,
   type ResolvedPoolItem,
 } from "@/lib/domain/studyRoutineGenerator";
@@ -127,7 +128,22 @@ async function profileWeekStartsOn() {
 
 const slotKey = (task: Pick<Task, "date" | "itemId" | "collectionId" | "title">) => `${task.date}|${task.itemId ?? ""}|${task.collectionId ?? ""}|${task.itemId ?? task.collectionId ? "" : task.title}`;
 
-async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: Map<string, number>, kept: Pick<Task, "date" | "itemId" | "collectionId" | "title">[] = []) {
+/** Per-week draw counters and the previous day's draws, so a run continues the one before it. */
+async function weekContext(routineId: number, fromDate: string, weekStartsOn: number) {
+  const from = parseDayKey(fromDate);
+  const first = dayKey(startOfWeek(from, weekStartsOn));
+  const last = dayKey(endOfWeek(from, weekStartsOn));
+  const prev = dayKey(addDays(from, -1));
+  const rows = await db.tasks.where("studyRoutineId").equals(routineId).filter((t) => !t.deletedAt && t.date >= (prev < first ? prev : first) && t.date <= last).toArray();
+  const counters = new Map<string, number>(), lastUsed = new Map<string, string>();
+  for (const task of rows) {
+    if (task.date === prev) for (const key of taskPoolKeys(task)) lastUsed.set(key, prev);
+    if (task.date >= first && (task.date < fromDate || task.done)) for (const key of taskPoolKeys(task)) counters.set(key, (counters.get(key) ?? 0) + 1);
+  }
+  return { counters, lastUsed };
+}
+
+async function generate(routine: StudyRoutine, fromDate: string, toDate: string, seedCounters?: Map<string, number>, kept: Pick<Task, "date" | "itemId" | "collectionId" | "title">[] = [], lastUsed?: Map<string, string>) {
   return db.transaction("rw", db.tables, async () => {
   routine = await db.studyRoutines.get(routine.id);
   if (!routine || routine.deletedAt) return;
@@ -144,6 +160,8 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
     groupItems,
     stats: routineAdaptivity(routine) === "uniform" ? null : await computeStats(entries),
     fromDate,
+    toDate,
+    lastUsed,
     createdAt: now(),
     seedCounters,
     weekStartsOn: await profileWeekStartsOn(),
@@ -155,6 +173,7 @@ async function generate(routine: StudyRoutine, fromDate: string, seedCounters?: 
   const taken = new Set([...kept, ...existing].map(slotKey));
   const fresh = tasks.filter((task) => !taken.has(slotKey(task)));
   if (fresh.length) await db.tasks.bulkAdd(fresh);
+  await db.studyRoutines.update(routine.id, { materializedUntil: dayKey(addDays(parseDayKey(toDate), -1)) });
   });
 }
 
@@ -171,15 +190,8 @@ async function regenerate(routine: StudyRoutine, fromDate: string) {
   const seen = new Set<string>();
   for (const task of future.filter((t) => t.customized)) { if (seen.has(slotKey(task))) replaceable.push(task); else seen.add(slotKey(task)); }
   if (replaceable.length) await db.tasks.bulkDelete(replaceable.map((task) => task.id));
-  const weekStartsOn = await profileWeekStartsOn();
-  const first = dayKey(startOfWeek(parseDayKey(fromDate), weekStartsOn));
-  const last = dayKey(endOfWeek(parseDayKey(fromDate), weekStartsOn));
-  const completed = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => task.done && task.date >= first && task.date <= last).toArray();
-  const counters = new Map<string, number>();
-  for (const task of completed) {
-    for (const key of taskPoolKeys(task)) counters.set(key, (counters.get(key) ?? 0) + 1);
-}
-  await generate(routine, fromDate, counters, future.filter((task) => task.customized && !replaceable.includes(task)));
+  const { counters, lastUsed } = await weekContext(routine.id, fromDate, await profileWeekStartsOn());
+  await generate(routine, fromDate, routineWindowEnd(routine, today()), counters, future.filter((task) => task.customized && !replaceable.includes(task)), lastUsed);
   });
 }
 
@@ -199,7 +211,7 @@ export const studyRoutineRepository = {
   async create(input: StudyRoutineInput) {
     const id = await db.studyRoutines.add({ ...input, tempoRuleRevision: input.tempoRule ? 1 : undefined, createdAt: now() }) as number;
     const routine = await db.studyRoutines.get(id);
-    if (routine) await generate(routine, input.startDate);
+    if (routine) await generate(routine, input.startDate, routineWindowEnd(routine, today()));
     return id;
   },
   regenerateFromDate(routine: StudyRoutine, fromDate: string) {

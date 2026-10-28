@@ -44,6 +44,8 @@ export interface StudyRoutine {
   /** Avoid drawing the same entry two days in a row. */
   avoidBackToBack?: boolean;
   startDate: string;
+  /** Last date (inclusive) whose tasks are written to the DB. */
+  materializedUntil?: string;
   createdAt: number;
   deletedAt?: number;
 }

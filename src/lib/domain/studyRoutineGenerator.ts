@@ -10,6 +10,7 @@ import type { Task } from "@/domain/entities/task";
 import type { SegmentEntry } from "@/domain/entities/common";
 import { emptyEntry, planSegmentIds } from "@/domain/logic/plan";
 import { parseDayKey, dayKey, addDays, weekKey } from "@/lib/date";
+import { scheduleWindowEnd } from "@/lib/recurrence";
 import { importanceRank, routineTaskOrder } from "./taskOrder";
 import type { TaskImportance } from "@/domain/entities/task";
 
@@ -197,6 +198,10 @@ export function routineAdaptivity(routine: Pick<StudyRoutine, "adaptivity" | "us
 /** Exclusive last day of a routine. */
 export const routineEnd = (routine: Pick<StudyRoutine, "startDate" | "weeksAhead">): string =>
   dayKey(addDays(parseDayKey(routine.startDate), routine.weeksAhead * 7));
+
+/** Exclusive end of what is written now: the routine end or the rolling window, whichever comes first. */
+export const routineWindowEnd = (routine: Pick<StudyRoutine, "startDate" | "weeksAhead">, today: string): string =>
+  [routineEnd(routine), dayKey(addDays(parseDayKey(scheduleWindowEnd(routine.startDate, today)), 1))].sort()[0];
 
 /** Pool keys a generated task counts against. */
 export function taskPoolKeys(task: Pick<Task, "collectionId" | "itemId" | "plan">): string[] {

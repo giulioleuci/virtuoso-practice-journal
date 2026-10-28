@@ -670,3 +670,39 @@ describe("studyRoutinesService — edge cases", () => {
     for (const task of tasks) expect(task.plan[0]).toMatchObject({ segmentId, bpm: 100, noteVal: "quarter" });
   });
 });
+
+describe("studyRoutinesService — rolling window", () => {
+  const everyDay = Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map((d) => [String(d), { g1: 1 }]));
+  const long = (subjectId: number, itemId: number, over: Partial<StudyRoutineConfig> = {}) =>
+    makeConfig(subjectId, [{ type: "item", id: itemId }], { matrix: everyDay, weeksAhead: 49, repetitionCap: 7, ...over });
+  const dates = async (routineId: number) => (await db.tasks.where("studyRoutineId").equals(routineId).toArray()).map((t) => t.date).sort();
+
+  it("writes only 14 days ahead and stamps the routine", async () => {
+    const subjectId = await seedSubject();
+    const itemId = await seedItem(subjectId);
+    const id = await studyRoutinesService.create(long(subjectId, itemId));
+    expect((await dates(id)).at(-1)).toBe("2026-06-01");
+    expect((await db.studyRoutines.get(id))!.materializedUntil).toBe("2026-06-01");
+  });
+
+  it("regenerating keeps the same window end and leaves done tasks alone", async () => {
+    const subjectId = await seedSubject();
+    const itemId = await seedItem(subjectId);
+    const id = await studyRoutinesService.create(long(subjectId, itemId));
+    const doneId = (await db.tasks.where("studyRoutineId").equals(id).first())!.id!;
+    await db.tasks.update(doneId, { done: true });
+    await studyRoutinesService.regenerateFromDate((await db.studyRoutines.get(id))!, "2026-05-20");
+    const all = await dates(id);
+    expect(all.at(-1)).toBe("2026-06-01");
+    expect((await db.tasks.get(doneId))!.done).toBe(true);
+  });
+
+  it("a routine starting later gets its own window", async () => {
+    const subjectId = await seedSubject();
+    const itemId = await seedItem(subjectId);
+    const id = await studyRoutinesService.create(long(subjectId, itemId, { startDate: "2026-12-01" }));
+    const all = await dates(id);
+    expect(all[0]).toBe("2026-12-01");
+    expect(all.at(-1)).toBe("2026-12-15");
+  });
+});

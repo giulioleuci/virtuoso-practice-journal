@@ -4,7 +4,7 @@ import { dayKey } from "@/lib/date";
 import { windowedRecurrenceDates } from "@/lib/recurrence";
 
 export class CreateTaskUseCase {
-  constructor(private readonly tasks: TaskPort, private readonly clock: () => number = Date.now) {}
+  constructor(private readonly tasks: TaskPort, private readonly clock: () => number = () => Date.now()) {}
   async execute(input: NewTaskInput): Promise<number> {
     const { recurrence, ...rest } = input;
     if (input.tempoRule) {
