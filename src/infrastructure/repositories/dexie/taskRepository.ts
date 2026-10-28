@@ -23,6 +23,29 @@ async function removeMany(ids: number[]) {
   });
   return { soft: softIds.length, hard: hardIds.length };
 }
+/** Writes the next stretch of one recurring series; idempotent per `materializedUntil`. */
+async function extendOne(rootId: number, todayKey: string) {
+  return db.transaction("rw", [db.tasks, db.tempoProgressions, db.studyRoutines, db.sessions, db.segments, db.library], async () => {
+    const root = await db.tasks.get(rootId);
+    if (!root?.recurrence) return 0;
+    const live = (await db.tasks.where("recurrenceTaskId").equals(rootId).filter(active).toArray()).concat(active(root) ? [root] : []).sort((a, b) => a.date.localeCompare(b.date));
+    if (root.deletedAt && !live.some((t) => t.date >= todayKey)) return 0;
+    const dates = windowedRecurrenceDates(root.recurrence, root.materializedUntil ?? live.at(-1)?.date, todayKey);
+    if (!dates.length) return 0;
+    const source = live.filter((t) => !t.customized).at(-1) ?? live.at(-1) ?? root;
+    const { id: _id, date: _date, done: _done, skipped: _skipped, executionNotes: _notes, customized: _customized, recurrence: _rec, tempoRule: _rule, tempoRuleRevision: _revision, materializedUntil: _until, deletedAt: _deleted, ...template } = source;
+    const owner = tempoOwner({ ...template, recurrenceTaskId: rootId } as Task);
+    const data = owner ? await tempoProgressionRepository.read(owner) : undefined;
+    const createdAt = now();
+    await db.tasks.bulkAdd(dates.map((date) => {
+      const task = { ...template, date, done: false, recurrenceTaskId: rootId, createdAt } as Task;
+      return data ? inheritTempoProgressions(task, data.states, data.rule, data.segments) : task;
+    }));
+    await db.tasks.update(rootId, { materializedUntil: dates.at(-1) });
+    return dates.length;
+  });
+}
+
 export const taskRepository = {
   list: () => db.tasks.filter(active).toArray(),
   byDate: (date: string) => db.tasks.where("date").equals(date).filter(active).toArray(),
@@ -50,6 +73,12 @@ export const taskRepository = {
       if (followUps.length) await db.tasks.bulkAdd(followUps.map(({ tempoRule: _rule,tempoRuleRevision: _revision,...task }) => ({ ...task, recurrenceTaskId: id })));
     });
     return id;
+  },
+  /** Tops every live recurring series up to the rolling window; returns rows added. */
+  async extendSeries(todayKey: string) {
+    let added = 0;
+    for (const id of await db.tasks.filter((t) => !!t.recurrence).primaryKeys() as number[]) added += await extendOne(id, todayKey);
+    return added;
   },
   async update(id: number, patch: Partial<Task>) {
     await db.transaction("rw", [db.tasks, db.sessions, db.tempoProgressions, db.studyRoutines, db.segments, db.library], async () => {

@@ -17,6 +17,7 @@ export class FakeTaskRepository implements TaskPort {
     this.created.push(first, ...followUps.map((task) => ({ ...task, recurrenceTaskId: id })));
     return id;
   }
+  async extendSeries() { return 0; }
   async update(id: number, patch: Partial<Task>) { this.updated.set(id, patch); }
   async remove(id: number) { return this.sessionTaskIds.has(id) ? "soft" as const : "hard" as const; }
   async carryOver(task: Task, toDate: string) { const id = await this.create({ ...task, date: toDate }); if (task.id) await this.skip(task.id); return id; }

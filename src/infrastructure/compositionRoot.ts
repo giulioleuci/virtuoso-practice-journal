@@ -10,6 +10,7 @@ import { ExportBackupUseCase } from "@/application/useCases/exportBackup";
 import { ImportBackupUseCase } from "@/application/useCases/importBackup";
 import { CapacitorBackupFileGateway } from "./gateways/CapacitorBackupFileGateway";
 import { browserAudio } from "./audio/browserAudio";
+import { today } from "@/lib/date";
 import { clearSessionDrafts } from "@/lib/sessionDrafts";
 import { clearLiveLesson } from "@/lib/liveLesson";
 import { backupRepository } from "./repositories/dexie/backupRepository";
@@ -30,6 +31,9 @@ export const application = {
     generate: new GenerateStudyRoutineUseCase(studyRoutineRepository),
     update: (...args: Parameters<typeof studyRoutineRepository.update>) => studyRoutineRepository.update(...args),
     regenerate: (...args: Parameters<typeof studyRoutineRepository.regenerateFromDate>) => studyRoutineRepository.regenerateFromDate(...args),
+  },
+  schedule: {
+    extend: async () => { const day = today(); await taskRepository.extendSeries(day); await studyRoutineRepository.extend(day); },
   },
   backups: {
     export: new ExportBackupUseCase(backupRepository, backupFiles),

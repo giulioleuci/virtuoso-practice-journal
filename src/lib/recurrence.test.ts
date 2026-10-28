@@ -271,6 +271,10 @@ describe("rolling schedule window", () => {
     expect(windowedRecurrenceDates(rec, undefined, "2026-10-28")).toEqual(["2026-10-20", "2026-11-19"]);
   });
 
+  it("adds nothing when the window is already written", () => {
+    expect(windowedRecurrenceDates(daily, "2026-11-11", "2026-10-28")).toEqual([]);
+  });
+
   it("continues after a given date", () => {
     const dates = windowedRecurrenceDates(daily, "2026-11-05", "2026-10-28");
     expect(dates[0]).toBe("2026-11-06");

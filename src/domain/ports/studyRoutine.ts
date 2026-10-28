@@ -76,6 +76,7 @@ export interface StudyRoutineGenerationPort {
 export interface StudyRoutinePort {
   create(input: StudyRoutineInput): Promise<number>;
   regenerateFromDate(routine: StudyRoutine, fromDate: string): Promise<void>;
+  extend(today: string): Promise<number>;
   update(id: number, patch: Partial<StudyRoutine>): Promise<void>;
   remove(id: number): Promise<void>;
 }

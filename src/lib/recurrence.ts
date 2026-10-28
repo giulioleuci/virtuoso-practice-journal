@@ -54,7 +54,7 @@ export function windowedRecurrenceDates(rec: TaskRecurrence, after: string | und
   const end = scheduleWindowEnd(rec.startDate, today);
   const rest = expandTaskRecurrence(rec).filter((d) => after === undefined || d > after);
   const kept = rest.filter((d) => d <= end);
-  if (kept.some((d) => d > today)) return kept;
+  if (kept.some((d) => d > today) || (after !== undefined && after > today)) return kept;
   const next = rest.find((d) => d > end);
   return next ? [...kept, next] : kept;
 }

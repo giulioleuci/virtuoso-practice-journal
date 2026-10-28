@@ -146,7 +146,7 @@ async function weekContext(routineId: number, fromDate: string, weekStartsOn: nu
 async function generate(routine: StudyRoutine, fromDate: string, toDate: string, seedCounters?: Map<string, number>, kept: Pick<Task, "date" | "itemId" | "collectionId" | "title">[] = [], lastUsed?: Map<string, string>) {
   return db.transaction("rw", db.tables, async () => {
   routine = await db.studyRoutines.get(routine.id);
-  if (!routine || routine.deletedAt) return;
+  if (!routine || routine.deletedAt) return 0;
   const entries = routine.groups.flatMap((group) => group.pool);
   const pool = await resolvePoolEntries(entries);
   const groupItems = new Map(
@@ -174,10 +174,18 @@ async function generate(routine: StudyRoutine, fromDate: string, toDate: string,
   const fresh = tasks.filter((task) => !taken.has(slotKey(task)));
   if (fresh.length) await db.tasks.bulkAdd(fresh);
   await db.studyRoutines.update(routine.id, { materializedUntil: dayKey(addDays(parseDayKey(toDate), -1)) });
+  return fresh.length;
   });
 }
 
-const locks = new Map<number, Promise<void>>();
+const locks = new Map<number, Promise<unknown>>();
+
+// Serialized per routine: overlapping runs would each delete then each add, duplicating the plan.
+function serialized<T>(id: number, fn: () => Promise<T>): Promise<T> {
+  const run = (locks.get(id) ?? Promise.resolve()).catch(() => undefined).then(fn);
+  locks.set(id, run);
+  return run;
+}
 
 async function regenerate(routine: StudyRoutine, fromDate: string) {
   return db.transaction("rw", db.tables, async () => {
@@ -215,10 +223,24 @@ export const studyRoutineRepository = {
     return id;
   },
   regenerateFromDate(routine: StudyRoutine, fromDate: string) {
-    // Serialized per routine: overlapping runs would each delete then each add, duplicating the plan.
-    const run = (locks.get(routine.id) ?? Promise.resolve()).catch(() => undefined).then(() => regenerate(routine, fromDate));
-    locks.set(routine.id, run);
-    return run;
+    return serialized(routine.id, () => regenerate(routine, fromDate));
+  },
+  /** Tops every live routine up to the rolling window; returns tasks added. */
+  async extend(todayKey: string) {
+    let added = 0;
+    for (const { id } of await db.studyRoutines.filter((r) => !r.deletedAt).toArray()) {
+      added += await serialized(id, async () => {
+        const routine = await db.studyRoutines.get(id);
+        if (!routine || routine.deletedAt) return 0;
+        const toDate = routineWindowEnd(routine, todayKey);
+        const next = routine.materializedUntil ? dayKey(addDays(parseDayKey(routine.materializedUntil), 1)) : routine.startDate;
+        const fromDate = next > todayKey ? next : todayKey;
+        if (fromDate >= toDate) return 0;
+        const { counters, lastUsed } = await weekContext(id, fromDate, await profileWeekStartsOn());
+        return generate(routine, fromDate, toDate, counters, [], lastUsed);
+      });
+    }
+    return added;
   },
   async update(id: number, patch: Partial<StudyRoutine>) {
     await db.transaction("rw", [db.studyRoutines, db.tempoProgressions, db.tasks, db.sessions, db.segments, db.library], async () => {

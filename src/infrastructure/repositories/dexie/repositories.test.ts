@@ -197,3 +197,73 @@ describe("Dexie repositories", () => {
     expect(after[0]).toMatchObject({ id: task.id, customized: true, plan: [{ layers: ["edited"] }] });
   });
 });
+
+describe("taskRepository.extendSeries", () => {
+  const daily = { kind: "interval" as const, everyXDays: 1, startDate: "2026-10-28", endDate: "2027-06-30" };
+  const rows = (root: number) => db.tasks.where("recurrenceTaskId").equals(root).toArray();
+  const dates = async (root: number) => (await rows(root)).map((t) => t.date).sort();
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-28T12:00:00"));
+    return () => vi.useRealTimers();
+  });
+
+  async function series(recurrence = daily) {
+    const subject = await subjectId();
+    return taskRepository.create({ title: "Scales", date: recurrence.startDate, subjectId: subject, plan: [], recurrence });
+  }
+
+  it("tops the window up and stamps the root", async () => {
+    const root = await series();
+    expect((await dates(root)).at(-1)).toBe("2026-11-11");
+    expect(await taskRepository.extendSeries("2026-11-04")).toBe(7);
+    expect((await dates(root)).at(-1)).toBe("2026-11-18");
+    expect((await db.tasks.get(root))!.materializedUntil).toBe("2026-11-18");
+    expect(await taskRepository.extendSeries("2026-11-04")).toBe(0);
+  });
+
+  it("does not duplicate rows when two top-ups run at once", async () => {
+    const root = await series();
+    await Promise.all([taskRepository.extendSeries("2026-11-04"), taskRepository.extendSeries("2026-11-04")]);
+    const all = await dates(root);
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it("does not resurrect a day the user deleted", async () => {
+    const root = await series();
+    await db.tasks.where({ recurrenceTaskId: root, date: "2026-11-11" }).delete();
+    await taskRepository.extendSeries("2026-11-04");
+    expect(await dates(root)).not.toContain("2026-11-11");
+  });
+
+  it("keeps a removed series dead", async () => {
+    const root = await series();
+    await db.sessions.add({ taskId: root, date: "2026-10-28", marks: [], createdAt: 1 });
+    await taskRepository.removeSeries(root);
+    expect(await taskRepository.extendSeries("2026-11-04")).toBe(0);
+  });
+
+  it("keeps extending when only the soft-deleted root is gone", async () => {
+    const root = await series();
+    await db.sessions.add({ taskId: root, date: "2026-10-28", marks: [], createdAt: 1 });
+    expect(await taskRepository.remove(root)).toBe("soft");
+    expect(await taskRepository.extendSeries("2026-11-04")).toBe(7);
+  });
+
+  it("writes the next occurrence of a sparse series", async () => {
+    const root = await series({ kind: "interval", everyXDays: 30, startDate: "2026-10-20", endDate: "2027-06-30" });
+    await taskRepository.extendSeries("2026-11-20");
+    expect(await dates(root)).toContain("2026-12-19");
+  });
+
+  it("gives new rows the series importance", async () => {
+    const root = await series();
+    const [child] = (await rows(root)).sort((a, b) => a.date.localeCompare(b.date));
+    await taskRepository.update(child.id!, { importance: "high" });
+    await taskRepository.extendSeries("2026-11-04");
+    const last = (await rows(root)).sort((a, b) => a.date.localeCompare(b.date)).at(-1)!;
+    expect(last.date).toBe("2026-11-18");
+    expect(last.importance).toBe("high");
+  });
+});

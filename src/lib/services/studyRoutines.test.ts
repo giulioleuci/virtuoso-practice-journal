@@ -697,6 +697,30 @@ describe("studyRoutinesService — rolling window", () => {
     expect((await db.tasks.get(doneId))!.done).toBe(true);
   });
 
+  it("extend writes the next days, holds the weekly cap and avoids back-to-back across the boundary", async () => {
+    const subjectId = await seedSubject();
+    const a = await seedItem(subjectId, "A");
+    const b = await seedItem(subjectId, "B");
+    const id = await studyRoutinesService.create(
+      makeConfig(subjectId, [{ type: "item", id: a }, { type: "item", id: b }], { matrix: everyDay, weeksAhead: 49, repetitionCap: 4, avoidBackToBack: true }),
+    );
+    expect(await studyRoutineRepository.extend("2026-05-25")).toBeGreaterThan(0);
+    const tasks = (await db.tasks.where("studyRoutineId").equals(id).toArray()).sort((x, y) => x.date.localeCompare(y.date));
+    expect(tasks.at(-1)!.date).toBe("2026-06-08");
+    const perWeek = new Map<string, number>();
+    for (const t of tasks) { const k = `${Math.floor((Date.parse(t.date) - Date.parse("2026-05-18")) / (7 * 864e5))}|${t.itemId}`; perWeek.set(k, (perWeek.get(k) ?? 0) + 1); }
+    for (const n of perWeek.values()) expect(n).toBeLessThanOrEqual(4);
+    for (let i = 1; i < tasks.length; i++) if (Date.parse(tasks[i].date) - Date.parse(tasks[i - 1].date) === 864e5) expect(tasks[i].itemId).not.toBe(tasks[i - 1].itemId);
+    expect(await studyRoutineRepository.extend("2026-05-25")).toBe(0);
+  });
+
+  it("extend adds nothing once the routine has ended", async () => {
+    const subjectId = await seedSubject();
+    const itemId = await seedItem(subjectId);
+    await studyRoutinesService.create(long(subjectId, itemId, { weeksAhead: 2 }));
+    expect(await studyRoutineRepository.extend("2026-08-01")).toBe(0);
+  });
+
   it("a routine starting later gets its own window", async () => {
     const subjectId = await seedSubject();
     const itemId = await seedItem(subjectId);

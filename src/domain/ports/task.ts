@@ -12,6 +12,7 @@ export interface TaskPort {
   byDate(date: string): Promise<Task[]>;
   create(task: NewTaskInput): Promise<number>;
   createRecurring(first: Omit<Task, "id">, followUps: Omit<Task, "id">[]): Promise<number>;
+  extendSeries(today: string): Promise<number>;
   update(id: number, patch: Partial<Task>): Promise<void>;
   remove(id: number): Promise<"soft" | "hard">;
   carryOver(task: Task, toDate: string): Promise<number>;

@@ -5,6 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { useAlertSchedule } from "@/hooks/useAlertSchedule";
+import { useScheduleTopUp } from "@/hooks/useScheduleTopUp";
 import { useReminderSchedule } from "@/hooks/useReminderSchedule";
 import { useActiveTasks, useAssignments } from "@/presentation/hooks/useEntities";
 import { useLiveLesson } from "@/presentation/hooks/useLiveLesson";
@@ -62,6 +63,7 @@ export default function AppShell({ profile }: { profile: Profile }) {
   }, [location.pathname]);
 
   useAndroidBackButton(t("toast.pressBackAgainToExit"));
+  useScheduleTopUp();
   useReminderSchedule(profile, lang);
   useAlertSchedule(profile, lang);
 
