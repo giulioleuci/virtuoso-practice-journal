@@ -162,13 +162,15 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
           <div className="col-span-full flex flex-wrap items-center justify-between gap-2">
             <Recorder sections={[]} segmentId={mark.segmentId} compact onClip={(clip) => setClips((c) => [...c, clip])} onRecordingChange={setRecording} />
             <div className="flex items-center gap-2">
-              <Button type="button" size="icon" variant={skipTempo ? "secondary" : "outline"} className="h-11 w-11" aria-pressed={skipTempo} title={t("practice.skipTempo")} aria-label={t("practice.skipTempo")} onClick={() => setSkipTempo((v) => !v)}><TimerOff /></Button>
-              <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => setMuted((m) => !m)} aria-label={muted ? t("practice.unmute") : t("practice.mute")}>
-                {muted ? <VolumeX /> : <Volume2 />}
-              </Button>
-              <Button className="min-h-11" onClick={() => { if (!meterOn && mark.bpm === undefined) patchMark({ bpm }); toggle(); }} aria-pressed={meterOn}>
-                {meterOn ? t("practice.stop") : t("practice.start")}
-              </Button>
+              <Button type="button" size="icon" variant={skipTempo ? "secondary" : "outline"} className="h-11 w-11" aria-pressed={skipTempo} title={t("practice.skipTempo")} aria-label={t("practice.skipTempo")} onClick={() => { if (!skipTempo && meterOn) toggle(); setSkipTempo((v) => !v); }}><TimerOff /></Button>
+              {!skipTempo && <>
+                <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => setMuted((m) => !m)} aria-label={muted ? t("practice.unmute") : t("practice.mute")}>
+                  {muted ? <VolumeX /> : <Volume2 />}
+                </Button>
+                <Button className="min-h-11" onClick={() => { if (!meterOn && mark.bpm === undefined) patchMark({ bpm }); toggle(); }} aria-pressed={meterOn}>
+                  {meterOn ? t("practice.stop") : t("practice.start")}
+                </Button>
+              </>}
             </div>
           </div>
 
@@ -180,6 +182,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             </div>
           )}
 
+          {!skipTempo && <>
           <div className="grid min-w-0 gap-2">
             <div className="flex items-center justify-between gap-1.5">
               <div className="flex gap-1">
@@ -245,6 +248,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               </div>
             </div>
           </details>
+          </>}
 
           <div className="col-span-full pt-2.5">
             <RatingFields compact mark={mark} onChange={patchMark} />
