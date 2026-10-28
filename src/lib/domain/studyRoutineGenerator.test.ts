@@ -5,6 +5,7 @@ import {
   uniformSampleWithoutReplacement,
   weightedSampleWithoutReplacement,
   generateRoutineTasks,
+  routineEnd,
   decayedAverage,
   adaptiveWeight,
   mulberry32,
@@ -245,4 +246,31 @@ it("inherits accepted context tempo and cycle, excluding other owners and uninit
   expect(generate([{ ...state, owner: { kind: "routine", id: 999 } }])[0].plan[0].bpm).toBe(60);
   expect(generate([],true)[0].plan[0].progression).toBeUndefined();
   expect(generate([state],false)[0].plan[0].bpm).toBe(60);
+});
+
+describe("generateRoutineTasks window and continuity", () => {
+  const rng = mulberry32(1);
+  const two = new Map([["g1", [item(1), item(2)]]]);
+
+  it("stops before toDate", () => {
+    const r = routine({ matrix: { "1": { g1: 1 }, "2": { g1: 1 }, "3": { g1: 1 }, "4": { g1: 1 }, "5": { g1: 1 } }, weeksAhead: 4 });
+    const tasks = generateRoutineTasks({ routine: r, groupItems: two, stats: null, fromDate: "2026-05-18", toDate: "2026-05-21", createdAt: 0, rng });
+    expect(tasks.map((t) => t.date)).toEqual(["2026-05-18", "2026-05-19", "2026-05-20"]);
+  });
+
+  it("routineEnd is startDate plus weeksAhead weeks", () => {
+    expect(routineEnd({ startDate: "2026-10-18", weeksAhead: 49 })).toBe("2027-09-26");
+  });
+
+  it("avoids repeating the previous run's last draw", () => {
+    const r = routine({ avoidBackToBack: true });
+    const first = (key: string) => generateRoutineTasks({ routine: r, groupItems: two, stats: null, fromDate: "2026-05-18", createdAt: 0, rng: () => 0, lastUsed: new Map([[key, "2026-05-17"]]) })[0].itemId;
+    expect([first("item:1"), first("item:2")].sort()).toEqual([1, 2]);
+  });
+
+  it("holds repetitionCap across the seeded week", () => {
+    const r = routine({ repetitionCap: 1, weeksAhead: 2 });
+    const tasks = generateRoutineTasks({ routine: r, groupItems: two, stats: null, fromDate: "2026-05-18", createdAt: 0, rng, seedCounters: new Map([["item:1", 1], ["item:2", 1]]) });
+    expect(tasks.map((t) => t.date)).toEqual(["2026-05-25"]);
+  });
 });

@@ -8,7 +8,7 @@ import type { TempoProgression, TempoProgressionRule } from "@/domain/entities/t
 import type { StudyPoolEntry, StudyRoutine } from "@/infrastructure/dexie/db";
 import type { Task } from "@/domain/entities/task";
 import type { SegmentEntry } from "@/domain/entities/common";
-import { emptyEntry } from "@/domain/logic/plan";
+import { emptyEntry, planSegmentIds } from "@/domain/logic/plan";
 import { parseDayKey, dayKey, addDays, weekKey } from "@/lib/date";
 import { importanceRank, routineTaskOrder } from "./taskOrder";
 import type { TaskImportance } from "@/domain/entities/task";
@@ -194,6 +194,18 @@ export function routineAdaptivity(routine: Pick<StudyRoutine, "adaptivity" | "us
   return routine.useSpacedRepetition ? "balanced" : "uniform";
 }
 
+/** Exclusive last day of a routine. */
+export const routineEnd = (routine: Pick<StudyRoutine, "startDate" | "weeksAhead">): string =>
+  dayKey(addDays(parseDayKey(routine.startDate), routine.weeksAhead * 7));
+
+/** Pool keys a generated task counts against. */
+export function taskPoolKeys(task: Pick<Task, "collectionId" | "itemId" | "plan">): string[] {
+  if (task.collectionId) return [`collection:${task.collectionId}`];
+  const ids = planSegmentIds(task.plan);
+  if (ids.length) return ids.map((id) => `segment:${id}`);
+  return task.itemId ? [`item:${task.itemId}`] : [];
+}
+
 export interface GenerateRoutineTasksOptions {
   tempoProgressions?: readonly TempoProgression[];
   tempoRule?: TempoProgressionRule;
@@ -202,6 +214,10 @@ export interface GenerateRoutineTasksOptions {
   stats?: Map<string, PoolStat> | null;
   fromDate: string;
   createdAt: number;
+  /** Exclusive end of generation; defaults to fromDate + weeksAhead weeks. */
+  toDate?: string;
+  /** Pool key -> last date drawn before fromDate, for avoidBackToBack across runs. */
+  lastUsed?: Map<string, string>;
   /** Per-key counters already used up in the current week (regeneration). */
   seedCounters?: Map<string, number>;
   weekStartsOn?: number;
@@ -220,20 +236,22 @@ export function generateRoutineTasks({
   fromDate,
   createdAt,
   seedCounters,
+  toDate,
+  lastUsed,
   weekStartsOn = 1,
   rng = Math.random,
   tempoProgressions = [],
   tempoRule = routine.tempoRule,
 }: GenerateRoutineTasksOptions): Omit<Task, "id">[] {
   const startDate = parseDayKey(fromDate);
-  const endDate = addDays(startDate, routine.weeksAhead * 7);
+  const endDate = toDate ? parseDayKey(toDate) : addDays(startDate, routine.weeksAhead * 7);
   const adaptivity = routineAdaptivity(routine);
 
   const tasks: Omit<Task, "id">[] = [];
 
   let currentWeekKey = weekKey(startDate, weekStartsOn);
   let weekCounts = new Map<string, number>(seedCounters ?? []);
-  const lastUsedDate = new Map<string, string>();
+  const lastUsedDate = new Map<string, string>(lastUsed ?? []);
 
   const capForGroup = (groupId: string) =>
     routine.groups.find((group) => group.id === groupId)?.repetitionCap ?? routine.repetitionCap;

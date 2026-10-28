@@ -12,13 +12,14 @@ import type {
   StudyRoutinePort,
 } from "@/domain/ports/studyRoutine";
 import { dayKey, getDefaultWeekStartsOn, now, parseDayKey, startOfWeek, endOfWeek, today } from "@/lib/date";
-import { planSegmentIds, syncPlan } from "@/domain/logic/plan";
+import { syncPlan } from "@/domain/logic/plan";
 import { meanConfidence } from "@/domain/logic/sessionMetrics";
 import {
   decayedAverage,
   generateRoutineTasks,
   poolEntryKey,
   routineAdaptivity,
+  taskPoolKeys,
   type ResolvedPoolItem,
 } from "@/lib/domain/studyRoutineGenerator";
 
@@ -176,8 +177,7 @@ async function regenerate(routine: StudyRoutine, fromDate: string) {
   const completed = await db.tasks.where("studyRoutineId").equals(routine.id).filter((task) => task.done && task.date >= first && task.date <= last).toArray();
   const counters = new Map<string, number>();
   for (const task of completed) {
-    const keys = task.collectionId ? [`collection:${task.collectionId}`] : planSegmentIds(task.plan).length ? planSegmentIds(task.plan).map((id) => `segment:${id}`) : task.itemId ? [`item:${task.itemId}`] : [];
-    for (const key of keys) counters.set(key, (counters.get(key) ?? 0) + 1);
+    for (const key of taskPoolKeys(task)) counters.set(key, (counters.get(key) ?? 0) + 1);
 }
   await generate(routine, fromDate, counters, future.filter((task) => task.customized && !replaceable.includes(task)));
   });
