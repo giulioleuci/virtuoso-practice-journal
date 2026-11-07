@@ -1,4 +1,7 @@
 {
+  "practice.playReference": "Play A · 440 Hz",
+  "practice.stopReference": "Stop A · 440 Hz",
+  "practice.referenceError": "Could not play the reference tone. Try again.",
   "tuner.title": "Tuner",
   "tuner.chromatic": "Chromatic tuner",
   "tuner.meter": "Pitch deviation from the nearest note",

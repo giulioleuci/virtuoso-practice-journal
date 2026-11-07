@@ -1,4 +1,7 @@
 {
+  "practice.playReference": "Tocar La · 440 Hz",
+  "practice.stopReference": "Detener La · 440 Hz",
+  "practice.referenceError": "No se pudo reproducir el tono de referencia. Inténtalo de nuevo.",
   "tuner.title": "Afinador",
   "tuner.chromatic": "Afinador cromático",
   "tuner.meter": "Desviación respecto a la nota más cercana",

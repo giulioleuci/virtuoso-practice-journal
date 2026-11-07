@@ -1,4 +1,7 @@
 {
+  "practice.playReference": "Suona il La · 440 Hz",
+  "practice.stopReference": "Ferma il La · 440 Hz",
+  "practice.referenceError": "Impossibile riprodurre il suono di riferimento. Riprova.",
   "tuner.title": "Accordatore",
   "tuner.chromatic": "Accordatore cromatico",
   "tuner.meter": "Scostamento dalla nota più vicina",
