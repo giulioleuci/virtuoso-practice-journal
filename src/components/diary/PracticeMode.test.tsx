@@ -8,8 +8,46 @@ import { configurePresentationQueries } from "@/application/queries/presentation
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
 import { I18nContext, translate } from "@/lib/i18n";
 import { PracticeMode } from "./PracticeMode";
+import { today } from "@/lib/date";
+import { tempoContextKey } from "@/domain/logic/tempoProgression";
+import type { Task } from "@/domain/entities/task";
+import { NOTE_GLYPH } from "@/lib/constants";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
+it("shows each subtask's last safety and its own BPM suggestion", async () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);
+  const rule = { enabled: true, successes: 1, minConfidence: 4, increase: { kind: "percent" as const, value: 10 }, decrease: { failures: 1, step: { kind: "percent" as const, value: 10 } } };
+  await db.studyRoutines.add({ id: 1, subjectId: 1, groups: [], matrix: {}, startDate: today(), weeksAhead: 1, repetitionCap: 1, createdAt: 1, tempoRule: rule });
+  await db.library.add({ id: 1, title: "Sonata", subjectId: 1, kind: "piece", createdAt: 1 });
+  await db.segments.bulkAdd([1, 2].map(id => ({ id, itemId: 1, label: `Section ${id}`, position: id, layers: [], createdAt: 1 })));
+  const plan = [1, 2].map(segmentId => ({ segmentId, bpm: segmentId === 1 ? 70 : 100, noteVal: "quarter" as const, layers: [], techniques: [], progression: { id: segmentId, cycle: 1, minConfidence: 4 } }));
+  const task: Task = { id: 1, title: "Daily Practice", subjectId: 1, itemId: 1, studyRoutineId: 1, date: today(), plan, done: false, createdAt: 1 };
+  await db.tasks.add(task);
+  await db.tempoProgressions.bulkAdd(plan.map(entry => {
+    const context = { itemId: 1, segmentId: entry.segmentId, layers: [], techniques: [] };
+    return { id: entry.segmentId, owner: { kind: "routine" as const, id: 1 }, context, contextKey: tempoContextKey(context), tempo: { bpm: entry.bpm, noteVal: entry.noteVal }, cycle: 1, startedAt: 1, ruleRevision: 0 };
+  }));
+  await db.sessions.add({ taskId: 1, itemId: 1, date: "2000-01-01", marks: plan.map(entry => ({ ...entry, targetBpm: entry.bpm, targetNoteVal: entry.noteVal, confidence: entry.segmentId === 1 ? 5 : 2 })), createdAt: 1 });
+  const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
+  const finish = vi.fn();
+  render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}><PracticeMode task={task} onClose={() => {}} onFinish={finish} /></I18nContext.Provider>);
+  const first = t("practice.suggestBpm", { note: NOTE_GLYPH.quarter, bpm: 77 });
+  const second = t("practice.suggestBpm", { note: NOTE_GLYPH.quarter, bpm: 90 });
+  expect(await screen.findByRole("button", { name: first })).toBeInTheDocument();
+  expect(await screen.findByText("Last Safety 5 ★")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: second })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: first }));
+  fireEvent.click(screen.getByRole("button", { name: t("practice.nextSection") }));
+  expect(await screen.findByRole("button", { name: second })).toBeInTheDocument();
+  expect(await screen.findByText("Last Safety 2 ★")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: first })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: second }));
+  fireEvent.click(screen.getByRole("button", { name: t("practice.finishLog") }));
+  expect(finish.mock.calls[0][0].marks.map(({ bpm }: { bpm: number }) => bpm)).toEqual([77, 90]);
+  expect((await db.tasks.get(1))!.plan.map(entry => entry.bpm)).toEqual([70, 100]);
+}, 15000);
+
 it("traps keyboard focus, closes with Escape and restores the launching control", async () => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);

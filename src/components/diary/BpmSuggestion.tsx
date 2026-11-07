@@ -23,7 +23,8 @@ export function BpmSuggestion({ task, sourceSession, onInitialized }: { task: Ta
   const [expanded,setExpanded] = useState<string>();
   const owner = tempoOwner(task);
   if (!owner) return null;
-  const contexts = entries.map(entry => resolveTempoContext({ ...task,itemId: sourceSession?.itemId ?? task.itemId },entry,segments ?? []));
+  const target = sourceSession ? { ...task, itemId: sourceSession.subjectId === undefined ? sourceSession.itemId ?? task.itemId : sourceSession.itemId } : task;
+  const contexts = entries.map(entry => resolveTempoContext(target,entry,segments ?? []));
   return <details className="min-w-0 space-y-4 border-y border-border py-2">
     <summary className="min-h-11 cursor-pointer py-2 font-serif text-xl font-semibold">{t("tempo.title")}</summary>
     {contexts.some(c => !c) && <p className="text-sm text-muted-foreground">{t("tempo.unavailable")}</p>}

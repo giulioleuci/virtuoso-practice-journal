@@ -109,6 +109,7 @@
   "diary.homework_plural": "{{count}} homework assignments to plan",
   "diary.targetBpm": "Target {{note}} = {{bpm}}",
   "practice.lastBpm": "Last {{note}} = {{bpm}}",
+  "practice.lastSafety": "Last Safety {{stars}} ★",
   "practice.suggestBpm": "Try {{note}} = {{bpm}}",
   "diary.routine": "Routine",
   "library.empty": "Your library is empty.",

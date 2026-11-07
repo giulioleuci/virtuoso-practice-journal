@@ -33,7 +33,8 @@ describe("practice mode data recall", () => {
   it("starts at 60 quarter notes with no history and no target", async () => {
     open();
     await waitFor(() => expect(tempo()).toMatch(/60$/));
-    expect(screen.queryByText(/^Last /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Last \S+ = /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Last Safety /)).not.toBeInTheDocument();
   });
 
   it("starts at half the planned target when nothing was played before", async () => {
@@ -46,7 +47,8 @@ describe("practice mode data recall", () => {
     await db.sessions.add({ taskId: 1, date: "2026-10-17", marks: [{ ...entry, bpm: 76, noteVal: "eighth", confidence: 4 }], createdAt: 1 });
     open();
     await waitFor(() => expect(tempo()).toMatch(/76$/));
-    expect(screen.getByText(/^Last /)).toHaveTextContent("76");
+    expect(screen.getByText(/^Last \S+ = /)).toHaveTextContent("76");
+    expect(screen.getByText("Last Safety 4 ★")).toBeInTheDocument();
     expect(within(screen.getByRole("group", { name: t("practice.noteLabel") })).getByRole("button", { name: "Eighth note" })).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -103,7 +105,7 @@ describe("practice mode data recall", () => {
     first.unmount();
     open();
     await waitFor(() => expect(tempo()).toMatch(/81$/));
-    expect(screen.getByText(/^Last /)).toHaveTextContent("76");
+    expect(screen.getByText(/^Last \S+ = /)).toHaveTextContent("76");
   });
 
   it("restores ratings and clips from the draft and hands them to the log on finish", async () => {
@@ -155,12 +157,12 @@ describe("practice mode data recall", () => {
     await db.sessions.add({ taskId: 6, itemId: 1, date: today(), marks: [{ ...entry, bpm: 80, noteVal: "quarter", confidence: 5, targetBpm: 80, targetNoteVal: "quarter", progression: { id, cycle: 1, minConfidence: 4 } }], createdAt: 2 });
     open({ ...baseTask, itemId: 1, studyRoutineId: 1 });
     await waitFor(() => expect(tempo()).toMatch(/80$/));
-    expect(screen.getByText(/^Last /)).toHaveTextContent("80");
+    expect(screen.getByText(/^Last \S+ = /)).toHaveTextContent("80");
     const hint = await screen.findByRole("button", { name: /^Try / });
     expect(hint).toHaveTextContent("88");
     expect(tempo()).toMatch(/80$/);
     fireEvent.click(hint);
     expect(tempo()).toMatch(/88$/);
-    expect(screen.getByText(/^Last /)).toHaveTextContent("80");
+    expect(screen.getByText(/^Last \S+ = /)).toHaveTextContent("80");
   });
 });

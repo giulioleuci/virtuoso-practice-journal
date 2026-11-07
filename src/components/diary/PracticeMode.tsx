@@ -184,7 +184,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 
           {!skipTempo && <>
           <div className="grid min-w-0 gap-2">
-            <div className="flex items-center justify-between gap-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-1.5">
               <div className="flex gap-1">
                 {[-5, -1].map((d) => (
                   <Button key={d} type="button" variant="outline" className="h-10 min-w-10 px-1 text-xs tabular-nums" onClick={() => setBpm((b) => Math.min(BPM_MAX, Math.max(BPM_MIN, b + d)))} aria-label={t("practice.bpmDecrease", { step: Math.abs(d) })}>{d}</Button>
@@ -200,12 +200,15 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               </div>
             </div>
             <Slider value={[bpm]} min={BPM_MIN} max={BPM_MAX} step={1} onValueChange={(v) => setBpm(v[0])} aria-label={t("practice.bpmUnit")} />
-            <div className="grid grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)] items-end gap-2 border-b border-border">
+            <div className="grid grid-cols-[auto_6rem_minmax(0,1fr)] items-end gap-2 border-b border-border">
               <BeatDots on={meterOn} pulse={pulse} beatsPerBar={beatsPerBar} />
               <Pendulum on={meterOn} pulse={pulse} bpm={bpm} beatsPerBar={beatsPerBar} />
-              <p className="flex flex-col items-end self-center font-numeric text-xs tabular-nums text-muted-foreground">
+              <p className="flex min-w-0 flex-col items-end self-center font-numeric text-xs tabular-nums text-muted-foreground">
                 {!!mark.targetBpm && <span>{t("diary.targetBpm", { note: targetGlyph, bpm: mark.targetBpm })}</span>}
-                {last?.bpm !== undefined && <span>{t("practice.lastBpm", { note: NOTE_GLYPH[last.noteVal ?? "quarter"], bpm: last.bpm })}</span>}
+                <span className="flex flex-wrap justify-end gap-x-3">
+                  {last?.bpm !== undefined && <span>{t("practice.lastBpm", { note: NOTE_GLYPH[last.noteVal ?? "quarter"], bpm: last.bpm })}</span>}
+                  {last?.confidence !== undefined && <span>{t("practice.lastSafety", { stars: last.confidence })}</span>}
+                </span>
                 <TempoHint task={task} mark={mark} segments={segments} onPick={patchMark} />
               </p>
             </div>
