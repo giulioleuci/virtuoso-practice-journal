@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX, Music2, Square } from "lucide-react";
 import { BPM_MAX, BPM_MIN } from "@/domain/constants/noteValues";
 import { useI18n } from "@/lib/i18n";
 import { useWakeLock } from "@/hooks/useWakeLock";
@@ -9,6 +9,8 @@ import { Slider } from "@/components/ui/slider";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { BeatDots, Pendulum } from "@/components/diary/Metronome";
 import { useMetronome } from "@/hooks/useMetronome";
+import { useReferenceTone } from "@/hooks/useReferenceTone";
+import { toast } from "sonner";
 
 const STEPS = [-5, -1, 1, 5];
 
@@ -19,7 +21,8 @@ export default function Metronome() {
   const [beatsPerBar, setBeatsPerBar] = useState(4);
   const [muted, setMuted] = useState(false);
   const { on, pulse, toggle } = useMetronome({ bpm, beatsPerBar, muted });
-  useWakeLock(on);
+  const reference = useReferenceTone();
+  useWakeLock(on || reference.playing);
   const change = (next: number) => {
     const value = Math.min(BPM_MAX, Math.max(BPM_MIN, next));
     setBpm(value);
@@ -64,7 +67,14 @@ export default function Metronome() {
           </div>
         </div>
 
-        <Button type="button" className="h-14 text-base" onClick={toggle} aria-pressed={on}>{on ? t("practice.stop") : t("practice.start")}</Button>
+        <Button type="button" className="h-14 text-base" onClick={() => { reference.stop(); toggle(); }} aria-pressed={on}>{on ? t("practice.stop") : t("practice.start")}</Button>
+        <Button type="button" variant={reference.playing ? "secondary" : "outline"} className="min-h-12 gap-2" aria-pressed={reference.playing} onClick={() => {
+          if (on) toggle();
+          void reference.toggle().catch(() => toast.error(t("practice.referenceError")));
+        }}>
+          {reference.playing ? <Square className="h-4 w-4" /> : <Music2 className="h-4 w-4" />}
+          {t(reference.playing ? "practice.stopReference" : "practice.playReference")}
+        </Button>
       </section>
     </div>
   );

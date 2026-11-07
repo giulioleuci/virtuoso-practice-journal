@@ -1,4 +1,7 @@
 {
+  "practice.playReference": "A abspielen · 440 Hz",
+  "practice.stopReference": "A stoppen · 440 Hz",
+  "practice.referenceError": "Der Referenzton konnte nicht abgespielt werden. Versuche es erneut.",
   "tuner.title": "Stimmgerät",
   "tuner.chromatic": "Chromatisches Stimmgerät",
   "tuner.meter": "Abweichung vom nächstgelegenen Ton",
