@@ -1,8 +1,11 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Mic, MicOff, X, Check } from "lucide-react";
+import { useEffect } from "react";
+import { Mic, MicOff, X, Check, Music2, Square } from "lucide-react";
 import { Dialog, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useTuner } from "@/hooks/useTuner";
+import { useReferenceTone } from "@/hooks/useReferenceTone";
+import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +14,8 @@ const names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A�
 export function Tuner({ onClose }: { onClose: () => void }) {
   const { t, lang } = useI18n();
   const { status, reading, start, stop } = useTuner();
+  const reference = useReferenceTone();
+  useEffect(() => { void start(); }, [start]);
   const active = status === "listening";
   const tuned = !!reading && Math.abs(reading.cents) <= 5;
   const cents = reading ? Math.round(reading.cents) : null;
@@ -25,12 +30,13 @@ export function Tuner({ onClose }: { onClose: () => void }) {
           <DialogTitle className="font-serif text-2xl">{t("tuner.title")}</DialogTitle>
           <Button variant="ghost" size="icon" className="h-11 w-11" onClick={onClose} aria-label={t("common.close")}><X /></Button>
         </header>
-        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-8 px-6 py-8 sm:px-10">
+        <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-6 sm:px-10">
           <div className="text-center">
             <p className="text-sm text-muted-foreground">{t("tuner.chromatic")}</p>
-            <div className={cn("mt-5 flex h-32 items-baseline justify-center gap-1 font-numeric", tuned ? "text-success" : "text-foreground")} aria-live="off">
-              <span className="text-8xl font-medium">{reading ? names[reading.noteIndex] : "—"}</span>
-              <span className="w-6 text-3xl text-muted-foreground">{reading?.octave}</span>
+            <div className={cn("mt-4 flex h-28 items-baseline justify-center font-numeric", tuned ? "text-success" : "text-foreground")} aria-live="off">
+              <span className="text-8xl font-medium leading-none">{reading ? names[reading.noteIndex][0] : "—"}</span>
+              {reading && names[reading.noteIndex][1] && <span className="self-start pt-2 text-4xl">♯</span>}
+              <span className="ml-1 text-2xl text-muted-foreground">{reading?.octave}</span>
             </div>
             <p className="h-6 font-numeric text-sm tabular-nums text-muted-foreground">{reading ? `${number.format(reading.frequency)} Hz` : "— Hz"}</p>
           </div>
@@ -60,7 +66,12 @@ export function Tuner({ onClose }: { onClose: () => void }) {
 
           <div className="space-y-4 border-t border-border pt-6 text-center">
             <p role="status" className="min-h-10 text-sm text-muted-foreground">{message}</p>
-            <Button className="min-h-12 gap-2 px-6" disabled={status === "starting"} onClick={() => active ? stop() : void start()}>{active ? <MicOff /> : <Mic />}{t(active ? "tuner.stop" : "tuner.start")}</Button>
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
+              <Button className="min-h-12 gap-2 px-6" disabled={status === "starting"} onClick={() => { reference.stop(); if (active) stop(); else void start(); }}>{active ? <MicOff /> : <Mic />}{t(active ? "tuner.stop" : "tuner.start")}</Button>
+              <Button variant={reference.playing ? "secondary" : "outline"} className="min-h-12 gap-2 px-6" disabled={status === "starting"} aria-pressed={reference.playing} onClick={() => { stop(); void reference.toggle().catch(() => toast.error(t("practice.referenceError"))); }}>
+                {reference.playing ? <Square /> : <Music2 />}{t(reference.playing ? "practice.stopReference" : "practice.playReference")}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogPrimitive.Content>
