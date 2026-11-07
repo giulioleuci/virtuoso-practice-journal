@@ -21,12 +21,13 @@ import { Link, useNavigate, useOutletContext, useSearchParams } from "react-rout
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PracticeMode } from "@/components/diary/PracticeMode";
+import { Tuner } from "@/components/diary/Tuner";
 import { LastSessionStrip } from "@/components/diary/LastSessionStrip";
 import { CarryoverBatchActions } from "@/components/diary/CarryoverBatchActions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { TeacherAnswersSheet } from "@/components/library/TeacherAnswersSheet";
-import { Archive, CalendarPlus, Check, CheckSquare, MessageSquareQuote, Trash2 } from "lucide-react";
+import { Archive, CalendarPlus, Check, CheckSquare, MessageSquareQuote, Trash2, AudioLines } from "lucide-react";
 import { SessionFAB } from "@/components/diary/SessionFAB";
 import { CompletionBar } from "@/components/diary/CompletionBar";
 import { WeekStrip } from "@/components/diary/WeekStrip";
@@ -116,6 +117,7 @@ export default function Diary() {
   const carryoverTasks = usePresentationRead<Task[]>("tasks.carryover", [carryoverFrom, todayKey]);
 
   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
+  const [tunerOpen, setTunerOpen] = useState(false);
   // `/?practice=ID` reopens practice mode, e.g. from the log page it led to.
   const requested = useTask(Number(params.get("practice")) || undefined);
   useEffect(() => {
@@ -228,6 +230,7 @@ export default function Diary() {
         title={isToday ? t("diary.hello", { name: profile?.name ?? "Musician" }) : t("diary.dayTasks")}
         actions={<>
           <Link to="/metronome" aria-label={t("practice.metronome")} title={t("practice.metronome")} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-input bg-card text-muted-foreground hover:bg-secondary/40 hover:text-foreground"><MetronomeIcon className="h-5 w-5" aria-hidden /></Link>
+          <Button variant="outline" size="icon" className="h-11 w-11 bg-card text-muted-foreground" onClick={() => setTunerOpen(true)} aria-label={t("tuner.title")} title={t("tuner.title")}><AudioLines className="h-5 w-5" aria-hidden /></Button>
           <SessionFAB short />
         </>}
       />
@@ -611,6 +614,7 @@ export default function Diary() {
           }
         />
       )}
+      {tunerOpen && <Tuner onClose={() => setTunerOpen(false)} />}
       {answersFor && (
         <TeacherAnswersSheet
           open={answersFor !== null}
