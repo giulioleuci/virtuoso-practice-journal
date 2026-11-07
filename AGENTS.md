@@ -1,0 +1,2 @@
+# Architecture rules
+- Keep chromatic pitch conversion in domain logic and microphone lifecycle in a hook; the tuner screen only presents readings and controls so audio cleanup and note math stay independently testable.
