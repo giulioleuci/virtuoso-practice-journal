@@ -114,7 +114,8 @@ export default function Diary() {
     return dayKey(d);
   }, [carryoverDays]);
 
-  const carryoverTasks = usePresentationRead<Task[]>("tasks.carryover", [carryoverFrom, todayKey]);
+  const carryoverTasksRaw = usePresentationRead<Task[]>("tasks.carryover", [carryoverFrom, todayKey]);
+  const carryoverTasks = useMemo(() => carryoverTasksRaw ? [...carryoverTasksRaw].sort((a, b) => b.date.localeCompare(a.date)) : carryoverTasksRaw, [carryoverTasksRaw]);
 
   const [practiceTask, setPracticeTask] = useState<Task | null>(null);
   const [tunerOpen, setTunerOpen] = useState(false);
