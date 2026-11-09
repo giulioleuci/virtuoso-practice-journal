@@ -191,7 +191,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
                 ))}
               </div>
               <div className="min-w-0 text-center" aria-live="off">
-                <p className="flex items-center justify-center gap-1.5 font-numeric text-[3.25rem] leading-none min-[700px]:text-[4.5rem] tabular-nums"><span aria-hidden="true">{NOTE_GLYPH[noteVal ?? "quarter"]}</span>{bpm}</p>
+                <p className="flex items-center justify-center gap-1.5 font-numeric text-[2.75rem] leading-none min-[700px]:text-[4.5rem] tabular-nums"><span aria-hidden="true">{NOTE_GLYPH[noteVal ?? "quarter"]}</span>{bpm}</p>
               </div>
               <div className="flex gap-1">
                 {[1, 5].map((d) => (
