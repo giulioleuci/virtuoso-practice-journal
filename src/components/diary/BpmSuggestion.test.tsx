@@ -33,7 +33,7 @@ async function seedSeries(confidences: number[], enabled = true) {
 it("shows the increase suggestion for a series once enough confident sessions are logged", async () => {
   const task = await seedSeries([4, 5]);
   wrap(<BpmSuggestion task={task} />);
-  expect(await screen.findByText("♩ = 88", { exact: false })).toBeInTheDocument();
+  expect(await screen.findByText(`${NOTE_GLYPH.quarter} = 88`, { exact: false })).toBeInTheDocument();
   expect(screen.getByText(t("tempo.increase"), { exact: false })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: t("tempo.review") })).toBeInTheDocument();
 });
