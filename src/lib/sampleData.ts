@@ -691,7 +691,7 @@ targetBpm: 84, noteVal: "quarter",
     date: todayKey, subjectId: pianoId, linkType: "item", itemId: hanon,
     title: "Hanon — Exercise 18", plan: hanonPlan,
     done: false, createdAt: now,
-    tempoRule: { enabled: true, successes: 2, minConfidence: 4, increase: { kind: "bpm", value: 4 } },
+    tempoRule: { enabled: true, successes: 2, minConfidence: 4, increase: { kind: "fixed", value: 4, noteVal: "sixteenth" } },
     recurrence: { kind: "interval", everyXDays: 1, startDate: todayKey, occurrences: 14 },
   })) as number;
 
@@ -715,7 +715,7 @@ targetBpm: 84, noteVal: "quarter",
     await db.tasks.update(historicalTask.id, { recurrenceTaskId: hanonTpl, plan: historicalPlan });
     const snapshot = await buildSessionSnapshot({ ...historicalTask, recurrenceTaskId: hanonTpl, plan: historicalPlan });
     await db.sessions.where("taskId").equals(historicalTask.id).modify({
-      marks: historicalPlan.map(entry => ({ ...entry, targetBpm: 104, targetNoteVal: "sixteenth", confidence: age === 2 ? 4 : 5 })),
+      marks: historicalPlan.map((entry): SegmentMark => ({ ...entry, targetBpm: 104, targetNoteVal: "sixteenth", confidence: age === 2 ? 4 : 5 })),
       snapshot,
       createdAt: addDays(todayDate, -age).getTime() + 3600000,
     });

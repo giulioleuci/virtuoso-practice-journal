@@ -12,7 +12,7 @@ import type { Task } from "@/domain/entities/task";
 import { BpmSuggestion } from "./BpmSuggestion";
 import { PracticeMode } from "./PracticeMode";
 import { seedSampleData } from "@/lib/sampleData";
-import { dayKey, today } from "@/lib/date";
+import { today } from "@/lib/date";
 
 const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
 const wrap = (node: React.ReactNode) => render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}>{node}</I18nContext.Provider>);
@@ -43,7 +43,7 @@ it("shows the increase suggestion for a series once enough confident sessions ar
 it("offers an engine-generated increase on the first piano fixture task today", async () => {
   await seedSampleData();
   configurePresentationQueries(dexiePresentationReads);
-  const tasks = await db.tasks.where("date").equals(dayKey(today())).toArray();
+  const tasks = await db.tasks.where("date").equals(today()).toArray();
   const task = tasks.find(task => !task.done && !task.skipped && task.deletedAt === undefined);
   if (!task) throw new Error("Missing today's fixture task");
   expect(task.title).toBe("Hanon — Exercise 18");
