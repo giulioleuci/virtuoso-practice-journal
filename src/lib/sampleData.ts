@@ -692,6 +692,7 @@ targetBpm: 84, noteVal: "quarter",
     title: "Hanon — Exercise 18", plan: hanonPlan,
     done: false, createdAt: now,
     tempoRule: { enabled: true, successes: 2, minConfidence: 4, increase: { kind: "fixed", value: 4, noteVal: "sixteenth" } },
+    tempoRuleRevision: 1,
     recurrence: { kind: "interval", everyXDays: 1, startDate: todayKey, occurrences: 14 },
   })) as number;
 
@@ -701,7 +702,7 @@ targetBpm: 84, noteVal: "quarter",
     owner: { kind: "recurrence", id: hanonTpl },
     context: hanonContext, contextKey: tempoContextKey(hanonContext),
     tempo: { bpm: 104, noteVal: "sixteenth" }, cycle: 1,
-    startedAt: addDays(todayDate, -2).getTime(), ruleRevision: 0,
+    startedAt: addDays(todayDate, -2).getTime(), ruleRevision: 1,
   });
   const reference = { id: progressionId, cycle: 1, minConfidence: 4 };
   for (const entry of hanonPlan) entry.progression = reference;
