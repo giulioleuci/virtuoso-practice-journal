@@ -63,6 +63,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
   const [current, setCurrent] = useState(0);
   useEffect(() => { document.querySelector("[data-seg-current]")?.scrollIntoView?.({ inline: "center", block: "nearest" }); }, [current]);
   const [asking, setAsking] = useState(false);
+  const [hasHint, setHasHint] = useState(false);
   const [recording, setRecording] = useState(false);
   const returnFocus = useRef(document.activeElement as HTMLElement | null);
   const onClose = () => { if (!storageFailed || window.confirm(t("draft.leaveWarning"))) closeOverlay(); };
@@ -191,7 +192,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
                 ))}
               </div>
               <div className="min-w-0 text-center" aria-live="off">
-                <p className="flex items-center justify-center gap-1.5 font-numeric text-[2.75rem] leading-none min-[700px]:text-[4.5rem] tabular-nums"><span aria-hidden="true">{NOTE_GLYPH[noteVal ?? "quarter"]}</span>{bpm}</p>
+                <p className={cn("flex items-center justify-center gap-1.5 font-numeric text-[2.75rem] leading-none min-[700px]:text-[4.5rem] tabular-nums", hasHint && "text-primary")}><span aria-hidden="true">{NOTE_GLYPH[noteVal ?? "quarter"]}</span>{bpm}</p>
               </div>
               <div className="flex gap-1">
                 {[1, 5].map((d) => (
@@ -209,7 +210,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
                   {last?.bpm !== undefined && <span>{t("practice.lastBpm", { note: NOTE_GLYPH[last.noteVal ?? "quarter"], bpm: last.bpm })}</span>}
                   {last?.confidence !== undefined && <span>{t("practice.lastSafety", { stars: last.confidence })}</span>}
                 </span>
-                <TempoHint task={task} mark={mark} segments={segments} onPick={patchMark} />
+                <TempoHint task={task} mark={mark} segments={segments} onPick={patchMark} onPresence={setHasHint} />
               </p>
             </div>
           </div>
@@ -279,20 +280,23 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 }
 
 /** The progression engine's next tempo for this section, offered, never applied: a tap moves the metronome there. */
-function TempoHint({ task, mark, segments, onPick }: { task: Task; mark: SegmentMark; segments?: Segment[]; onPick: (tempo: Tempo) => void }) {
+function TempoHint({ task, mark, segments, onPick, onPresence }: { task: Task; mark: SegmentMark; segments?: Segment[]; onPick: (tempo: Tempo) => void; onPresence: (present: boolean) => void }) {
   const owner = tempoOwner(task);
   const context = owner && segments ? resolveTempoContext(task, mark, segments) : undefined;
-  return owner && context ? <TempoHintButton owner={owner} context={context} onPick={onPick} /> : null;
+  const absent = !(owner && context);
+  useEffect(() => { if (absent) onPresence(false); }, [absent, onPresence]);
+  return owner && context ? <TempoHintButton owner={owner} context={context} onPick={onPick} onPresence={onPresence} /> : null;
 }
 
-function TempoHintButton({ owner, context, onPick }: { owner: TempoOwner; context: TempoContext; onPick: (tempo: Tempo) => void }) {
+function TempoHintButton({ owner, context, onPick, onPresence }: { owner: TempoOwner; context: TempoContext; onPick: (tempo: Tempo) => void; onPresence: (present: boolean) => void }) {
   const { t } = useI18n();
   const suggestion = usePresentationRead<TempoProgressionView>("tempo.progression", [owner, context])?.evaluation?.suggestion;
+  useEffect(() => { onPresence(!!suggestion); return () => onPresence(false); }, [suggestion, onPresence]);
   if (!suggestion) return null;
   const Arrow = suggestion.direction === "decrease" ? ArrowDown : ArrowUp;
   return (
-    <button type="button" onClick={() => onPick(suggestion.tempo)} className="inline-flex min-h-11 items-center gap-0.5 font-medium text-primary hover:underline underline-offset-4">
-      <Arrow aria-hidden="true" className="h-3 w-3" />{t("practice.suggestBpm", { note: NOTE_GLYPH[suggestion.tempo.noteVal], bpm: suggestion.tempo.bpm })}
+    <button type="button" onClick={() => onPick(suggestion.tempo)} className="inline-flex min-h-11 items-center gap-1 text-base font-semibold text-primary hover:underline underline-offset-4">
+      <Arrow aria-hidden="true" className="h-4 w-4" />{t("practice.suggestBpm", { note: NOTE_GLYPH[suggestion.tempo.noteVal], bpm: suggestion.tempo.bpm })}
     </button>
   );
 }

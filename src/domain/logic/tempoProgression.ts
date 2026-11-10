@@ -44,6 +44,14 @@ export function evaluateTempoProgression(rule: TempoProgressionRule, state: Temp
   return result;
 }
 
+/** The target tempo is a ceiling: no increase once reached, and an increase never overshoots it. */
+export function capAtTarget(evaluation: TempoEvaluation, current: Tempo, target: Tempo | undefined): TempoEvaluation {
+  const s = evaluation.suggestion;
+  if (!target || !s || s.direction !== "increase") return evaluation;
+  if (compareTempos(current, target) >= 0) return { ...evaluation, suggestion: undefined };
+  return compareTempos(s.tempo, target) > 0 ? { ...evaluation, suggestion: { ...s, tempo: { ...target } } } : evaluation;
+}
+
 export function planTempoUpdates(input: { owner: TempoOwner; context: TempoContext; tempo: Tempo; reference?: TempoProgressionRef; tasks: readonly Task[]; observations: readonly TempoObservation[]; segments: readonly Pick<Segment, "id" | "itemId">[]; fromDate: string; sourceTaskId?: number }): { updates: TempoPlanUpdate[]; excluded: TempoPlanExclusion[] } {
   const updates: TempoPlanUpdate[] = [], excluded: TempoPlanExclusion[] = [];
   for (const task of [...input.tasks].sort((a,b) => a.date.localeCompare(b.date) || a.id!-b.id!)) {

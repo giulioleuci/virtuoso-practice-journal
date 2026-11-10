@@ -135,7 +135,7 @@ targetBpm: 84, noteVal: "quarter",
   const hanon = (await db.library.add({
     subjectId: pianoId, kind: "technique",
     title: "Hanon — Exercise 18", composer: "Hanon",
-    targetBpm: 108, noteVal: "sixteenth",
+    targetBpm: 116, noteVal: "sixteenth",
     techniqueIds: [tNoPedal, tLegato],
     createdAt: now - 150 * D,
   })) as number;
@@ -356,7 +356,7 @@ targetBpm: 84, noteVal: "quarter",
   const wtcPrelude = await seg(bachWtcCsh, "Prelude — full",       60, "quarter", ["Both","Memorized"], [tLegato]);
   const wtcFugue   = await seg(bachWtcCsh, "Fugue — exposition",   56, "quarter", ["RH","LH","Both"], [tVoicing]);
 
-  const hanonEx18 = await seg(hanon, "Exercise 18", 96, "sixteenth", ["RH","LH","Both"], [tLegato]);
+  const hanonEx18 = await seg(hanon, "Exercise 18", 116, "sixteenth", ["RH","LH","Both"], [tLegato]);
   const cortotCh1 = await seg(cortot, "Chapter 1 — finger equality", 76, "eighth", ["RH","LH"], [tLegato]);
 
   // ---------- Lesson recurrences ----------
