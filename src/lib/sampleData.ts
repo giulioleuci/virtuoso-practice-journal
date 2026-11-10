@@ -3,6 +3,7 @@ import { THEORY_LAYERS } from "@/domain/constants/theoryLayers";
 import type { LessonRecurrence } from "@/domain/entities/lesson";
 import type { NoteVal, SegmentEntry, SegmentMark } from "@/domain/entities/common";
 import { sessionContext } from "@/domain/logic/sessionContext";
+import { tempoContextKey } from "@/domain/logic/tempoProgression";
 import { buildSessionSnapshot, buildLessonSnapshot } from "./domain/snapshots";
 import { backupService } from "./services/backup";
 import { lessonsService } from "./services";
@@ -689,9 +690,37 @@ targetBpm: 84, noteVal: "quarter",
   const hanonTpl = (await db.tasks.add({
     date: todayKey, subjectId: pianoId, linkType: "item", itemId: hanon,
     title: "Hanon — Exercise 18", plan: hanonPlan,
-    done: false, createdAt: now,
+    done: false, createdAt: now, importance: "warmup",
+    tempoRule: { enabled: true, successes: 2, minConfidence: 4, increase: { kind: "fixed", value: 4, noteVal: "sixteenth" } },
+    tempoRuleRevision: 1,
     recurrence: { kind: "interval", everyXDays: 1, startDate: todayKey, occurrences: 14 },
   })) as number;
+
+  // The first task today has a real, completed progression cycle: 104 → 108.
+  const hanonContext = { itemId: hanon, segmentId: hanonEx18, layers: ["RH", "LH", "Both"], techniques: [tLegato] };
+  const progressionId = await db.tempoProgressions.add({
+    owner: { kind: "recurrence", id: hanonTpl },
+    context: hanonContext, contextKey: tempoContextKey(hanonContext),
+    tempo: { bpm: 104, noteVal: "sixteenth" }, cycle: 1,
+    startedAt: addDays(todayDate, -2).getTime(), ruleRevision: 1,
+  });
+  const reference = { id: progressionId, cycle: 1, minConfidence: 4 };
+  for (const entry of hanonPlan) entry.progression = reference;
+  await db.tasks.update(hanonTpl, { plan: hanonPlan });
+  for (const age of [2, 1]) {
+    const date = dayKey(addDays(todayDate, -age));
+    const historicalTask = await db.tasks.where("date").equals(date)
+      .filter(task => task.itemId === hanon && task.title === "Hanon — Exercise 18").first();
+    if (historicalTask?.id === undefined) throw new Error("Missing Hanon fixture history");
+    const historicalPlan = hanonPlan.map(entry => ({ ...entry }));
+    await db.tasks.update(historicalTask.id, { recurrenceTaskId: hanonTpl, plan: historicalPlan });
+    const snapshot = await buildSessionSnapshot({ ...historicalTask, recurrenceTaskId: hanonTpl, plan: historicalPlan });
+    await db.sessions.where("taskId").equals(historicalTask.id).modify({
+      marks: historicalPlan.map((entry): SegmentMark => ({ ...entry, targetBpm: 104, targetNoteVal: "sixteenth", confidence: age === 2 ? 4 : 5 })),
+      snapshot,
+      createdAt: addDays(todayDate, -age).getTime() + 3600000,
+    });
+  }
   for (let i = 1; i < 14; i++) {
     upcoming.push({
       date: dayKey(addDays(todayDate, i)), subjectId: pianoId, linkType: "item", itemId: hanon,

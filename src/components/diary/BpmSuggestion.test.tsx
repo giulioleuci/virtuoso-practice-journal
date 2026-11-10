@@ -11,6 +11,9 @@ import { NOTE_GLYPH } from "@/lib/constants";
 import type { Task } from "@/domain/entities/task";
 import { BpmSuggestion } from "./BpmSuggestion";
 import { PracticeMode } from "./PracticeMode";
+import { seedSampleData } from "@/lib/sampleData";
+import { today } from "@/lib/date";
+import { sortDiaryTasks } from "@/lib/domain/taskOrder";
 
 const t = (key: string, vars?: Record<string, string | number>) => translate("en", key, vars);
 const wrap = (node: React.ReactNode) => render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t }}>{node}</I18nContext.Provider>);
@@ -36,6 +39,21 @@ it("shows the increase suggestion for a series once enough confident sessions ar
   expect(await screen.findByText(`${NOTE_GLYPH.quarter} = 88`, { exact: false })).toBeInTheDocument();
   expect(screen.getByText(t("tempo.increase"), { exact: false })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: t("tempo.review") })).toBeInTheDocument();
+});
+
+it("offers an engine-generated increase on the first piano fixture task today", async () => {
+  await seedSampleData();
+  configurePresentationQueries(dexiePresentationReads);
+  const tasks = sortDiaryTasks(await db.tasks.where("date").equals(today()).toArray(), await db.studyRoutines.toArray(), "routine", "en");
+  const task = tasks.find(task => !task.done && !task.skipped && task.deletedAt === undefined);
+  if (!task) throw new Error("Missing today's fixture task");
+  expect(task.title).toBe("Hanon — Exercise 18");
+  expect(task.plan[0]).toMatchObject({ bpm: 104, noteVal: "sixteenth" });
+  wrap(<BpmSuggestion task={task} />);
+  fireEvent.click(screen.getByText(t("tempo.title")));
+  expect(await screen.findByText(`${t("tempo.increase")}:`, { exact: false })).toHaveTextContent(`${NOTE_GLYPH.sixteenth} = 108`);
+  fireEvent.click(screen.getByRole("button", { name: t("tempo.review") }));
+  expect(await screen.findByText(`${NOTE_GLYPH.sixteenth} = 104 → ${NOTE_GLYPH.sixteenth} = 108`)).toBeVisible();
 });
 
 it("hides the suggestion when sessions are not yet confident enough", async () => {
