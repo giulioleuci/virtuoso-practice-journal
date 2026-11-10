@@ -690,7 +690,7 @@ targetBpm: 84, noteVal: "quarter",
   const hanonTpl = (await db.tasks.add({
     date: todayKey, subjectId: pianoId, linkType: "item", itemId: hanon,
     title: "Hanon — Exercise 18", plan: hanonPlan,
-    done: false, createdAt: now,
+    done: false, createdAt: now, importance: "warmup",
     tempoRule: { enabled: true, successes: 2, minConfidence: 4, increase: { kind: "fixed", value: 4, noteVal: "sixteenth" } },
     tempoRuleRevision: 1,
     recurrence: { kind: "interval", everyXDays: 1, startDate: todayKey, occurrences: 14 },
