@@ -9,7 +9,7 @@ import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
 import type { AudioDraft } from "@/domain/ports/audio";
-import { resolveTempoContext, tempoOwner } from "@/domain/logic/tempoProgression";
+import { capAtTarget, resolveTempoContext, tempoOwner } from "@/domain/logic/tempoProgression";
 import type { TempoContext, TempoOwner } from "@/domain/entities/tempoProgression";
 import type { TempoProgressionView } from "@/application/useCases/tempoProgression";
 import { entryFor, marksFromPlan, planSegmentIds } from "@/domain/logic/plan";
