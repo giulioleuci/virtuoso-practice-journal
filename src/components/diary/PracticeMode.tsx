@@ -151,8 +151,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             {marks.map((m, i) => (
               <li key={m.segmentId ?? i} className="shrink-0">
                 <button type="button" aria-current={i === current} data-seg-current={i === current || undefined} onClick={() => setCurrent(i)} className={cn("inline-flex min-h-11 items-center gap-1", i === current ? "font-semibold text-primary" : "hover:text-foreground")}>
-                  <span className="whitespace-nowrap">{segmentOf(m.segmentId)}</span>
-                  {m.confidence !== undefined && <span className="inline-flex items-center gap-0.5 tabular-nums"><Check className="h-3 w-3" />{m.confidence}</span>}
+                  <span className={cn("whitespace-nowrap", m.confidence !== undefined && "line-through")}>{segmentOf(m.segmentId)}</span>
                 </button>
               </li>
             ))}
