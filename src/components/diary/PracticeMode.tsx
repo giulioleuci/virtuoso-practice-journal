@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { RatingFields } from "@/components/shared/RatingFields";
 import { ClipDraftList, Recorder } from "./Recorder";
 import { Slider } from "@/components/ui/slider";
-import { X, Volume2, VolumeX, MessageSquareQuote, CircleHelp, ChevronLeft, ChevronRight, Check, Dot, TimerOff, ArrowUp, ArrowDown } from "lucide-react";
+import { X, Volume2, VolumeX, MessageSquareQuote, CircleHelp, ChevronLeft, ChevronRight, Dot, TimerOff, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ItemHelpSheet } from "@/components/library/ItemHelpSheet";
 import { NotesHistory } from "./NotesHistory";
