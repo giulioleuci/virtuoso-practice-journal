@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { TempoObservation, TempoProgression, TempoProgressionRule } from "../entities/tempoProgression";
-import { evaluateTempoProgression, initialTempo, planTempoUpdates, resolveTempoContext, targetEvidence, tempoContextKey } from "./tempoProgression";
+import { capAtTarget, evaluateTempoProgression, initialTempo, planTempoUpdates, resolveTempoContext, targetEvidence, tempoContextKey } from "./tempoProgression";
 import { tempoRuleSchema } from "@/lib/schemas";
 
 const context = { itemId: 9, segmentId: 1, layers: ["RH"], techniques: [1] };
