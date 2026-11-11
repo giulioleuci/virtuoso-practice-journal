@@ -289,7 +289,8 @@ function TempoHint({ task, mark, segments, onPick, onPresence }: { task: Task; m
 
 function TempoHintButton({ owner, context, onPick, onPresence }: { owner: TempoOwner; context: TempoContext; onPick: (tempo: Tempo) => void; onPresence: (present: boolean) => void }) {
   const { t } = useI18n();
-  const suggestion = usePresentationRead<TempoProgressionView>("tempo.progression", [owner, context])?.evaluation?.suggestion;
+  const view = usePresentationRead<TempoProgressionView>("tempo.progression", [owner, context]);
+  const suggestion = view?.evaluation?.suggestion;
   useEffect(() => { onPresence(!!suggestion); return () => onPresence(false); }, [suggestion, onPresence]);
   if (!suggestion) return null;
   const Arrow = suggestion.direction === "decrease" ? ArrowDown : ArrowUp;

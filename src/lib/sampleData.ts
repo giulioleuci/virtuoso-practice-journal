@@ -135,7 +135,7 @@ targetBpm: 84, noteVal: "quarter",
   const hanon = (await db.library.add({
     subjectId: pianoId, kind: "technique",
     title: "Hanon — Exercise 18", composer: "Hanon",
-    targetBpm: 116, noteVal: "sixteenth",
+    targetBpm: 104, noteVal: "sixteenth",
     techniqueIds: [tNoPedal, tLegato],
     createdAt: now - 150 * D,
   })) as number;
@@ -356,7 +356,7 @@ targetBpm: 84, noteVal: "quarter",
   const wtcPrelude = await seg(bachWtcCsh, "Prelude — full",       60, "quarter", ["Both","Memorized"], [tLegato]);
   const wtcFugue   = await seg(bachWtcCsh, "Fugue — exposition",   56, "quarter", ["RH","LH","Both"], [tVoicing]);
 
-  const hanonEx18 = await seg(hanon, "Exercise 18", 116, "sixteenth", ["RH","LH","Both"], [tLegato]);
+  const hanonEx18 = await seg(hanon, "Exercise 18", 104, "sixteenth", ["RH","LH","Both"], [tLegato]);
   const cortotCh1 = await seg(cortot, "Chapter 1 — finger equality", 76, "eighth", ["RH","LH"], [tLegato]);
 
   // ---------- Lesson recurrences ----------
@@ -696,7 +696,7 @@ targetBpm: 84, noteVal: "quarter",
     recurrence: { kind: "interval", everyXDays: 1, startDate: todayKey, occurrences: 14 },
   })) as number;
 
-  // The first task today has a real, completed progression cycle: 104 → 108.
+  // The first task today has a completed cycle but already sits at its target (104): no suggestion.
   const hanonContext = { itemId: hanon, segmentId: hanonEx18, layers: ["RH", "LH", "Both"], techniques: [tLegato] };
   const progressionId = await db.tempoProgressions.add({
     owner: { kind: "recurrence", id: hanonTpl },
@@ -721,6 +721,40 @@ targetBpm: 84, noteVal: "quarter",
       createdAt: addDays(todayDate, -age).getTime() + 3600000,
     });
   }
+  // Two more progression cases; the section's target tempo is the ceiling for the suggestion:
+  // Cortot gets the full +4 step (64 → 68, target 76), Bach Fugue is capped (54 → 56, not 58).
+  const progressionCase = async (c: { itemId: number; segmentId: number; title: string; layers: string[]; techniques: number[]; noteVal: NoteVal; working: number }) => {
+    const rule = { enabled: true, successes: 2, minConfidence: 4, increase: { kind: "fixed" as const, value: 4, noteVal: c.noteVal } };
+    const tplId = (await db.tasks.add({
+      date: todayKey, subjectId: pianoId, linkType: "item", itemId: c.itemId, title: c.title,
+      plan: plan(c.layers, c.techniques, c.working, c.noteVal, [c.segmentId]),
+      done: false, createdAt: now, tempoRule: rule, tempoRuleRevision: 1,
+      recurrence: { kind: "interval", everyXDays: 7, startDate: todayKey, occurrences: 1 },
+    })) as number;
+    const context = { itemId: c.itemId, segmentId: c.segmentId, layers: c.layers, techniques: c.techniques };
+    const id = await db.tempoProgressions.add({
+      owner: { kind: "recurrence", id: tplId }, context, contextKey: tempoContextKey(context),
+      tempo: { bpm: c.working, noteVal: c.noteVal }, cycle: 1, startedAt: addDays(todayDate, -2).getTime(), ruleRevision: 1,
+    });
+    const ref = { id, cycle: 1, minConfidence: 4 };
+    const tplPlan = plan(c.layers, c.techniques, c.working, c.noteVal, [c.segmentId]).map(e => ({ ...e, progression: ref }));
+    await db.tasks.update(tplId, { plan: tplPlan });
+    for (const age of [2, 1]) {
+      const date = dayKey(addDays(todayDate, -age));
+      const workPlan = plan(c.layers, c.techniques, c.working, c.noteVal, [c.segmentId]).map(e => ({ ...e, progression: ref }));
+      const taskId = (await db.tasks.add({ date, subjectId: pianoId, linkType: "item", itemId: c.itemId, title: c.title, plan: workPlan, done: true, recurrenceTaskId: tplId, createdAt: now - age * D })) as number;
+      const task = await db.tasks.get(taskId);
+      if (!task) continue;
+      await db.sessions.add({
+        taskId, ...sessionContext(task), date,
+        marks: workPlan.map((e): SegmentMark => ({ ...e, targetBpm: c.working, targetNoteVal: c.noteVal, confidence: age === 2 ? 4 : 5 })),
+        snapshot: await buildSessionSnapshot(task), createdAt: addDays(todayDate, -age).getTime() + 3600000,
+      });
+    }
+  };
+  await progressionCase({ itemId: cortot, segmentId: cortotCh1, title: "Cortot Ch. 1 — tempo ladder", layers: ["RH","LH"], techniques: [tLegato], noteVal: "eighth", working: 64 });
+  await progressionCase({ itemId: bachWtcCsh, segmentId: wtcFugue, title: "Bach Fugue — tempo ladder", layers: ["RH","LH","Both"], techniques: [tVoicing], noteVal: "quarter", working: 54 });
+
   for (let i = 1; i < 14; i++) {
     upcoming.push({
       date: dayKey(addDays(todayDate, i)), subjectId: pianoId, linkType: "item", itemId: hanon,
