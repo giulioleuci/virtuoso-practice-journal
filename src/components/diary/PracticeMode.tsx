@@ -284,12 +284,15 @@ function TempoHint({ task, mark, segments, onPick, onPresence }: { task: Task; m
   const context = owner && segments ? resolveTempoContext(task, mark, segments) : undefined;
   const absent = !(owner && context);
   useEffect(() => { if (absent) onPresence(false); }, [absent, onPresence]);
-  return owner && context ? <TempoHintButton owner={owner} context={context} onPick={onPick} onPresence={onPresence} /> : null;
+  const target = mark.targetBpm !== undefined && mark.targetNoteVal ? { bpm: mark.targetBpm, noteVal: mark.targetNoteVal } : undefined;
+  return owner && context ? <TempoHintButton owner={owner} context={context} target={target} onPick={onPick} onPresence={onPresence} /> : null;
 }
 
-function TempoHintButton({ owner, context, onPick, onPresence }: { owner: TempoOwner; context: TempoContext; onPick: (tempo: Tempo) => void; onPresence: (present: boolean) => void }) {
+function TempoHintButton({ owner, context, target, onPick, onPresence }: { owner: TempoOwner; context: TempoContext; target?: Tempo; onPick: (tempo: Tempo) => void; onPresence: (present: boolean) => void }) {
   const { t } = useI18n();
-  const suggestion = usePresentationRead<TempoProgressionView>("tempo.progression", [owner, context])?.evaluation?.suggestion;
+  const view = usePresentationRead<TempoProgressionView>("tempo.progression", [owner, context]);
+  // The task's own target tempo is a ceiling too, on top of the piece's.
+  const suggestion = view?.evaluation && view.state ? capAtTarget(view.evaluation, view.state.tempo, target).suggestion : undefined;
   useEffect(() => { onPresence(!!suggestion); return () => onPresence(false); }, [suggestion, onPresence]);
   if (!suggestion) return null;
   const Arrow = suggestion.direction === "decrease" ? ArrowDown : ArrowUp;

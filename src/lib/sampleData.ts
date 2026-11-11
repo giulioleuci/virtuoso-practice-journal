@@ -517,7 +517,41 @@ targetBpm: 84, noteVal: "quarter",
       });
     }
 
-    // Ballade — every other day
+    // Two more progression cases. The task's own target tempo is the ceiling for the suggestion:
+  // Cortot gets the full +4 step (64 → 68 under target 76), Bach Fugue is capped (52 → 54, not 56).
+  const progressionCase = async (c: { itemId: number; segmentId: number; title: string; layers: string[]; techniques: number[]; noteVal: NoteVal; working: number; target: number }) => {
+    const rule = { enabled: true, successes: 2, minConfidence: 4, increase: { kind: "fixed" as const, value: 4, noteVal: c.noteVal } };
+    const tplId = (await db.tasks.add({
+      date: todayKey, subjectId: pianoId, linkType: "item", itemId: c.itemId, title: c.title,
+      plan: plan(c.layers, c.techniques, c.target, c.noteVal, [c.segmentId]),
+      done: false, createdAt: now, tempoRule: rule, tempoRuleRevision: 1,
+      recurrence: { kind: "interval", everyXDays: 7, startDate: todayKey, occurrences: 1 },
+    })) as number;
+    const context = { itemId: c.itemId, segmentId: c.segmentId, layers: c.layers, techniques: c.techniques };
+    const id = await db.tempoProgressions.add({
+      owner: { kind: "recurrence", id: tplId }, context, contextKey: tempoContextKey(context),
+      tempo: { bpm: c.working, noteVal: c.noteVal }, cycle: 1, startedAt: addDays(todayDate, -2).getTime(), ruleRevision: 1,
+    });
+    const ref = { id, cycle: 1, minConfidence: 4 };
+    const tplPlan = plan(c.layers, c.techniques, c.target, c.noteVal, [c.segmentId]).map(e => ({ ...e, progression: ref }));
+    await db.tasks.update(tplId, { plan: tplPlan });
+    for (const age of [2, 1]) {
+      const date = dayKey(addDays(todayDate, -age));
+      const workPlan = plan(c.layers, c.techniques, c.working, c.noteVal, [c.segmentId]).map(e => ({ ...e, progression: ref }));
+      const taskId = (await db.tasks.add({ date, subjectId: pianoId, linkType: "item", itemId: c.itemId, title: c.title, plan: workPlan, done: true, recurrenceTaskId: tplId, createdAt: now - age * D })) as number;
+      const task = await db.tasks.get(taskId);
+      if (!task) continue;
+      await db.sessions.add({
+        taskId, ...sessionContext(task), date,
+        marks: workPlan.map((e): SegmentMark => ({ ...e, targetBpm: c.working, targetNoteVal: c.noteVal, confidence: age === 2 ? 4 : 5 })),
+        snapshot: await buildSessionSnapshot(task), createdAt: addDays(todayDate, -age).getTime() + 3600000,
+      });
+    }
+  };
+  await progressionCase({ itemId: cortot, segmentId: cortotCh1, title: "Cortot Ch. 1 — tempo ladder", layers: ["RH","LH"], techniques: [tLegato], noteVal: "eighth", working: 64, target: 76 });
+  await progressionCase({ itemId: bachWtcCsh, segmentId: wtcFugue, title: "Bach Fugue — tempo ladder", layers: ["RH","LH","Both"], techniques: [tVoicing], noteVal: "quarter", working: 52, target: 54 });
+
+  // Ballade — every other day
     if (i % 2 === 0) {
       pastTasks.push({
         date: d, subjectId: pianoId, linkType: "item", itemId: chopinBallade,
@@ -696,7 +730,7 @@ targetBpm: 84, noteVal: "quarter",
     recurrence: { kind: "interval", everyXDays: 1, startDate: todayKey, occurrences: 14 },
   })) as number;
 
-  // The first task today has a real, completed progression cycle: 104 → 108.
+  // The first task today has a completed cycle but already sits at its target (104): no suggestion.
   const hanonContext = { itemId: hanon, segmentId: hanonEx18, layers: ["RH", "LH", "Both"], techniques: [tLegato] };
   const progressionId = await db.tempoProgressions.add({
     owner: { kind: "recurrence", id: hanonTpl },
