@@ -39,6 +39,13 @@ it("uses latest qualified source and preserves target evidence across cycles wit
   expect(targetEvidence({ ...state, cycle: 2 }, [old], { bpm: 90, noteVal: "quarter" })?.sessionId).toBe(1);
   expect(targetEvidence(state, [], state.tempo)).toBeUndefined();
 });
+it("stops increases at the target and caps a larger step exactly at it", () => {
+  const increase = { evaluated: 2, successes: 2, trailingSuccesses: 2, trailingFailures: 0, suggestion: { direction: "increase" as const, tempo: { bpm: 88, noteVal: "quarter" as const }, reason: "successes" as const } };
+  expect(capAtTarget(increase, { bpm: 80, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 85, noteVal: "quarter" });
+  expect(capAtTarget(increase, { bpm: 85, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toBeUndefined();
+  expect(capAtTarget(increase, { bpm: 90, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toBeUndefined();
+  expect(capAtTarget(increase, { bpm: 80, noteVal: "quarter" }, { bpm: 90, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 88, noteVal: "quarter" });
+});
 it("validates configurable rules at the boundary", () => {
   expect(tempoRuleSchema.safeParse(rule).success).toBe(true);
   for (const patch of [{ successes: 0 }, { successes: 1.5 }, { window: 0 }, { window: 2 }, { window: "" }, { minConfidence: 6 }, { increase: { kind: "percent", value: NaN } }, { increase: { kind: "percent", value: Infinity } }, { decrease: { failures: 2, step: { kind: "percent", value: 100 } } }]) expect(tempoRuleSchema.safeParse({ ...rule, ...patch }).success).toBe(false);
