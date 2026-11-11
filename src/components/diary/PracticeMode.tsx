@@ -9,7 +9,7 @@ import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
 import type { AudioDraft } from "@/domain/ports/audio";
-import { capAtTarget, resolveTempoContext, tempoOwner } from "@/domain/logic/tempoProgression";
+import { resolveTempoContext, tempoOwner } from "@/domain/logic/tempoProgression";
 import type { TempoContext, TempoOwner } from "@/domain/entities/tempoProgression";
 import type { TempoProgressionView } from "@/application/useCases/tempoProgression";
 import { entryFor, marksFromPlan, planSegmentIds } from "@/domain/logic/plan";
@@ -284,15 +284,13 @@ function TempoHint({ task, mark, segments, onPick, onPresence }: { task: Task; m
   const context = owner && segments ? resolveTempoContext(task, mark, segments) : undefined;
   const absent = !(owner && context);
   useEffect(() => { if (absent) onPresence(false); }, [absent, onPresence]);
-  const target = mark.targetBpm !== undefined && mark.targetNoteVal ? { bpm: mark.targetBpm, noteVal: mark.targetNoteVal } : undefined;
-  return owner && context ? <TempoHintButton owner={owner} context={context} target={target} onPick={onPick} onPresence={onPresence} /> : null;
+  return owner && context ? <TempoHintButton owner={owner} context={context} onPick={onPick} onPresence={onPresence} /> : null;
 }
 
-function TempoHintButton({ owner, context, target, onPick, onPresence }: { owner: TempoOwner; context: TempoContext; target?: Tempo; onPick: (tempo: Tempo) => void; onPresence: (present: boolean) => void }) {
+function TempoHintButton({ owner, context, onPick, onPresence }: { owner: TempoOwner; context: TempoContext; onPick: (tempo: Tempo) => void; onPresence: (present: boolean) => void }) {
   const { t } = useI18n();
   const view = usePresentationRead<TempoProgressionView>("tempo.progression", [owner, context]);
-  // The task's own target tempo is a ceiling too, on top of the piece's.
-  const suggestion = view?.evaluation && view.state ? capAtTarget(view.evaluation, view.state.tempo, target).suggestion : undefined;
+  const suggestion = view?.evaluation?.suggestion;
   useEffect(() => { onPresence(!!suggestion); return () => onPresence(false); }, [suggestion, onPresence]);
   if (!suggestion) return null;
   const Arrow = suggestion.direction === "decrease" ? ArrowDown : ArrowUp;
