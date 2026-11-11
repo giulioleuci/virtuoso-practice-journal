@@ -17,6 +17,11 @@ it("caps the 72 suggestion at the 71 target and protects custom tasks; acceptanc
  expect(repository.data.states[0].cycle).toBe(2);expect((await useCase.accept(preview)).status).toBe("stale");
  expect(repository.data.observations[0].mark.progression?.cycle).toBe(1);
 });
+it("offers no increase once the working tempo reaches the target",async()=>{
+ const { repository,useCase }=fixture();repository.data.items[0].targetBpm=70;
+ expect(await useCase.preview({ owner,context,sourceTaskId: 1 })).toBeNull();
+ expect((await useCase.view(owner,context)).evaluation?.suggestion).toBeUndefined();
+});
 it("rejects each material change to the decision or preview without writing",async()=>{
  for(const change of [
   (r:FakeTempoProgressionRepository)=>{r.data.rule!.minConfidence=5;},
