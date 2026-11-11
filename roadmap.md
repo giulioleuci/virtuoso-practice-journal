@@ -1,4 +1,5 @@
-# Tuner
-- [x] Add chromatic pitch detection and microphone lifecycle.
-- [x] Add tuner screen beside the diary metronome, with localized states and cents meter.
-- [x] Run tests and verify microphone flow and mobile layout (445 Hz sharp, 432 Hz flat, 440 Hz centered; stop/reopen resets microphone).
+# BPM suggestions
+- [x] Verify the larger suggestion and brick-colored BPM in Practice mode.
+- [x] Test that progression suggestions stop at the BPM target and never exceed it.
+- [x] Verify the refreshed Today fixtures still show suggestions.
+- [x] Run targeted tests, i18n validation, and inspect the practice flow in the preview.

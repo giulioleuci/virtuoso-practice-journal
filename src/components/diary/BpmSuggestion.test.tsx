@@ -82,6 +82,8 @@ it("practice mode offers the series suggestion and applies it to the metronome",
   const finish = vi.fn();
   wrap(<PracticeMode task={task} onClose={() => {}} onFinish={finish} />);
   const button = await screen.findByRole("button", { name: t("practice.suggestBpm", { note: NOTE_GLYPH.quarter, bpm: 88 }) });
+  expect(button).toHaveClass("text-base", "font-semibold");
+  expect(screen.getByText("80")).toHaveClass("text-primary");
   fireEvent.click(button);
   fireEvent.click(screen.getByRole("button", { name: t("practice.finishLog") }));
   expect(finish.mock.calls[0][0].marks[0].bpm).toBe(88);

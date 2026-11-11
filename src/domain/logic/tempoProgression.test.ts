@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { TempoObservation, TempoProgression, TempoProgressionRule } from "../entities/tempoProgression";
-import { evaluateTempoProgression, initialTempo, planTempoUpdates, resolveTempoContext, targetEvidence, tempoContextKey } from "./tempoProgression";
+import { capAtTarget, evaluateTempoProgression, initialTempo, planTempoUpdates, resolveTempoContext, targetEvidence, tempoContextKey } from "./tempoProgression";
 import { tempoRuleSchema } from "@/lib/schemas";
 
 const context = { itemId: 9, segmentId: 1, layers: ["RH"], techniques: [1] };
@@ -38,6 +38,13 @@ it("uses latest qualified source and preserves target evidence across cycles wit
   expect(initialTempo(context, [observation(2),old], 4)?.sessionId).toBe(2);
   expect(targetEvidence({ ...state, cycle: 2 }, [old], { bpm: 90, noteVal: "quarter" })?.sessionId).toBe(1);
   expect(targetEvidence(state, [], state.tempo)).toBeUndefined();
+});
+it("stops increases at the target and caps a larger step exactly at it", () => {
+  const increase = { evaluated: 2, successes: 2, trailingSuccesses: 2, trailingFailures: 0, suggestion: { direction: "increase" as const, tempo: { bpm: 88, noteVal: "quarter" as const }, reason: "successes" as const } };
+  expect(capAtTarget(increase, { bpm: 80, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 85, noteVal: "quarter" });
+  expect(capAtTarget(increase, { bpm: 85, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toBeUndefined();
+  expect(capAtTarget(increase, { bpm: 90, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toBeUndefined();
+  expect(capAtTarget(increase, { bpm: 80, noteVal: "quarter" }, { bpm: 90, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 88, noteVal: "quarter" });
 });
 it("validates configurable rules at the boundary", () => {
   expect(tempoRuleSchema.safeParse(rule).success).toBe(true);
