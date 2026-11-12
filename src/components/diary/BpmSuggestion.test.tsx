@@ -41,7 +41,7 @@ it("shows the increase suggestion for a series once enough confident sessions ar
   expect(screen.getByRole("button", { name: t("tempo.review") })).toBeInTheDocument();
 });
 
-it("offers an engine-generated increase on the first piano fixture task today", async () => {
+it("stops suggesting on the first piano fixture task once its target is reached", async () => {
   await seedSampleData();
   configurePresentationQueries(dexiePresentationReads);
   const tasks = sortDiaryTasks(await db.tasks.where("date").equals(today()).toArray(), await db.studyRoutines.toArray(), "routine", "en");
@@ -51,9 +51,9 @@ it("offers an engine-generated increase on the first piano fixture task today", 
   expect(task.plan[0]).toMatchObject({ bpm: 104, noteVal: "sixteenth" });
   wrap(<BpmSuggestion task={task} />);
   fireEvent.click(screen.getByText(t("tempo.title")));
-  expect(await screen.findByText(`${t("tempo.increase")}:`, { exact: false })).toHaveTextContent(`${NOTE_GLYPH.sixteenth} = 108`);
-  fireEvent.click(screen.getByRole("button", { name: t("tempo.review") }));
-  expect(await screen.findByText(`${NOTE_GLYPH.sixteenth} = 104 → ${NOTE_GLYPH.sixteenth} = 108`)).toBeVisible();
+  expect(await screen.findByText(/104/)).toBeInTheDocument();
+  expect(screen.queryByText(`${t("tempo.increase")}:`, { exact: false })).not.toBeInTheDocument();
+  expect(screen.queryByText(`${NOTE_GLYPH.sixteenth} = 108`, { exact: false })).not.toBeInTheDocument();
 });
 
 it("hides the suggestion when sessions are not yet confident enough", async () => {
