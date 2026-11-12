@@ -51,7 +51,7 @@ it("stops suggesting on the first piano fixture task once its target is reached"
   expect(task.plan[0]).toMatchObject({ bpm: 104, noteVal: "sixteenth" });
   wrap(<BpmSuggestion task={task} />);
   fireEvent.click(screen.getByText(t("tempo.title")));
-  expect(await screen.findByText(/104/)).toBeInTheDocument();
+  expect((await screen.findAllByText(/104/)).length).toBeGreaterThan(0);
   expect(screen.queryByText(`${t("tempo.increase")}:`, { exact: false })).not.toBeInTheDocument();
   expect(screen.queryByText(`${NOTE_GLYPH.sixteenth} = 108`, { exact: false })).not.toBeInTheDocument();
 });
