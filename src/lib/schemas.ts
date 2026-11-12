@@ -3,8 +3,10 @@ import type { StudyAdaptivity, StudyGroup } from "@/domain/ports/studyRoutine";
 import { z } from "zod";
 import { TASK_IMPORTANCE } from "@/domain/entities/task";
 import { BPM_MIN, BPM_MAX, NOTE_VALUES } from "@/domain/constants/noteValues";
+import { CLICK_LEVELS } from "@/domain/constants/clickLevels";
 
 export const noteValSchema = z.enum(NOTE_VALUES);
+const clickSchema = z.enum(CLICK_LEVELS);
 export const bpmSchema = z.number().int().min(BPM_MIN).max(BPM_MAX);
 export const ratingSchema = z.number().int().min(1).max(5);
 
@@ -22,7 +24,7 @@ export const tempoProgressionRefSchema = z.object({ id: z.number().int().positiv
 export const tempoProgressionSchema = z.object({
   id: z.number().int().positive(), owner: z.object({ kind: z.enum(["routine", "recurrence"]), id: z.number().int().positive() }),
   context: z.object({ itemId: z.number().int().positive(), segmentId: z.number().int().positive().optional(), layers: z.array(z.string()), techniques: z.array(z.number().int().positive()) }),
-  contextKey: z.string(), tempo: z.object({ bpm: bpmSchema, noteVal: noteValSchema }),
+  contextKey: z.string(), tempo: z.object({ bpm: bpmSchema, noteVal: noteValSchema }), click: clickSchema.optional(),
   cycle: z.number().int().positive(), startedAt: z.number().finite().nonnegative(), ruleRevision: z.number().int().positive(),
 });
 
@@ -31,6 +33,7 @@ export const segmentEntrySchema = z.object({
   segmentId: z.number().int().positive().optional(),
   bpm: bpmSchema.optional(),
   noteVal: noteValSchema.optional(),
+  click: clickSchema.optional(),
   layers: z.array(z.string()),
   techniques: z.array(z.number()),
 });
@@ -42,6 +45,7 @@ export const segmentMarkSchema = segmentEntrySchema.extend({
   notes: z.string().max(2000).optional(),
   targetBpm: bpmSchema.optional(),
   targetNoteVal: noteValSchema.optional(),
+  beatsPerBar: z.number().int().min(1).max(12).optional(),
 });
 
 const oneEntryPerSection = (marks: { segmentId?: number }[]) => new Set(marks.map((m) => m.segmentId ?? "whole")).size === marks.length;

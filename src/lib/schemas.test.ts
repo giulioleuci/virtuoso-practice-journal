@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { NOTE_VALUES } from "@/domain/constants/noteValues";
-import { sessionInputSchema, taskInputSchema, flattenErrors, bpmSchema, libraryKindSchema, collectionKindSchema, libraryItemInputSchema, segmentInputSchema, collectionLinkInputSchema } from "./schemas";
+import { sessionInputSchema, taskInputSchema, flattenErrors, bpmSchema, libraryKindSchema, collectionKindSchema, libraryItemInputSchema, segmentInputSchema, collectionLinkInputSchema, segmentMarkSchema, tempoProgressionSchema } from "./schemas";
 
 describe("study materials", () => {
   it("accepts the five autonomous types and rejects material kinds as containers", () => {
@@ -118,4 +118,13 @@ describe("flattenErrors", () => {
     expect(errs[0]).toMatch(/^a: /);
     expect(errs[1]).toMatch(/^b: /);
   });
+});
+
+it("keeps click level and beats per bar on marks", () => {
+  const mark = { layers: [], techniques: [], click: "bar2", beatsPerBar: 4 };
+  expect(segmentMarkSchema.parse(mark)).toEqual(mark);
+  expect(segmentMarkSchema.safeParse({ ...mark, click: "half" }).success).toBe(false);
+  expect(segmentMarkSchema.safeParse({ ...mark, beatsPerBar: 0 }).success).toBe(false);
+  const validState = { id: 1, owner: { kind: "routine", id: 1 }, context: { itemId: 1, layers: [], techniques: [] }, contextKey: "k", tempo: { bpm: 60, noteVal: "quarter" }, cycle: 1, startedAt: 1, ruleRevision: 1 };
+  expect(tempoProgressionSchema.parse({ ...validState, click: "none" }).click).toBe("none");
 });

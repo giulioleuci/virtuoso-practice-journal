@@ -130,3 +130,12 @@ it("rejects a task plan linked to another owner's progression before changing da
   await expect(new ImportBackupUseCase(repository,new FakeFiles()).importContent(JSON.stringify({version:6,data}))).rejects.toThrow();
   expect(repository.imported).toBeUndefined();
 });
+
+it("round-trips click level and beats per bar", async () => {
+  const data = valid();
+  data.sessions[0] = { ...data.sessions[0] as object, marks: [{ segmentId: 1, bpm: 56, noteVal: "quarter", layers: [], techniques: [], click: "first", beatsPerBar: 3 }] };
+  const repository = new FakeBackupRepository(data);
+  const content = await new ExportBackupUseCase(repository, new FakeFiles()).createContent();
+  await new ImportBackupUseCase(repository, new FakeFiles(content)).execute();
+  expect((repository.imported?.sessions[0] as { marks: unknown[] }).marks[0]).toMatchObject({ click: "first", beatsPerBar: 3 });
+});

@@ -1,4 +1,5 @@
 import type { NoteVal } from "../constants/noteValues";
+import type { ClickLevel } from "../constants/clickLevels";
 
 export type { NoteVal };
 export type Tempo = { bpm: number; noteVal: NoteVal };
@@ -16,6 +17,8 @@ export interface SegmentEntry {
   segmentId?: number;
   bpm?: number;
   noteVal?: NoteVal;
+  /** Plan = planned click level, mark = level actually played; absent means every beat. */
+  click?: ClickLevel;
   layers: string[];
   techniques: number[];
 }
@@ -31,6 +34,8 @@ export interface SegmentMark extends SegmentEntry {
   notes?: string;
   targetBpm?: number;
   targetNoteVal?: NoteVal;
+  /** Beats per bar the section was practiced in (1-12). */
+  beatsPerBar?: number;
 }
 
 /** The three per-section ratings in display order; each is an integer 1-5. */
