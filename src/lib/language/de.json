@@ -1175,5 +1175,7 @@
   "tempo.emptyCycle": "Noch keine auswertbaren Sitzungen in diesem Zyklus.",
   "tempo.updateCount": "Zu aktualisierende Aufgaben: {{count}}",
   "tempo.reference": "Referenznotenwert: {{note}}",
-  "tempo.windowSize": "Fenster: {{count}} Sitzungen"
+  "tempo.windowSize": "Fenster: {{count}} Sitzungen",
+  "print.bpmDelta": "{{value}} BPM ggü. Vorwoche",
+  "print.bpmDeltaHint": "Änderung zum Höchsttempo der Vorwoche, im Zielnotenwert"
 }

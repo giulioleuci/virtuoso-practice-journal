@@ -1,8 +1,9 @@
-import { compareTempos } from "@/domain/logic/tempo";
-import { useMemo, useRef, useState } from "react";
+import { compareTempos, convertTempo } from "@/domain/logic/tempo";
+import type { Tempo } from "@/domain/entities/common";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
-import { useLibrary, useAssignments, useLessons, useProfile, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
+import { useLibrary, useAssignments, useLessons, useProfile, useSegments, useSessionsInRange, useSubjects } from "@/presentation/hooks/useEntities";
 import { useI18n } from "@/lib/i18n";
 import { addDays, dayKey, endOfWeek, formatDate, getDefaultWeekStartsOn, parseDayKey, startOfWeek } from "@/lib/date";
 import { tempoLabel } from "@/lib/format";
@@ -36,6 +37,9 @@ export default function PrintSummary() {
   const rangeDays = Math.round((parseDayKey(to).getTime() - parseDayKey(from).getTime()) / 864e5) + 1;
 
   const sessions = useSessionsInRange(from, to);
+  // Previous week: the seven days before the summary range, for the +BPM comparison.
+  const prevSessions = useSessionsInRange(dayKey(addDays(parseDayKey(from), -7)), dayKey(addDays(parseDayKey(from), -1)));
+  const segments = useSegments();
   const items = useLibrary();
   const assignments = useAssignments();
 
@@ -49,22 +53,62 @@ export default function PrintSummary() {
   const practiceDays = new Set(list.map((session) => session.date)).size;
 
   const pieces = useMemo(() => {
-    const map = new Map<string, { key: string; title: string; composer?: string; count: number; topBpm: number; noteVal?: NoteVal }>();
+    const keyOf = (session: (typeof list)[number], title: string) =>
+      session.itemId !== undefined ? `item:${session.itemId}` : session.taskId !== undefined ? `task:${session.taskId}` : `free:${session.subjectId}:${title}`;
+    const better = (m: { bpm?: number; noteVal?: NoteVal }, best?: Tempo): best is Tempo =>
+      m.bpm !== undefined && m.noteVal !== undefined && (!best || compareTempos({ bpm: m.bpm, noteVal: m.noteVal }, best) > 0);
+    // Previous-week max per piece and per section.
+    const prevMax = new Map<string, Tempo>();
+    for (const session of prevSessions ?? []) {
+      if (subjectId !== undefined && session.subjectId !== subjectId) continue;
+      const key = keyOf(session, session.snapshot?.itemTitle ?? session.snapshot?.taskTitle ?? "");
+      for (const m of session.marks) {
+        if (m.bpm === undefined || !m.noteVal) continue;
+        const tempo = { bpm: m.bpm, noteVal: m.noteVal };
+        for (const k of [key, m.segmentId !== undefined ? `${key}#${m.segmentId}` : undefined]) {
+          if (k && (!prevMax.has(k) || compareTempos(tempo, prevMax.get(k)!) > 0)) prevMax.set(k, tempo);
+        }
+      }
+    }
+    const segName = new Map((segments ?? []).map((seg) => [seg.id, seg.label]));
+    type Frag = { id: number; name: string; count: number; top?: Tempo; target?: NoteVal; delta?: number };
+    type Piece = { key: string; title: string; composer?: string; count: number; topBpm: number; noteVal?: NoteVal; target?: NoteVal; fragments: Map<number, Frag> };
+    const map = new Map<string, Piece>();
     for (const session of list) {
       const item = session.itemId !== undefined ? itemById.get(session.itemId) : undefined;
       const title = item?.title ?? session.snapshot?.itemTitle ?? session.snapshot?.taskTitle ?? t("history.untitled");
-      const key = session.itemId !== undefined ? `item:${session.itemId}` : session.taskId !== undefined ? `task:${session.taskId}` : `free:${session.subjectId}:${title}`;
+      const key = keyOf(session, title);
       const top = topMark(session.marks);
-      const current = map.get(key) ?? { key, title, composer: item?.composer ?? session.snapshot?.itemComposer, count: 0, topBpm: 0, noteVal: top?.noteVal };
+      const current: Piece = map.get(key) ?? { key, title, composer: item?.composer ?? session.snapshot?.itemComposer, count: 0, topBpm: 0, noteVal: top?.noteVal, fragments: new Map() };
       current.count += 1;
-      if (top?.bpm !== undefined && top.noteVal && (!current.noteVal || compareTempos({ bpm: top.bpm,noteVal: top.noteVal },{ bpm: current.topBpm,noteVal: current.noteVal }) > 0)) {
-        current.topBpm = top?.bpm ?? 0;
-        current.noteVal = top?.noteVal;
+      if (top && better(top, current.noteVal ? { bpm: current.topBpm, noteVal: current.noteVal } : undefined)) {
+        current.topBpm = top.bpm ?? 0;
+        current.noteVal = top.noteVal;
+      }
+      current.target ??= top?.targetNoteVal;
+      const seen = new Set<number>();
+      for (const m of session.marks) {
+        if (m.segmentId === undefined) continue;
+        const frag = current.fragments.get(m.segmentId) ?? { id: m.segmentId, name: segName.get(m.segmentId) ?? t("history.untitled"), count: 0 };
+        if (!seen.has(m.segmentId)) { frag.count += 1; seen.add(m.segmentId); }
+        if (better(m, frag.top)) frag.top = { bpm: m.bpm!, noteVal: m.noteVal! };
+        frag.target ??= m.targetNoteVal;
+        current.fragments.set(m.segmentId, frag);
       }
       map.set(key, current);
     }
-    return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [list, itemById, t]);
+    // Delta vs previous week's max, expressed in the target note value (falls back to the reached one).
+    const delta = (cur: Tempo | undefined, prev: Tempo | undefined, target?: NoteVal) => {
+      if (!cur || !prev) return undefined;
+      const unit = target ?? cur.noteVal;
+      return Math.round(convertTempo(cur, unit) - convertTempo(prev, unit));
+    };
+    return Array.from(map.values()).sort((a, b) => b.count - a.count).map((piece) => ({
+      ...piece,
+      delta: delta(piece.noteVal ? { bpm: piece.topBpm, noteVal: piece.noteVal } : undefined, prevMax.get(piece.key), piece.target),
+      fragmentList: Array.from(piece.fragments.values()).map((f) => ({ ...f, delta: delta(f.top, prevMax.get(`${piece.key}#${f.id}`), f.target) })),
+    }));
+  }, [list, prevSessions, segments, subjectId, itemById, t]);
 
   const weekLessonIds = useMemo(
     () => new Set((lessons ?? []).filter((lesson) => lesson.date >= (lessonRange ?? from) && lesson.date <= to).map((lesson) => lesson.id)),
@@ -148,18 +192,31 @@ export default function PrintSummary() {
             <thead><tr className="border-b border-border text-left text-xs text-muted-foreground"><th scope="col" className="py-2">{t("progress.item")}</th><th scope="col" className="py-2 text-right">{t("progress.bpm")}</th><th scope="col" className="py-2 pl-3 text-right">{t("print.sessions")}</th></tr></thead>
             <tbody>
               {pieces.map((piece) => (
-                <tr key={piece.key} className="border-b border-border/60 align-top">
+                <Fragment key={piece.key}>
+                <tr className="border-b border-border/60 align-top">
                   <td className="py-1.5 pr-2">
                     <span className="break-words">{piece.title}</span>
                     {piece.composer && <span className="text-muted-foreground italic"> · {piece.composer}</span>}
                   </td>
                   <td className="py-1.5 text-right tabular-nums text-muted-foreground">
                     {piece.topBpm ? tempoLabel(piece.noteVal, piece.topBpm) : "—"}
+                    <BpmDelta value={piece.delta} />
                   </td>
                   <td className="py-1.5 pl-3 text-right tabular-nums text-muted-foreground">
                     {t("history.sessions", { count: piece.count })}
                   </td>
                 </tr>
+                {piece.fragmentList.map((frag) => (
+                  <tr key={`${piece.key}#${frag.id}`} className="border-b border-border/40 align-top text-xs">
+                    <td className="py-1 pl-4 pr-2 text-muted-foreground"><span className="break-words">↳ {frag.name}</span></td>
+                    <td className="py-1 text-right tabular-nums text-muted-foreground">
+                      {frag.top ? tempoLabel(frag.top.noteVal, frag.top.bpm) : "—"}
+                      <BpmDelta value={frag.delta} />
+                    </td>
+                    <td className="py-1 pl-3 text-right tabular-nums text-muted-foreground">{t("history.sessions", { count: frag.count })}</td>
+                  </tr>
+                ))}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -198,4 +255,12 @@ export default function PrintSummary() {
       </footer>
     </div>
   );
+}
+
+/** Change of the weekly max tempo vs the previous week's max; hidden when either week has no tempo. */
+function BpmDelta({ value }: { value?: number }) {
+  const { t } = useI18n();
+  if (value === undefined) return null;
+  const text = value > 0 ? `+${value}` : `${value}`;
+  return <span className="block text-[0.7rem] text-foreground/70" title={t("print.bpmDeltaHint")}>{t("print.bpmDelta", { value: text })}</span>;
 }
