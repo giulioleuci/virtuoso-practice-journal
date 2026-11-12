@@ -12,7 +12,7 @@ it("plays a sustained 440 Hz A and stops it on toggle and unmount", async () => 
     resume = vi.fn().mockResolvedValue(undefined);
     close = vi.fn().mockResolvedValue(undefined);
     createOscillator() {
-      const oscillator = { frequency: { value: 0 }, start: vi.fn(), stop: vi.fn(), connect: vi.fn() };
+      const oscillator = { frequency: { value: 0 }, start: vi.fn(), stop: vi.fn(), connect: vi.fn((destination: unknown) => destination) };
       oscillators.push(oscillator);
       return oscillator;
     }
