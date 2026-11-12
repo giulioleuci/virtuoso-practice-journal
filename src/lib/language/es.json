@@ -479,7 +479,7 @@
   "practice.beatsPerBar": "Tiempos/compás",
   "practice.noteLabel": "Nota",
   "practice.finishLog": "Terminar y registrar sesión",
-  "practice.skipTempo": "Sin tempo",
+  "practice.skipTempo": "Lectura, tempo no registrado",
   "practice.notesHistory": "Historial de notas",
   "practice.askTeacher": "Preguntar al maestro",
   "session.flagLesson": "Marcar para la próxima clase",
@@ -1177,5 +1177,15 @@
   "tempo.reference": "Figura de referencia: {{note}}",
   "tempo.windowSize": "Ventana: {{count}} sesiones",
   "print.bpmDelta": "{{value}} BPM respecto a la semana pasada",
-  "print.bpmDeltaHint": "Diferencia con el tempo máximo de la semana anterior, en la figura objetivo"
+  "print.bpmDeltaHint": "Diferencia con el tempo máximo de la semana anterior, en la figura objetivo",
+  "practice.clickLevel": "Clic",
+  "click.all": "Todos los tiempos",
+  "click.1-3": "Tiempos 1 y 3",
+  "click.first": "Solo el primer tiempo",
+  "click.bar2": "Primer tiempo cada 2 compases",
+  "click.bar4": "Primer tiempo cada 4 compases",
+  "click.none": "Sin clic",
+  "practice.suggestRelease": "¿Empezar a soltar el metrónomo? {{level}}",
+  "practice.suggestClick": "Prueba: {{level}}",
+  "tempo.released": "Sin metrónomo"
 }

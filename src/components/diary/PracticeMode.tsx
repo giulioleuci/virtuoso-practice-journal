@@ -4,7 +4,8 @@ import { Dialog, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { usePresentationRead } from "@/presentation/hooks/usePresentationQuery";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { BPM_MIN, BPM_MAX, COMPOUND_NOTES, SIMPLE_NOTES } from "@/domain/constants/noteValues";
-import type { SegmentMark, Tempo } from "@/domain/entities/common";
+import { CLICK_LEVELS } from "@/domain/constants/clickLevels";
+import type { SegmentMark } from "@/domain/entities/common";
 import type { Collection } from "@/domain/entities/collection";
 import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
@@ -85,17 +86,22 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     update({ marks: marks.map((m) => {
       if (restored && m.bpm !== undefined) return m;
       const prev = entryFor(lastMarks, m.segmentId);
-      if (prev?.bpm !== undefined) return { ...m, bpm: prev.bpm, noteVal: prev.noteVal ?? m.targetNoteVal ?? "quarter" };
-      if (m.targetBpm) return { ...m, bpm: Math.max(30, Math.round(m.targetBpm / 2)), noteVal: m.targetNoteVal ?? "quarter" };
-      return { ...m, bpm: DEFAULT_BPM, noteVal: m.targetNoteVal ?? "quarter" };
+      // The planned click level wins; otherwise the section resumes with its last level and meter.
+      const m2 = { ...m, click: m.click ?? prev?.click, beatsPerBar: m.beatsPerBar ?? prev?.beatsPerBar };
+      if (prev?.bpm !== undefined) return { ...m2, bpm: prev.bpm, noteVal: prev.noteVal ?? m.targetNoteVal ?? "quarter" };
+      if (m.targetBpm) return { ...m2, bpm: Math.max(30, Math.round(m.targetBpm / 2)), noteVal: m.targetNoteVal ?? "quarter" };
+      return { ...m2, bpm: DEFAULT_BPM, noteVal: m.targetNoteVal ?? "quarter" };
     }) });
   }, [lastMarks, marks, restored, update]);
 
   // Metronome
   const [muted, setMuted] = useState(false);
-  const [beatsPerBar, setBeatsPerBar] = useState(1);
+  const beatsPerBar = mark.beatsPerBar ?? 1;
+  const click = mark.click ?? "all";
   const [showDottedNotes, setShowDottedNotes] = useState(false);
-  const { on: meterOn, pulse, toggle } = useMetronome({ bpm, beatsPerBar, muted });
+  const { on: meterOn, pulse, toggle } = useMetronome({ bpm, beatsPerBar, muted, click });
+  // Without a click nothing sounds, so a running metronome stops when the level goes silent.
+  const pick = (patch: Partial<SegmentMark>) => { if (patch.click === "none" && meterOn) toggle(); patchMark(patch); };
 
   // Read-through without the click: the ratings go on, the metronome tempo is left out of the log.
   const [skipTempo, setSkipTempo] = useState(false);
@@ -163,7 +169,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             <Recorder sections={[]} segmentId={mark.segmentId} compact onClip={(clip) => setClips((c) => [...c, clip])} onRecordingChange={setRecording} />
             <div className="flex items-center gap-2">
               <Button type="button" size="icon" variant={skipTempo ? "secondary" : "outline"} className="h-11 w-11" aria-pressed={skipTempo} title={t("practice.skipTempo")} aria-label={t("practice.skipTempo")} onClick={() => { if (!skipTempo && meterOn) toggle(); setSkipTempo((v) => !v); }}><TimerOff /></Button>
-              {!skipTempo && <>
+              {!skipTempo && click !== "none" && <>
                 <Button type="button" size="icon" variant="outline" className="h-11 w-11" onClick={() => setMuted((m) => !m)} aria-label={muted ? t("practice.unmute") : t("practice.mute")}>
                   {muted ? <VolumeX /> : <Volume2 />}
                 </Button>
@@ -201,15 +207,15 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
             </div>
             <Slider value={[bpm]} min={BPM_MIN} max={BPM_MAX} step={1} onValueChange={(v) => setBpm(v[0])} aria-label={t("practice.bpmUnit")} />
             <div className="grid grid-cols-[auto_6rem_minmax(0,1fr)] items-end gap-2 border-b border-border">
-              <BeatDots on={meterOn} pulse={pulse} beatsPerBar={beatsPerBar} />
-              <Pendulum on={meterOn} pulse={pulse} bpm={bpm} beatsPerBar={beatsPerBar} />
+              <BeatDots on={meterOn} pulse={pulse} beatsPerBar={beatsPerBar} click={click} />
+              <Pendulum on={meterOn && click === "all"} pulse={pulse} bpm={bpm} beatsPerBar={beatsPerBar} />
               <p className="flex min-w-0 flex-col items-end self-center font-numeric text-xs tabular-nums text-muted-foreground">
                 {!!mark.targetBpm && <span>{t("diary.targetBpm", { note: targetGlyph, bpm: mark.targetBpm })}</span>}
                 <span className="flex flex-wrap justify-end gap-x-3">
                   {last?.bpm !== undefined && <span>{t("practice.lastBpm", { note: NOTE_GLYPH[last.noteVal ?? "quarter"], bpm: last.bpm })}</span>}
                   {last?.confidence !== undefined && <span>{t("practice.lastSafety", { stars: last.confidence })}</span>}
                 </span>
-                <TempoHint task={task} mark={mark} segments={segments} onPick={patchMark} onPresence={setHasHint} />
+                <TempoHint task={task} mark={mark} segments={segments} onPick={pick} onPresence={setHasHint} />
               </p>
             </div>
           </div>
@@ -219,6 +225,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
               <span className="flex flex-wrap gap-x-4">
                 <span>{t("practice.beatsPerBar")} <span className="font-medium tabular-nums text-foreground">{beatsPerBar}</span></span>
                 <span>{t("practice.noteLabel")} <span className="text-base leading-none text-foreground">{NOTE_GLYPH[noteVal ?? "quarter"]}</span></span>
+                <span>{t("practice.clickLevel")} <span className="font-medium text-foreground">{t(`click.${click}`)}</span></span>
               </span>
               <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90 motion-reduce:transition-none" />
             </summary>
@@ -227,9 +234,20 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
                 <span className="text-xs text-muted-foreground">{t("practice.beatsPerBar")}</span>
                 <div className="flex gap-0.5">
                   {[1, 2, 3, 4, 6].map((n) => (
-                    <button key={n} type="button" aria-pressed={beatsPerBar === n} onClick={() => setBeatsPerBar(n)}
+                    <button key={n} type="button" aria-pressed={beatsPerBar === n} onClick={() => patchMark({ beatsPerBar: n })}
                       className={cn("h-11 w-11 rounded-lg text-sm tabular-nums", beatsPerBar === n ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
                       {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div role="group" aria-label={t("practice.clickLevel")} className="grid gap-1">
+                <span className="text-xs text-muted-foreground">{t("practice.clickLevel")}</span>
+                <div className="flex flex-wrap gap-0.5">
+                  {CLICK_LEVELS.filter((l) => l !== "1-3" || beatsPerBar === 4 || click === "1-3").map((l) => (
+                    <button key={l} type="button" aria-pressed={click === l} onClick={() => pick({ click: l })}
+                      className={cn("min-h-11 rounded-lg px-3 text-xs", click === l ? "bg-secondary font-medium text-foreground" : "text-muted-foreground hover:bg-secondary/40")}>
+                      {t(`click.${l}`)}
                     </button>
                   ))}
                 </div>
@@ -279,7 +297,7 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
 }
 
 /** The progression engine's next tempo for this section, offered, never applied: a tap moves the metronome there. */
-function TempoHint({ task, mark, segments, onPick, onPresence }: { task: Task; mark: SegmentMark; segments?: Segment[]; onPick: (tempo: Tempo) => void; onPresence: (present: boolean) => void }) {
+function TempoHint({ task, mark, segments, onPick, onPresence }: { task: Task; mark: SegmentMark; segments?: Segment[]; onPick: (patch: Partial<SegmentMark>) => void; onPresence: (present: boolean) => void }) {
   const owner = tempoOwner(task);
   const context = owner && segments ? resolveTempoContext(task, mark, segments) : undefined;
   const absent = !(owner && context);
@@ -287,16 +305,18 @@ function TempoHint({ task, mark, segments, onPick, onPresence }: { task: Task; m
   return owner && context ? <TempoHintButton owner={owner} context={context} onPick={onPick} onPresence={onPresence} /> : null;
 }
 
-function TempoHintButton({ owner, context, onPick, onPresence }: { owner: TempoOwner; context: TempoContext; onPick: (tempo: Tempo) => void; onPresence: (present: boolean) => void }) {
+function TempoHintButton({ owner, context, onPick, onPresence }: { owner: TempoOwner; context: TempoContext; onPick: (patch: Partial<SegmentMark>) => void; onPresence: (present: boolean) => void }) {
   const { t } = useI18n();
   const view = usePresentationRead<TempoProgressionView>("tempo.progression", [owner, context]);
   const suggestion = view?.evaluation?.suggestion;
   useEffect(() => { onPresence(!!suggestion); return () => onPresence(false); }, [suggestion, onPresence]);
   if (!suggestion) return null;
   const Arrow = suggestion.direction === "decrease" ? ArrowDown : ArrowUp;
+  const level = suggestion.click && t(`click.${suggestion.click}`);
+  const label = level ? t(!view.state?.click || view.state.click === "all" ? "practice.suggestRelease" : "practice.suggestClick", { level }) : t("practice.suggestBpm", { note: NOTE_GLYPH[suggestion.tempo.noteVal], bpm: suggestion.tempo.bpm });
   return (
-    <button type="button" onClick={() => onPick(suggestion.tempo)} className="inline-flex min-h-11 items-center gap-1 text-base font-semibold text-primary hover:underline underline-offset-4">
-      <Arrow aria-hidden="true" className="h-4 w-4" />{t("practice.suggestBpm", { note: NOTE_GLYPH[suggestion.tempo.noteVal], bpm: suggestion.tempo.bpm })}
+    <button type="button" onClick={() => onPick(suggestion.click ? { ...suggestion.tempo, click: suggestion.click } : suggestion.tempo)} className="inline-flex min-h-11 items-center gap-1 text-base font-semibold text-primary hover:underline underline-offset-4">
+      <Arrow aria-hidden="true" className="h-4 w-4" />{label}
     </button>
   );
 }

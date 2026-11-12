@@ -479,7 +479,7 @@
   "practice.beatsPerBar": "Battiti/misura",
   "practice.noteLabel": "Nota",
   "practice.finishLog": "Termina e registra sessione",
-  "practice.skipTempo": "Senza tempo",
+  "practice.skipTempo": "Lettura, tempo non registrato",
   "practice.notesHistory": "Storico note",
   "practice.askTeacher": "Domanda al maestro",
   "session.flagLesson": "Segnala per la prossima lezione",
@@ -1177,5 +1177,15 @@
   "tempo.reference": "Figura di riferimento: {{note}}",
   "tempo.windowSize": "Finestra: {{count}} sessioni",
   "print.bpmDelta": "{{value}} BPM rispetto alla settimana scorsa",
-  "print.bpmDeltaHint": "Differenza dal tempo massimo della settimana precedente, nella figura target"
+  "print.bpmDeltaHint": "Differenza dal tempo massimo della settimana precedente, nella figura target",
+  "practice.clickLevel": "Click",
+  "click.all": "Tutti i battiti",
+  "click.1-3": "Battiti 1 e 3",
+  "click.first": "Solo primo tempo",
+  "click.bar2": "Primo tempo ogni 2 battute",
+  "click.bar4": "Primo tempo ogni 4 battute",
+  "click.none": "Senza click",
+  "practice.suggestRelease": "Iniziare lo svincolo? {{level}}",
+  "practice.suggestClick": "Prova: {{level}}",
+  "tempo.released": "Svincolata dal metronomo"
 }

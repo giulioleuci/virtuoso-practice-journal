@@ -1,10 +1,12 @@
 import { cn } from "@/lib/utils";
+import type { ClickLevel } from "@/domain/constants/clickLevels";
+import { audible } from "@/domain/logic/click";
 
-export function BeatDots({ on, pulse, beatsPerBar }: { on: boolean; pulse: number; beatsPerBar: number }) {
+export function BeatDots({ on, pulse, beatsPerBar, click }: { on: boolean; pulse: number; beatsPerBar: number; click?: ClickLevel }) {
   return (
     <div className="flex flex-wrap gap-1.5 self-center" aria-hidden="true">
       {Array.from({ length: beatsPerBar }).map((_, i) => {
-        const active = on && pulse > 0 && (pulse - 1) % beatsPerBar === i;
+        const active = on && pulse > 0 && (pulse - 1) % beatsPerBar === i && audible(pulse - 1, beatsPerBar, click);
         const accent = i === 0;
         return (
           <span key={active ? `beat-${pulse}` : i} data-beat-mark={active ? pulse : undefined} className={cn("h-3.5 w-3.5 rounded-full border", accent ? "border-primary" : "border-muted-foreground/40", active ? cn("animate-beat-flash", accent ? "bg-primary" : "bg-foreground/70") : "bg-transparent")} />

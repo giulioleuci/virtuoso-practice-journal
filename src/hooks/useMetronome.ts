@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import type { ClickLevel } from "@/domain/constants/clickLevels";
+import { audible } from "@/domain/logic/click";
 
-interface Settings { bpm: number; beatsPerBar: number; muted: boolean }
+interface Settings { bpm: number; beatsPerBar: number; muted: boolean; click?: ClickLevel }
 
 const click = (ctx: AudioContext, when: number, accent: boolean) => {
   const osc = ctx.createOscillator();
@@ -44,7 +46,7 @@ export function useMetronome(settings: Settings) {
     let scheduledBpm = live.current.bpm;
     const pulses: number[] = [];
     const schedule = () => {
-      const { bpm, beatsPerBar, muted } = live.current;
+      const { bpm, beatsPerBar, muted, click: level } = live.current;
       if (bpm !== scheduledBpm) {
         next = Math.max(last + 60 / bpm, ctx.currentTime);
         scheduledBpm = bpm;
@@ -56,7 +58,7 @@ export function useMetronome(settings: Settings) {
       }
       const horizon = ctx.currentTime + (document.hidden ? 1.5 : 0.1);
       while (next < horizon) {
-        if (!muted) click(ctx, next, beat % beatsPerBar === 0);
+        if (!muted && audible(beat, beatsPerBar, level)) click(ctx, next, beat % beatsPerBar === 0);
         const shown = beat + 1;
         pulses.push(window.setTimeout(() => setPulse(shown), Math.max(0, (next - ctx.currentTime) * 1000)));
         beat += 1;

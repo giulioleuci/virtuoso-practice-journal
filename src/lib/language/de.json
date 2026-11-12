@@ -479,7 +479,7 @@
   "practice.beatsPerBar": "Schläge/Takt",
   "practice.noteLabel": "Note",
   "practice.finishLog": "Beenden & Sitzung erfassen",
-  "practice.skipTempo": "Ohne Tempo",
+  "practice.skipTempo": "Durchlesen, Tempo nicht erfasst",
   "practice.notesHistory": "Notizverlauf",
   "practice.askTeacher": "Lehrer fragen",
   "session.flagLesson": "Für die nächste Stunde vormerken",
@@ -1177,5 +1177,15 @@
   "tempo.reference": "Referenznotenwert: {{note}}",
   "tempo.windowSize": "Fenster: {{count}} Sitzungen",
   "print.bpmDelta": "{{value}} BPM ggü. Vorwoche",
-  "print.bpmDeltaHint": "Änderung zum Höchsttempo der Vorwoche, im Zielnotenwert"
+  "print.bpmDeltaHint": "Änderung zum Höchsttempo der Vorwoche, im Zielnotenwert",
+  "practice.clickLevel": "Klick",
+  "click.all": "Alle Schläge",
+  "click.1-3": "Schläge 1 und 3",
+  "click.first": "Nur die Eins",
+  "click.bar2": "Eins alle 2 Takte",
+  "click.bar4": "Eins alle 4 Takte",
+  "click.none": "Ohne Klick",
+  "practice.suggestRelease": "Vom Metronom lösen? {{level}}",
+  "practice.suggestClick": "Versuch: {{level}}",
+  "tempo.released": "Ohne Metronom gefestigt"
 }

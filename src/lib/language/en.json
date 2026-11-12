@@ -479,7 +479,7 @@
   "practice.beatsPerBar": "Beats/bar",
   "practice.noteLabel": "Note",
   "practice.finishLog": "Finish & log session",
-  "practice.skipTempo": "Skip tempo",
+  "practice.skipTempo": "Read-through, tempo not logged",
   "practice.notesHistory": "Notes history",
   "practice.askTeacher": "Ask teacher",
   "session.flagLesson": "Flag this for the next lesson",
@@ -1177,5 +1177,15 @@
   "tempo.reference": "Reference note value: {{note}}",
   "tempo.windowSize": "Window: {{count}} sessions",
   "print.bpmDelta": "{{value}} BPM vs last week",
-  "print.bpmDeltaHint": "Change from last week's highest tempo, in the target note value"
+  "print.bpmDeltaHint": "Change from last week's highest tempo, in the target note value",
+  "practice.clickLevel": "Click",
+  "click.all": "Every beat",
+  "click.1-3": "Beats 1 and 3",
+  "click.first": "Downbeat only",
+  "click.bar2": "Downbeat every 2 bars",
+  "click.bar4": "Downbeat every 4 bars",
+  "click.none": "No click",
+  "practice.suggestRelease": "Start weaning off the click? {{level}}",
+  "practice.suggestClick": "Try: {{level}}",
+  "tempo.released": "Off the click"
 }
