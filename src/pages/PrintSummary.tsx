@@ -70,15 +70,16 @@ export default function PrintSummary() {
         }
       }
     }
-    const segName = new Map((segments ?? []).map((seg) => [seg.id, seg.name]));
+    const segName = new Map((segments ?? []).map((seg) => [seg.id, seg.label]));
     type Frag = { id: number; name: string; count: number; top?: Tempo; target?: NoteVal; delta?: number };
-    const map = new Map<string, { key: string; title: string; composer?: string; count: number; topBpm: number; noteVal?: NoteVal; target?: NoteVal; delta?: number; fragments: Map<number, Frag> }>();
+    type Piece = { key: string; title: string; composer?: string; count: number; topBpm: number; noteVal?: NoteVal; target?: NoteVal; fragments: Map<number, Frag> };
+    const map = new Map<string, Piece>();
     for (const session of list) {
       const item = session.itemId !== undefined ? itemById.get(session.itemId) : undefined;
       const title = item?.title ?? session.snapshot?.itemTitle ?? session.snapshot?.taskTitle ?? t("history.untitled");
       const key = keyOf(session, title);
       const top = topMark(session.marks);
-      const current = map.get(key) ?? { key, title, composer: item?.composer ?? session.snapshot?.itemComposer, count: 0, topBpm: 0, noteVal: top?.noteVal, fragments: new Map() };
+      const current: Piece = map.get(key) ?? { key, title, composer: item?.composer ?? session.snapshot?.itemComposer, count: 0, topBpm: 0, noteVal: top?.noteVal, fragments: new Map() };
       current.count += 1;
       if (top && better(top, current.noteVal ? { bpm: current.topBpm, noteVal: current.noteVal } : undefined)) {
         current.topBpm = top.bpm ?? 0;
