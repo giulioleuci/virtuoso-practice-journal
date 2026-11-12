@@ -1175,5 +1175,7 @@
   "tempo.emptyCycle": "No evaluable sessions in this cycle yet.",
   "tempo.updateCount": "Tasks to update: {{count}}",
   "tempo.reference": "Reference note value: {{note}}",
-  "tempo.windowSize": "Window: {{count}} sessions"
+  "tempo.windowSize": "Window: {{count}} sessions",
+  "print.bpmDelta": "{{value}} BPM vs last week",
+  "print.bpmDeltaHint": "Change from last week's highest tempo, in the target note value"
 }

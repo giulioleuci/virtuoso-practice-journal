@@ -1175,5 +1175,7 @@
   "tempo.emptyCycle": "Aún no hay sesiones evaluables en este ciclo.",
   "tempo.updateCount": "Actividades a actualizar: {{count}}",
   "tempo.reference": "Figura de referencia: {{note}}",
-  "tempo.windowSize": "Ventana: {{count}} sesiones"
+  "tempo.windowSize": "Ventana: {{count}} sesiones",
+  "print.bpmDelta": "{{value}} BPM respecto a la semana pasada",
+  "print.bpmDeltaHint": "Diferencia con el tempo máximo de la semana anterior, en la figura objetivo"
 }
