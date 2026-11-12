@@ -5,6 +5,11 @@ import { carryMarksToPlan, followUpTasks, latestMarks, marksFromHistory, marksFr
 const e = (segmentId: number | undefined, bpm: number) => ({ segmentId, bpm, layers: [], techniques: [] });
 
 describe("carryMarksToPlan", () => {
+  it("keeps the planned click level of the next task", () => {
+    const next = [{ segmentId: 1, bpm: 60, noteVal: "quarter" as const, click: "bar2" as const, layers: [], techniques: [] }];
+    const marks = [{ segmentId: 1, bpm: 70, noteVal: "quarter" as const, click: "none" as const, layers: [], techniques: [] }];
+    expect(carryMarksToPlan(next, marks, { tempo: new Set([1]), extras: false })[0]).toMatchObject({ bpm: 70, click: "bar2" });
+  });
   const next = [e(1, 60), e(2, 70)];
   const marks = [
     { ...e(1, 84), noteVal: "dotted-quarter" as const, layers: ["rhythm"], techniques: [3], confidence: 4, mood: 2, focus: 5 },

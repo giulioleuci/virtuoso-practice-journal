@@ -19,6 +19,7 @@ export const carryMarksToPlan = (plan: SegmentEntry[], marks: SegmentMark[], pic
     const tempo = picks.tempo.has(e.segmentId) && m.bpm !== undefined;
     return {
       progression: e.progression,
+      click: e.click,
       segmentId: e.segmentId,
       bpm: tempo ? m.bpm : e.bpm,
       noteVal: tempo ? m.noteVal ?? e.noteVal : e.noteVal,
