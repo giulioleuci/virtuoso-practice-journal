@@ -50,6 +50,7 @@ export function SegmentHistory({ itemId, segmentId, targetBpm, targetNoteVal }: 
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <Link to={`/sessions/${s.id}`} className="flex-1 text-sm font-medium tabular-nums hover:underline underline-offset-4">{formatDate(s.date, lang, "weekdayShort")}</Link>
                     {m.bpm != null && <span className="text-sm font-medium tabular-nums">{tempoLabel(m.noteVal, m.bpm)}</span>}
+                    {m.click && m.click !== "all" && <span className="text-xs text-muted-foreground">{t(`click.${m.click}`)}</span>}
                     {m.mood != null && <span className="text-xs tabular-nums text-muted-foreground">{t("rating.mood")} {m.mood}</span>}
                     {m.focus != null && <span className="text-xs tabular-nums text-muted-foreground">{t("rating.focus")} {m.focus}</span>}
                     {m.confidence != null && <span className="text-xs tabular-nums text-muted-foreground">{confidenceLabel(m.confidence)}</span>}

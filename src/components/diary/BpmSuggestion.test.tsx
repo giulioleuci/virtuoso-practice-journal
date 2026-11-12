@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-imports -- Uses real queries to check what the user sees. */
 import "fake-indexeddb/auto";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { db } from "@/infrastructure/dexie/db";
 import { configurePresentationQueries } from "@/application/queries/presentationQueryService";
 import { dexiePresentationReads } from "@/infrastructure/dexie/presentationReadPort";
@@ -41,7 +41,7 @@ it("shows the increase suggestion for a series once enough confident sessions ar
   expect(screen.getByRole("button", { name: t("tempo.review") })).toBeInTheDocument();
 });
 
-it("stops suggesting on the first piano fixture task once its target is reached", async () => {
+it("offers the click ladder, not a higher tempo, on the first piano fixture task once its target is reached", async () => {
   await seedSampleData();
   configurePresentationQueries(dexiePresentationReads);
   const tasks = sortDiaryTasks(await db.tasks.where("date").equals(today()).toArray(), await db.studyRoutines.toArray(), "routine", "en");
@@ -52,7 +52,7 @@ it("stops suggesting on the first piano fixture task once its target is reached"
   wrap(<BpmSuggestion task={task} />);
   fireEvent.click(screen.getByText(t("tempo.title")));
   expect((await screen.findAllByText(/104/)).length).toBeGreaterThan(0);
-  expect(screen.queryByText(`${t("tempo.increase")}:`, { exact: false })).not.toBeInTheDocument();
+  expect(screen.getByText(t("click.first"), { exact: false })).toBeInTheDocument();
   expect(screen.queryByText(`${NOTE_GLYPH.sixteenth} = 108`, { exact: false })).not.toBeInTheDocument();
 });
 
@@ -111,4 +111,18 @@ it("caps the Bach fixture suggestion at its target (54 → 56, not 58)", async (
   const hint = await screen.findByText(`${t("tempo.increase")}:`, { exact: false });
   expect(hint).toHaveTextContent(`${NOTE_GLYPH.quarter} = 56`);
   expect(hint).not.toHaveTextContent(`${NOTE_GLYPH.quarter} = 58`);
+});
+
+it("previews a click step and marks a released section", async () => {
+  const task = await seedSeries([4, 5]);
+  await db.library.update(1, { targetBpm: 80, noteVal: "quarter" });
+  wrap(<BpmSuggestion task={task} />);
+  fireEvent.click(await screen.findByRole("button", { name: t("tempo.review") }));
+  await waitFor(() => expect(screen.getAllByText(t("click.first"), { exact: false })).toHaveLength(2)); // suggestion line and preview
+  cleanup();
+  await db.tempoProgressions.update(1, { click: "none" });
+  await db.sessions.toCollection().modify(s => { for (const m of s.marks) m.click = "none"; });
+  wrap(<BpmSuggestion task={task} />);
+  expect(await screen.findByText(t("tempo.released"))).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: t("tempo.review") })).not.toBeInTheDocument();
 });

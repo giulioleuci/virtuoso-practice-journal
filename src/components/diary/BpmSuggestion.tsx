@@ -4,6 +4,7 @@ import type { LibraryItem, Segment } from "@/domain/entities/library";
 import type { Task } from "@/domain/entities/task";
 import type { Session } from "@/domain/entities/session";
 import type { Tempo } from "@/domain/entities/common";
+import type { ClickLevel } from "@/domain/constants/clickLevels";
 import type { TempoContext, TempoOwner, TempoProgression, TempoProgressionRef } from "@/domain/entities/tempoProgression";
 import type { TempoProgressionPreview, TempoProgressionView } from "@/application/useCases/tempoProgression";
 import { resolveTempoContext, tempoContextKey, tempoOwner } from "@/domain/logic/tempoProgression";
@@ -68,6 +69,8 @@ function ContextSuggestion({ task,owner,context,sourceTaskId,onInitialized,expan
     } catch { setError(t("tempo.error")); } finally { setBusy(false); }
   };
   const label = (tempo: Tempo) => tempoLabel(tempo.noteVal,tempo.bpm);
+  const clickName = (click: ClickLevel) => t(`click.${click}`);
+  const withClick = (tempo: Tempo, click?: ClickLevel) => preview?.currentClick || preview?.proposedClick ? `${label(tempo)} · ${clickName(click ?? "all")}` : label(tempo);
   if (!view) return <p role="status" className="text-sm text-muted-foreground">{t("tempo.loading")}</p>;
   if (!view.rule?.enabled) return <p className="text-sm text-muted-foreground">{t("tempo.disabled")}</p>;
   const evaluation = view.evaluation, suggestion = evaluation?.suggestion;
@@ -76,11 +79,12 @@ function ContextSuggestion({ task,owner,context,sourceTaskId,onInitialized,expan
     <h3 className="break-words font-sans font-medium">{item?.title ?? task.title}{context.segmentId !== undefined && ` · ${sections?.[0]?.label ?? "—"}`}</h3>
     {!!context.layers.length && <p className="break-words text-muted-foreground">{context.layers.join(", ")}</p>}
     {view.state ? <>
-      <p className="font-numeric tabular-nums">{t("tempo.working")}: {label(view.state.tempo)}</p>
+      <p className="font-numeric tabular-nums">{t("tempo.working")}: {label(view.state.tempo)}{view.state.click && view.state.click !== "all" && ` · ${clickName(view.state.click)}`}</p>
       <p className="text-muted-foreground">{counts}</p>
-      {suggestion && <p>{t(`tempo.${suggestion.direction === "decrease" ? "decrease" : "increase"}`)}: <span className="font-numeric tabular-nums">{label(suggestion.tempo)}</span>{suggestion.direction === "decrease" && ` · ${t("tempo.failureCount",{ count: evaluation!.trailingFailures })}`}</p>}
+      {view.released && <p className="font-medium">{t("tempo.released")}</p>}
+      {!view.released && suggestion && <p>{t(`tempo.${suggestion.direction === "decrease" ? "decrease" : "increase"}`)}: <span className="font-numeric tabular-nums">{suggestion.click ? clickName(suggestion.click) : label(suggestion.tempo)}</span>{suggestion.direction === "decrease" && ` · ${t("tempo.failureCount",{ count: evaluation!.trailingFailures })}`}</p>}
       {evaluation?.blocked && <p>{t("tempo.blocked")}</p>}
-      {!evaluation?.evaluated && <p className="text-muted-foreground">{t("tempo.emptyCycle")}</p>}
+      {!view.released && !evaluation?.evaluated && <p className="text-muted-foreground">{t("tempo.emptyCycle")}</p>}
     </> : <>
       {source && <p className="text-muted-foreground">{t("tempo.source", { tempo: tempoLabel(source.mark.noteVal,source.mark.bpm!),date: formatDate(source.date,lang,"medium"),confidence: source.mark.confidence! })}</p>}
       <BpmCoupler bpm={initialTempo.bpm} noteVal={initialTempo.noteVal} onChange={value => { setInitial(value); setPreview(null); }} label={t("tempo.initial")} />
@@ -88,7 +92,7 @@ function ContextSuggestion({ task,owner,context,sourceTaskId,onInitialized,expan
     {view.evidence && <p>{t("tempo.evidence",{ tempo: tempoLabel(view.evidence.mark.noteVal,view.evidence.mark.bpm!),date: formatDate(view.evidence.date,lang,"medium"),confidence: view.evidence.mark.progression!.minConfidence })}</p>}
     {(suggestion || (!view.state && bpmSchema.safeParse(initialTempo.bpm).success)) && <Button type="button" ref={reviewRef} variant="outline" disabled={busy} onClick={() => void review()}>{t("tempo.review")}</Button>}
     {expanded && preview && <div ref={previewRef} tabIndex={-1} className="space-y-3 border-t border-border pt-3 outline-none">
-      <p className="font-numeric tabular-nums">{preview.current && `${label(preview.current)} → `}{label(preview.proposed)}</p>
+      <p className="font-numeric tabular-nums">{preview.current && `${withClick(preview.current, preview.currentClick)} → `}{withClick(preview.proposed, preview.proposedClick)}</p>
       {counts && <p>{counts}</p>}
       <p>{t("tempo.updateCount",{ count: preview.updates.length })}</p>
       <ul className="space-y-1 font-numeric tabular-nums">{preview.updates.map(update => <li key={update.taskId}>{formatDate(update.date,lang,"long")}</li>)}</ul>
