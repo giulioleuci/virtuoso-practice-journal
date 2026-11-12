@@ -88,3 +88,27 @@ it("practice mode offers the series suggestion and applies it to the metronome",
   fireEvent.click(screen.getByRole("button", { name: t("practice.finishLog") }));
   expect(finish.mock.calls[0][0].marks[0].bpm).toBe(88);
 }, 15000);
+
+const fixtureTask = async (title: string) => {
+  await seedSampleData();
+  configurePresentationQueries(dexiePresentationReads);
+  const task = (await db.tasks.where("date").equals(today()).toArray()).find(task => task.title === title && task.deletedAt === undefined);
+  if (!task) throw new Error(`Missing fixture task ${title}`);
+  return task;
+};
+
+it("suggests the full +4 step on the Cortot fixture (64 → 68, target 76)", async () => {
+  const task = await fixtureTask("Cortot Ch. 1 — tempo ladder");
+  wrap(<BpmSuggestion task={task} />);
+  fireEvent.click(screen.getByText(t("tempo.title")));
+  expect(await screen.findByText(`${t("tempo.increase")}:`, { exact: false })).toHaveTextContent(`${NOTE_GLYPH.eighth} = 68`);
+});
+
+it("caps the Bach fixture suggestion at its target (54 → 56, not 58)", async () => {
+  const task = await fixtureTask("Bach Fugue — tempo ladder");
+  wrap(<BpmSuggestion task={task} />);
+  fireEvent.click(screen.getByText(t("tempo.title")));
+  const hint = await screen.findByText(`${t("tempo.increase")}:`, { exact: false });
+  expect(hint).toHaveTextContent(`${NOTE_GLYPH.quarter} = 56`);
+  expect(hint).not.toHaveTextContent(`${NOTE_GLYPH.quarter} = 58`);
+});
