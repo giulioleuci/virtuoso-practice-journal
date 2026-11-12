@@ -2,7 +2,7 @@ import type { ClickLevel } from "../constants/clickLevels";
 import type { SegmentEntry, SegmentMark, Tempo, TempoStep } from "./common";
 export type TempoOwner = { kind: "routine" | "recurrence"; id: number };
 export type TempoContext = { itemId: number; segmentId?: number; layers: string[]; techniques: number[] };
-export type TempoProgressionRule = { enabled: boolean; successes: number; window?: number; minConfidence: number; increase: TempoStep; decrease?: { failures: number; step: TempoStep } };
+export type TempoProgressionRule = { enabled: boolean; /** Offer to wean off the metronome once the target tempo holds; absent = keep the click. */ releaseClick?: boolean; successes: number; window?: number; minConfidence: number; increase: TempoStep; decrease?: { failures: number; step: TempoStep } };
 export type TempoProgressionRef = { id: number; cycle: number; minConfidence: number };
 export type TempoProgression = { id: number; owner: TempoOwner; context: TempoContext; contextKey: string; tempo: Tempo; click?: ClickLevel; cycle: number; startedAt: number; ruleRevision: number };
 export type TempoObservation = { sessionId: number; taskId?: number; date: string; createdAt: number; context: TempoContext; mark: SegmentMark };

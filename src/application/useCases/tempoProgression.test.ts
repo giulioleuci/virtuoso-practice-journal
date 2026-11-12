@@ -19,11 +19,11 @@ it("caps the 72 suggestion at the 71 target and protects custom tasks; acceptanc
 });
 it("offers no increase once the working tempo reaches the target",async()=>{
  const { repository,useCase }=fixture();repository.data.items[0].targetBpm=70;
- expect((await useCase.preview({ owner,context,sourceTaskId: 1 }))?.proposedClick).toBe("first");
- expect((await useCase.view(owner,context)).evaluation?.suggestion?.click).toBe("first");
+ expect(await useCase.preview({ owner,context,sourceTaskId: 1 })).toBeNull();
+ expect((await useCase.view(owner,context)).evaluation?.suggestion).toBeUndefined();
 });
-it("accepts a click step as a new cycle and derives released",async()=>{
- const { repository,useCase }=fixture();repository.data.items[0].targetBpm=70;
+it("accepts a click step as a new cycle and derives released, when the rule weans off the click",async()=>{
+ const { repository,useCase }=fixture();repository.data.items[0].targetBpm=70;repository.data.rule!.releaseClick=true;
  const preview=(await useCase.preview({ owner,context,sourceTaskId: 1 }))!;
  expect(preview.proposedClick).toBe("first");expect(preview.proposed).toEqual({ bpm: 70,noteVal: "quarter" });
  expect((await useCase.accept(preview)).status).toBe("applied");

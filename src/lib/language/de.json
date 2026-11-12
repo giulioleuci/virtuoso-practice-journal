@@ -1187,5 +1187,7 @@
   "click.none": "Ohne Klick",
   "practice.suggestRelease": "Vom Metronom lösen? {{level}}",
   "practice.suggestClick": "Versuch: {{level}}",
-  "tempo.released": "Ohne Metronom gefestigt"
+  "tempo.released": "Ohne Metronom gefestigt",
+  "tempo.releaseClick": "Vom Metronom lösen bei Zieltempo",
+  "tempo.releaseClickHint": "Aus: Das Metronom bleibt, im Zieltempo oder im erfassten, falls schneller. Jede Einheit kann trotzdem ohne Metronom geübt werden."
 }

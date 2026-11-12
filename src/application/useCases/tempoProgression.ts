@@ -14,6 +14,7 @@ const targetOf = (data: TempoOwnerData, context: TempoContext) => {
   return segment?.targetBpm !== undefined && segment.noteVal !== undefined ? segment : item;
 };
 const targetTempo = (t: { targetBpm?: number; noteVal?: Tempo["noteVal"] } | undefined): Tempo | undefined => t?.targetBpm !== undefined && t.noteVal !== undefined ? { bpm: t.targetBpm, noteVal: t.noteVal } : undefined;
+const ladderOf = (rule: TempoProgressionRule, state: TempoProgression) => rule.releaseClick ? { click: state.click } : undefined;
 const findState = (data: TempoOwnerData, context: TempoContext) => data.states.find(s => s.contextKey === tempoContextKey(context));
 
 export class TempoProgressionUseCase {
@@ -23,7 +24,7 @@ export class TempoProgressionUseCase {
     if (!data.rule?.enabled) return { state, rule: data.rule };
     const initial = state ? undefined : initialTempo(context, await this.repository.history(context), data.rule.minConfidence);
     const target = targetOf(data,context);
-    const evaluation = state ? capAtTarget(evaluateTempoProgression(data.rule,state,data.observations,dayKey(new Date(state.startedAt))),state.tempo,targetTempo(target),state.click) : undefined;
+    const evaluation = state ? capAtTarget(evaluateTempoProgression(data.rule,state,data.observations,dayKey(new Date(state.startedAt))),state.tempo,targetTempo(target),ladderOf(data.rule,state)) : undefined;
     const released = state?.click === "none" && evaluation !== undefined && (data.rule.window === undefined ? evaluation.trailingSuccesses : evaluation.successes) >= data.rule.successes;
     return { state, rule: data.rule, initial, evaluation, released,
       evidence: state && target?.targetBpm !== undefined && target.noteVal !== undefined ? targetEvidence(state,data.observations,{ bpm: target.targetBpm, noteVal: target.noteVal }) : undefined };
@@ -34,7 +35,7 @@ export class TempoProgressionUseCase {
     if (!data.items.some(i => i.id === request.context.itemId) || (request.context.segmentId !== undefined && !data.segments.some(s => s.id === request.context.segmentId && s.itemId === request.context.itemId))) throw new Error("Invalid tempo context");
     const history = state ? [] : await tx.history(request.context);
     const source = initialTempo(request.context,history,data.rule.minConfidence);
-    const suggestion = state ? capAtTarget(evaluateTempoProgression(data.rule,state,data.observations,dayKey(new Date(state.startedAt))),state.tempo,targetTempo(targetOf(data,request.context)),state.click).suggestion : undefined;
+    const suggestion = state ? capAtTarget(evaluateTempoProgression(data.rule,state,data.observations,dayKey(new Date(state.startedAt))),state.tempo,targetTempo(targetOf(data,request.context)),ladderOf(data.rule,state)).suggestion : undefined;
     const proposedClick = suggestion?.click;
     const proposed = state ? suggestion?.tempo : request.initialTempo ?? (source?.mark.bpm !== undefined && source.mark.noteVal ? { bpm: source.mark.bpm, noteVal: source.mark.noteVal } : undefined);
     if (!proposed) return null;

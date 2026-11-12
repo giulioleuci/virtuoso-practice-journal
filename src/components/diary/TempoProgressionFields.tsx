@@ -8,14 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { nativeSelect } from "./WhenFields";
 
-type Draft = { successes: string; window: string; confidence: string; increaseKind: "fixed" | "percent"; increaseValue: string; increaseNote: NoteVal; decrease: boolean; failures: string; decreaseKind: "fixed" | "percent"; decreaseValue: string; decreaseNote: NoteVal };
+type Draft = { successes: string; window: string; confidence: string; increaseKind: "fixed" | "percent"; increaseValue: string; increaseNote: NoteVal; decrease: boolean; failures: string; decreaseKind: "fixed" | "percent"; decreaseValue: string; decreaseNote: NoteVal; releaseClick: boolean };
 export function TempoProgressionFields({ value, onChange, onValidityChange, disabled }: { value?: TempoProgressionRule; onChange: (value: TempoProgressionRule | undefined) => void; onValidityChange: (valid: boolean) => void; disabled?: boolean }) {
   const { t } = useI18n(), id = useId();
   const [enabled,setEnabled] = useState(value?.enabled ?? false);
-  const [draft,setDraft] = useState<Draft>({ successes: String(value?.successes ?? 3), window: value?.window === undefined ? "" : String(value.window), confidence: String(value?.minConfidence ?? 4), increaseKind: value?.increase.kind ?? "fixed", increaseValue: String(value?.increase.value ?? 2), increaseNote: value?.increase.kind === "fixed" ? value.increase.noteVal : "quarter", decrease: !!value?.decrease, failures: String(value?.decrease?.failures ?? 2), decreaseKind: value?.decrease?.step.kind ?? "percent", decreaseValue: String(value?.decrease?.step.value ?? 5), decreaseNote: value?.decrease?.step.kind === "fixed" ? value.decrease.step.noteVal : "quarter" });
+  const [draft,setDraft] = useState<Draft>({ successes: String(value?.successes ?? 3), window: value?.window === undefined ? "" : String(value.window), confidence: String(value?.minConfidence ?? 4), increaseKind: value?.increase.kind ?? "fixed", increaseValue: String(value?.increase.value ?? 2), increaseNote: value?.increase.kind === "fixed" ? value.increase.noteVal : "quarter", decrease: !!value?.decrease, failures: String(value?.decrease?.failures ?? 2), decreaseKind: value?.decrease?.step.kind ?? "percent", decreaseValue: String(value?.decrease?.step.value ?? 5), decreaseNote: value?.decrease?.step.kind === "fixed" ? value.decrease.step.noteVal : "quarter", releaseClick: !!value?.releaseClick });
   const parse = (d: Draft) => {
     const step = (kind: "fixed" | "percent", amount: string, noteVal: NoteVal): TempoStep => kind === "fixed" ? { kind,value: Number(amount),noteVal } : { kind,value: Number(amount) };
-    return tempoRuleSchema.safeParse({ enabled: true, successes: Number(d.successes), window: d.window === "" ? undefined : Number(d.window), minConfidence: Number(d.confidence), increase: step(d.increaseKind,d.increaseValue,d.increaseNote), decrease: d.decrease ? { failures: Number(d.failures), step: step(d.decreaseKind,d.decreaseValue,d.decreaseNote) } : undefined });
+    return tempoRuleSchema.safeParse({ enabled: true, releaseClick: d.releaseClick || undefined, successes: Number(d.successes), window: d.window === "" ? undefined : Number(d.window), minConfidence: Number(d.confidence), increase: step(d.increaseKind,d.increaseValue,d.increaseNote), decrease: d.decrease ? { failures: Number(d.failures), step: step(d.decreaseKind,d.decreaseValue,d.decreaseNote) } : undefined });
   };
   const valid = !enabled || parse(draft).success;
   useEffect(() => { onValidityChange(valid); }, [valid,onValidityChange]);
@@ -37,6 +37,7 @@ export function TempoProgressionFields({ value, onChange, onValidityChange, disa
       <h3 className="font-medium">{t("tempo.increase")}</h3>{stepFields("increase")}
       <div className="flex min-h-11 items-center justify-between gap-4"><label htmlFor={`${id}-decrease`} className="min-w-0 flex-1">{t("tempo.decrease")}</label><Switch id={`${id}-decrease`} checked={draft.decrease} onCheckedChange={decrease => change({ decrease })} /></div>
       {draft.decrease && <>{number("failures","failures",1)}{stepFields("decrease")}</>}
+      <div className="flex min-h-11 items-center justify-between gap-4"><label htmlFor={`${id}-release`} className="min-w-0 flex-1">{t("tempo.releaseClick")}<span className="block text-xs text-muted-foreground">{t("tempo.releaseClickHint")}</span></label><Switch id={`${id}-release`} checked={draft.releaseClick} onCheckedChange={releaseClick => change({ releaseClick })} /></div>
       {!valid && <p role="alert" className="text-sm text-destructive">{t("tempo.invalidRule")}</p>}
     </>}
   </fieldset>;

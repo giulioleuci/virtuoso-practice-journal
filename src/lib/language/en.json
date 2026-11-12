@@ -1187,5 +1187,7 @@
   "click.none": "No click",
   "practice.suggestRelease": "Start weaning off the click? {{level}}",
   "practice.suggestClick": "Try: {{level}}",
-  "tempo.released": "Off the click"
+  "tempo.released": "Off the click",
+  "tempo.releaseClick": "Wean off the metronome at target",
+  "tempo.releaseClickHint": "Off: the metronome stays, at the target tempo or the logged one if faster. You can still practice without it in any session."
 }

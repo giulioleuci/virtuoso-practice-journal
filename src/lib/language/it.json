@@ -1187,5 +1187,7 @@
   "click.none": "Senza click",
   "practice.suggestRelease": "Iniziare lo svincolo? {{level}}",
   "practice.suggestClick": "Prova: {{level}}",
-  "tempo.released": "Svincolata dal metronomo"
+  "tempo.released": "Svincolata dal metronomo",
+  "tempo.releaseClick": "Svincolo dal metronomo al tempo obiettivo",
+  "tempo.releaseClickHint": "Disattivato: il metronomo resta, al tempo obiettivo o a quello registrato se più veloce. In ogni sessione puoi comunque studiare senza."
 }

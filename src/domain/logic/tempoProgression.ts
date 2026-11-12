@@ -50,12 +50,12 @@ export function evaluateTempoProgression(rule: TempoProgressionRule, state: Temp
   return result;
 }
 
-/** The target tempo is a ceiling: once reached, an "increase" climbs the click ladder instead, and a tempo increase never overshoots it. */
-export function capAtTarget(evaluation: TempoEvaluation, current: Tempo, target: Tempo | undefined, click?: ClickLevel): TempoEvaluation {
+/** The target tempo is a ceiling: once reached, an "increase" climbs the click ladder instead (only when `ladder` is given, i.e. the rule weans off the click), and a tempo increase never overshoots it. */
+export function capAtTarget(evaluation: TempoEvaluation, current: Tempo, target: Tempo | undefined, ladder?: { click?: ClickLevel }): TempoEvaluation {
   const s = evaluation.suggestion;
   if (!target || !s || s.direction !== "increase") return evaluation;
   if (compareTempos(current, target) >= 0) {
-    const next = stepClick(click, "up");
+    const next = ladder && stepClick(ladder.click, "up");
     return { ...evaluation, suggestion: next ? { direction: "increase", tempo: current, click: next, reason: s.reason } : undefined };
   }
   return compareTempos(s.tempo, target) > 0 ? { ...evaluation, suggestion: { ...s, tempo: { ...target } } } : evaluation;

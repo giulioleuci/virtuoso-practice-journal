@@ -63,10 +63,10 @@ export const tempoProgressionRepository: TempoProgressionPort = {
       if (owner.kind === "routine") await db.studyRoutines.update(owner.id, { tempoRule: rule, tempoRuleRevision: revision });
       else await db.tasks.update(owner.id, { tempoRule: rule, tempoRuleRevision: revision });
       for (const state of data.states) {
-        const next = { ...state, cycle: state.cycle+1, startedAt: at, ruleRevision: revision };
+        const next = { ...state, click: rule?.releaseClick ? state.click : undefined, cycle: state.cycle+1, startedAt: at, ruleRevision: revision };
         await tx.putState(next);
         if (!rule?.enabled) continue;
-        const { updates } = planTempoUpdates({ ...data, context: state.context, tempo: state.tempo, click: state.click, reference: { id: state.id, cycle: next.cycle, minConfidence: rule.minConfidence }, fromDate: dayKey(new Date(at)) });
+        const { updates } = planTempoUpdates({ ...data, context: state.context, tempo: state.tempo, click: next.click, reference: { id: state.id, cycle: next.cycle, minConfidence: rule.minConfidence }, fromDate: dayKey(new Date(at)) });
         for (const update of updates) {
           await tx.putPlan(update.taskId,update.plan);
           const task = data.tasks.find(t => t.id === update.taskId);

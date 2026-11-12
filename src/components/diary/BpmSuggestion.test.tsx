@@ -41,7 +41,7 @@ it("shows the increase suggestion for a series once enough confident sessions ar
   expect(screen.getByRole("button", { name: t("tempo.review") })).toBeInTheDocument();
 });
 
-it("offers the click ladder, not a higher tempo, on the first piano fixture task once its target is reached", async () => {
+it("stops suggesting on the first piano fixture task once its target is reached", async () => {
   await seedSampleData();
   configurePresentationQueries(dexiePresentationReads);
   const tasks = sortDiaryTasks(await db.tasks.where("date").equals(today()).toArray(), await db.studyRoutines.toArray(), "routine", "en");
@@ -52,7 +52,7 @@ it("offers the click ladder, not a higher tempo, on the first piano fixture task
   wrap(<BpmSuggestion task={task} />);
   fireEvent.click(screen.getByText(t("tempo.title")));
   expect((await screen.findAllByText(/104/)).length).toBeGreaterThan(0);
-  expect(screen.getByText(t("click.first"), { exact: false })).toBeInTheDocument();
+  expect(screen.queryByText(`${t("tempo.increase")}:`, { exact: false })).not.toBeInTheDocument();
   expect(screen.queryByText(`${NOTE_GLYPH.sixteenth} = 108`, { exact: false })).not.toBeInTheDocument();
 });
 
@@ -116,6 +116,7 @@ it("caps the Bach fixture suggestion at its target (54 → 56, not 58)", async (
 it("previews a click step and marks a released section", async () => {
   const task = await seedSeries([4, 5]);
   await db.library.update(1, { targetBpm: 80, noteVal: "quarter" });
+  await db.tasks.update(1, { tempoRule: { ...rule, releaseClick: true } });
   wrap(<BpmSuggestion task={task} />);
   fireEvent.click(await screen.findByRole("button", { name: t("tempo.review") }));
   await waitFor(() => expect(screen.getAllByText(t("click.first"), { exact: false })).toHaveLength(2)); // suggestion line and preview

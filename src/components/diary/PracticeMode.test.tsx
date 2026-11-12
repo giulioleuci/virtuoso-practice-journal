@@ -242,7 +242,7 @@ it("keeps level first with one beat per bar", async () => {
 it("asks to start weaning off at target and applies the level on tap", async () => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);
-  const rule = { enabled: true, successes: 1, minConfidence: 4, increase: { kind: "percent" as const, value: 10 } };
+  const rule = { enabled: true, releaseClick: true, successes: 1, minConfidence: 4, increase: { kind: "percent" as const, value: 10 } };
   await db.studyRoutines.add({ id: 1, subjectId: 1, groups: [], matrix: {}, startDate: today(), weeksAhead: 1, repetitionCap: 1, createdAt: 1, tempoRule: rule });
   await db.library.add({ id: 1, title: "Sonata", subjectId: 1, kind: "piece", createdAt: 1, targetBpm: 70, noteVal: "quarter" });
   const entry = { bpm: 70, noteVal: "quarter" as const, layers: [], techniques: [], progression: { id: 1, cycle: 1, minConfidence: 4 } };
@@ -266,4 +266,15 @@ it("hides Start at no click but logs the tempo", async () => {
   expect(screen.queryByRole("button", { name: t("practice.start") })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: t("practice.finishLog") }));
   expect(finish.mock.calls[0][0].marks[0]).toMatchObject({ click: "none", bpm: 60 });
+});
+
+it("starts every session with the metronome: a past session without click does not carry over", async () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  await db.delete(); await db.open(); configurePresentationQueries(dexiePresentationReads);
+  await db.sessions.add({ taskId: 1, date: "2026-10-17", marks: [{ layers: [], techniques: [], bpm: 76, noteVal: "quarter", confidence: 4, click: "none", beatsPerBar: 3 }], createdAt: 1 });
+  renderBare();
+  await screen.findByText("76");
+  expect(screen.getByRole("button", { name: t("practice.start") })).toBeInTheDocument();
+  expect(level(t("click.all"))).toHaveAttribute("aria-pressed", "true");
+  expect(within(screen.getByRole("group", { name: t("practice.beatsPerBar") })).getByRole("button", { name: "3" })).toHaveAttribute("aria-pressed", "true");
 });

@@ -148,3 +148,14 @@ it("serializes a rule change against carryover so the copied occurrence receives
     expect((await db.tasks.get(id))?.plan[0].progression).toMatchObject({cycle:2,minConfidence:5});
   } finally { release();pause.mockRestore(); }
 });
+it("keeps the click level while the rule weans off the click and drops it once it stops", async () => {
+  const preview = (await useCase.preview({ owner, context, initialTempo: { bpm: 70, noteVal: "quarter" } }))!;
+  await useCase.accept(preview);
+  await db.tempoProgressions.update(1, { click: "bar2" });
+  await repository.configure(owner, { ...rule, releaseClick: true }, at+1);
+  expect((await repository.read(owner)).states[0].click).toBe("bar2");
+  expect((await db.tasks.get(2))!.plan[0].click).toBe("bar2");
+  await repository.configure(owner, rule, at+2);
+  expect((await repository.read(owner)).states[0].click).toBeUndefined();
+  expect((await db.tasks.get(2))!.plan[0].click).toBeUndefined();
+});

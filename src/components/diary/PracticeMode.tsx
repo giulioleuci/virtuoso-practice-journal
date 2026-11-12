@@ -86,8 +86,8 @@ export function PracticeMode({ task, onClose: closeOverlay, onFinish, onShowAnsw
     update({ marks: marks.map((m) => {
       if (restored && m.bpm !== undefined) return m;
       const prev = entryFor(lastMarks, m.segmentId);
-      // The planned click level wins; otherwise the section resumes with its last level and meter.
-      const m2 = { ...m, click: m.click ?? prev?.click, beatsPerBar: m.beatsPerBar ?? prev?.beatsPerBar };
+      // Only the planned click level applies (a session without click is a per-session choice); the section resumes with its last meter.
+      const m2 = { ...m, beatsPerBar: m.beatsPerBar ?? prev?.beatsPerBar };
       if (prev?.bpm !== undefined) return { ...m2, bpm: prev.bpm, noteVal: prev.noteVal ?? m.targetNoteVal ?? "quarter" };
       if (m.targetBpm) return { ...m2, bpm: Math.max(30, Math.round(m.targetBpm / 2)), noteVal: m.targetNoteVal ?? "quarter" };
       return { ...m2, bpm: DEFAULT_BPM, noteVal: m.targetNoteVal ?? "quarter" };

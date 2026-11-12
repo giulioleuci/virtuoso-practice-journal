@@ -43,8 +43,8 @@ it("uses latest qualified source and preserves target evidence across cycles wit
 it("stops increases at the target and caps a larger step exactly at it", () => {
   const increase = { evaluated: 2, successes: 2, trailingSuccesses: 2, trailingFailures: 0, suggestion: { direction: "increase" as const, tempo: { bpm: 88, noteVal: "quarter" as const }, reason: "successes" as const } };
   expect(capAtTarget(increase, { bpm: 80, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 85, noteVal: "quarter" });
-  expect(capAtTarget(increase, { bpm: 85, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toEqual({ direction: "increase", tempo: { bpm: 85, noteVal: "quarter" }, click: "first", reason: "successes" });
-  expect(capAtTarget(increase, { bpm: 90, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 90, noteVal: "quarter" });
+  expect(capAtTarget(increase, { bpm: 85, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toBeUndefined();
+  expect(capAtTarget(increase, { bpm: 90, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toBeUndefined();
   expect(capAtTarget(increase, { bpm: 80, noteVal: "quarter" }, { bpm: 90, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 88, noteVal: "quarter" });
 });
 it("validates configurable rules at the boundary", () => {
@@ -53,9 +53,11 @@ it("validates configurable rules at the boundary", () => {
 });
 
 const withClick = (id: number, click?: ClickLevel, extra: Partial<TempoObservation["mark"]> = {}, confidence = 4): TempoObservation => { const o = observation(id, confidence); o.mark.bpm = 70; o.mark.noteVal = "quarter"; Object.assign(o.mark, { click }, extra); return o; };
-const onLadder = (click: ClickLevel | undefined, observations: TempoObservation[]) => { const st = { ...state, click }; return capAtTarget(evaluateTempoProgression(rule, st, observations, "2026-10-22"), st.tempo, st.tempo, click); };
-it("proposes the downbeat once the target holds", () => {
-  expect(capAtTarget(evaluate([1,2,3].map(i => observation(i))), state.tempo, state.tempo).suggestion).toEqual({ direction: "increase", tempo: state.tempo, click: "first", reason: "successes" });
+const onLadder = (click: ClickLevel | undefined, observations: TempoObservation[]) => { const st = { ...state, click }; return capAtTarget(evaluateTempoProgression(rule, st, observations, "2026-10-22"), st.tempo, st.tempo, { click }); };
+it("proposes the downbeat once the target holds, only when weaning off is on", () => {
+  const three = evaluate([1,2,3].map(i => observation(i)));
+  expect(capAtTarget(three, state.tempo, state.tempo).suggestion).toBeUndefined();
+  expect(capAtTarget(three, state.tempo, state.tempo, {}).suggestion).toEqual({ direction: "increase", tempo: state.tempo, click: "first", reason: "successes" });
 });
 it("climbs the ladder and stops at none", () => {
   expect(onLadder("bar4", [1,2,3].map(i => withClick(i, "bar4"))).suggestion?.click).toBe("none");

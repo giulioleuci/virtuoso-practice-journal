@@ -31,3 +31,14 @@ it("keeps optional M absent, validates drafts and preserves the last valid disab
   expect(saved?.enabled).toBe(false);
   expect(saved?.decrease?.step.value).toBe(5);
 });
+
+it("keeps the metronome by default and saves weaning off only when asked", () => {
+  let saved: TempoProgressionRule | undefined;
+  function Harness() { const [value,onChange] = useState<TempoProgressionRule>(); saved = value; return <TempoProgressionFields {...{ value,onChange,onValidityChange: () => {} }} />; }
+  render(<I18nContext.Provider value={{ lang: "en", setLang: () => {}, t: (k,v) => translate("en",k,v) }}><Harness /></I18nContext.Provider>);
+  fireEvent.click(screen.getByRole("switch", { name: /tempo progression/i }));
+  const release = screen.getByRole("switch", { name: /wean off the metronome/i });
+  expect(release).not.toBeChecked(); expect(saved?.releaseClick).toBeUndefined();
+  fireEvent.click(release); expect(saved?.releaseClick).toBe(true);
+  fireEvent.click(release); expect(saved?.releaseClick).toBeUndefined();
+});

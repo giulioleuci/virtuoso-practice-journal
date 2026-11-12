@@ -15,7 +15,7 @@ export const tempoStepSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("percent"), value: z.number().positive().finite() }),
 ]);
 export const tempoRuleSchema = z.object({
-  enabled: z.boolean(), successes: z.number().int().positive(), window: z.number().int().positive().optional(),
+  enabled: z.boolean(), releaseClick: z.boolean().optional(), successes: z.number().int().positive(), window: z.number().int().positive().optional(),
   minConfidence: ratingSchema, increase: tempoStepSchema,
   decrease: z.object({ failures: z.number().int().positive(), step: tempoStepSchema }).optional(),
 }).refine(v => v.window === undefined || v.window >= v.successes, { path: ["window"], message: "Window must be at least the required successes" })

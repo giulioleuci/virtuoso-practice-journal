@@ -1187,5 +1187,7 @@
   "click.none": "Sin clic",
   "practice.suggestRelease": "¿Empezar a soltar el metrónomo? {{level}}",
   "practice.suggestClick": "Prueba: {{level}}",
-  "tempo.released": "Sin metrónomo"
+  "tempo.released": "Sin metrónomo",
+  "tempo.releaseClick": "Soltar el metrónomo al llegar al tempo objetivo",
+  "tempo.releaseClickHint": "Desactivado: el metrónomo se mantiene, en el tempo objetivo o en el registrado si es más rápido. En cualquier sesión puedes estudiar sin él."
 }
