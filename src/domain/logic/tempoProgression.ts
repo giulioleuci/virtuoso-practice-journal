@@ -3,6 +3,8 @@ import type { Segment } from "../entities/library";
 import type { Task } from "../entities/task";
 import type { TempoContext, TempoEvaluation, TempoObservation, TempoOwner, TempoPlanExclusion, TempoPlanUpdate, TempoProgression, TempoProgressionRef, TempoProgressionRule } from "../entities/tempoProgression";
 import { BPM_MAX, BPM_MIN, NOTE_VALUES } from "../constants/noteValues";
+import type { ClickLevel } from "../constants/clickLevels";
+import { clickRank, stepClick } from "./click";
 import { compareTempos, stepTempo } from "./tempo";
 
 export const tempoContextKey = (c: TempoContext): string => JSON.stringify([c.itemId, c.segmentId ?? null, [...new Set(c.layers)].sort(), [...new Set(c.techniques)].sort((a,b) => a-b)]);
@@ -24,11 +26,13 @@ export function evaluateTempoProgression(rule: TempoProgressionRule, state: Temp
   const result: TempoEvaluation = { evaluated: 0, successes: 0, trailingSuccesses: 0, trailingFailures: 0 };
   if (!rule.enabled) return result;
   const seen = new Set<number>();
-  const successes = ordered(observations).filter(o => {
+  const evaluable = ordered(observations).filter(o => {
     const ref = o.mark.progression;
     if (seen.has(o.sessionId) || ref?.id !== state.id || ref.cycle !== state.cycle || o.date < cycleStartDate || !qualified(o, state.context, 1) || !validTempo(o.mark.targetBpm, o.mark.targetNoteVal) || compareTempos({ bpm: o.mark.targetBpm!, noteVal: o.mark.targetNoteVal! }, state.tempo) !== 0) return false;
     seen.add(o.sessionId); return true;
-  }).map(o => o.mark.confidence! >= rule.minConfidence && compareTempos(o.mark as Tempo, state.tempo) >= 0);
+  });
+  const successes = evaluable.map(o => o.mark.confidence! >= rule.minConfidence && compareTempos(o.mark as Tempo, state.tempo) >= 0 && clickRank(o.mark.click) >= clickRank(state.click));
+  result.beatsPerBar = evaluable.at(-1)?.mark.beatsPerBar;
   result.evaluated = successes.length;
   result.successes = (rule.window === undefined ? successes : successes.slice(-rule.window)).filter(Boolean).length;
   for (let i = successes.length-1; i >= 0 && successes[i]; i--) result.trailingSuccesses++;
@@ -38,21 +42,26 @@ export function evaluateTempoProgression(rule: TempoProgressionRule, state: Temp
   if (reduce || increase) {
     const direction = reduce ? "decrease" : "increase";
     const tempo = stepTempo(state.tempo, reduce ? rule.decrease!.step : rule.increase, direction);
-    if (tempo) result.suggestion = { direction, tempo, reason: reduce ? "failures" : "successes" };
+    // On the ladder a failure steps the click back, never the tempo.
+    if (reduce && clickRank(state.click) > 0) result.suggestion = { direction, tempo: state.tempo, click: stepClick(state.click, "down", result.beatsPerBar), reason: "failures" };
+    else if (tempo) result.suggestion = { direction, tempo, reason: reduce ? "failures" : "successes" };
     else result.blocked = "tempo-out-of-range";
   }
   return result;
 }
 
-/** The target tempo is a ceiling: no increase once reached, and an increase never overshoots it. */
-export function capAtTarget(evaluation: TempoEvaluation, current: Tempo, target: Tempo | undefined): TempoEvaluation {
+/** The target tempo is a ceiling: once reached, an "increase" climbs the click ladder instead, and a tempo increase never overshoots it. */
+export function capAtTarget(evaluation: TempoEvaluation, current: Tempo, target: Tempo | undefined, click?: ClickLevel): TempoEvaluation {
   const s = evaluation.suggestion;
   if (!target || !s || s.direction !== "increase") return evaluation;
-  if (compareTempos(current, target) >= 0) return { ...evaluation, suggestion: undefined };
+  if (compareTempos(current, target) >= 0) {
+    const next = stepClick(click, "up");
+    return { ...evaluation, suggestion: next ? { direction: "increase", tempo: current, click: next, reason: s.reason } : undefined };
+  }
   return compareTempos(s.tempo, target) > 0 ? { ...evaluation, suggestion: { ...s, tempo: { ...target } } } : evaluation;
 }
 
-export function planTempoUpdates(input: { owner: TempoOwner; context: TempoContext; tempo: Tempo; reference?: TempoProgressionRef; tasks: readonly Task[]; observations: readonly TempoObservation[]; segments: readonly Pick<Segment, "id" | "itemId">[]; fromDate: string; sourceTaskId?: number }): { updates: TempoPlanUpdate[]; excluded: TempoPlanExclusion[] } {
+export function planTempoUpdates(input: { owner: TempoOwner; context: TempoContext; tempo: Tempo; click?: ClickLevel; reference?: TempoProgressionRef; tasks: readonly Task[]; observations: readonly TempoObservation[]; segments: readonly Pick<Segment, "id" | "itemId">[]; fromDate: string; sourceTaskId?: number }): { updates: TempoPlanUpdate[]; excluded: TempoPlanExclusion[] } {
   const updates: TempoPlanUpdate[] = [], excluded: TempoPlanExclusion[] = [];
   for (const task of [...input.tasks].sort((a,b) => a.date.localeCompare(b.date) || a.id!-b.id!)) {
     if (task.id === undefined || !belongsToOwner(task, input.owner)) continue;
@@ -61,7 +70,7 @@ export function planTempoUpdates(input: { owner: TempoOwner; context: TempoConte
     const studied = task.plan.some(e => matches(e) && input.observations.some(o => o.taskId === task.id && o.mark.segmentId === e.segmentId));
     const reason = task.id === input.sourceTaskId ? "source" : task.deletedAt !== undefined || task.done || task.skipped ? "closed" : task.customized ? "customized" : task.date < input.fromDate ? "past" : studied ? "studied" : undefined;
     if (reason) excluded.push({ taskId: task.id, reason });
-    else updates.push({ taskId: task.id, date: task.date, plan: task.plan.map(e => matches(e) ? { ...e, ...input.tempo, progression: input.reference } : e) });
+    else updates.push({ taskId: task.id, date: task.date, plan: task.plan.map(e => matches(e) ? { ...e, ...input.tempo, click: input.click, progression: input.reference } : e) });
   }
   return { updates, excluded };
 }
@@ -71,6 +80,6 @@ export function inheritTempoProgressions(task: Task, states: readonly TempoProgr
   return { ...task, plan: task.plan.map(entry => {
     const context = resolveTempoContext(task,entry,segments);
     const state = context && states.find(s => belongsToOwner(task,s.owner) && s.contextKey === tempoContextKey(context));
-    return state ? { ...entry, ...state.tempo, progression: { id: state.id, cycle: state.cycle, minConfidence: rule.minConfidence } } : entry;
+    return state ? { ...entry, ...state.tempo, click: state.click, progression: { id: state.id, cycle: state.cycle, minConfidence: rule.minConfidence } } : entry;
   }) };
 }

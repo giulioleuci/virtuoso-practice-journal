@@ -19,8 +19,20 @@ it("caps the 72 suggestion at the 71 target and protects custom tasks; acceptanc
 });
 it("offers no increase once the working tempo reaches the target",async()=>{
  const { repository,useCase }=fixture();repository.data.items[0].targetBpm=70;
- expect(await useCase.preview({ owner,context,sourceTaskId: 1 })).toBeNull();
- expect((await useCase.view(owner,context)).evaluation?.suggestion).toBeUndefined();
+ expect((await useCase.preview({ owner,context,sourceTaskId: 1 }))?.proposedClick).toBe("first");
+ expect((await useCase.view(owner,context)).evaluation?.suggestion?.click).toBe("first");
+});
+it("accepts a click step as a new cycle and derives released",async()=>{
+ const { repository,useCase }=fixture();repository.data.items[0].targetBpm=70;
+ const preview=(await useCase.preview({ owner,context,sourceTaskId: 1 }))!;
+ expect(preview.proposedClick).toBe("first");expect(preview.proposed).toEqual({ bpm: 70,noteVal: "quarter" });
+ expect((await useCase.accept(preview)).status).toBe("applied");
+ expect(repository.data.states[0]).toMatchObject({ click: "first",cycle: 2 });
+ expect(repository.data.tasks[0].plan[0].click).toBe("first");
+ expect((await useCase.view(owner,context)).released).toBe(false);
+ repository.data.states[0]={ ...repository.data.states[0],click: "none",cycle: 1 };
+ for(const o of repository.data.observations)o.mark.click="none";
+ expect((await useCase.view(owner,context)).released).toBe(true);
 });
 it("rejects each material change to the decision or preview without writing",async()=>{
  for(const change of [

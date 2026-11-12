@@ -66,7 +66,7 @@ export const tempoProgressionRepository: TempoProgressionPort = {
         const next = { ...state, cycle: state.cycle+1, startedAt: at, ruleRevision: revision };
         await tx.putState(next);
         if (!rule?.enabled) continue;
-        const { updates } = planTempoUpdates({ ...data, context: state.context, tempo: state.tempo, reference: { id: state.id, cycle: next.cycle, minConfidence: rule.minConfidence }, fromDate: dayKey(new Date(at)) });
+        const { updates } = planTempoUpdates({ ...data, context: state.context, tempo: state.tempo, click: state.click, reference: { id: state.id, cycle: next.cycle, minConfidence: rule.minConfidence }, fromDate: dayKey(new Date(at)) });
         for (const update of updates) {
           await tx.putPlan(update.taskId,update.plan);
           const task = data.tasks.find(t => t.id === update.taskId);

@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import type { TempoObservation, TempoProgression, TempoProgressionRule } from "../entities/tempoProgression";
+import type { ClickLevel } from "../constants/clickLevels";
 import { capAtTarget, evaluateTempoProgression, initialTempo, planTempoUpdates, resolveTempoContext, targetEvidence, tempoContextKey } from "./tempoProgression";
 import { tempoRuleSchema } from "@/lib/schemas";
 
@@ -42,11 +43,38 @@ it("uses latest qualified source and preserves target evidence across cycles wit
 it("stops increases at the target and caps a larger step exactly at it", () => {
   const increase = { evaluated: 2, successes: 2, trailingSuccesses: 2, trailingFailures: 0, suggestion: { direction: "increase" as const, tempo: { bpm: 88, noteVal: "quarter" as const }, reason: "successes" as const } };
   expect(capAtTarget(increase, { bpm: 80, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 85, noteVal: "quarter" });
-  expect(capAtTarget(increase, { bpm: 85, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toBeUndefined();
-  expect(capAtTarget(increase, { bpm: 90, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toBeUndefined();
+  expect(capAtTarget(increase, { bpm: 85, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion).toEqual({ direction: "increase", tempo: { bpm: 85, noteVal: "quarter" }, click: "first", reason: "successes" });
+  expect(capAtTarget(increase, { bpm: 90, noteVal: "quarter" }, { bpm: 85, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 90, noteVal: "quarter" });
   expect(capAtTarget(increase, { bpm: 80, noteVal: "quarter" }, { bpm: 90, noteVal: "quarter" }).suggestion?.tempo).toEqual({ bpm: 88, noteVal: "quarter" });
 });
 it("validates configurable rules at the boundary", () => {
   expect(tempoRuleSchema.safeParse(rule).success).toBe(true);
   for (const patch of [{ successes: 0 }, { successes: 1.5 }, { window: 0 }, { window: 2 }, { window: "" }, { minConfidence: 6 }, { increase: { kind: "percent", value: NaN } }, { increase: { kind: "percent", value: Infinity } }, { decrease: { failures: 2, step: { kind: "percent", value: 100 } } }]) expect(tempoRuleSchema.safeParse({ ...rule, ...patch }).success).toBe(false);
+});
+
+const withClick = (id: number, click?: ClickLevel, extra: Partial<TempoObservation["mark"]> = {}, confidence = 4): TempoObservation => { const o = observation(id, confidence); o.mark.bpm = 70; o.mark.noteVal = "quarter"; Object.assign(o.mark, { click }, extra); return o; };
+const onLadder = (click: ClickLevel | undefined, observations: TempoObservation[]) => { const st = { ...state, click }; return capAtTarget(evaluateTempoProgression(rule, st, observations, "2026-10-22"), st.tempo, st.tempo, click); };
+it("proposes the downbeat once the target holds", () => {
+  expect(capAtTarget(evaluate([1,2,3].map(i => observation(i))), state.tempo, state.tempo).suggestion).toEqual({ direction: "increase", tempo: state.tempo, click: "first", reason: "successes" });
+});
+it("climbs the ladder and stops at none", () => {
+  expect(onLadder("bar4", [1,2,3].map(i => withClick(i, "bar4"))).suggestion?.click).toBe("none");
+  expect(onLadder("none", [1,2,3].map(i => withClick(i, "none"))).suggestion).toBeUndefined();
+});
+it("counts less support as success and more support as failure", () => {
+  expect(evaluateTempoProgression(rule, { ...state, click: "bar2" }, [withClick(1, "none")], "2026-10-22").successes).toBe(1);
+  expect(evaluateTempoProgression(rule, { ...state, click: "bar2" }, [withClick(1, "first")], "2026-10-22").trailingFailures).toBe(1);
+  expect(evaluateTempoProgression(rule, state, [withClick(1)], "2026-10-22").successes).toBe(1);
+});
+it("steps back one level after failures, via 1-3 only in four", () => {
+  const fail = (bpb: number) => [1,2].map(i => withClick(i, "first", { beatsPerBar: bpb }, 3));
+  expect(onLadder("first", fail(4)).suggestion).toEqual({ direction: "decrease", tempo: state.tempo, click: "1-3", reason: "failures" });
+  expect(onLadder("first", fail(3)).suggestion?.click).toBe("all");
+});
+it("writes the click level into future plans", () => {
+  const task = { id: 1, studyRoutineId: 1, date: "2026-10-23", title: "T", subjectId: 1, linkType: "free" as const, plan: [{ ...observation(1).mark, click: "first" as const }], done: false, createdAt: 1 };
+  const segments = [{ id: 1, itemId: 9, label: "A", position: 0, layers: [], createdAt: 1 }];
+  const plan = (click?: ClickLevel) => planTempoUpdates({ owner: state.owner, context, tempo: state.tempo, click, tasks: [task], observations: [], segments, fromDate: "2026-10-22" }).updates[0].plan[0];
+  expect(plan("bar2").click).toBe("bar2");
+  expect(plan().click).toBeUndefined();
 });
