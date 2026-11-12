@@ -13,6 +13,8 @@ it("steps and clamps the tempo and remembers it", () => {
   fireEvent.click(screen.getByRole("button", { name: t("practice.bpmIncrease", { step: 5 }) }));
   expect(screen.getByText("85", { selector: "p" })).toBeInTheDocument();
   expect(localStorage.getItem("metronome.bpm")).toBe("85");
-  for (let i = 0; i < 100; i++) fireEvent.click(screen.getByRole("button", { name: t("practice.bpmDecrease", { step: 5 }) }));
+  // Query the button once: re-running the accessible-name lookup 100 times made this test time out.
+  const decrease = screen.getByRole("button", { name: t("practice.bpmDecrease", { step: 5 }) });
+  for (let i = 0; i < 100; i++) fireEvent.click(decrease);
   expect(screen.getByText("1", { selector: "p" })).toBeInTheDocument();
 });
