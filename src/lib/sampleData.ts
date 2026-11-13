@@ -7,7 +7,9 @@ import { tempoContextKey } from "@/domain/logic/tempoProgression";
 import { buildSessionSnapshot, buildLessonSnapshot } from "./domain/snapshots";
 import { backupService } from "./services/backup";
 import { lessonsService } from "./services";
-import { dayKey, today, addDays } from "./date";
+import { dayKey, parseDayKey, addDays } from "./date";
+import { sessionTempoIndexes } from "@/domain/entities/session";
+import { seedPianoScenarios } from "./pianoFixtureScenarios";
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 // Deterministic pseudo-random in [0,1) from a seed (so re-seeding is stable).
 const rand = (seed: number) => {
@@ -17,21 +19,24 @@ const rand = (seed: number) => {
 
 export async function seedSampleData() {
   await backupService.wipeAll();
-  const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
   const now = Date.now();
+  const todayDate = new Date(now); todayDate.setHours(0, 0, 0, 0);
+  const timestamp = (offset: number, hours = 0) => Math.min(addDays(new Date(now), offset).getTime() + hours * 3600000, now);
   const D = 86400000;
 
   // ---------- Profile ----------
   await db.profile.put({
     id: "me",
     name: "Wolfgang",
-    lang: "en",
+    lang: "it",
     reminderTime: "18:30",
     reminderFreq: "daily",
     reminderDays: [0, 1, 2, 3, 4, 5, 6],
     reminderEnabled: true,
     reminderPreset: "motivational",
     reminderIncludeContext: true,
+    recurringAlertEnabled: true, recurringAlertDays: [1, 2, 3, 4, 5],
+    missedAlertEnabled: true, missedAlertAfter: 3, alertTime: "09:00",
     lateRecoveryDays: 3,
     carryoverDays: 7,
     graceDay: true,
@@ -40,7 +45,7 @@ export async function seedSampleData() {
     weekStartsOn: 1,
     onboarded: true,
     introSeen: true,
-    createdAt: now - 200 * D,
+    createdAt: timestamp(-200),
   });
 
 
@@ -48,11 +53,11 @@ export async function seedSampleData() {
   const pianoId = (await db.subjects.add({
     name: "Piano", type: "instrument",
     layers: ["RH", "LH", "Both", "Slow", "In rhythm", "Memorized"],
-    createdAt: now - 200 * D,
+    createdAt: timestamp(-200),
   })) as number;
   const harmonyId = (await db.subjects.add({
     name: "Harmony", type: "theory",
-    createdAt: now - 200 * D,
+    createdAt: timestamp(-200),
   })) as number;
 
   // ---------- Techniques ----------
@@ -80,7 +85,7 @@ export async function seedSampleData() {
     title: "Ballade No. 1 in G minor, Op. 23", composer: "Chopin",
 targetBpm: 76, noteVal: "quarter",
     techniqueIds: [tPedal, tArpeggios, tOctaves, tVoicing],
-    createdAt: now - 90 * D,
+    createdAt: timestamp(-90),
   })) as number;
 
   const bachWtcCsh = (await db.library.add({
@@ -88,7 +93,7 @@ targetBpm: 76, noteVal: "quarter",
     title: "WTC I — Prelude & Fugue in C# minor, BWV 849", composer: "Bach",
 targetBpm: 60, noteVal: "quarter",
     techniqueIds: [tNoPedal, tLegato, tVoicing],
-    createdAt: now - 60 * D,
+    createdAt: timestamp(-60),
   })) as number;
 
   const beethoven110 = (await db.library.add({
@@ -96,7 +101,7 @@ targetBpm: 60, noteVal: "quarter",
     title: "Sonata Op. 110 in A♭ major", composer: "Beethoven",
 targetBpm: 92, noteVal: "quarter",
     techniqueIds: [tPedal, tLegato, tVoicing],
-    createdAt: now - 180 * D,
+    createdAt: timestamp(-180),
   })) as number;
 
   const nocturne9_2 = (await db.library.add({
@@ -104,7 +109,7 @@ targetBpm: 92, noteVal: "quarter",
     title: "Nocturne in E♭ major, Op. 9 No. 2", composer: "Chopin",
 targetBpm: 132, noteVal: "eighth",
     techniqueIds: [tPedal, tLegato, tTrills],
-    createdAt: now - 220 * D,
+    createdAt: timestamp(-220),
   })) as number;
 
   const nocturne9_1 = (await db.library.add({
@@ -112,7 +117,7 @@ targetBpm: 132, noteVal: "eighth",
     title: "Nocturne in B♭ minor, Op. 9 No. 1", composer: "Chopin",
 targetBpm: 116, noteVal: "eighth",
     techniqueIds: [tPedal, tLegato, tVoicing],
-    createdAt: now - 40 * D,
+    createdAt: timestamp(-40),
   })) as number;
 
   const wtcCmaj = (await db.library.add({
@@ -120,7 +125,7 @@ targetBpm: 116, noteVal: "eighth",
     title: "WTC I — Prelude & Fugue in C major, BWV 846", composer: "Bach",
 targetBpm: 72, noteVal: "quarter",
     techniqueIds: [tNoPedal, tLegato, tVoicing],
-    createdAt: now - 240 * D,
+    createdAt: timestamp(-240),
   })) as number;
 
   const beethoven109 = (await db.library.add({
@@ -128,7 +133,7 @@ targetBpm: 72, noteVal: "quarter",
     title: "Sonata Op. 109 in E major", composer: "Beethoven",
 targetBpm: 84, noteVal: "quarter",
     techniqueIds: [tPedal, tLegato, tVoicing, tTrills],
-    createdAt: now - 35 * D,
+    createdAt: timestamp(-35),
   })) as number;
 
   // Manuals (4)
@@ -137,7 +142,7 @@ targetBpm: 84, noteVal: "quarter",
     title: "Hanon — Exercise 18", composer: "Hanon",
     targetBpm: 104, noteVal: "sixteenth",
     techniqueIds: [tNoPedal, tLegato],
-    createdAt: now - 150 * D,
+    createdAt: timestamp(-150),
   })) as number;
 
   const cortot = (await db.library.add({
@@ -145,7 +150,7 @@ targetBpm: 84, noteVal: "quarter",
     title: "Cortot — Finger equality", composer: "Cortot",
     targetBpm: 80, noteVal: "eighth",
     techniqueIds: [tArpeggios, tTrills],
-    createdAt: now - 80 * D,
+    createdAt: timestamp(-80),
   })) as number;
 
   const czerny740 = (await db.library.add({
@@ -153,14 +158,14 @@ targetBpm: 84, noteVal: "quarter",
     title: "Czerny — Study No. 5, Op. 740", composer: "Czerny",
     targetBpm: 120, noteVal: "sixteenth",
     techniqueIds: [tLegato, tStaccato, tArpeggios],
-    createdAt: now - 70 * D,
+    createdAt: timestamp(-70),
   })) as number;
 
   const piston = (await db.library.add({
     subjectId: harmonyId, kind: "exercise",
     title: "Piston — Figured bass, Chapter 12", composer: "Walter Piston",
     techniqueIds: [tFigured, tChorale],
-    createdAt: now - 70 * D,
+    createdAt: timestamp(-70),
   })) as number;
 
   // Technique items (extra, not counted toward minimums)
@@ -169,7 +174,7 @@ targetBpm: 84, noteVal: "quarter",
     title: "24 scales — major & minor (4 octaves, hands together)",
     startBpm: 80, targetBpm: 132, noteVal: "sixteenth",
     techniqueIds: [tLegato, tStaccato],
-    createdAt: now - 120 * D,
+    createdAt: timestamp(-120),
   })) as number;
 
   // 24 segments — one per major and minor key (12 + 12)
@@ -181,7 +186,7 @@ targetBpm: 84, noteVal: "quarter",
     const id = (await db.segments.add({
       position: majorSegmentIds.length, itemId: scales, label: `${key} major`, targetBpm: 132, noteVal: "sixteenth",
       layers: ["RH","LH","Both"], techniqueIds: [tLegato],
-      createdAt: now - 120 * D,
+      createdAt: timestamp(-120),
     })) as number;
     majorSegmentIds.push(id);
   }
@@ -189,7 +194,7 @@ targetBpm: 84, noteVal: "quarter",
     const id = (await db.segments.add({
       position: MAJORS.length + minorSegmentIds.length, itemId: scales, label: `${key} minor`, targetBpm: 132, noteVal: "sixteenth",
       layers: ["RH","LH","Both"], techniqueIds: [tLegato],
-      createdAt: now - 120 * D,
+      createdAt: timestamp(-120),
     })) as number;
     minorSegmentIds.push(id);
   }
@@ -200,7 +205,7 @@ targetBpm: 84, noteVal: "quarter",
     title: "Dominant 7th arpeggios — all keys",
     startBpm: 70, targetBpm: 120, noteVal: "sixteenth",
     techniqueIds: [tArpeggios],
-    createdAt: now - 110 * D,
+    createdAt: timestamp(-110),
   })) as number;
 
   // Theory (4)
@@ -208,28 +213,28 @@ targetBpm: 84, noteVal: "quarter",
     subjectId: harmonyId, kind: "theory",
     title: "Secondary dominants & tonicization",
     techniqueIds: [tChorale, tModulation],
-    createdAt: now - 50 * D,
+    createdAt: timestamp(-50),
   })) as number;
 
   const modMix = (await db.library.add({
     subjectId: harmonyId, kind: "theory",
     title: "Modal mixture & Neapolitan",
     techniqueIds: [tChorale],
-    createdAt: now - 30 * D,
+    createdAt: timestamp(-30),
   })) as number;
 
   const speciesCpt = (await db.library.add({
     subjectId: harmonyId, kind: "theory",
     title: "Species counterpoint — first & second species",
     techniqueIds: [tCounter, tChorale],
-    createdAt: now - 45 * D,
+    createdAt: timestamp(-45),
   })) as number;
 
   const augSixth = (await db.library.add({
     subjectId: harmonyId, kind: "theory",
     title: "Augmented sixth chords (It / Fr / Ger)",
     techniqueIds: [tChorale, tModulation],
-    createdAt: now - 20 * D,
+    createdAt: timestamp(-20),
   })) as number;
 
   // ---------- Collections (4) ----------
@@ -238,21 +243,21 @@ targetBpm: 84, noteVal: "quarter",
     name: "Nocturnes, Op. 9", composer: "Chopin", catalog: "Op. 9",
     notes: "Three nocturnes dedicated to Madame Camille Pleyel.",
     color: "plum", defaultSubjectId: pianoId,
-    createdAt: now - 60 * D, updatedAt: now,
+    createdAt: timestamp(-60), updatedAt: now,
   })) as number;
 
   const colWtcI = (await db.collections.add({
     kind: "collection",
     name: "Well-Tempered Clavier, Book I", composer: "Bach", catalog: "BWV 846–869",
     color: "blue", defaultSubjectId: pianoId,
-    createdAt: now - 60 * D, updatedAt: now,
+    createdAt: timestamp(-60), updatedAt: now,
   })) as number;
 
   const colBeethovenLate = (await db.collections.add({
     kind: "collection",
     name: "Late Beethoven Sonatas", composer: "Beethoven", catalog: "Op. 101–111",
     color: "terracotta", defaultSubjectId: pianoId,
-    createdAt: now - 60 * D, updatedAt: now,
+    createdAt: timestamp(-60), updatedAt: now,
   })) as number;
 
   const colCzerny = (await db.collections.add({
@@ -260,7 +265,7 @@ targetBpm: 84, noteVal: "quarter",
     name: "Czerny Studies", composer: "Czerny", catalog: "Op. 740",
     notes: "Daily finger-dexterity studies.",
     color: "gold", defaultSubjectId: pianoId,
-    createdAt: now - 60 * D, updatedAt: now,
+    createdAt: timestamp(-60), updatedAt: now,
   })) as number;
 
   const colHanon = await db.collections.add({ kind: "manual", name: "The Virtuoso Pianist", composer: "Hanon", edition: "Student edition", defaultSubjectId: pianoId, createdAt: now, updatedAt: now });
@@ -298,7 +303,7 @@ targetBpm: 84, noteVal: "quarter",
     subjectId: pianoId,
     venue: "Sala Verdi, Milano",
     notes: "45-minute programme, no interval.",
-    createdAt: now - 30 * D,
+    createdAt: timestamp(-30),
   })) as number;
 
   const examId = (await db.performances.add({
@@ -308,7 +313,7 @@ targetBpm: 84, noteVal: "quarter",
     subjectId: pianoId,
     venue: "Conservatorio — Aula magna",
     notes: "Bach + a Classical sonata required.",
-    createdAt: now - 20 * D,
+    createdAt: timestamp(-20),
   })) as number;
 
   const auditionId = (await db.performances.add({
@@ -317,7 +322,7 @@ targetBpm: 84, noteVal: "quarter",
     date: dayKey(addDays(todayDate, 12)),
     subjectId: pianoId,
     venue: "Teatro Comunale",
-    createdAt: now - 10 * D,
+    createdAt: timestamp(-10),
   })) as number;
 
   await db.performanceItems.bulkAdd([
@@ -340,7 +345,7 @@ targetBpm: 84, noteVal: "quarter",
     layers: string[], techniqueIds: number[]
   ) => (await db.segments.add({
     itemId, label, position: await db.segments.where("itemId").equals(itemId).count(), targetBpm, noteVal, layers, techniqueIds,
-    createdAt: now - 60 * D,
+    createdAt: timestamp(-60),
   })) as number;
 
   const balladeIntro = await seg(chopinBallade, "mm. 1–8 — Introduction",   72, "quarter", ["RH","LH","Both"], [tVoicing, tPedal]);
@@ -365,7 +370,7 @@ targetBpm: 84, noteVal: "quarter",
     subjectId: pianoId, teacher: "Prof. Aldo Ferri",
     schedules: [{ dayOfWeek: wedDow, startTime: "17:00", endTime: "18:00", frequency: "weekly" }],
     startDate: dayKey(addDays(todayDate, -90)), color: "terracotta",
-    createdAt: now - 100 * D,
+    createdAt: timestamp(-100),
   })) as number;
 
   // Harmony has two weekly slots (Tuesday & Friday)
@@ -376,7 +381,7 @@ targetBpm: 84, noteVal: "quarter",
       { dayOfWeek: 5, startTime: "10:00", endTime: "11:30", frequency: "weekly" },
     ],
     startDate: dayKey(addDays(todayDate, -84)), color: "blue",
-    createdAt: now - 100 * D,
+    createdAt: timestamp(-100),
   })) as number;
 
 
@@ -451,7 +456,7 @@ targetBpm: 84, noteVal: "quarter",
 
   // One past harmony lesson
   {
-    const d = addDays(todayDate, -14);
+    const d = addDays(todayDate, -14 - (todayDate.getDay() - 2 + 7) % 7);
     const pieceIds = [piston, secDom];
     const { snapshot, piecesPlayedTitles } = await buildLessonSnapshot(
       harmonyId,
@@ -489,22 +494,27 @@ targetBpm: 84, noteVal: "quarter",
       targetBpm: e.bpm,
       targetNoteVal: e.noteVal,
       bpm: e.bpm ? clamp(Math.round(e.bpm - 6 + bias(k) / 2 + rand(seed + k * 17) * 10), 20, 400) : undefined,
+      mood: 2 + seed % 4,
+      focus: 2 + (seed + k) % 4,
+      beatsPerBar: 4,
       confidence: clamp(Math.round((trend + bias(k) - 8 + rand(seed + k * 31) * 18) / 20), 1, 5),
     }));
 
-  const histDays = 30;
+  const histDays = 84;
   const pastTasks: TaskRow[] = [];
 
   for (let i = histDays; i >= 1; i--) {
     const dateObj = addDays(todayDate, -i);
     const d = dayKey(dateObj);
     const dow = dateObj.getDay();
+    // Rest days keep streak breaks and missed-practice history visible.
+    if (i > 7 && i % 11 === 0) continue;
 
     // Daily Hanon
     pastTasks.push({
       date: d, subjectId: pianoId, linkType: "item", itemId: hanon,
       title: "Hanon — Exercise 18", plan: plan(["RH","LH","Both"], [tLegato], 96, "sixteenth", [hanonEx18]),
-      done: true, createdAt: now - i * D,
+      done: true, createdAt: timestamp(-i),
     });
 
     // Scales 5x/week
@@ -513,7 +523,7 @@ targetBpm: 84, noteVal: "quarter",
         date: d, subjectId: pianoId, linkType: "item", itemId: scales,
         title: "Scales — 4 octaves HT",
         plan: plan(["Both"], [tLegato, tStaccato], 100 + Math.min(20, Math.floor((histDays - i) / 2)), "sixteenth"),
-        done: true, createdAt: now - i * D,
+        done: true, createdAt: timestamp(-i),
       });
     }
 
@@ -522,7 +532,7 @@ targetBpm: 84, noteVal: "quarter",
       pastTasks.push({
         date: d, subjectId: pianoId, linkType: "item", itemId: chopinBallade,
         title: "Ballade — first theme", plan: plan(["RH","LH","Slow"], [tVoicing, tLegato], 66, "quarter", [balladeA]),
-        done: true, createdAt: now - i * D,
+        done: true, createdAt: timestamp(-i),
       });
     }
 
@@ -532,7 +542,7 @@ targetBpm: 84, noteVal: "quarter",
         date: d, subjectId: pianoId, linkType: "item", itemId: bachWtcCsh,
         title: "Bach — Fugue exposition", plan: plan(["RH","LH","Both"], [tVoicing], 56, "quarter", [wtcFugue]),
         done: i > 4, skipped: i <= 4 ? false : undefined,
-        createdAt: now - i * D,
+        createdAt: timestamp(-i),
       });
     }
 
@@ -542,7 +552,7 @@ targetBpm: 84, noteVal: "quarter",
         date: d, subjectId: pianoId, linkType: "item", itemId: czerny740,
         title: "Czerny 740 — No. 5 staccato",
         plan: plan(["RH","LH","Both"], [tStaccato, tLegato], 110 + Math.min(10, Math.floor((histDays - i) / 3)), "sixteenth"),
-        done: true, createdAt: now - i * D,
+        done: true, createdAt: timestamp(-i),
       });
     }
 
@@ -551,7 +561,7 @@ targetBpm: 84, noteVal: "quarter",
       pastTasks.push({
         date: d, subjectId: harmonyId, linkType: "item", itemId: piston,
         title: "Piston — chapter exercises", plan: plan([...THEORY_LAYERS], [tFigured, tChorale]),
-        done: true, createdAt: now - i * D,
+        done: true, createdAt: timestamp(-i),
       });
     }
 
@@ -560,7 +570,7 @@ targetBpm: 84, noteVal: "quarter",
       pastTasks.push({
         date: d, subjectId: harmonyId, linkType: "item", itemId: secDom,
         title: "Aural drill — secondary dominants", plan: plan(["aural", "analytical"], [tModulation]),
-        done: true, createdAt: now - i * D,
+        done: true, createdAt: timestamp(-i),
       });
     }
   }
@@ -576,17 +586,17 @@ targetBpm: 84, noteVal: "quarter",
     const snapshot = await buildSessionSnapshot(fullTask);
 
     // Trend: more recent → higher confidence
-    const ageDays = Math.round((todayDate.getTime() - new Date(t.date).getTime()) / D);
+    const ageDays = Math.round((todayDate.getTime() - parseDayKey(t.date).getTime()) / D);
     const trend = clamp(70 + (histDays - ageDays) * 0.6, 40, 95);
 
     await db.sessions.add({
       taskId: id, ...sessionContext(fullTask), date: t.date,
       notes: idx % 5 === 0
-        ? "Inner voices clearer today; pedaling lighter at the cadence."
+        ? "Voci interne più chiare; pedale più leggero alla cadenza."
         : undefined,
       marks: sessionMarks(t.plan, trend, idx * 7 + 1),
       snapshot,
-      createdAt: now - (histDays - idx) * 3600000,
+      createdAt: Math.min(parseDayKey(t.date).getTime() + 18 * 3600000, now),
     });
   }
 
@@ -604,7 +614,7 @@ targetBpm: 84, noteVal: "quarter",
       title: "Ballade — Intro + First theme (slow run-through)",
       plan: taskPlan,
       done: true,
-      createdAt: now - ageDays * D,
+      createdAt: timestamp(-ageDays),
     })) as number;
     const fullTask = await db.tasks.get(taskId);
     if (!fullTask) continue;
@@ -620,7 +630,7 @@ targetBpm: 84, noteVal: "quarter",
         : undefined,
       marks: sessionMarks(taskPlan, clamp(68 + (30 - ageDays) * 0.8, 45, 92), k * 31, (si) => (si === 0 ? 6 : -4)),
       snapshot,
-      createdAt: now - ageDays * D + 3600000,
+      createdAt: timestamp(-ageDays, 1),
     });
   }
 
@@ -665,7 +675,7 @@ targetBpm: 84, noteVal: "quarter",
       const taskId = (await db.tasks.add({
         date: d, subjectId: pianoId, linkType: "item",
         itemId: scenario.itemId, title: scenario.title, plan: taskPlan,
-        done: true, createdAt: now - ageDays * D,
+        done: true, createdAt: timestamp(-ageDays),
       })) as number;
       const fullTask = await db.tasks.get(taskId);
       if (!fullTask) continue;
@@ -675,7 +685,7 @@ targetBpm: 84, noteVal: "quarter",
         taskId, ...sessionContext(fullTask), date: d,
         marks: sessionMarks(taskPlan, clamp(60 + (30 - ageDays) * 0.9, 40, 92), extraSeed + k * 29, (si) => (si === 0 ? 4 : -3)),
         snapshot,
-        createdAt: now - ageDays * D + 7200000,
+        createdAt: timestamp(-ageDays, 2),
       });
       extraSeed += 7;
     }
@@ -780,14 +790,14 @@ targetBpm: 84, noteVal: "quarter",
   }
 
   // Bach fugue — Mon/Wed/Fri
-  const bachPlan = plan(["RH","LH","Both"], [tVoicing], 60, "quarter", [wtcFugue]);
+  const bachPlan = plan(["RH","LH","Both"], [tVoicing], 54, "quarter", [wtcFugue]);
   const bachTpl = (await db.tasks.add({
     date: todayKey, subjectId: pianoId, linkType: "item", itemId: bachWtcCsh,
     title: "Bach — Fugue exposition", plan: bachPlan,
     done: false, createdAt: now,
     recurrence: { kind: "weekdays", days: [1, 3, 5], startDate: todayKey, occurrences: 9 },
   })) as number;
-  for (let i = 1; i <= 21; i++) {
+  for (let i = 1; i < 14; i++) {
     const d = addDays(todayDate, i);
     if ([1, 3, 5].includes(d.getDay())) {
       upcoming.push({
@@ -806,7 +816,7 @@ targetBpm: 84, noteVal: "quarter",
     done: false, createdAt: now,
     recurrence: { kind: "weekdays", days: [2, 5], startDate: todayKey, occurrences: 8 },
   })) as number;
-  for (let i = 1; i <= 28; i++) {
+  for (let i = 1; i < 14; i++) {
     const d = addDays(todayDate, i);
     if ([2, 5].includes(d.getDay())) {
       upcoming.push({
@@ -855,7 +865,9 @@ targetBpm: 84, noteVal: "quarter",
 
   // Homework from past lessons that already became tasks: link it to the first task of the same piece.
   for (const { assignmentId, itemId } of linkedHomework) {
-    const task = await db.tasks.where("itemId").equals(itemId).first();
+    const assignment = await db.assignments.get(assignmentId);
+    const lesson = assignment ? await db.lessons.get(assignment.lessonId) : undefined;
+    const task = await db.tasks.where("itemId").equals(itemId).filter(task => !!lesson && task.date >= lesson.date).first();
     if (task?.id !== undefined) await lessonsService.linkTask(assignmentId, task.id);
   }
 
@@ -865,12 +877,12 @@ targetBpm: 84, noteVal: "quarter",
   {
     const majorsGroup = {
       id: "majors_" + now.toString(36),
-      name: "Major scales",
+      name: "Scale maggiori",
       pool: majorSegmentIds.map((id) => ({ type: "segment" as const, id })),
     };
     const minorsGroup = {
       id: "minors_" + now.toString(36),
-      name: "Minor scales",
+      name: "Scale minori",
       pool: minorSegmentIds.map((id) => ({ type: "segment" as const, id })),
     };
     const matrix: Record<string, Record<string, number>> = {};
@@ -879,7 +891,7 @@ targetBpm: 84, noteVal: "quarter",
     }
     const { studyRoutinesService } = await import("./services");
     await studyRoutinesService.create({
-      name: "Scale routine",
+      name: "Routine di scale",
       subjectId: pianoId,
       groups: [majorsGroup, minorsGroup],
       matrix,
@@ -895,7 +907,7 @@ targetBpm: 84, noteVal: "quarter",
     {
       itemId: chopinBallade, taskId: balladeTpl,
       question: "How do you shape the inner-voice crescendo in mm. 28–32 without losing the bass line?",
-      resolved: false, createdAt: now - 2 * D,
+      resolved: false, createdAt: timestamp(-2),
     },
     {
       itemId: bachWtcCsh,
@@ -906,15 +918,25 @@ targetBpm: 84, noteVal: "quarter",
       itemId: hanon,
       question: "Should I keep Hanon 18 at ♩=104 for another week or push?",
       answer: "Stay at 104 until perfectly even, then jump in 4-bpm steps.",
-      answeredAt: now - 3 * D, resolved: true, createdAt: now - 5 * D,
+      answeredAt: timestamp(-3), resolved: true, createdAt: timestamp(-5),
     },
   ]);
 
   // ---------- Homework captured live in the upcoming lessons ----------
-  const nextOn = (dow: number) => dayKey(addDays(todayDate, (dow - todayDate.getDay() + 7) % 7));
+  const nextOn = (dow: number) => dayKey(addDays(todayDate, ((dow - todayDate.getDay() + 7) % 7) || 7));
   const pianoLesson = await lessonsService.ensureFor(pianoId, await db.recurrences.get(lessonRecId), nextOn(wedDow));
   await lessonsService.addAssignment(pianoLesson, "Ballade — coda octaves at ♩=90, hands separately");
   await lessonsService.addAssignment(pianoLesson, "Record the Nocturne Op. 9 No. 2 and listen back");
   const harmonyLesson = await lessonsService.ensureFor(harmonyId, await db.recurrences.get(harmonyRecId), nextOn(2));
-  await lessonsService.addAssignment(harmonyLesson, "Analyse two chorales for augmented sixth chords");
+  await lessonsService.addAssignment(harmonyLesson, "Analizzare due corali con accordi di sesta aumentata");
+
+  await seedPianoScenarios(todayDate, now, pianoId, harmonyId);
+  await db.sessions.toCollection().modify(session => Object.assign(session, sessionTempoIndexes(session.marks)));
+  // Root weekdays must include the root day; future slots stay inside the rolling window.
+  for (const id of [bachTpl, pistonTpl]) {
+    const root = await db.tasks.get(id);
+    if (!root?.recurrence) continue;
+    const days = [...new Set([...(root.recurrence.days ?? []), todayDate.getDay()])];
+    await db.tasks.update(id, { recurrence: { ...root.recurrence, days, occurrences: undefined } });
+  }
 }
