@@ -931,7 +931,7 @@ targetBpm: 84, noteVal: "quarter",
   await lessonsService.addAssignment(harmonyLesson, "Analizzare due corali con accordi di sesta aumentata");
 
   await seedPianoScenarios(todayDate, now, pianoId, harmonyId);
-  await db.sessions.toCollection().modify(session => Object.assign(session, sessionTempoIndexes(session.marks)));
+  await db.sessions.toCollection().modify(session => { Object.assign(session, sessionTempoIndexes(session.marks)); });
   // Root weekdays must include the root day; future slots stay inside the rolling window.
   for (const id of [bachTpl, pistonTpl]) {
     const root = await db.tasks.get(id);
